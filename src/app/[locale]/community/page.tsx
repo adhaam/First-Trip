@@ -108,7 +108,7 @@ export default function CommunityPage() {
                         )}
                         <Badge variant="outline" className="border-brand-blue/30 text-brand-blue">
                           <Icon className="h-3 w-3 mr-1" />
-                          {t(`categories.${post.category === 'dahab-guide' ? 'dahabGuide' : post.category.replace('-', '') as 'blog' | 'hiddenGems' | 'stories'}`)}
+                          {t(`categories.${post.category === 'dahab-guide' ? 'dahabGuide' : post.category === 'hidden-gems' ? 'hiddenGems' : post.category as 'blog' | 'stories'}`)}
                         </Badge>
                         <div className="flex items-center gap-1 text-xs text-gray-400">
                           <Calendar className="h-3 w-3" />

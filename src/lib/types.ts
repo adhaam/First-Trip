@@ -45,6 +45,7 @@ export interface SinaiTrip {
   category_en: string
   images: string[]
   duration: string   // e.g. "نصف يوم", "Full Day"
+  duration_en: string
   price: number
   includes_ar: string[]
   includes_en: string[]

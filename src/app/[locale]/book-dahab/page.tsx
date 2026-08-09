@@ -51,7 +51,7 @@ export default function BookDahabPage() {
           >
             {t('gallery')}
           </motion.h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[160px] md:auto-rows-[180px]">
             {/* Masonry-style grid */}
             {[
               { src: PLACEHOLDER_IMAGES.dahab1, span: 'col-span-2 row-span-2' },

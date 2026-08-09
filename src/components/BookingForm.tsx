@@ -72,9 +72,29 @@ export function BookingForm({ accommodation }: Props) {
     setCalculatedPrice(price * numPeople)
   }, [bookingType, duration, governorate, numPeople, accommodation, watch])
 
-  const onSubmit = (data: BookingFormData) => {
-    // In production, this would POST to /api/bookings which inserts to Supabase
-    console.log('Booking:', data)
+  const onSubmit = async (data: BookingFormData) => {
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accommodation_id: accommodation.id,
+          booking_type: data.booking_type,
+          full_name: data.full_name,
+          phone: data.phone,
+          travel_date: data.travel_date || null,
+          num_people: parseInt(data.num_people),
+          notes: data.notes || null,
+          nights: data.nights ? parseInt(data.nights) : null,
+        }),
+      })
+      if (!res.ok) {
+        console.error('Booking submission failed:', await res.text())
+        return
+      }
+    } catch (err) {
+      console.error('Booking submission error:', err)
+    }
     setSubmitted(true)
   }
 

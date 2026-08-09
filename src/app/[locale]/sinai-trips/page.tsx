@@ -93,7 +93,7 @@ export default function SinaiTripsPage() {
                     </h3>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
                       <Clock className="h-3.5 w-3.5" />
-                      <span>{trip.duration}</span>
+                      <span>{locale === 'ar' ? trip.duration : trip.duration_en}</span>
                     </div>
                     <p className="text-sm text-gray-500 line-clamp-2 mb-4">
                       {locale === 'ar' ? trip.description_ar : trip.description_en}

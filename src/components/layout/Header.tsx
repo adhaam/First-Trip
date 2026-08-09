@@ -77,10 +77,14 @@ export function Header() {
 
         {/* Language Toggle + Mobile Menu */}
         <div className="flex items-center gap-2">
-          <ButtonLink href={cleanPath} variant="ghost" size="default" className="gap-1.5 !h-9 !px-3">
+          <Link
+            href={cleanPath}
+            locale={otherLocale}
+            className="inline-flex items-center justify-center rounded-full font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 gap-1.5 whitespace-nowrap hover:bg-muted hover:text-foreground h-9 px-3"
+          >
             <Globe className="h-4 w-4" />
             <span className="hidden sm:inline">{otherLocale === 'ar' ? 'العربية' : 'English'}</span>
-          </ButtonLink>
+          </Link>
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger className="lg:hidden inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-muted">
