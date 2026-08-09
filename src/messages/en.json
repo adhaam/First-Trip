@@ -1,0 +1,154 @@
+{
+  "meta": {
+    "title": "First Trip – Organized Trips to Dahab | All-Inclusive Packages",
+    "description": "First Trip – Dahab travel agency specializing in all-inclusive packages, hotel & chalet bookings, and Sinai day trips in South Sinai, Egypt"
+  },
+  "nav": {
+    "home": "Home",
+    "book": "Book Dahab",
+    "trips": "Sinai Trips",
+    "community": "Community",
+    "partner": "Partner With Us",
+    "about": "About Us",
+    "policy": "Policy & Refund"
+  },
+  "hero": {
+    "title": "Your Dahab Journey Starts Here",
+    "subtitle": "All-inclusive packages — transfers, accommodation & internal trips from your governorate to Dahab",
+    "cta": "Book Your Trip Now"
+  },
+  "home": {
+    "trustTitle": "Trusted Journey",
+    "servicesTitle": "Our Services",
+    "featuredTitle": "Featured Trips",
+    "whyUsTitle": "Why First Trip?",
+    "testimonialsTitle": "What Our Customers Say",
+    "dahabGuideTitle": "Dahab Quick Guide",
+    "finalCta": "Ready for Your Trip?",
+    "finalCtaSub": "Book with First Trip and leave the rest to us. Contact us on WhatsApp or book online.",
+    "whatsappBtn": "Book via WhatsApp",
+    "services": {
+      "packages": "Full Packages",
+      "packagesDesc": "Transfer + Accommodation + 2 Internal Trips — 4 or 5 days from your governorate to Dahab",
+      "accommodation": "Accommodation Only",
+      "accommodationDesc": "Book hotels, chalets & camps in Dahab — choose your number of nights",
+      "transfers": "Transfers Only",
+      "transfersDesc": "Transfers from governorates to Dahab & back — fixed schedule or VIP",
+      "trips": "Sinai Day Trips",
+      "tripsDesc": "Safari, diving, Blue Hole, Mount Sinai, Wadi Washwashi & more"
+    }
+  },
+  "book": {
+    "title": "Book Your Dahab Trip",
+    "subtitle": "Choose the package that suits you — full package, accommodation only, or transfers",
+    "gallery": "Photo Gallery",
+    "aboutTrip": "About the Trip",
+    "schedule": "Schedule",
+    "scheduleText": "Trips depart every Sunday and every Thursday — year-round",
+    "day4": "4 Days (Thu → Mon)",
+    "day5": "5 Days (Sun → Fri)",
+    "accommodations": "Accommodations",
+    "priceStartsFrom": "Starts from",
+    "perPerson": "per person",
+    "package4": "4-Day Package",
+    "package5": "5-Day Package",
+    "accommodationOnly": "Accommodation Only",
+    "perNight": "per night",
+    "viewDetails": "View Details",
+    "bookingForm": "Booking Form",
+    "bookingType": "Booking Type",
+    "selectType": "Select booking type",
+    "fullPackage": "Full Package",
+    "nights": "Number of Nights",
+    "duration": "Duration",
+    "governorate": "Governorate",
+    "selectGovernorate": "Select governorate",
+    "travelDate": "Travel Date",
+    "selectDate": "Select date",
+    "numPeople": "Number of People",
+    "fullName": "Full Name",
+    "phoneNumber": "Phone Number",
+    "notes": "Additional Notes",
+    "notesPlaceholder": "Any special requests or notes...",
+    "submit": "Submit Booking",
+    "whatsappBooking": "Book via WhatsApp"
+  },
+  "sinai": {
+    "title": "Sinai Trips",
+    "subtitle": "Discover the most beautiful places in Dahab & South Sinai",
+    "filterBy": "Filter by",
+    "allTrips": "All Trips",
+    "price": "Price",
+    "duration": "Duration",
+    "bookNow": "Book Now",
+    "includes": "Includes"
+  },
+  "community": {
+    "title": "First Trip Community",
+    "subtitle": "Stories, Hidden Gems & Dahab Guide",
+    "categories": {
+      "all": "All",
+      "blog": "Blog",
+      "hiddenGems": "Hidden Gems",
+      "stories": "Stories",
+      "dahabGuide": "Dahab Guide"
+    },
+    "pinned": "Pinned",
+    "readMore": "Read More"
+  },
+  "partner": {
+    "title": "Partner With First Trip",
+    "subtitle": "Hotels, chalets, suppliers — join the First Trip partner network",
+    "benefits": "Partnership Benefits",
+    "benefit1": "Access to new customers from all Egyptian governorates",
+    "benefit2": "Regular bookings year-round",
+    "benefit3": "Free marketing on our website and social media",
+    "benefit4": "Organized and easy booking system",
+    "contactForm": "Contact us for partnership",
+    "name": "Name",
+    "business": "Business Name",
+    "phone": "Phone Number",
+    "message": "Message",
+    "send": "Send",
+    "success": "Your request has been sent! We'll get back to you soon"
+  },
+  "about": {
+    "title": "About First Trip",
+    "story": "Our Story",
+    "storyText": "First Trip started in 2017 as a tourism company specializing in organizing trips from Egyptian governorates to Dahab. Over 6 years, we organized hundreds of trips and earned the trust of thousands of customers. After our 2026 relaunch, we're back stronger and better — with the same spirit and service quality we're known for.",
+    "vision": "Our Vision",
+    "visionText": "To be the first choice for anyone wanting to visit Dahab — providing a complete tourism experience combining comfort, adventure, and the best prices.",
+    "mission": "Our Mission",
+    "missionText": "Organizing safe, enjoyable, and competitively priced trips — connecting Egyptian governorates to the beauty of Dahab and Sinai."
+  },
+  "policy": {
+    "title": "Policy & Refund",
+    "booking": "Booking Policy",
+    "bookingText": "Booking is confirmed after paying a 50% deposit of the total trip value. The remaining 50% is paid upon arrival in Dahab. Payment can be made via bank transfer or Vodafone Cash.",
+    "cancellation": "Cancellation & Refund Policy",
+    "cancellationText": "Cancellation 7+ days before trip date: Full deposit refund. Cancellation 3-6 days before: 50% deposit refund. Cancellation less than 48 hours before: No refund.",
+    "terms": "Terms & Conditions",
+    "privacy": "Privacy Policy"
+  },
+  "footer": {
+    "rights": "All rights reserved © First Trip 2026",
+    "quickLinks": "Quick Links",
+    "contact": "Contact Us",
+    "followUs": "Follow Us",
+    "dahab": "Dahab, South Sinai, Egypt"
+  },
+  "common": {
+    "language": "العربية",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try Again",
+    "back": "Back",
+    "more": "More",
+    "egp": "EGP",
+    "night": "night",
+    "nights": "nights",
+    "days": "days",
+    "person": "person",
+    "people": "people"
+  }
+}
