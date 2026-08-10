@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { motion, type Variants } from 'framer-motion'
 import { MOCK_ACCOMMODATIONS } from '@/lib/mock-data'
 import { ACCOMMODATION_TAGS, PLACEHOLDER_IMAGES } from '@/lib/constants'
-import { Star, MapPin, Calendar } from 'lucide-react'
+import { Star, MapPin, Calendar, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
@@ -24,6 +25,20 @@ export default function BookDahabPage() {
   const t = useTranslations('book')
   const common = useTranslations('common')
   const locale = useLocale()
+  const [filterType, setFilterType] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<string>('default')
+
+  const filtered = MOCK_ACCOMMODATIONS.filter(a => {
+    if (!a.is_active) return false
+    if (filterType !== 'all' && a.type !== filterType) return false
+    return true
+  })
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'price-asc') return a.price_per_night - b.price_per_night
+    if (sortBy === 'price-desc') return b.price_per_night - a.price_per_night
+    return 0 // default order
+  })
 
   return (
     <div>
@@ -158,8 +173,57 @@ export default function BookDahabPage() {
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900">{t('accommodations')}</h2>
           </motion.div>
 
+          {/* Filters & Sort */}
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <div className="flex items-center gap-1.5 bg-gray-100 rounded-full p-1">
+              {[
+                { key: 'all', label_ar: 'الكل', label_en: 'All' },
+                { key: 'hotel', label_ar: '🏨 فنادق', label_en: '🏨 Hotels' },
+                { key: 'chalet', label_ar: '🏖️ شاليهات', label_en: '🏖️ Chalets' },
+                { key: 'camp', label_ar: '🏕️ كمبات', label_en: '🏕️ Camps' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilterType(f.key)}
+                  className={cn(
+                    'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                    filterType === f.key
+                      ? 'bg-white text-brand-blue shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  )}
+                >
+                  {locale === 'ar' ? f.label_ar : f.label_en}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 bg-gray-100 rounded-full p-1">
+              <ArrowUpDown className="h-4 w-4 text-gray-400 ml-2" />
+              {[
+                { key: 'default', label_ar: 'الافتراضي', label_en: 'Default' },
+                { key: 'price-asc', label_ar: 'السعر ↓', label_en: 'Price ↓' },
+                { key: 'price-desc', label_ar: 'السعر ↑', label_en: 'Price ↑' },
+              ].map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setSortBy(s.key)}
+                  className={cn(
+                    'px-3 py-2 rounded-full text-xs font-medium transition-colors',
+                    sortBy === s.key
+                      ? 'bg-white text-brand-blue shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  )}
+                >
+                  {locale === 'ar' ? s.label_ar : s.label_en}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm text-gray-400">
+              {sorted.length} {locale === 'ar' ? 'مكان إقامة' : 'places'}
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {MOCK_ACCOMMODATIONS.filter(a => a.is_active).map((acc, i) => {
+            {sorted.map((acc, i) => {
               const tag = ACCOMMODATION_TAGS[acc.type]
               return (
                 <motion.div
