@@ -21,6 +21,7 @@ export default function CommunityPage() {
   const t = useTranslations('community')
   const locale = useLocale()
   const [filter, setFilter] = useState<string>('all')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const categories = [
     { id: 'all', key: 'all' as const, icon: BookOpen },
@@ -118,12 +119,17 @@ export default function CommunityPage() {
                       <h3 className="text-xl font-bold text-gray-900 mb-2">
                         {locale === 'ar' ? post.title_ar : post.title_en}
                       </h3>
-                      <p className="text-gray-600 leading-relaxed line-clamp-4">
+                      <p className={`text-gray-600 leading-relaxed ${expandedId === post.id ? '' : 'line-clamp-4'}`}>
                         {locale === 'ar' ? post.content_ar : post.content_en}
                       </p>
-                      <Button variant="link" className="px-0 mt-2 text-brand-blue">
-                        {t('readMore')} →
-                      </Button>
+                      <button
+                        onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
+                        className="inline-flex items-center gap-1 px-0 mt-2 text-brand-blue font-medium text-sm hover:text-brand-blue-dark transition-colors"
+                      >
+                        {expandedId === post.id
+                          ? (locale === 'ar' ? 'عرض أقل ↑' : 'Show Less ↑')
+                          : `${t('readMore')} →`}
+                      </button>
                     </CardContent>
                   </Card>
                 </motion.div>
