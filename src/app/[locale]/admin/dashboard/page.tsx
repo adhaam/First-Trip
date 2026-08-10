@@ -11,6 +11,7 @@ import {
   LogOut, Menu, X, TrendingUp, DollarSign, BedDouble, Star
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
@@ -52,10 +53,7 @@ export default function AdminDashboardPage() {
           : (sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
       )}>
         <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-800">
-          <div className="flex flex-col items-center">
-            <div className="w-5 h-5 rounded-full border-2 border-[#38BDF8] bg-transparent" />
-            <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#FB923C] -mt-[2px]" />
-          </div>
+          <Image src="/logo.png" alt="First Trip" width={32} height={32} className="h-8 w-auto" />
           <span className="text-lg font-bold">
             <span className="text-[#38BDF8]">FIRST</span>{' '}
             <span className="text-[#FB923C]">TRIP</span>

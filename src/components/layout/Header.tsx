@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { ButtonLink } from '@/components/ButtonLink'
 import { NAV_ITEMS, NAV_LABEL_KEYS } from '@/lib/constants'
 import { Menu, Globe } from 'lucide-react'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 export function Header() {
@@ -43,13 +44,17 @@ export function Header() {
       <div className="container-main flex h-16 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex flex-col items-center">
-            <div className="w-6 h-6 rounded-full border-2 border-[#00A0E0] bg-transparent" />
-            <div className="w-0 h-0 border-l-[9px] border-r-[9px] border-t-[12px] border-l-transparent border-r-transparent border-t-[#F08020] -mt-[2px]" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="First Trip"
+            width={40}
+            height={40}
+            className="h-9 w-auto"
+            priority
+          />
           <span className="text-lg font-bold hidden sm:inline-block">
-            <span className="text-[#00A0E0]">FIRST</span>{' '}
-            <span className="text-[#F08020]">TRIP</span>
+            <span className="text-[#0EA5E9]">FIRST</span>{' '}
+            <span className="text-[#F97316]">TRIP</span>
           </span>
         </Link>
 

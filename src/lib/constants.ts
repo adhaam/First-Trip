@@ -3,8 +3,8 @@ import { NavItem, ServiceItem, Testimonial, WhyUsPoint } from './types'
 export const SITE_NAME = 'First Trip'
 export const SITE_DESCRIPTION_AR = 'First Trip – رحلات منظمة لدهب | باقات سياحية شاملة | حجز فنادق وشاليهات وكمبات في دهب، جنوب سيناء'
 export const SITE_DESCRIPTION_EN = 'First Trip – Organized trips to Dahab | All-inclusive packages | Hotels, chalets & camps in Dahab, South Sinai'
-export const WHATSAPP_NUMBER = '+201000000000' // placeholder
-export const PHONE_NUMBER = '+201000000000'
+export const WHATSAPP_NUMBER = '+201005744083'
+export const PHONE_NUMBER = '+201005744083'
 export const EMAIL = 'info@firsttrip-eg.com'
 
 export const NAV_ITEMS: NavItem[] = [

@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation'
 import { ButtonLink } from '@/components/ButtonLink'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { BrandPattern } from '@/components/BrandPattern'
 import { motion, type Variants } from 'framer-motion'
 import {
   SERVICES, WHY_US, TESTIMONIALS, TRUST_STATS,
@@ -31,6 +32,9 @@ export default function HomePage() {
 
   return (
     <div className="overflow-hidden">
+      {/* Brand Pattern Background */}
+      <BrandPattern />
+
       {/* ─── HERO ─── */}
       <HeroSection t={t} locale={locale} />
 
@@ -55,72 +59,106 @@ export default function HomePage() {
   )
 }
 
-/* ──────── Hero Section ──────── */
+/* ──────── Hero Section — New Design ──────── */
 function HeroSection({ t, locale }: Props) {
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0">
+    <section className="relative min-h-[95vh] flex items-center justify-center overflow-hidden bg-brand-blue-dark">
+      {/* Background Image — moves with parallax */}
+      <div className="absolute inset-0 z-0 scale-110" style={{ willChange: 'transform' }}>
         <Image
           src={PLACEHOLDER_IMAGES.hero}
           alt="Dahab"
           fill
-          className="object-cover"
+          className="object-cover opacity-70"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-blue/80 via-brand-blue-dark/60 to-brand-blue-dark/90" />
+      </div>
+
+      {/* Floating Dahab Elements (subtle) */}
+      <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
+        <div className="absolute top-[15%] left-[5%] text-4xl opacity-20 animate-bounce" style={{ animationDuration: '6s' }}>🐪</div>
+        <div className="absolute top-[25%] right-[8%] text-3xl opacity-20 animate-bounce" style={{ animationDuration: '7s', animationDelay: '1s' }}>🌴</div>
+        <div className="absolute top-[60%] left-[12%] text-3xl opacity-15 animate-bounce" style={{ animationDuration: '8s', animationDelay: '2s' }}>🐠</div>
+        <div className="absolute bottom-[15%] right-[10%] text-4xl opacity-10 animate-bounce" style={{ animationDuration: '9s', animationDelay: '0.5s' }}>🏄</div>
       </div>
 
       <div className="container-main relative z-10 text-center text-white py-20">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
         >
-          <div className="flex justify-center mb-6">
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full border-[3px] border-[#38BDF8] bg-transparent" />
-              <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[22px] border-l-transparent border-r-transparent border-t-[#FB923C] -mt-[2px]" />
-            </div>
+          {/* Logo Centered */}
+          <div className="flex justify-center mb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+              className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center p-3 shadow-2xl"
+            >
+              <Image src="/logo.png" alt="First Trip" width={56} height={56} className="w-full h-auto" priority />
+            </motion.div>
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-4 leading-tight">
-            {t('hero.title')}
+
+          {/* Hero Tagline */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="inline-block mb-6 px-5 py-2 rounded-full border border-white/30 bg-white/10 backdrop-blur text-sm tracking-widest uppercase"
+          >
+            {locale === 'ar' ? 'دهب · جنوب سيناء · مصر' : 'Dahab · South Sinai · Egypt'}
+          </motion.div>
+
+          {/* Main Headline */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-4 leading-[1.1]">
+            <span className="block">{locale === 'ar' ? 'دهب مش مجرد رحلة' : "Dahab isn't just a trip"}</span>
+            <span className="block mt-2 bg-gradient-to-r from-[#38BDF8] to-[#FB923C] bg-clip-text text-transparent">
+              {locale === 'ar' ? 'دي First Trip بتاعتك' : "it's YOUR First Trip"}
+            </span>
           </h1>
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto mb-8 leading-relaxed">
-            {t('hero.subtitle')}
+
+          {/* Subtitle */}
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto mb-10 leading-relaxed font-light">
+            {locale === 'ar'
+              ? 'باقات شاملة — انتقالات، إقامة في أفضل الفنادق والشاليهات، ورحلات داخلية. كل حاجة متظبطة، وإنت بس تعيشها.'
+              : 'All-inclusive packages — transfers, stays in the best hotels & chalets, and Sinai day trips. Everything sorted — you just live it.'}
           </p>
+
+          {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <ButtonLink
               href="/book-dahab"
-              size="lg"
-              className="bg-brand-orange hover:bg-brand-orange-dark shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/30"
+              size="xl"
+              className="bg-brand-orange hover:bg-brand-orange-dark shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all hover:-translate-y-1"
             >
               {t('hero.cta')}
-              {locale === 'ar' ? <ArrowLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+              {locale === 'ar' ? <ArrowLeft className="h-5 w-5 mr-2" /> : <ChevronRight className="h-5 w-5 ml-2" />}
             </ButtonLink>
             <a
-              href={`https://wa.me/${WHATSAPP_NUMBER.replace('+', '')}`}
+              href={`https://wa.me/201005744083`}
               target="_blank"
               rel="noopener"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-full text-lg font-medium border border-white/30 text-white hover:bg-white/10 transition-all"
+              className="inline-flex items-center justify-center h-14 px-10 rounded-full text-lg font-medium border-2 border-white/40 text-white hover:bg-white/10 hover:border-white/60 backdrop-blur transition-all"
             >
               <span className="mr-2">💬</span>
-              {locale === 'ar' ? 'واتساب' : 'WhatsApp'}
+              {locale === 'ar' ? 'احجز عبر واتساب' : 'Book on WhatsApp'}
             </a>
           </div>
+
+          {/* Scroll indicator */}
+          <motion.div
+            className="absolute bottom-8 left-1/2 -translate-x-1/2"
+            animate={{ y: [0, 12, 0] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+          >
+            <div className="w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center p-1">
+              <div className="w-1.5 h-3 bg-white/60 rounded-full" />
+            </div>
+          </motion.div>
         </motion.div>
       </div>
-
-      {/* Scroll indicator */}
-      <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
-        animate={{ y: [0, 10, 0] }}
-        transition={{ repeat: Infinity, duration: 2 }}
-      >
-        <div className="w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center p-1.5">
-          <div className="w-1.5 h-3 rounded-full bg-white/60" />
-        </div>
-      </motion.div>
     </section>
   )
 }

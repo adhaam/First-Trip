@@ -1,0 +1,14 @@
+'use client'
+
+export function BrandPattern() {
+  return (
+    <div
+      className="fixed inset-0 z-0 pointer-events-none opacity-[0.03]"
+      aria-hidden="true"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520' viewBox='0 0 520 520'%3E%3Cg fill='none' stroke='%230EA5E9' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3C!-- palm --%3E%3Cg transform='translate(60 380) rotate(-6) scale(0.8)'%3E%3Cpath d='M18,52 C14,34 16,18 24,4'/%3E%3Cpath d='M24,4 C14,-6 2,-8 -8,-2'/%3E%3Cpath d='M24,4 C20,-10 10,-16 -2,-16'/%3E%3Cpath d='M24,4 C30,-10 42,-14 52,-10'/%3E%3Cpath d='M24,4 C36,-4 48,-2 56,6'/%3E%3C/g%3E%3C!-- camel --%3E%3Cg transform='translate(200 60) rotate(4) scale(0.85)'%3E%3Cpath d='M0,26 C2,12 12,4 22,8 C26,-2 40,-2 44,8 C54,6 60,14 58,24'/%3E%3Cpath d='M58,24 C66,18 68,8 67,0'/%3E%3Ccircle cx='69' cy='-3' r='4'/%3E%3Cline x1='8' y1='26' x2='8' y2='44'/%3E%3Cline x1='20' y1='28' x2='20' y2='44'/%3E%3Cline x1='38' y1='28' x2='38' y2='44'/%3E%3Cline x1='50' y1='26' x2='50' y2='44'/%3E%3C/g%3E%3C!-- wave --%3E%3Cg transform='translate(340 80) rotate(-3)'%3E%3Cpath d='M0,0 Q10,-9 20,0 T40,0 T60,0 T80,0'/%3E%3Cpath d='M8,12 Q18,3 28,12 T48,12 T68,12'/%3E%3C/g%3E%3C!-- sun --%3E%3Cg transform='translate(460 60)'%3E%3Ccircle r='10'/%3E%3Cline x1='14' y1='0' x2='20' y2='0'/%3E%3Cline x1='10' y1='10' x2='14' y2='14'/%3E%3Cline x1='0' y1='14' x2='0' y2='20'/%3E%3C/g%3E%3C!-- fish --%3E%3Cg transform='translate(120 160) rotate(8)'%3E%3Cellipse cx='0' cy='0' rx='14' ry='8'/%3E%3Cpath d='M12,0 L21,-7 L21,7 Z'/%3E%3Ccircle cx='-7' cy='-2' r='1.5'/%3E%3C/g%3E%3C!-- location pin --%3E%3Cg transform='translate(380 200) scale(0.7)'%3E%3Ccircle r='12'/%3E%3Cpath d='M-14,-14 L14,14 M-14,14 L14,-14' stroke-width='2.5'/%3E%3C/g%3E%3C!-- snorkel mask --%3E%3Cg transform='translate(260 240) rotate(5)'%3E%3Crect x='0' y='0' width='34' height='20' rx='9'/%3E%3Cline x1='17' y1='5' x2='17' y2='15'/%3E%3Cpath d='M34,8 h8 v-16 q0,-5 5,-5'/%3E%3C/g%3E%3C!-- starfish --%3E%3Cg transform='translate(90 380) rotate(12) scale(0.7)'%3E%3Cpolygon points='0,-18 4,-6 17,-5 7,2 10,15 0,8 -10,15 -7,2 -17,-5 -4,-6'/%3E%3C/g%3E%3C!-- mountain range --%3E%3Cg transform='translate(10 450)'%3E%3Cpath d='M0,50 L0,20 L60,0 L120,25 L180,5 L240,22 L300,0 L360,18 L420,5 L480,20 L510,10 L510,50 Z' opacity='0.5'/%3E%3C/g%3E%3C!-- sea waves at bottom --%3E%3Cg transform='translate(0 470)' stroke='%23F97316'%3E%3Cpath d='M0,15 Q30,5 60,15 T120,15 T180,15 T240,15 T300,15 T360,15 T420,15 T480,15 T520,10' opacity='0.4'/%3E%3Cpath d='M0,25 Q35,15 70,25 T140,25 T210,25 T280,25 T350,25 T420,25 T490,25 T520,20' opacity='0.3'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        backgroundSize: '520px 520px',
+      }}
+    />
+  )
+}

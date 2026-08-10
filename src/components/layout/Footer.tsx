@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { NAV_ITEMS, WHATSAPP_NUMBER, PHONE_NUMBER, EMAIL } from '@/lib/constants'
 import { MapPin, Phone, Mail } from 'lucide-react'
+import Image from 'next/image'
 
 export function Footer() {
   const t = useTranslations('footer')
@@ -16,10 +17,7 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="flex flex-col items-center">
-                <div className="w-7 h-7 rounded-full border-2 border-[#38BDF8] bg-transparent" />
-                <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[14px] border-l-transparent border-r-transparent border-t-[#FB923C] -mt-[2px]" />
-              </div>
+              <Image src="/logo.png" alt="First Trip" width={28} height={28} className="h-7 w-auto" />
               <span className="text-xl font-bold text-white">
                 <span className="text-[#38BDF8]">FIRST</span>{' '}
                 <span className="text-[#FB923C]">TRIP</span>

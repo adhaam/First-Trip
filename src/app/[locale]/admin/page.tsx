@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { motion } from 'framer-motion'
 import { LogIn, Lock, Mail } from 'lucide-react'
+import Image from 'next/image'
 
 export default function AdminLoginPage() {
   const t = useTranslations('nav')
@@ -52,10 +53,7 @@ export default function AdminLoginPage() {
           <CardContent className="p-8">
             <div className="text-center mb-8">
               <div className="flex justify-center mb-4">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full border-[3px] border-[#38BDF8] bg-transparent" />
-                  <div className="w-0 h-0 border-l-[13px] border-r-[13px] border-t-[18px] border-l-transparent border-r-transparent border-t-[#FB923C] -mt-[2px]" />
-                </div>
+                <Image src="/logo.png" alt="First Trip" width={56} height={56} className="w-14 h-auto" />
               </div>
               <h1 className="text-2xl font-bold text-gray-900">
                 <span className="text-brand-blue">FIRST</span>{' '}
