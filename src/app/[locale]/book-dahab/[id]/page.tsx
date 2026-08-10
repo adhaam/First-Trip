@@ -13,6 +13,7 @@ import { MOCK_ACCOMMODATIONS } from '@/lib/mock-data'
 import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
 import { BookingForm } from '@/components/BookingForm'
 import { ButtonLink } from '@/components/ButtonLink'
+import { RelatedPlaces } from '@/components/RelatedPlaces'
 import {
   Star, MapPin, ChevronLeft, ChevronRight, Check,
   Wifi, Utensils, Waves, Thermometer, TreePine
@@ -287,6 +288,7 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+           <RelatedPlaces current={accommodation} />
     </div>
   )
 }
