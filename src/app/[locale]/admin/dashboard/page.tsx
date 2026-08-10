@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import { AccommodationManager } from '@/components/admin/AccommodationManager'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
@@ -192,8 +193,11 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {/* Accommodations */}
+          {active === 'accommodations' && <AccommodationManager />}
+
           {/* Placeholder for other sections */}
-          {active !== 'dashboard' && (
+          {active !== 'dashboard' && active !== 'accommodations' && (
             <div className="text-center py-20 text-gray-400">
               <div className="text-4xl mb-4">⚙️</div>
               <p className="text-lg">

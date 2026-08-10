@@ -12,11 +12,17 @@ export interface Accommodation {
   name_ar: string
   name_en: string
   type: AccommodationType
+  tier?: string  // budget / standard / premium / lagoon
   description_ar: string
   description_en: string
   images: string[]
+  image_url?: string  // primary image
   rating: number // 1-5 stars for hotels
   location: string
+  location_ar?: string
+  location_en?: string
+  latitude?: number
+  longitude?: number
   amenities_ar: string[]
   amenities_en: string[]
   price_per_night: number // accommodation-only price per person
@@ -24,6 +30,7 @@ export interface Accommodation {
   price_5day: number   // 5-day package price per person
   is_active: boolean
   created_at: string
+  updated_at?: string
 }
 
 export interface GovernoratePricing {
