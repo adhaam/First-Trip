@@ -5,29 +5,16 @@ import { Link } from '@/i18n/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { motion } from 'framer-motion'
-import { MOCK_ACCOMMODATIONS } from '@/lib/mock-data'
 import type { Accommodation } from '@/lib/types'
 import { ACCOMMODATION_TAGS } from '@/lib/constants'
 import Image from 'next/image'
 
 interface Props {
-  current: Accommodation
+  related: Accommodation[]
 }
 
-export function RelatedPlaces({ current }: Props) {
+export function RelatedPlaces({ related }: Props) {
   const locale = useLocale()
-
-  // Smart algorithm: same type first, then closest price
-  const sameType = (MOCK_ACCOMMODATIONS as Accommodation[]).filter(
-    a => a.id !== current.id && a.type === current.type && a.is_active
-  )
-  const similarPrice = (MOCK_ACCOMMODATIONS as Accommodation[]).filter(
-    a => a.id !== current.id && a.type !== current.type && a.is_active
-  ).sort((a, b) =>
-    Math.abs(a.price_per_night - current.price_per_night) -
-    Math.abs(b.price_per_night - current.price_per_night)
-  )
-  const related = [...sameType, ...similarPrice].slice(0, 3)
 
   if (related.length === 0) return null
 
