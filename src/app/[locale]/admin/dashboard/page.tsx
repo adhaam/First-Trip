@@ -17,6 +17,7 @@ import { SiteSettingsManager } from '@/components/admin/SiteSettingsManager'
 import { BookingsManager } from '@/components/admin/BookingsManager'
 import { CustomersManager } from '@/components/admin/CustomersManager'
 import { DashboardHome } from '@/components/admin/DashboardHome'
+import { TripDatesManager } from '@/components/admin/TripDatesManager'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
@@ -29,7 +30,7 @@ const sidebarItems = [
   { icon: Settings, key: 'settings', label_ar: 'الإعدادات', label_en: 'Settings' },
 ]
 
-const CONNECTED_KEYS = ['dashboard', 'accommodations', 'sinai-trips', 'bookings', 'customers', 'community', 'settings']
+const CONNECTED_KEYS = ['dashboard', 'accommodations', 'sinai-trips', 'dates', 'bookings', 'customers', 'community', 'settings']
 
 export default function AdminDashboardPage() {
   const locale = useLocale()
@@ -117,12 +118,12 @@ export default function AdminDashboardPage() {
           {active === 'dashboard' && <DashboardHome />}
           {active === 'accommodations' && <AccommodationManager />}
           {active === 'sinai-trips' && <SinaiTripManager />}
+          {active === 'dates' && <TripDatesManager />}
           {active === 'bookings' && <BookingsManager />}
           {active === 'customers' && <CustomersManager />}
           {active === 'community' && <CommunityPostManager />}
           {active === 'settings' && <SiteSettingsManager />}
 
-          {/* Trip Dates management isn't built yet */}
           {!CONNECTED_KEYS.includes(active) && (
             <div className="text-center py-20 text-gray-400">
               <div className="text-4xl mb-4">⚙️</div>
