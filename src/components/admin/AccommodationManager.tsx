@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,8 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, MapPin, Star, Upload, X, Search } from 'lucide-react'
-import { MOCK_ACCOMMODATIONS } from '@/lib/mock-data'
+import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2 } from 'lucide-react'
 import { Accommodation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -52,12 +51,40 @@ const emptyAccommodation: Partial<Accommodation> = {
 
 export function AccommodationManager() {
   const locale = useLocale()
-  const [accommodations, setAccommodations] = useState<Accommodation[]>(MOCK_ACCOMMODATIONS as Accommodation[])
+  const [accommodations, setAccommodations] = useState<Accommodation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const [editing, setEditing] = useState<Accommodation | null>(null)
   const [form, setForm] = useState<Partial<Accommodation>>({})
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
+
+  const loadAccommodations = async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const res = await fetch('/api/admin/accommodations')
+      if (res.status === 401) {
+        window.location.href = `/${locale}/admin`
+        return
+      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to load')
+      setAccommodations(data.accommodations || [])
+    } catch {
+      setLoadError(locale === 'ar' ? 'تعذر تحميل البيانات' : 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch, not a synchronous state computation
+    loadAccommodations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const filtered = accommodations.filter(a => {
     const matchesSearch = !search || a.name_ar.includes(search) || a.name_en.toLowerCase().includes(search.toLowerCase())
@@ -77,29 +104,53 @@ export function AccommodationManager() {
     setShowForm(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name_ar || !form.name_en) return
-    const now = new Date().toISOString()
-    if (editing) {
-      setAccommodations(prev => prev.map(a => a.id === editing.id ? { ...a, ...form, updated_at: now } as Accommodation : a))
-    } else {
-      const newAcc: Accommodation = {
-        ...form,
-        id: String(Date.now()),
-        created_at: now,
-        updated_at: now,
-      } as Accommodation
-      setAccommodations(prev => [newAcc, ...prev])
+    setSaving(true)
+    try {
+      const res = editing
+        ? await fetch(`/api/admin/accommodations/${editing.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form),
+          })
+        : await fetch('/api/admin/accommodations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form),
+          })
+
+      if (res.status === 401) {
+        window.location.href = `/${locale}/admin`
+        return
+      }
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || (locale === 'ar' ? 'فشل الحفظ' : 'Save failed'))
+        return
+      }
+      await loadAccommodations()
+      setShowForm(false)
+      setEditing(null)
+      setForm({})
+    } finally {
+      setSaving(false)
     }
-    setShowForm(false)
-    setEditing(null)
-    setForm({})
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm(locale === 'ar' ? 'متأكد من الحذف؟' : 'Confirm delete?')) {
-      setAccommodations(prev => prev.filter(a => a.id !== id))
+  const handleDelete = async (id: string) => {
+    if (!confirm(locale === 'ar' ? 'متأكد من الحذف؟' : 'Confirm delete?')) return
+    const res = await fetch(`/api/admin/accommodations/${id}`, { method: 'DELETE' })
+    if (res.status === 401) {
+      window.location.href = `/${locale}/admin`
+      return
     }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(data.error || (locale === 'ar' ? 'فشل الحذف' : 'Delete failed'))
+      return
+    }
+    setAccommodations(prev => prev.filter(a => a.id !== id))
   }
 
   const updateField = (field: string, value: string | number | string[]) => {
@@ -169,7 +220,20 @@ export function AccommodationManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(acc => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                    <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+                    {locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && loadError && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-red-500 py-8">{loadError}</TableCell>
+                </TableRow>
+              )}
+              {!loading && !loadError && filtered.map(acc => (
                 <TableRow key={acc.id}>
                   <TableCell className="font-medium">{locale === 'ar' ? acc.name_ar : acc.name_en}</TableCell>
                   <TableCell>
@@ -198,7 +262,7 @@ export function AccommodationManager() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
+              {!loading && !loadError && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-gray-400 py-8">
                     {locale === 'ar' ? 'لا توجد أماكن إقامة' : 'No accommodations found'}
@@ -353,8 +417,8 @@ export function AccommodationManager() {
                 <Button variant="outline" onClick={() => { setShowForm(false); setEditing(null) }}>
                   {locale === 'ar' ? 'إلغاء' : 'Cancel'}
                 </Button>
-                <Button onClick={handleSave} className="bg-brand-blue hover:bg-brand-blue-dark">
-                  <Upload className="h-4 w-4 mr-2" />
+                <Button onClick={handleSave} disabled={saving} className="bg-brand-blue hover:bg-brand-blue-dark">
+                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   {locale === 'ar' ? 'حفظ' : 'Save'}
                 </Button>
               </div>

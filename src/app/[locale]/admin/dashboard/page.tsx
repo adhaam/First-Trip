@@ -76,6 +76,10 @@ export default function AdminDashboardPage() {
           <Button
             variant="ghost"
             className="w-full justify-start text-gray-300 hover:bg-gray-800 hover:text-white"
+            onClick={async () => {
+              await fetch('/api/admin/logout', { method: 'POST' })
+              window.location.href = `/${locale}/admin`
+            }}
           >
             <LogOut className="h-4 w-4 mr-2" />
             {locale === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}

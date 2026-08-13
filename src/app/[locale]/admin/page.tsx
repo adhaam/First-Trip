@@ -1,18 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useTranslations, useLocale } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { motion } from 'framer-motion'
-import { LogIn, Lock, Mail } from 'lucide-react'
+import { LogIn, Lock } from 'lucide-react'
 import Image from 'next/image'
 
 export default function AdminLoginPage() {
-  const t = useTranslations('nav')
   const locale = useLocale()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -23,23 +21,25 @@ export default function AdminLoginPage() {
     setError('')
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    // Placeholder: In production, use Supabase auth
-    // const { error } = await supabase.auth.signInWithPassword({ email, password })
-    // if (error) setError(error.message)
-    // else router.push(`/${locale}/admin/dashboard`)
-
-    // For now, simulate login
-    setTimeout(() => {
-      setLoading(false)
-      if (email && password.length >= 6) {
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
         window.location.href = `/${locale}/admin/dashboard`
-      } else {
-        setError(locale === 'ar' ? 'بيانات غير صحيحة' : 'Invalid credentials')
+        return
       }
-    }, 1000)
+      setError(data.error || (locale === 'ar' ? 'بيانات غير صحيحة' : 'Invalid credentials'))
+    } catch {
+      setError(locale === 'ar' ? 'حدث خطأ، حاول مرة أخرى' : 'Something went wrong, try again')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -72,21 +72,6 @@ export default function AdminLoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <Label htmlFor="email">
-                  <Mail className="h-4 w-4 inline mr-1" />
-                  {locale === 'ar' ? 'البريد الإلكتروني' : 'Email'}
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  placeholder="admin@firsttrip-eg.com"
-                  className="mt-1"
-                  dir="ltr"
-                />
-              </div>
-              <div>
                 <Label htmlFor="password">
                   <Lock className="h-4 w-4 inline mr-1" />
                   {locale === 'ar' ? 'كلمة المرور' : 'Password'}
@@ -98,6 +83,7 @@ export default function AdminLoginPage() {
                   required
                   className="mt-1"
                   dir="ltr"
+                  autoFocus
                 />
               </div>
               <Button
