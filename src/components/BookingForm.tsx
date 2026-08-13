@@ -276,7 +276,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
 
   if (submitted) {
     return (
-      <div className="rounded-3xl border-[1.5px] border-sea-100 bg-white p-8 text-center shadow-sm">
+      <div className="rounded-3xl border-[1.5px] border-sea-100 bg-card p-8 text-center shadow-sm">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
           <CheckCircle2 className="h-7 w-7 text-emerald-600" />
         </div>
@@ -302,7 +302,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
       {/* ─── running total ─── */}
       <div className="border-b border-sea-100 bg-gradient-to-br from-sea-50 to-sun-50 p-6">
         <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sea-900/50">
@@ -359,7 +359,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
           <div className="text-xs text-sea-900/55">
             {t('totalFor')} {numPeople} {numPeople === 1 ? common('person') : common('people')}
           </div>
-          <div className="font-display text-3xl font-extrabold text-sea-900">
+          <div className="font-display text-3xl font-bold text-sea-900">
             {formatEGP(total, locale)}{' '}
             <span className="text-base font-semibold text-sea-900/70">{common('egp')}</span>
           </div>

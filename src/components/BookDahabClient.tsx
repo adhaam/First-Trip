@@ -38,7 +38,7 @@ export function BookDahabClient({ accommodations }: { accommodations: Accommodat
   return (
     <>
       <div className="mb-8 flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-sand-300 bg-white p-1">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-sand-300 bg-card p-1">
           {filters.map((f) => (
             <button
               key={f.key}
@@ -55,7 +55,7 @@ export function BookDahabClient({ accommodations }: { accommodations: Accommodat
           ))}
         </div>
 
-        <div className="flex items-center gap-1 rounded-full border border-sand-300 bg-white p-1">
+        <div className="flex items-center gap-1 rounded-full border border-sand-300 bg-card p-1">
           <ArrowUpDown className="mx-1.5 h-3.5 w-3.5 text-sea-900/35" />
           {sorts.map((s) => (
             <button

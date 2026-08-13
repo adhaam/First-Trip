@@ -24,7 +24,7 @@ export default async function SinaiTripsPage() {
             <span aria-hidden className="h-px w-6 bg-current" />
             {t('title')}
           </span>
-          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <h1 className="font-display text-4xl font-bold sm:text-5xl">{t('title')}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
         </div>
         <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />

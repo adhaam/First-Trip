@@ -34,7 +34,7 @@ export function AccommodationCard({
     <GlowCard className={cn('h-full', className)}>
       <Link
         href={`/book-dahab/${acc.id}`}
-        className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-white pin-card transition-colors hover:border-sea-900/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea-500"
+        className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card transition-colors hover:border-sea-900/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea-500"
       >
         <div className="relative aspect-[4/3] overflow-hidden">
           <Image
@@ -82,7 +82,7 @@ export function AccommodationCard({
               <div className="text-[0.7rem] uppercase tracking-wider text-sea-900/45">
                 {t('priceStartsFrom')}
               </div>
-              <div className="font-display text-xl font-extrabold text-sea-900">
+              <div className="font-display text-xl font-bold text-sea-900">
                 {Number(acc.price_per_night).toLocaleString()}{' '}
                 <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
               </div>

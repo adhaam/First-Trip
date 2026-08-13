@@ -36,7 +36,7 @@ export default function PolicyPage() {
             {ar ? 'السياسات' : 'Policies'}
           </span>
           <Shield className="mx-auto mb-4 h-10 w-10 opacity-80" />
-          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <h1 className="font-display text-4xl font-bold sm:text-5xl">{t('title')}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">
             {ar
               ? 'سياساتنا واضحة وشفافة — اقرأها قبل الحجز'
@@ -49,7 +49,7 @@ export default function PolicyPage() {
       <section className="section-padding bg-sand-50">
         <div className="container-main max-w-4xl">
           <Reveal>
-            <article className="overflow-hidden border-[1.5px] border-sand-300 bg-white pin-card">
+            <article className="overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
               {/* Tab bar */}
               <div className="no-scrollbar flex gap-0 overflow-x-auto border-b border-sand-200">
                 {tabs.map((tab) => {
@@ -77,14 +77,14 @@ export default function PolicyPage() {
               <div className="p-6 md:p-10">
                 {active === 'booking' && (
                   <div className="space-y-4">
-                    <h3 className="font-display text-xl font-bold text-sea-900">{t('booking')}</h3>
+                    <h3 className="font-display text-xl font-semibold text-sea-900">{t('booking')}</h3>
                     <p className="leading-relaxed text-sea-900/65">{t('bookingText')}</p>
                   </div>
                 )}
 
                 {active === 'cancellation' && (
                   <div className="space-y-4">
-                    <h3 className="font-display text-xl font-bold text-sea-900">{t('cancellation')}</h3>
+                    <h3 className="font-display text-xl font-semibold text-sea-900">{t('cancellation')}</h3>
                     <p className="leading-relaxed text-sea-900/65">{t('cancellationText')}</p>
                     <div className="mt-4 rounded-xl border border-sun-200 bg-sun-50 p-4">
                       <ul className="space-y-2 text-sm text-sea-900/70">
@@ -98,7 +98,7 @@ export default function PolicyPage() {
 
                 {active === 'terms' && (
                   <div className="space-y-4">
-                    <h3 className="font-display text-xl font-bold text-sea-900">{t('terms')}</h3>
+                    <h3 className="font-display text-xl font-semibold text-sea-900">{t('terms')}</h3>
                     <div className="space-y-3 leading-relaxed text-sea-900/65">
                       <p>
                         {ar
@@ -117,7 +117,7 @@ export default function PolicyPage() {
 
                 {active === 'privacy' && (
                   <div className="space-y-4">
-                    <h3 className="font-display text-xl font-bold text-sea-900">{t('privacy')}</h3>
+                    <h3 className="font-display text-xl font-semibold text-sea-900">{t('privacy')}</h3>
                     <p className="leading-relaxed text-sea-900/65">
                       {ar
                         ? 'نحترم خصوصيتك. كل البيانات اللي بنجمعها (الاسم، الموبايل، الإيميل) بتُستخدم فقط لغرض تأكيد الحجز والتواصل معك. مش بنشارك بياناتك مع أي طرف ثالث أبداً.'

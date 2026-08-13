@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import {
-  Outfit,
-  Tajawal,
+  Plus_Jakarta_Sans,
+  Almarai,
 } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
@@ -15,22 +15,22 @@ import { getSiteSettings } from '@/lib/data'
 import '../globals.css'
 
 // ─── Typeface pairing ───
-// Latin: Outfit — geometric, clean, very readable, modern without feeling cold.
-// Great for a lifestyle brand targeting Gen Z/millennials. Used as both display
-// and body font for latin text.
-// Arabic: Tajawal — the modern Arabic used by Careem/Anghami/Talabat. Feels
-// current, warm, and pairs beautifully with Outfit.
-const outfit = Outfit({
+// Latin: Plus Jakarta Sans — warm, rounded terminals, very readable at both
+// body and display sizes without the stark geometric edge of the old font.
+// Arabic: Almarai — soft, rounded, built specifically to feel comfortable and
+// friendly to read at length, even at heavy weights. Pairs naturally with
+// Plus Jakarta Sans' own roundness.
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-outfit',
+  variable: '--font-jakarta',
   weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
 })
 
-const tajawal = Tajawal({
-  subsets: ['arabic', 'latin'],
-  variable: '--font-tajawal',
-  weight: ['400', '500', '700', '800'],
+const almarai = Almarai({
+  subsets: ['arabic'],
+  variable: '--font-almarai',
+  weight: ['400', '700', '800'],
   display: 'swap',
 })
 
@@ -85,7 +85,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${outfit.variable} ${tajawal.variable} font-sans antialiased`}
+        className={`${jakarta.variable} ${almarai.variable} font-sans antialiased`}
       >
         <NextIntlClientProvider messages={messages} locale={locale}>
           <TooltipProvider>

@@ -122,7 +122,7 @@ export function ProductDetailClient({
 
           {/* title over the image */}
           <div className="container-main absolute inset-x-0 bottom-0 pb-6">
-            <h1 className="font-display text-3xl font-extrabold leading-tight text-white drop-shadow-sm sm:text-4xl md:text-5xl">
+            <h1 className="font-display text-3xl font-bold leading-tight text-white drop-shadow-sm sm:text-4xl md:text-5xl">
               {name}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/90">
@@ -209,7 +209,7 @@ export function ProductDetailClient({
                     return (
                       <li
                         key={i}
-                        className="flex items-center gap-3 rounded-xl border border-sand-300 bg-white px-4 py-3"
+                        className="flex items-center gap-3 rounded-xl border border-sand-300 bg-card px-4 py-3"
                       >
                         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sea-50 text-sea-600">
                           <Icon className="h-4 w-4" />
@@ -235,7 +235,7 @@ export function ProductDetailClient({
           <div className="lg:relative">
             <div className="space-y-5 lg:sticky lg:top-24">
               {/* price card */}
-              <div className="overflow-hidden border-[1.5px] border-sand-300 bg-white pin-card">
+              <div className="overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
                 <div className="space-y-2.5 p-6">
                   <PriceRow
                     label={ar ? 'إقامة فقط' : 'Stay only'}
@@ -287,7 +287,7 @@ export function ProductDetailClient({
             <div className="text-[0.65rem] uppercase tracking-wider text-sea-900/45">
               {t('priceStartsFrom')}
             </div>
-            <div className="truncate font-display text-lg font-extrabold text-sea-900">
+            <div className="truncate font-display text-lg font-bold text-sea-900">
               {formatEGP(cheapest, locale)}{' '}
               <span className="text-xs font-semibold text-sea-900/70">{common('egp')}</span>
             </div>
@@ -323,7 +323,7 @@ function IncludedTile({
   desc: string
 }) {
   return (
-    <div className="bg-white p-5">
+    <div className="bg-card p-5">
       <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sun-50 text-sun-500">
         <Icon className="h-5 w-5" />
       </span>
@@ -358,7 +358,7 @@ function PriceRow({
         <div className="mt-0.5 text-xs text-sea-900/50">{sub}</div>
       </div>
       <div className="shrink-0 text-end">
-        <span className="font-display text-lg font-extrabold text-sea-900">{value}</span>{' '}
+        <span className="font-display text-lg font-bold text-sea-900">{value}</span>{' '}
         <span className="text-xs font-semibold text-sea-900/60">{currency}</span>
       </div>
     </div>

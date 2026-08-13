@@ -70,7 +70,7 @@ export function NewsletterSignup() {
           </Reveal>
 
           <Reveal delay={80}>
-            <h2 className="font-display text-3xl font-extrabold leading-tight sm:text-4xl md:text-[2.6rem]">
+            <h2 className="font-display text-3xl font-bold leading-tight sm:text-4xl md:text-[2.6rem]">
               {t('newsletterTitle')}
             </h2>
           </Reveal>

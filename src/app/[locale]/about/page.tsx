@@ -41,7 +41,7 @@ export default function AboutPage() {
             {ar ? 'من نحن' : 'About Us'}
           </span>
           <Compass className="mx-auto mb-4 h-10 w-10 opacity-80" />
-          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <h1 className="font-display text-4xl font-bold sm:text-5xl">{t('title')}</h1>
         </div>
         <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
       </section>
@@ -69,9 +69,9 @@ export default function AboutPage() {
                 >
                   <div className="absolute start-4 z-10 h-4 w-4 -translate-x-1/2 rounded-full border-4 border-sand-50 bg-sea-600 shadow-md md:start-1/2" />
                   <div className="ms-12 md:ms-0 md:w-1/2">
-                    <article className="overflow-hidden border-[1.5px] border-sand-300 bg-white p-6 pin-card transition-shadow hover:shadow-sm">
+                    <article className="overflow-hidden border-[1.5px] border-sand-300 bg-card p-6 pin-card transition-shadow hover:shadow-sm">
                       <div className="mb-1 font-display text-lg font-bold text-sun-500">{item.year}</div>
-                      <h3 className="mb-2 font-bold text-sea-900">
+                      <h3 className="mb-2 font-semibold text-sea-900">
                         {ar ? item.title_ar : item.title_en}
                       </h3>
                       <p className="text-sm leading-relaxed text-sea-900/60">
@@ -87,20 +87,20 @@ export default function AboutPage() {
       </section>
 
       {/* Vision & Mission */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-sand-100">
         <div className="container-main">
           <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2">
             <Reveal>
               <article className="h-full border-[1.5px] border-sea-200 bg-sand-50 p-8 pin-card">
                 <Eye className="mb-4 h-10 w-10 text-sea-600" />
-                <h3 className="mb-3 font-display text-xl font-bold text-sea-900">{t('vision')}</h3>
+                <h3 className="mb-3 font-display text-xl font-semibold text-sea-900">{t('vision')}</h3>
                 <p className="leading-relaxed text-sea-900/65">{t('visionText')}</p>
               </article>
             </Reveal>
             <Reveal delay={80}>
               <article className="h-full border-[1.5px] border-sun-200 bg-sand-50 p-8 pin-card">
                 <Target className="mb-4 h-10 w-10 text-sun-500" />
-                <h3 className="mb-3 font-display text-xl font-bold text-sea-900">{t('mission')}</h3>
+                <h3 className="mb-3 font-display text-xl font-semibold text-sea-900">{t('mission')}</h3>
                 <p className="leading-relaxed text-sea-900/65">{t('missionText')}</p>
               </article>
             </Reveal>
@@ -118,7 +118,7 @@ export default function AboutPage() {
                   <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-sea-100">
                     <s.icon className="h-6 w-6 text-sea-600" />
                   </div>
-                  <div className="mb-1 font-display text-3xl font-extrabold text-sea-900 md:text-4xl">
+                  <div className="mb-1 font-display text-3xl font-bold text-sea-900 md:text-4xl">
                     {s.value}
                   </div>
                   <div className="text-sm text-sea-900/55">

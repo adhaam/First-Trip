@@ -29,7 +29,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
             <span aria-hidden className="h-px w-6 bg-current" />
             {ar ? 'احجز دهب' : 'Book Dahab'}
           </span>
-          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <h1 className="font-display text-4xl font-bold sm:text-5xl">{t('title')}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
         </div>
         <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
@@ -53,7 +53,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
           </Reveal>
 
           <Reveal delay={100}>
-            <div className="border-[1.5px] border-sand-300 bg-white p-7 pin-card">
+            <div className="border-[1.5px] border-sand-300 bg-card p-7 pin-card">
               <h3 className="font-display text-lg font-bold text-sea-900">
                 {ar ? 'تواريخ الرحلات المتاحة' : 'Available trip dates'}
               </h3>
@@ -100,7 +100,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
       {/* ─── CTA ─── */}
       <section className="relative overflow-hidden bg-sun-400 py-16 text-center text-white">
         <div className="container-main relative">
-          <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
+          <h2 className="font-display text-2xl font-bold sm:text-3xl">
             {ar ? 'مش لاقي المكان المناسب؟' : 'Can\'t find the right place?'}
           </h2>
           <p className="mx-auto mt-2 max-w-lg text-white/85">

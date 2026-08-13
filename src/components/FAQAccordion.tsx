@@ -39,7 +39,7 @@ export function FAQAccordion() {
   const faqs = locale === 'ar' ? faqsAr : faqsEn
 
   return (
-    <section className="section-padding bg-white">
+    <section className="section-padding bg-sand-100">
       <div className="container-main max-w-3xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

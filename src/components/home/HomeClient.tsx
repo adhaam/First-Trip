@@ -93,7 +93,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           </Reveal>
 
           <Reveal delay={80}>
-            <h1 className="font-display text-[2.6rem] font-extrabold leading-[1.05] text-white sm:text-6xl lg:text-7xl">
+            <h1 className="font-display text-[2.6rem] font-bold leading-[1.05] text-white sm:text-6xl lg:text-7xl">
               {ar ? (
                 <>
                   <span className="block">دهب مش مجرد رحلة</span>
@@ -168,7 +168,7 @@ function TrustBar() {
   const ar = locale === 'ar'
 
   return (
-    <section className="border-b border-sand-200 bg-white">
+    <section className="border-b border-sand-200 bg-card">
       <div className="container-main">
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 py-8 md:grid-cols-4 md:gap-x-6 md:py-12">
           {TRUST_STATS.map((stat, i) => (
@@ -184,7 +184,7 @@ function TrustBar() {
                 {stat.icon}
               </span>
               <div className="min-w-0">
-                <div className="font-display text-sm font-extrabold leading-tight text-sea-900 md:text-base">
+                <div className="font-display text-sm font-bold leading-tight text-sea-900 md:text-base">
                   {ar ? stat.label_ar : stat.label_en}
                 </div>
                 <div className="mt-1 text-xs leading-snug text-sea-900/55 md:text-[0.8rem]">
@@ -226,7 +226,7 @@ function Services() {
               <GlowCard className="h-full">
                 <Link
                   href={service.href}
-                  className="hover-lift group flex h-full flex-col border-[1.5px] border-sand-300 bg-white p-6 pin-card transition-colors hover:border-sea-900/25"
+                  className="hover-lift group flex h-full flex-col border-[1.5px] border-sand-300 bg-card p-6 pin-card transition-colors hover:border-sea-900/25"
                 >
                   <span
                     aria-hidden
@@ -234,7 +234,7 @@ function Services() {
                   >
                     {service.icon}
                   </span>
-                  <h3 className="font-display text-lg font-bold text-sea-900">
+                  <h3 className="font-display text-lg font-semibold text-sea-900">
                     {ar ? service.title_ar : service.title_en}
                   </h3>
                   <p className="mt-2.5 text-sm leading-relaxed text-sea-900/60">
@@ -288,7 +288,7 @@ function HowItWorks() {
               <div className="relative mb-5 inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-sun-400 bg-sea-900 font-display text-lg font-extrabold text-sun-300">
                 {i + 1}
               </div>
-              <h3 className="font-display text-lg font-bold text-white">{step.title}</h3>
+              <h3 className="font-display text-lg font-semibold text-white">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-sand-100/65">{step.desc}</p>
             </Reveal>
           ))}
@@ -400,9 +400,9 @@ function WhyUs() {
 
           <div className="grid gap-px overflow-hidden border-[1.5px] border-sand-300 bg-sand-300 pin-card sm:grid-cols-2">
             {WHY_US.map((point, i) => (
-              <Reveal key={i} delay={i * 70} className="bg-white p-6 md:p-7">
+              <Reveal key={i} delay={i * 70} className="bg-card p-6 md:p-7">
                 <span aria-hidden className="mb-4 block text-3xl">{point.icon}</span>
-                <h3 className="font-display text-base font-bold text-sea-900">
+                <h3 className="font-display text-base font-semibold text-sea-900">
                   {ar ? point.title_ar : point.title_en}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-sea-900/60">
@@ -553,7 +553,7 @@ function Community({ posts }: { posts: CommunityPost[] }) {
             <Reveal key={post.id} delay={i * 80} className="h-full">
               <Link
                 href="/community"
-                className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-white pin-card"
+                className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card"
               >
                 {post.image_url && (
                   <div className="relative aspect-[16/10] overflow-hidden">
@@ -567,7 +567,7 @@ function Community({ posts }: { posts: CommunityPost[] }) {
                   </div>
                 )}
                 <div className="flex flex-1 flex-col p-6">
-                  <h3 className="font-display text-base font-bold leading-snug text-sea-900">
+                  <h3 className="font-display text-base font-semibold leading-snug text-sea-900">
                     {ar ? post.title_ar : post.title_en}
                   </h3>
                   <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-sea-900/60">
@@ -620,11 +620,11 @@ function DahabGuide() {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {guides.map((item, i) => (
             <Reveal key={i} delay={i * 70} className="h-full">
-              <div className="hover-lift h-full border-[1.5px] border-sand-300 bg-white p-6 pin-card">
+              <div className="hover-lift h-full border-[1.5px] border-sand-300 bg-card p-6 pin-card">
                 <span className="font-display text-4xl font-extrabold text-sand-300">
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <h3 className="mt-3 font-display text-base font-bold text-sea-900">
+                <h3 className="mt-3 font-display text-base font-semibold text-sea-900">
                   {item.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-sea-900/60">{item.desc}</p>
@@ -658,7 +658,7 @@ function FinalCta({ settings }: { settings: SiteSettings | null }) {
 
       <div className="container-main relative text-center">
         <Reveal>
-          <h2 className="mx-auto max-w-2xl font-display text-3xl font-extrabold leading-tight sm:text-4xl md:text-5xl">
+          <h2 className="mx-auto max-w-2xl font-display text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
             {t('home.finalCta')}
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/85 md:text-lg">

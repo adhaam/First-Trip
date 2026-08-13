@@ -36,7 +36,7 @@ export function TripCard({
 
   return (
     <GlowCard className={cn('h-full', className)}>
-      <article className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-white pin-card">
+      <article className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
         <div className="relative aspect-[3/2] overflow-hidden">
           <Image
             src={cover}
@@ -88,7 +88,7 @@ export function TripCard({
           )}
 
           <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-            <div className="font-display text-lg font-extrabold text-sea-900">
+            <div className="font-display text-lg font-bold text-sea-900">
               {Number(trip.price).toLocaleString()}{' '}
               <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
             </div>

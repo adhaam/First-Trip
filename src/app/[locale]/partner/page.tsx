@@ -35,7 +35,7 @@ export default function PartnerPage() {
             {ar ? 'شراكات' : 'Partnerships'}
           </span>
           <Handshake className="mx-auto mb-4 h-10 w-10 opacity-80" />
-          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <h1 className="font-display text-4xl font-bold sm:text-5xl">{t('title')}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
         </div>
         <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
@@ -45,14 +45,14 @@ export default function PartnerPage() {
       <section className="section-padding bg-sand-50">
         <div className="container-main">
           <Reveal>
-            <h2 className="mb-12 text-center font-display text-2xl font-bold text-sea-900 md:text-3xl">
+            <h2 className="mb-12 text-center font-display text-2xl font-semibold text-sea-900 md:text-3xl">
               {t('benefits')}
             </h2>
           </Reveal>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {benefits.map((b, i) => (
               <Reveal key={i} delay={i * 80}>
-                <article className="border-[1.5px] border-sand-300 bg-white p-6 text-center pin-card transition-shadow hover:shadow-sm">
+                <article className="border-[1.5px] border-sand-300 bg-card p-6 text-center pin-card transition-shadow hover:shadow-sm">
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sun-400 text-white">
                     <b.icon className="h-6 w-6" />
                   </div>
@@ -65,11 +65,11 @@ export default function PartnerPage() {
       </section>
 
       {/* Contact Form */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-sand-100">
         <div className="container-main max-w-2xl">
           <Reveal>
             <article className="border-[1.5px] border-sand-300 bg-sand-50 p-8 pin-card">
-              <h2 className="mb-6 text-center font-display text-2xl font-bold text-sea-900">
+              <h2 className="mb-6 text-center font-display text-2xl font-semibold text-sea-900">
                 {t('contactForm')}
               </h2>
 
@@ -87,19 +87,19 @@ export default function PartnerPage() {
                 >
                   <div>
                     <label htmlFor="name" className="mb-1 block text-sm font-medium text-sea-900/80">{t('name')}</label>
-                    <input id="name" required className="w-full rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
+                    <input id="name" required className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
                   </div>
                   <div>
                     <label htmlFor="business" className="mb-1 block text-sm font-medium text-sea-900/80">{t('business')}</label>
-                    <input id="business" required className="w-full rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
+                    <input id="business" required className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
                   </div>
                   <div>
                     <label htmlFor="phone" className="mb-1 block text-sm font-medium text-sea-900/80">{t('phone')}</label>
-                    <input id="phone" type="tel" required dir="ltr" className="w-full rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
+                    <input id="phone" type="tel" required dir="ltr" className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
                   </div>
                   <div>
                     <label htmlFor="message" className="mb-1 block text-sm font-medium text-sea-900/80">{t('message')}</label>
-                    <textarea id="message" rows={4} className="w-full rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
+                    <textarea id="message" rows={4} className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
                   </div>
                   <button
                     type="submit"
