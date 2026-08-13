@@ -112,7 +112,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
             <p className="mt-7 max-w-xl text-base leading-relaxed text-sand-100/80 sm:text-lg">
               {ar
                 ? 'انتقالات، إقامة في أماكن نزلنا فيها بنفسنا، ورحلتين داخليتين. إحنا بنظبط كل التفاصيل — وإنت بس تعيشها.'
-                : 'Transfers, a stay in places we\'ve slept in ourselves, and two day trips. We sort every detail — you just live it.'}
+                : 'Transportation, accommodation in places we\'ve tried and 2 domestic trips. We will sort out the details and you will just live it.'}
             </p>
           </Reveal>
 
@@ -216,7 +216,7 @@ function Services() {
           subtitle={
             ar
               ? 'أربع خدمات تغطي رحلتك من باب بيتك لحد ما ترجع.'
-              : 'Four services that cover your trip from your front door and back.'
+              : 'Four services that cover your trip from your door and back.'
           }
         />
 
@@ -392,7 +392,7 @@ function WhyUs() {
               subtitle={
                 ar
                   ? 'مش أكبر شركة، بس على الأرجح أكترهم اهتمامًا بالتفاصيل الصغيرة.'
-                  : 'Not the biggest company — probably the one that sweats the small details most.'
+                  : 'Not the biggest company, but probably the most caring and detail-oriented.'
               }
               className="mb-0"
             />
@@ -603,7 +603,7 @@ function DahabGuide() {
       ]
     : [
         { title: 'Weather', desc: 'Warm year-round — October to April is the sweet spot. Summer is hot, but the sea makes up for it.' },
-        { title: 'What you\'ll see', desc: 'Blue Hole, Colored Canyon, Abu Galum, Laguna, Pharaoh\'s Island — every corner has something.' },
+        { title: 'What you\'ll see', desc: 'Blue Hole, Colored Canyon, Abu Galum, Lagona, Pharaoh\'s Island — every corner has something.' },
         { title: 'What you\'ll do', desc: 'Snorkelling, diving, mountain safari, kitesurfing, camping, beach yoga.' },
         { title: 'Good to know', desc: 'Bring cash — ATMs aren\'t always around. Sunscreen is a must. Book early in peak season.' },
       ]

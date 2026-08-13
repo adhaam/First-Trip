@@ -106,7 +106,7 @@ export default function PolicyPage() {
                           : 'By booking with us, the customer agrees to all following terms & conditions:'}
                       </p>
                       <ol className="list-decimal space-y-2 ps-6">
-                        <li>{ar ? 'الحجز مؤكد فقط بعد دفع العربون (50%)' : 'Booking is confirmed only after deposit payment (50%)'}</li>
+                        <li>{ar ? 'الحجز مؤكد فقط بعد دفع العربون (50%)' : 'Your booking will be confirmed only after paying the deposit (50%)'}</li>
                         <li>{ar ? 'الأسعار قابلة للتغيير حسب الموسم والطلب' : 'Prices are subject to change based on season & demand'}</li>
                         <li>{ar ? 'الشركة غير مسؤولة عن الأغراض الشخصية المفقودة' : 'Company not responsible for lost personal belongings'}</li>
                         <li>{ar ? 'العميل مسؤول عن سلوكه الشخصي خلال الرحلة' : 'Customer is responsible for personal conduct during the trip'}</li>
