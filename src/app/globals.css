@@ -102,11 +102,10 @@
 }
 
 :root {
-  /* Typography — Bricolage Grotesque for latin display, Tajawal for arabic
-     (a modern warm humanist that reads current, not template). Body copy uses
-     IBM Plex Sans / IBM Plex Sans Arabic for long-form legibility. */
-  --font-display: var(--font-bricolage), var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-plex), var(--font-plex-ar), ui-sans-serif, system-ui, sans-serif;
+  /* Typography — Outfit for latin (geometric, clean, very readable, catchy).
+     Tajawal for arabic (modern, warm, used by Careem/Anghami/Talabat). */
+  --font-display: var(--font-outfit), var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-outfit), var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
 
   --background: #FFFFFF;
   --foreground: #0F3D5C;

@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
 import {
-  Bricolage_Grotesque,
-  IBM_Plex_Sans,
-  IBM_Plex_Sans_Arabic,
+  Outfit,
   Tajawal,
 } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
@@ -17,14 +15,14 @@ import { getSiteSettings } from '@/lib/data'
 import '../globals.css'
 
 // ─── Typeface pairing ───
-// Display: Bricolage Grotesque (latin) — expressive, modern.
+// Latin: Outfit — geometric, clean, very readable, modern without feeling cold.
+// Great for a lifestyle brand targeting Gen Z/millennials. Used as both display
+// and body font for latin text.
 // Arabic: Tajawal — the modern Arabic used by Careem/Anghami/Talabat. Feels
-// current, warm, and pairs beautifully with Bricolage without looking retro.
-// Body: IBM Plex Sans (latin) + IBM Plex Sans Arabic (arabic) as a humanist
-// backup for body copy — Tajawal handles headings, Plex handles long-form text.
-const bricolage = Bricolage_Grotesque({
+// current, warm, and pairs beautifully with Outfit.
+const outfit = Outfit({
   subsets: ['latin'],
-  variable: '--font-bricolage',
+  variable: '--font-outfit',
   weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
 })
@@ -33,20 +31,6 @@ const tajawal = Tajawal({
   subsets: ['arabic', 'latin'],
   variable: '--font-tajawal',
   weight: ['400', '500', '700', '800'],
-  display: 'swap',
-})
-
-const plex = IBM_Plex_Sans({
-  subsets: ['latin'],
-  variable: '--font-plex',
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
-
-const plexArabic = IBM_Plex_Sans_Arabic({
-  subsets: ['arabic'],
-  variable: '--font-plex-ar',
-  weight: ['400', '500', '600', '700'],
   display: 'swap',
 })
 
@@ -101,7 +85,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${bricolage.variable} ${tajawal.variable} ${plex.variable} ${plexArabic.variable} font-sans antialiased`}
+        className={`${outfit.variable} ${tajawal.variable} font-sans antialiased`}
       >
         <NextIntlClientProvider messages={messages} locale={locale}>
           <TooltipProvider>

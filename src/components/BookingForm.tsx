@@ -42,6 +42,7 @@ const schema = z.object({
   duration: z.string().optional(),           // '4' | '5'
   package_governorate: z.string().optional(),
   package_direction: z.enum(['to_dahab', 'round_trip']).optional(),
+  package_departure_date: z.string().optional(), // chosen departure date
 
   // stay-only
   nights: z.string().optional(),
@@ -98,6 +99,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
   const duration = watch('duration') || '4'
   const packageGov = watch('package_governorate')
   const packageDirection = (watch('package_direction') ?? 'round_trip') as 'to_dahab' | 'round_trip'
+  const packageDepartureDate = watch('package_departure_date')
   const nights = Math.max(1, parseInt(watch('nights') || '1') || 1)
   const transferType = (watch('transfer_type') ?? 'hiace') as TransferType
   const transferGov = watch('transfer_governorate')
@@ -125,18 +127,20 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
   const transferReturnDateOptions =
     transferType === 'package_bus' ? busReturnDates : anyDates
 
-  // ─── auto-computed next departure/return for packages ───
-  // We don't ask the user for dates here — Adham's brief. We just SHOW the next
-  // valid date so they know when the trip actually leaves.
-  const packageSchedule = useMemo(() => {
-    // 5-day trip = Sun → Fri (out on Sunday, back on Friday)
-    // 4-day trip = Thu → Mon (out on Thursday, back on Monday)
-    const departDay = duration === '5' ? 0 : 4 // Sun or Thu
-    const returnDay = duration === '5' ? 5 : 1 // Fri or Mon
-    const [depart] = upcomingDatesFor([departDay], 1)
-    const [ret] = upcomingDatesFor([returnDay], 1, new Date(`${depart}T00:00:00`))
-    return { depart, ret }
+  // ─── upcoming departure dates for packages (user picks which one) ───
+  // 4-day: departs Thu, returns Mon | 5-day: departs Sun, returns Fri
+  const packageDepartureDates = useMemo(() => {
+    const departDay = duration === '5' ? 0 : 4 // Sun(0) or Thu(4)
+    return upcomingDatesFor([departDay], 8) // next 8 options
   }, [duration])
+
+  const packageReturnDate = useMemo(() => {
+    const returnDay = duration === '5' ? 5 : 1 // Fri(5) or Mon(1)
+    const base = packageDepartureDate || packageDepartureDates[0]
+    if (!base) return ''
+    const [ret] = upcomingDatesFor([returnDay], 1, new Date(`${base}T00:00:00`))
+    return ret
+  }, [duration, packageDepartureDate, packageDepartureDates])
 
   // ─── live price preview (server recomputes on submit) ───
   const packageQuote = useMemo(() => {
@@ -193,8 +197,8 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
           booking_type: 'package' as const,
           accommodation_id: accommodation.id,
           governorate: data.package_governorate,
-          trip_date: packageSchedule.depart,
-          return_date: packageDirection === 'round_trip' ? packageSchedule.ret : undefined,
+          trip_date: packageDepartureDate || packageDepartureDates[0],
+          return_date: packageDirection === 'round_trip' ? packageReturnDate : undefined,
           duration: duration === '5' ? 5 : 4,
           transfer_type: 'package_bus' as const,
           transfer_direction: packageDirection,
@@ -455,35 +459,42 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
               </div>
             </div>
 
-            {/* Fixed-schedule note — the whole reason we removed the date pickers */}
-            <div className="flex items-start gap-3 rounded-2xl bg-sun-50 border border-sun-200 p-4">
-              <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-sun-500" />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-sea-900">
-                  {t('fixedSchedule')}
+            {/* Departure date selector */}
+            <div>
+              <Label className="mb-1.5 block">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-sea-500" />
+                  {ar ? 'تاريخ القيام' : 'Departure date'}
+                </span>
+              </Label>
+              <Select
+                value={packageDepartureDate || packageDepartureDates[0] || ''}
+                onValueChange={(v) => v && setValue('package_departure_date', v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={ar ? 'اختر تاريخ' : 'Choose date'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {packageDepartureDates.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {new Date(`${d}T00:00:00`).toLocaleDateString(ar ? 'ar-EG' : 'en-GB', {
+                        weekday: 'long', day: 'numeric', month: 'long',
+                      })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {packageReturnDate && packageDirection === 'round_trip' && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-sea-900/60">
+                  <Info className="h-3.5 w-3.5 shrink-0 text-sun-500" />
+                  {ar ? 'الرجوع:' : 'Return:'}{' '}
+                  <span className="font-semibold text-sea-900">
+                    {new Date(`${packageReturnDate}T00:00:00`).toLocaleDateString(ar ? 'ar-EG' : 'en-GB', {
+                      weekday: 'long', day: 'numeric', month: 'long',
+                    })}
+                  </span>
                 </div>
-                <div className="mt-1 text-xs leading-relaxed text-sea-900/65">
-                  {t('fixedScheduleHint')}
-                </div>
-                <div className="mt-3 space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-sea-500" />
-                    <span className="text-sea-900/70">
-                      {ar ? 'قيامتك الجاية:' : 'Your next departure:'}
-                    </span>
-                    <span className="font-semibold text-sea-900">{formatDate(packageSchedule.depart)}</span>
-                  </div>
-                  {packageDirection === 'round_trip' && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-sun-500" />
-                      <span className="text-sea-900/70">
-                        {ar ? 'الرجوع:' : 'Return:'}
-                      </span>
-                      <span className="font-semibold text-sea-900">{formatDate(packageSchedule.ret)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </>
         )}

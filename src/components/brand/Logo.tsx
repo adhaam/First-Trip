@@ -61,7 +61,7 @@ export function Logo({
           width={mark.px * 2}
           height={mark.px * 2}
           priority={priority}
-          className="absolute left-1/2 top-1/2 w-[132%] max-w-none -translate-x-1/2 -translate-y-[58%]"
+          className="absolute left-1/2 top-1/2 w-[132%] max-w-none -translate-x-1/2 -translate-y-[62%]"
         />
       </span>
 

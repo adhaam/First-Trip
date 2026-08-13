@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, Image as ImageIcon } from 'lucide-react'
 import { Accommodation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -60,6 +60,29 @@ export function AccommodationManager() {
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true)
+    setUploadError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+      updateField('image_url', data.url)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const loadAccommodations = async () => {
     setLoading(true)
@@ -330,9 +353,61 @@ export function AccommodationManager() {
                   <Label>{locale === 'ar' ? 'الموقع (إنجليزي)' : 'Location (English)'}</Label>
                   <Input value={form.location_en || ''} onChange={e => updateField('location_en', e.target.value)} className="mt-1" />
                 </div>
-                <div>
-                  <Label>{locale === 'ar' ? 'رابط الصورة' : 'Image URL'}</Label>
-                  <Input value={form.image_url || ''} onChange={e => updateField('image_url', e.target.value)} className="mt-1" placeholder="https://..." />
+                <div className="md:col-span-2">
+                  <Label>{locale === 'ar' ? 'صورة الإقامة' : 'Accommodation Photo'}</Label>
+                  <div className="mt-1 space-y-2">
+                    {/* Preview */}
+                    {form.image_url && (
+                      <div className="relative w-full h-36 rounded-xl overflow-hidden border border-sand-300 bg-sand-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={form.image_url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => updateField('image_url', '')}
+                          className="absolute top-2 right-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    {/* Upload button */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) handleImageUpload(file)
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="gap-2"
+                      >
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                        {locale === 'ar' ? 'رفع صورة' : 'Upload photo'}
+                      </Button>
+                      <Input
+                        value={form.image_url || ''}
+                        onChange={e => updateField('image_url', e.target.value)}
+                        placeholder={locale === 'ar' ? 'أو الصق رابط الصورة...' : 'Or paste image URL...'}
+                        className="flex-1 text-sm"
+                      />
+                    </div>
+                    {uploadError && (
+                      <p className="text-xs text-red-500">{uploadError}</p>
+                    )}
+                  </div>
                 </div>
               </div>
 

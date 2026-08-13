@@ -596,16 +596,16 @@ function DahabGuide() {
 
   const guides = ar
     ? [
-        { title: 'أفضل وقت للزيارة', desc: 'من أكتوبر لأبريل — الجو مثالي للبحر والأنشطة الخارجية.' },
-        { title: 'أشهر الأماكن', desc: 'بلو هول، الوادي الملون، جزيرة فرعون، أبو جالوم، لاجونا.' },
-        { title: 'الأنشطة', desc: 'غوص، سنوركل، سفاري، كامبينج، كايت سيرف، يوجا، تسلق.' },
-        { title: 'نصايح مهمة', desc: 'احجز بدري في المواسم، خد كاش كفاية، وصن بلوك وطارد ناموس.' },
+        { title: 'الجو في دهب', desc: 'دافي طول السنة — بس أمتع وقت بين أكتوبر وأبريل. الصيف حار بس البحر بيكسبها.' },
+        { title: 'اللي هتشوفه', desc: 'بلو هول، الوادي الملون، أبو جالوم، لاجونا، جزيرة فرعون — كل ناحية فيها حاجة.' },
+        { title: 'اللي هتعمله', desc: 'سنوركل، غوص، سفاري جبلية، كايت سيرف، كامبينج، يوجا على الشاطئ.' },
+        { title: 'خد بالك', desc: 'كاش مهم — ATM مش دايماً موجود. جيب صن بلوك ومواسم الموجة احجز بدري.' },
       ]
     : [
-        { title: 'Best time to visit', desc: 'October to April — ideal weather for the sea and everything outdoors.' },
-        { title: 'Top spots', desc: 'Blue Hole, Colored Canyon, Pharaoh\'s Island, Abu Galum, Laguna.' },
-        { title: 'Things to do', desc: 'Diving, snorkelling, safari, camping, kitesurfing, yoga, climbing.' },
-        { title: 'Practical tips', desc: 'Book early in season, bring enough cash, sunscreen and mosquito repellent.' },
+        { title: 'Weather', desc: 'Warm year-round — October to April is the sweet spot. Summer is hot, but the sea makes up for it.' },
+        { title: 'What you\'ll see', desc: 'Blue Hole, Colored Canyon, Abu Galum, Laguna, Pharaoh\'s Island — every corner has something.' },
+        { title: 'What you\'ll do', desc: 'Snorkelling, diving, mountain safari, kitesurfing, camping, beach yoga.' },
+        { title: 'Good to know', desc: 'Bring cash — ATMs aren\'t always around. Sunscreen is a must. Book early in peak season.' },
       ]
 
   return (
