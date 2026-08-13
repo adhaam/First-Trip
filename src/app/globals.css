@@ -4,20 +4,62 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════════════════════════
+   FIRST TRIP — "Desert Meets Sea"
+   ───────────────────────────────────────────────────────────────
+   The visual system is built on the two things Dahab actually is:
+   a sunburnt mountain desert that stops abruptly at a very blue sea.
+   So: warm paper-sand surfaces instead of the default white/grey,
+   deep sea ink for text, the logo's blue for water and its orange
+   for sun. Cards use an asymmetric radius that echoes the map-pin
+   in the logo (round on one diagonal, sharp on the other), and
+   depth comes from flat offset shadows and hairline ink borders
+   rather than soft blurred drop-shadows.
+   ═══════════════════════════════════════════════════════════════ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
   --font-mono: var(--font-mono);
-  --font-heading: var(--font-heading);
+  --font-heading: var(--font-display);
 
-  /* Brand colors */
-  --color-brand-blue: #0EA5E9;
-  --color-brand-blue-light: #38BDF8;
-  --color-brand-blue-dark: #0284C7;
-  --color-brand-orange: #F97316;
-  --color-brand-orange-light: #FB923C;
-  --color-brand-orange-dark: #EA580C;
+  /* ─── Sea ─── */
+  --color-sea-50: #EAF6FC;
+  --color-sea-100: #CDEAF8;
+  --color-sea-200: #9AD5F1;
+  --color-sea-300: #5FBDE8;
+  --color-sea-400: #2BA3DC;
+  --color-sea-500: #1391CE;
+  --color-sea-600: #0B74AA;
+  --color-sea-700: #0A5A83;
+  --color-sea-800: #0C4460;
+  --color-sea-900: #0C2B38;
+
+  /* ─── Sun / sandstone ─── */
+  --color-sun-50: #FEF5EA;
+  --color-sun-100: #FCE7CD;
+  --color-sun-200: #F8CB96;
+  --color-sun-300: #F4A93C;
+  --color-sun-400: #F0762A;
+  --color-sun-500: #DE5C1C;
+  --color-sun-600: #B84616;
+
+  /* ─── Sand (surfaces) ─── */
+  --color-sand-50: #FBF7F1;
+  --color-sand-100: #F6F0E6;
+  --color-sand-200: #EDE3D3;
+  --color-sand-300: #DFD0B8;
+  --color-sand-400: #C4AF91;
+
+  /* Back-compat aliases — older markup still refers to these */
+  --color-brand-blue: #1391CE;
+  --color-brand-blue-light: #5FBDE8;
+  --color-brand-blue-dark: #0B5A83;
+  --color-brand-orange: #F0762A;
+  --color-brand-orange-light: #F4A93C;
+  --color-brand-orange-dark: #DE5C1C;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -58,85 +100,91 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.65 0.16 234); /* brand blue */
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.02 247);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.72 0.16 55); /* warm orange accent */
-  --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.65 0.16 234);
-  --chart-1: oklch(0.65 0.16 234);
-  --chart-2: oklch(0.72 0.16 55);
-  --chart-3: oklch(0.55 0.12 234);
-  --chart-4: oklch(0.78 0.12 55);
-  --chart-5: oklch(0.7 0.08 234);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.65 0.16 234);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.96 0.02 247);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.65 0.16 234);
+  /* Typography — Bricolage Grotesque (latin display) is deliberately quirky;
+     Noto Kufi Arabic carries the same structural weight for Arabic headings.
+     Body is IBM Plex Sans / IBM Plex Sans Arabic — a humanist pair that reads
+     nothing like the Inter/Poppins default. */
+  --font-display: var(--font-bricolage), var(--font-kufi), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-plex), var(--font-plex-ar), ui-sans-serif, system-ui, sans-serif;
 
-  /* First Trip brand color aliases */
-  --ft-blue: #0EA5E9;
-  --ft-blue-light: #38BDF8;
-  --ft-blue-dark: #0284C7;
-  --ft-orange: #F97316;
-  --ft-orange-light: #FB923C;
-  --ft-orange-dark: #EA580C;
+  --background: #FBF7F1;
+  --foreground: #0C2B38;
+  --card: #FFFFFF;
+  --card-foreground: #0C2B38;
+  --popover: #FFFFFF;
+  --popover-foreground: #0C2B38;
+  --primary: #1391CE;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F6F0E6;
+  --secondary-foreground: #0C2B38;
+  --muted: #F6F0E6;
+  --muted-foreground: #5F7180;
+  --accent: #F0762A;
+  --accent-foreground: #FFFFFF;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #E4D9C7;
+  --input: #E4D9C7;
+  --ring: #1391CE;
+  --chart-1: #1391CE;
+  --chart-2: #F0762A;
+  --chart-3: #0A5A83;
+  --chart-4: #F4A93C;
+  --chart-5: #9AD5F1;
+  --radius: 0.75rem;
+
+  --sidebar: #0C2B38;
+  --sidebar-foreground: #E9F3F8;
+  --sidebar-primary: #1391CE;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #0C4460;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #1391CE;
+
+  /* Signature shapes */
+  --pin-radius: 1.75rem 0.35rem 1.75rem 0.35rem;
+  --pin-radius-rtl: 0.35rem 1.75rem 0.35rem 1.75rem;
+  --ink: #0C2B38;
+
+  /* First Trip brand color aliases (kept for older markup) */
+  --ft-blue: #1391CE;
+  --ft-blue-light: #5FBDE8;
+  --ft-blue-dark: #0B5A83;
+  --ft-orange: #F0762A;
+  --ft-orange-light: #F4A93C;
+  --ft-orange-dark: #DE5C1C;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.155 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.155 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.7 0.14 234);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.74 0.14 55);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: #071E28;
+  --foreground: #EAF3F7;
+  --card: #0C2B38;
+  --card-foreground: #EAF3F7;
+  --popover: #0C2B38;
+  --popover-foreground: #EAF3F7;
+  --primary: #2BA3DC;
+  --primary-foreground: #04141B;
+  --secondary: #0C4460;
+  --secondary-foreground: #EAF3F7;
+  --muted: #0C4460;
+  --muted-foreground: #9BB2BF;
+  --accent: #F4A93C;
+  --accent-foreground: #04141B;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.14 234);
-  --chart-1: oklch(0.7 0.14 234);
-  --chart-2: oklch(0.74 0.14 55);
-  --chart-3: oklch(0.62 0.1 234);
-  --chart-4: oklch(0.78 0.1 55);
-  --chart-5: oklch(0.72 0.06 234);
-  --sidebar: oklch(0.155 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.7 0.14 234);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.7 0.14 234);
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #2BA3DC;
+  --sidebar: #04141B;
+  --sidebar-foreground: #EAF3F7;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
 }
 
-/* RTL support */
+/* ─── RTL ─── */
 html[dir="rtl"] {
   direction: rtl;
+  --font-display: var(--font-kufi), var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-plex-ar), var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --pin-radius: 0.35rem 1.75rem 0.35rem 1.75rem;
 }
 
 html[dir="rtl"] .ltr-only {
@@ -144,30 +192,42 @@ html[dir="rtl"] .ltr-only {
   display: inline-block;
 }
 
-/* Font classes */
-.font-arabic {
-  font-family: 'Cairo', var(--font-sans);
-}
+/* Font classes (legacy hooks) */
+.font-arabic { font-family: var(--font-kufi), var(--font-plex-ar), sans-serif; }
+.font-english { font-family: var(--font-plex), sans-serif; }
 
-.font-english {
-  font-family: var(--font-sans);
-}
-
-/* Smooth scroll & base styles */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   html {
     @apply scroll-smooth;
   }
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+  /* Arabic headings need a touch more line-height and no negative tracking */
+  html[dir="rtl"] h1,
+  html[dir="rtl"] h2,
+  html[dir="rtl"] h3,
+  html[dir="rtl"] h4 {
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+  ::selection {
+    background: var(--color-sun-300);
+    color: #0C2B38;
+  }
 }
 
-/* Custom utilities */
+/* ═══════════ Layout utilities ═══════════ */
+
 @utility container-main {
   @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
 }
@@ -176,16 +236,175 @@ html[dir="rtl"] .ltr-only {
   @apply py-16 md:py-24;
 }
 
+/* ═══════════ Signature surfaces ═══════════ */
+
+/* The map-pin silhouette: round on one diagonal, sharp on the other. */
+@utility pin-card {
+  border-radius: var(--pin-radius);
+}
+
+/* Flat, offset "sticker" depth instead of a soft blur. */
+@utility ink-shadow {
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+
+@utility ink-shadow-sm {
+  box-shadow: 2px 2px 0 0 var(--ink);
+}
+
+@utility ink-border {
+  border: 1.5px solid var(--ink);
+}
+
+/* Sandstone contour lines — the desert half of the identity. */
+@utility topo-bg {
+  background-image: repeating-radial-gradient(
+    circle at 18% 120%,
+    transparent 0,
+    transparent 38px,
+    rgba(12, 43, 56, 0.045) 38px,
+    rgba(12, 43, 56, 0.045) 39px
+  );
+}
+
+/* Sea depth lines — the water half. */
+@utility depth-bg {
+  background-image: repeating-linear-gradient(
+    -12deg,
+    transparent 0,
+    transparent 26px,
+    rgba(255, 255, 255, 0.05) 26px,
+    rgba(255, 255, 255, 0.05) 27px
+  );
+}
+
+/* Paper grain — 2% opacity, keeps large flat areas from feeling digital. */
+@utility grain {
+  position: relative;
+}
+
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Brush-stroke underline for section headings. */
+@utility brush-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.brush-underline::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: -2%;
+  bottom: -0.15em;
+  width: 104%;
+  height: 0.32em;
+  background: var(--color-sun-300);
+  opacity: 0.55;
+  border-radius: 60% 40% 55% 45% / 100% 100% 60% 70%;
+  z-index: -1;
+}
+
+@utility eyebrow {
+  @apply inline-flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.22em];
+}
+
+/* ═══════════ Motion ═══════════ */
+
+@utility hover-lift {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hover-lift:hover,
+.hover-lift:focus-visible {
+  transform: translateY(-4px);
+}
+
+/* Reveal-on-scroll, driven by a single IntersectionObserver (see <Reveal/>). */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 620ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.reveal[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Pointer-tracking glow used on feature cards. */
+.glow-follow {
+  position: relative;
+  isolation: isolate;
+}
+
+.glow-follow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  border-radius: inherit;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(19, 145, 206, 0.16),
+    transparent 65%
+  );
+}
+
+.glow-follow:hover::before {
+  opacity: 1;
+}
+
+/* Everything above degrades to "just show it" when the OS asks for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .hover-lift:hover,
+  .hover-lift:focus-visible {
+    transform: none;
+  }
+
+  .glow-follow::before { display: none; }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ═══════════ Gradients (kept, retuned to the new palette) ═══════════ */
+
 @utility gradient-brand {
-  background: linear-gradient(135deg, #0EA5E9, #38BDF8, #F97316);
+  background: linear-gradient(135deg, #0B5A83, #1391CE, #F0762A);
 }
 
 @utility gradient-blue {
-  background: linear-gradient(135deg, #0284C7, #0EA5E9, #38BDF8);
+  background: linear-gradient(135deg, #0A5A83, #1391CE, #5FBDE8);
 }
 
 @utility gradient-warm {
-  background: linear-gradient(135deg, #F97316, #FB923C, #FBBF24);
+  background: linear-gradient(135deg, #DE5C1C, #F0762A, #F4A93C);
 }
 
 /* Leaflet overrides */
@@ -193,4 +412,13 @@ html[dir="rtl"] .ltr-only {
   height: 100%;
   width: 100%;
   border-radius: var(--radius);
+}
+
+/* Hide scrollbars on horizontal scroll rails while keeping them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -1,8 +1,11 @@
 'use client'
 
 import { useTranslations, useLocale } from 'next-intl'
-import { Card, CardContent } from '@/components/ui/card'
-import { motion } from 'framer-motion'
+import Image from 'next/image'
+import { Reveal } from '@/components/motion/Reveal'
+import { WaveDivider } from '@/components/brand/Section'
+import { PLACEHOLDER_IMAGES } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import { Compass, Eye, Target, Award, Users, Star, MapPin } from 'lucide-react'
 
 const timeline = [
@@ -22,110 +25,107 @@ const stats = [
 export default function AboutPage() {
   const t = useTranslations('about')
   const locale = useLocale()
+  const ar = locale === 'ar'
 
   return (
-    <div>
+    <div className="bg-sand-50">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-brand-blue to-brand-blue-dark text-white py-20 md:py-28 text-center">
-        <div className="container-main">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <Compass className="h-12 w-12 mx-auto mb-4 opacity-90" />
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-3">{t('title')}</h1>
-          </motion.div>
+      <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
+        <div className="absolute inset-0 opacity-20">
+          <Image src={PLACEHOLDER_IMAGES.camping} alt="" fill className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
+        <div className="container-main relative z-10">
+          <span className="eyebrow mb-5 justify-center text-sun-300">
+            <span aria-hidden className="h-px w-6 bg-current" />
+            {ar ? 'من نحن' : 'About Us'}
+          </span>
+          <Compass className="mx-auto mb-4 h-10 w-10 opacity-80" />
+          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+        </div>
+        <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
       </section>
 
       {/* Story Timeline */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-sand-50">
         <div className="container-main">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-12 text-center">
-            {t('story')}
-          </h2>
+          <Reveal>
+            <h2 className="mb-12 text-center font-display text-2xl font-bold text-sea-900 md:text-3xl">
+              {t('story')}
+            </h2>
+          </Reveal>
 
-          <div className="relative max-w-4xl mx-auto">
+          <div className="relative mx-auto max-w-4xl">
             {/* Vertical Line */}
-            <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-brand-blue via-brand-orange to-brand-blue" />
+            <div className="absolute start-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-sea-600 via-sun-400 to-sea-600 md:start-1/2" />
 
             {timeline.map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                className={`relative flex items-center gap-8 mb-12 ${
-                  i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'
-                }`}
-              >
-                <div className="absolute left-4 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-brand-blue border-4 border-white shadow-md z-10" />
-                <div className="ml-12 md:ml-0 md:w-1/2">
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="text-brand-orange font-bold text-lg mb-1">{item.year}</div>
-                      <h3 className="font-bold text-gray-900 mb-2">
-                        {locale === 'ar' ? item.title_ar : item.title_en}
+              <Reveal key={i} delay={i * 100}>
+                <div
+                  className={cn(
+                    'relative mb-12 flex items-center gap-8',
+                    i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse',
+                  )}
+                >
+                  <div className="absolute start-4 z-10 h-4 w-4 -translate-x-1/2 rounded-full border-4 border-sand-50 bg-sea-600 shadow-md md:start-1/2" />
+                  <div className="ms-12 md:ms-0 md:w-1/2">
+                    <article className="overflow-hidden border-[1.5px] border-sand-300 bg-white p-6 pin-card transition-shadow hover:shadow-sm">
+                      <div className="mb-1 font-display text-lg font-bold text-sun-500">{item.year}</div>
+                      <h3 className="mb-2 font-bold text-sea-900">
+                        {ar ? item.title_ar : item.title_en}
                       </h3>
-                      <p className="text-sm text-gray-500">
-                        {locale === 'ar' ? item.desc_ar : item.desc_en}
+                      <p className="text-sm leading-relaxed text-sea-900/60">
+                        {ar ? item.desc_ar : item.desc_en}
                       </p>
-                    </CardContent>
-                  </Card>
+                    </article>
+                  </div>
                 </div>
-              </motion.div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* Vision & Mission */}
-      <section className="section-padding bg-gray-50">
+      <section className="section-padding bg-white">
         <div className="container-main">
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-              <Card className="h-full border-brand-blue/20">
-                <CardContent className="p-8">
-                  <Eye className="h-10 w-10 text-brand-blue mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{t('vision')}</h3>
-                  <p className="text-gray-600 leading-relaxed">{t('visionText')}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-              <Card className="h-full border-brand-orange/20">
-                <CardContent className="p-8">
-                  <Target className="h-10 w-10 text-brand-orange mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{t('mission')}</h3>
-                  <p className="text-gray-600 leading-relaxed">{t('missionText')}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2">
+            <Reveal>
+              <article className="h-full border-[1.5px] border-sea-200 bg-sand-50 p-8 pin-card">
+                <Eye className="mb-4 h-10 w-10 text-sea-600" />
+                <h3 className="mb-3 font-display text-xl font-bold text-sea-900">{t('vision')}</h3>
+                <p className="leading-relaxed text-sea-900/65">{t('visionText')}</p>
+              </article>
+            </Reveal>
+            <Reveal delay={80}>
+              <article className="h-full border-[1.5px] border-sun-200 bg-sand-50 p-8 pin-card">
+                <Target className="mb-4 h-10 w-10 text-sun-500" />
+                <h3 className="mb-3 font-display text-xl font-bold text-sea-900">{t('mission')}</h3>
+                <p className="leading-relaxed text-sea-900/65">{t('missionText')}</p>
+              </article>
+            </Reveal>
           </div>
         </div>
       </section>
 
       {/* Stats */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-sand-50">
         <div className="container-main">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             {stats.map((s, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="text-center"
-              >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-brand-blue/10 flex items-center justify-center">
-                  <s.icon className="h-6 w-6 text-brand-blue" />
+              <Reveal key={i} delay={i * 80}>
+                <div className="text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-sea-100">
+                    <s.icon className="h-6 w-6 text-sea-600" />
+                  </div>
+                  <div className="mb-1 font-display text-3xl font-extrabold text-sea-900 md:text-4xl">
+                    {s.value}
+                  </div>
+                  <div className="text-sm text-sea-900/55">
+                    {ar ? s.label_ar : s.label_en}
+                  </div>
                 </div>
-                <div className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-1">
-                  {s.value}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {locale === 'ar' ? s.label_ar : s.label_en}
-                </div>
-              </motion.div>
+              </Reveal>
             ))}
           </div>
         </div>

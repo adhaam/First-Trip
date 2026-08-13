@@ -1,9 +1,15 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
+// Locale-aware Link — plain next/link would drop the /en prefix and bounce
+// English visitors back to the Arabic route.
+import { Link } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 
 const variants = {
   default: 'bg-primary text-primary-foreground hover:bg-primary/80',
+  ink: 'bg-sea-900 text-sand-50 hover:bg-sea-700',
+  sun: 'bg-sun-400 text-white hover:bg-sun-500',
+  'outline-ink': 'border-[1.5px] border-sea-900 text-sea-900 hover:bg-sea-900 hover:text-sand-50',
+  'outline-light': 'border-[1.5px] border-white/45 text-white hover:bg-white/10 hover:border-white/70',
   orange: 'bg-brand-orange text-white hover:bg-brand-orange-dark shadow-sm',
   outline: 'border border-border bg-background hover:bg-muted hover:text-foreground',
   secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',

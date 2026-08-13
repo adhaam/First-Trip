@@ -1,6 +1,9 @@
 import { getTranslations } from 'next-intl/server'
+import Image from 'next/image'
 import { getCommunityPosts } from '@/lib/data'
 import { CommunityClient } from '@/components/CommunityClient'
+import { PLACEHOLDER_IMAGES } from '@/lib/constants'
+import { WaveDivider } from '@/components/brand/Section'
 
 export const revalidate = 60
 
@@ -9,16 +12,24 @@ export default async function CommunityPage() {
   const posts = await getCommunityPosts()
 
   return (
-    <div>
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-brand-blue to-brand-blue-dark text-white py-20 md:py-24 text-center">
-        <div className="container-main">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-3">{t('title')}</h1>
-          <p className="text-lg text-blue-100 max-w-2xl mx-auto">{t('subtitle')}</p>
+    <div className="bg-sand-50">
+      <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-24 grain">
+        <div className="absolute inset-0 opacity-20">
+          <Image src={PLACEHOLDER_IMAGES.camping} alt="" fill className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
+        <div className="container-main relative z-10">
+          <span className="eyebrow mb-5 justify-center text-sun-300">
+            <span aria-hidden className="h-px w-6 bg-current" />
+            {t('title')}
+          </span>
+          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
+        </div>
+        <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
       </section>
 
-      <section className="section-padding bg-gray-50">
+      <section className="section-padding bg-sand-50">
         <div className="container-main max-w-3xl">
           <CommunityClient posts={posts} />
         </div>

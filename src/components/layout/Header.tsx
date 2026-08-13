@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { ButtonLink } from '@/components/ButtonLink'
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Logo } from '@/components/brand/Logo'
 import { NAV_ITEMS, NAV_LABEL_KEYS } from '@/lib/constants'
-import { Menu, Globe } from 'lucide-react'
-import Image from 'next/image'
+import { Menu, Globe, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function Header() {
@@ -19,14 +18,15 @@ export function Header() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20)
+    const handleScroll = () => setScrolled(window.scrollY > 16)
+    handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === `/${locale}` || pathname === `/${locale}/`
-    return pathname.startsWith(`/${locale}${href}`)
+    if (href === '/') return pathname === `/${locale}` || pathname === `/${locale}/` || pathname === '/'
+    return pathname.startsWith(`/${locale}${href}`) || pathname.startsWith(href)
   }
 
   const otherLocale = locale === 'ar' ? 'en' : 'ar'
@@ -35,84 +35,102 @@ export function Header() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b transition-all duration-300',
+        'sticky top-0 z-50 w-full transition-all duration-300',
         scrolled
-          ? 'bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-gray-200 shadow-sm'
-          : 'bg-white border-transparent'
+          ? 'border-b border-sand-300/70 bg-sand-50/90 backdrop-blur-md supports-[backdrop-filter]:bg-sand-50/75'
+          : 'border-b border-transparent bg-sand-50',
       )}
     >
-      <div className="container-main flex h-16 items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="First Trip"
-            width={40}
-            height={40}
-            className="h-9 w-auto"
-            priority
-          />
-          <span className="text-lg font-bold hidden sm:inline-block">
-            <span className="text-[#0EA5E9]">FIRST</span>{' '}
-            <span className="text-[#F97316]">TRIP</span>
-          </span>
+      <div className="container-main flex h-[4.5rem] items-center justify-between gap-4">
+        <Link href="/" aria-label="First Trip" className="shrink-0">
+          <Logo size="md" priority />
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-1">
+        {/* Desktop nav — a single ink hairline rail rather than floating pills */}
+        <nav className="hidden items-center lg:flex">
           {NAV_ITEMS.map((item) => {
             const labelKey = NAV_LABEL_KEYS[item.href] || 'home'
+            const active = isActive(item.href)
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                  isActive(item.href)
-                    ? 'text-brand-blue bg-blue-50'
-                    : 'text-gray-600 hover:text-brand-blue hover:bg-gray-50'
+                  'relative px-3 py-2 text-[0.9rem] font-medium transition-colors',
+                  active ? 'text-sea-700' : 'text-sea-900/65 hover:text-sea-700',
                 )}
               >
-                <span className="hidden xl:inline mr-1">{item.icon}</span>
                 {t(labelKey)}
+                <span
+                  aria-hidden
+                  className={cn(
+                    'absolute inset-x-2 -bottom-0.5 h-[2px] origin-center rounded-full bg-sun-400 transition-transform duration-300',
+                    active ? 'scale-x-100' : 'scale-x-0',
+                  )}
+                />
               </Link>
             )
           })}
         </nav>
 
-        {/* Language Toggle + Mobile Menu */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Link
             href={cleanPath}
             locale={otherLocale}
-            className="inline-flex items-center justify-center rounded-full font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 gap-1.5 whitespace-nowrap hover:bg-muted hover:text-foreground h-9 px-3"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium text-sea-900/70 transition-colors hover:bg-sand-200 hover:text-sea-900"
           >
             <Globe className="h-4 w-4" />
             <span className="hidden sm:inline">{otherLocale === 'ar' ? 'العربية' : 'English'}</span>
           </Link>
 
+          <Link
+            href="/book-dahab"
+            className="hidden h-10 items-center gap-1.5 rounded-full bg-sea-900 px-5 text-sm font-semibold text-sand-50 transition-all hover:bg-sea-700 sm:inline-flex"
+          >
+            {locale === 'ar' ? 'احجز' : 'Book'}
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger className="lg:hidden inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-muted">
+            <SheetTrigger className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sea-900 transition-colors hover:bg-sand-200 lg:hidden">
               <Menu className="h-5 w-5" />
+              <span className="sr-only">{locale === 'ar' ? 'القائمة' : 'Menu'}</span>
             </SheetTrigger>
-            <SheetContent side={locale === 'ar' ? 'right' : 'left'} className="w-[280px] sm:w-[320px]">
-              <div className="flex flex-col gap-1 mt-8">
+            <SheetContent
+              side={locale === 'ar' ? 'right' : 'left'}
+              className="w-[290px] border-sand-300 bg-sand-50 sm:w-[330px]"
+            >
+              <SheetTitle className="sr-only">{locale === 'ar' ? 'القائمة' : 'Menu'}</SheetTitle>
+              <div className="px-5 pt-5">
+                <Logo size="md" />
+              </div>
+              <nav className="mt-6 flex flex-col px-3">
                 {NAV_ITEMS.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-colors',
+                      'flex items-center gap-3 rounded-xl px-3 py-3 text-[0.95rem] font-medium transition-colors',
                       isActive(item.href)
-                        ? 'text-brand-blue bg-blue-50'
-                        : 'text-gray-600 hover:text-brand-blue hover:bg-gray-50'
+                        ? 'bg-sea-900 text-sand-50'
+                        : 'text-sea-900/80 hover:bg-sand-200',
                     )}
                   >
-                    <span>{item.icon}</span>
+                    <span aria-hidden className="text-base">{item.icon}</span>
                     <span>{item[locale === 'ar' ? 'label_ar' : 'label_en']}</span>
                   </Link>
                 ))}
+              </nav>
+              <div className="mt-6 px-5">
+                <Link
+                  href="/book-dahab"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-sun-400 text-sm font-semibold text-white transition-colors hover:bg-sun-500"
+                >
+                  {locale === 'ar' ? 'احجز رحلتك' : 'Book your trip'}
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
               </div>
             </SheetContent>
           </Sheet>

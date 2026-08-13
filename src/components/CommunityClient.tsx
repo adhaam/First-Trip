@@ -2,23 +2,22 @@
 
 import { useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { motion } from 'framer-motion'
+import { Reveal } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { Pin, Calendar, BookOpen, Sparkles, BookHeart, Map, type LucideIcon } from 'lucide-react'
-import { CommunityPost } from '@/lib/types'
+import type { CommunityPost } from '@/lib/types'
 
 const categoryIcons: Record<string, LucideIcon> = {
-  'blog': BookOpen,
+  blog: BookOpen,
   'hidden-gems': Sparkles,
-  'stories': BookHeart,
+  stories: BookHeart,
   'dahab-guide': Map,
 }
 
 export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
   const t = useTranslations('community')
   const locale = useLocale()
+  const ar = locale === 'ar'
   const [filter, setFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -30,7 +29,7 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
     { id: 'dahab-guide', key: 'dahabGuide', icon: Map },
   ]
 
-  const filtered = filter === 'all' ? posts : posts.filter(p => p.category === filter)
+  const filtered = filter === 'all' ? posts : posts.filter((p) => p.category === filter)
 
   const sorted = [...filtered].sort((a, b) => {
     if (a.is_pinned && !b.is_pinned) return -1
@@ -41,87 +40,101 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
 
   return (
     <>
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-        {categories.map(cat => {
+      {/* Filter tabs */}
+      <div className="no-scrollbar mb-8 flex gap-2 overflow-x-auto pb-2">
+        {categories.map((cat) => {
           const Icon = cat.icon
           return (
             <button
               key={cat.id}
               onClick={() => setFilter(cat.id)}
               className={cn(
-                'flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+                'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
                 filter === cat.id
-                  ? 'bg-brand-blue text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border'
+                  ? 'bg-sea-900 text-sand-50'
+                  : 'border border-sand-300 bg-white text-sea-900/60 hover:text-sea-900',
               )}
             >
               <Icon className="h-4 w-4" />
-              {cat.key === 'all' ? (locale === 'ar' ? 'الكل' : 'All') : t(`categories.${cat.key}` as 'blog')}
+              {cat.key === 'all' ? (ar ? 'الكل' : 'All') : t(`categories.${cat.key}` as 'blog')}
             </button>
           )
         })}
       </div>
 
-      {/* News Feed */}
-      <div className="space-y-6">
+      {/* Feed */}
+      <div className="space-y-5">
         {sorted.map((post, i) => {
           const Icon = categoryIcons[post.category]
+          const isExpanded = expandedId === post.id
           return (
-            <motion.div
-              key={post.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-            >
-              <Card className={cn('overflow-hidden hover:shadow-md transition-shadow', post.is_pinned && 'ring-2 ring-brand-orange')}>
+            <Reveal key={post.id} delay={(i % 8) * 60}>
+              <article
+                className={cn(
+                  'overflow-hidden border-[1.5px] bg-white pin-card transition-shadow hover:shadow-sm',
+                  post.is_pinned ? 'border-sun-300' : 'border-sand-300',
+                )}
+              >
                 {post.image_url && (
-                  <div className="relative h-56 w-full overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={post.image_url} alt="" className="w-full h-full object-cover" />
+                  <div className="relative h-56 w-full overflow-hidden bg-sand-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- remote URLs, avoids Next/Image domain config churn for admin-entered links */}
+                    <img src={post.image_url} alt="" className="h-full w-full object-cover" />
                   </div>
                 )}
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <div className="p-6">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
                     {post.is_pinned && (
-                      <Badge className="bg-brand-orange text-white">
-                        <Pin className="h-3 w-3 mr-1" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-sun-400 px-2.5 py-1 text-[0.7rem] font-semibold text-white">
+                        <Pin className="h-3 w-3" />
                         {t('pinned')}
-                      </Badge>
+                      </span>
                     )}
-                    <Badge variant="outline" className="border-brand-blue/30 text-brand-blue">
-                      <Icon className="h-3 w-3 mr-1" />
-                      {t(`categories.${post.category === 'dahab-guide' ? 'dahabGuide' : post.category === 'hidden-gems' ? 'hiddenGems' : post.category as 'blog' | 'stories'}`)}
-                    </Badge>
-                    <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-sea-600/25 px-2.5 py-1 text-[0.7rem] font-semibold text-sea-600">
+                      <Icon className="h-3 w-3" />
+                      {t(
+                        `categories.${
+                          post.category === 'dahab-guide'
+                            ? 'dahabGuide'
+                            : post.category === 'hidden-gems'
+                              ? 'hiddenGems'
+                              : (post.category as 'blog' | 'stories')
+                        }`,
+                      )}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs text-sea-900/40">
                       <Calendar className="h-3 w-3" />
-                      {new Date(post.created_at).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US')}
-                    </div>
+                      {new Date(post.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-US')}
+                    </span>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    {locale === 'ar' ? post.title_ar : post.title_en}
+
+                  <h3 className="font-display text-xl font-bold text-sea-900">
+                    {ar ? post.title_ar : post.title_en}
                   </h3>
-                  <p className={`text-gray-600 leading-relaxed ${expandedId === post.id ? '' : 'line-clamp-4'}`}>
-                    {locale === 'ar' ? post.content_ar : post.content_en}
+                  <p
+                    className={cn(
+                      'mt-2 leading-relaxed text-sea-900/65',
+                      !isExpanded && 'line-clamp-4',
+                    )}
+                  >
+                    {ar ? post.content_ar : post.content_en}
                   </p>
                   <button
-                    onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
-                    className="inline-flex items-center gap-1 px-0 mt-2 text-brand-blue font-medium text-sm hover:text-brand-blue-dark transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : post.id)}
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-sea-600 transition-colors hover:text-sun-500"
                   >
-                    {expandedId === post.id
-                      ? (locale === 'ar' ? 'عرض أقل ↑' : 'Show Less ↑')
+                    {isExpanded
+                      ? (ar ? 'عرض أقل ↑' : 'Show less ↑')
                       : `${t('readMore')} →`}
                   </button>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+              </article>
+            </Reveal>
           )
         })}
 
         {sorted.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            {locale === 'ar' ? 'لا يوجد محتوى في هذه الفئة بعد' : 'No content in this category yet'}
+          <div className="py-16 text-center text-sea-900/40">
+            {ar ? 'لا يوجد محتوى في هذه الفئة بعد' : 'No content in this category yet'}
           </div>
         )}
       </div>

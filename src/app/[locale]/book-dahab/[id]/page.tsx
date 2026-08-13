@@ -1,4 +1,4 @@
-import { getAccommodationById, getAccommodations, getRelatedAccommodations } from '@/lib/data'
+import { getAccommodationById, getAccommodations, getRelatedAccommodations, getSiteSettings, getTransferPricing } from '@/lib/data'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { ButtonLink } from '@/components/ButtonLink'
@@ -11,21 +11,31 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   if (!accommodation) {
     return (
-      <div className="container-main py-20 text-center">
-        <h2 className="text-2xl font-bold mb-4">
+      <div className="container-main py-24 text-center">
+        <h2 className="font-display text-2xl font-bold text-sea-900 mb-4">
           {locale === 'ar' ? 'غير موجود' : 'Not Found'}
         </h2>
-        <ButtonLink href="/book-dahab">{locale === 'ar' ? 'رجوع' : 'Go Back'}</ButtonLink>
+        <ButtonLink href="/book-dahab" variant="ink">
+          {locale === 'ar' ? 'رجوع' : 'Go Back'}
+        </ButtonLink>
       </div>
     )
   }
 
-  const all = await getAccommodations()
+  const [all, pricing, settings] = await Promise.all([
+    getAccommodations(),
+    getTransferPricing(),
+    getSiteSettings(),
+  ])
   const related = getRelatedAccommodations(accommodation, all)
 
   return (
     <div>
-      <ProductDetailClient accommodation={accommodation} />
+      <ProductDetailClient
+        accommodation={accommodation}
+        pricing={pricing}
+        whatsapp={settings?.whatsapp_number}
+      />
       <RelatedPlaces related={related} />
     </div>
   )

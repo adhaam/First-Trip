@@ -10,7 +10,8 @@
     "community": "Community",
     "partner": "Partner With Us",
     "about": "About Us",
-    "policy": "Policy & Refund"
+    "policy": "Policy & Refund",
+    "transfers": "Transfers"
   },
   "hero": {
     "title": "Your Dahab Journey Starts Here",
@@ -36,7 +37,25 @@
       "transfersDesc": "Transfers from governorates to Dahab & back — fixed schedule or VIP",
       "trips": "Sinai Day Trips",
       "tripsDesc": "Safari, diving, Blue Hole, Mount Sinai, Wadi Washwashi & more"
-    }
+    },
+    "accommodationsTitle": "Where you'll stay",
+    "accommodationsSub": "Hotels, chalets and camps we've stayed in ourselves before recommending them",
+    "tripsTitle": "Sinai day trips",
+    "tripsSub": "Blue Hole, Colored Canyon, Abu Galum, Mount Sinai — and everything in between",
+    "communityTitle": "From the First Trip community",
+    "communitySub": "Stories, hidden spots and advice from people who actually went",
+    "testimonialsSub": "Real words from people who travelled with us",
+    "viewAll": "See all",
+    "howItWorksTitle": "Your trip in four steps",
+    "howItWorksSub": "From booking to getting home — we're with you the whole way",
+    "step1": "Pick where you'll stay",
+    "step1Desc": "Hotel, chalet or camp — real photos and clear prices, no surprises",
+    "step2": "Choose your city and date",
+    "step2Desc": "Buses leave Sunday and Thursday, and come back Monday and Friday",
+    "step3": "Confirm with 50% down",
+    "step3Desc": "Bank transfer or Vodafone Cash — the rest when you arrive in Dahab",
+    "step4": "Just live it",
+    "step4Desc": "We handle the transfers, the stay and the day trips"
   },
   "book": {
     "title": "Book Your Dahab Trip",
@@ -71,7 +90,22 @@
     "notes": "Additional Notes",
     "notesPlaceholder": "Any special requests or notes...",
     "submit": "Submit Booking",
-    "whatsappBooking": "Book via WhatsApp"
+    "whatsappBooking": "Book via WhatsApp",
+    "transferDirection": "Transfer direction",
+    "oneWay": "One way",
+    "roundTrip": "Round trip",
+    "returnDate": "Return date",
+    "departureDaysNote": "Departures on Sunday or Thursday only",
+    "returnDaysNote": "Returns on Monday or Friday only",
+    "priceBreakdown": "Price breakdown",
+    "accommodationLine": "Accommodation",
+    "transferLine": "Transfer",
+    "totalFor": "Total for",
+    "mapTitle": "On the map",
+    "openInMaps": "Open in Google Maps",
+    "relatedTitle": "Other places you might like",
+    "highlights": "Why this place?",
+    "reviewsNote": "Rating based on our customers' stays"
   },
   "sinai": {
     "title": "Sinai Trips",
@@ -150,5 +184,30 @@
     "days": "days",
     "person": "person",
     "people": "people"
+  },
+  "transfer": {
+    "title": "Book a transfer",
+    "subtitle": "Hiace from your city to Dahab and back — available any day, no package needed",
+    "eyebrow": "Hiace · Every day",
+    "direction": "Trip direction",
+    "toDahab": "One way (to Dahab)",
+    "fromDahab": "One way (from Dahab)",
+    "roundTrip": "Round trip",
+    "departDate": "Departure date",
+    "returnDate": "Return date",
+    "anyDay": "Any day of the week",
+    "yourGovernorate": "Your city",
+    "perPersonOneWay": "per person / one way",
+    "estimate": "Estimated total",
+    "priceNote": "The final price is confirmed on WhatsApp before any payment",
+    "notAvailable": "Transfer prices aren't set up yet. Message us on WhatsApp.",
+    "book": "Request booking",
+    "whyTitle": "Why book your transfer with us?",
+    "why1": "Drivers we've worked with for years",
+    "why1Desc": "They know this road, every stop and every rest break",
+    "why2": "Times that fit you",
+    "why2Desc": "Available every day, and we set the departure time around you",
+    "why3": "One clear price",
+    "why3Desc": "What you see here is what you pay — no hidden fees"
   }
 }

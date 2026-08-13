@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard, Building2, Mountain, CalendarDays,
   ClipboardList, Users, MessageSquareText, Settings,
-  LogOut, Menu, X
+  Bus, Quote, LogOut, Menu, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
+import { Logo } from '@/components/brand/Logo'
 import { AccommodationManager } from '@/components/admin/AccommodationManager'
 import { SinaiTripManager } from '@/components/admin/SinaiTripManager'
 import { CommunityPostManager } from '@/components/admin/CommunityPostManager'
@@ -18,19 +18,23 @@ import { BookingsManager } from '@/components/admin/BookingsManager'
 import { CustomersManager } from '@/components/admin/CustomersManager'
 import { DashboardHome } from '@/components/admin/DashboardHome'
 import { TripDatesManager } from '@/components/admin/TripDatesManager'
+import { TransferPricingManager } from '@/components/admin/TransferPricingManager'
+import { TestimonialsManager } from '@/components/admin/TestimonialsManager'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
   { icon: Building2, key: 'accommodations', label_ar: 'أماكن الإقامة', label_en: 'Accommodations' },
   { icon: Mountain, key: 'sinai-trips', label_ar: 'الرحلات الداخلية', label_en: 'Sinai Trips' },
+  { icon: Bus, key: 'transfers', label_ar: 'النقل', label_en: 'Transfers' },
   { icon: CalendarDays, key: 'dates', label_ar: 'التواريخ', label_en: 'Dates' },
   { icon: ClipboardList, key: 'bookings', label_ar: 'الحجوزات', label_en: 'Bookings' },
   { icon: Users, key: 'customers', label_ar: 'العملاء', label_en: 'Customers' },
   { icon: MessageSquareText, key: 'community', label_ar: 'المجتمع', label_en: 'Community' },
+  { icon: Quote, key: 'testimonials', label_ar: 'آراء العملاء', label_en: 'Testimonials' },
   { icon: Settings, key: 'settings', label_ar: 'الإعدادات', label_en: 'Settings' },
 ]
 
-const CONNECTED_KEYS = ['dashboard', 'accommodations', 'sinai-trips', 'dates', 'bookings', 'customers', 'community', 'settings']
+const CONNECTED_KEYS = sidebarItems.map(i => i.key)
 
 export default function AdminDashboardPage() {
   const locale = useLocale()
@@ -46,12 +50,8 @@ export default function AdminDashboardPage() {
           ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0')
           : (sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
       )}>
-        <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-800">
-          <Image src="/logo.png" alt="First Trip" width={32} height={32} className="h-8 w-auto" />
-          <span className="text-lg font-bold">
-            <span className="text-[#38BDF8]">FIRST</span>{' '}
-            <span className="text-[#FB923C]">TRIP</span>
-          </span>
+        <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
+          <Logo size="md" tone="light" priority />
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {sidebarItems.map(item => {
@@ -118,10 +118,12 @@ export default function AdminDashboardPage() {
           {active === 'dashboard' && <DashboardHome />}
           {active === 'accommodations' && <AccommodationManager />}
           {active === 'sinai-trips' && <SinaiTripManager />}
+          {active === 'transfers' && <TransferPricingManager />}
           {active === 'dates' && <TripDatesManager />}
           {active === 'bookings' && <BookingsManager />}
           {active === 'customers' && <CustomersManager />}
           {active === 'community' && <CommunityPostManager />}
+          {active === 'testimonials' && <TestimonialsManager />}
           {active === 'settings' && <SiteSettingsManager />}
 
           {!CONNECTED_KEYS.includes(active) && (

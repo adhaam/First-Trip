@@ -10,6 +10,10 @@ import type {
   SiteSettings,
   TripDate,
   GovernoratePricing,
+  Testimonial,
+  TransferGovernoratePrice,
+  TransferPricing,
+  TransferSettings,
 } from './types'
 
 export async function getAccommodations(): Promise<Accommodation[]> {
@@ -121,6 +125,63 @@ export function getRelatedAccommodations(current: Accommodation, all: Accommodat
       Math.abs(b.price_per_night - current.price_per_night)
     )
   return [...sameType, ...similarPrice].slice(0, 3)
+}
+
+/**
+ * Everything the booking forms need to price a transfer.
+ * Read once per page on the server and passed down to the client components —
+ * no price is ever hardcoded in the UI.
+ */
+export async function getTransferPricing(): Promise<TransferPricing> {
+  const supabase = getSupabaseAdmin()
+
+  const [settingsRes, govRes] = await Promise.all([
+    supabase.from('transfer_settings').select('*').eq('is_active', true),
+    supabase
+      .from('transfer_governorate_pricing')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
+  ])
+
+  if (settingsRes.error) console.error('getTransferPricing settings error:', settingsRes.error)
+  if (govRes.error) console.error('getTransferPricing governorates error:', govRes.error)
+
+  return {
+    settings: (settingsRes.data ?? []).map(normalizeTransferSettings),
+    governorates: (govRes.data ?? []).map(normalizeTransferGovernorate),
+  }
+}
+
+// Supabase returns NUMERIC columns as strings — coerce once, here, so the rest
+// of the app can trust that a price is a number.
+type RawRow = Record<string, unknown>
+
+function normalizeTransferSettings(row: RawRow): TransferSettings {
+  return { ...(row as unknown as TransferSettings), base_price: Number(row.base_price ?? 0) }
+}
+
+function normalizeTransferGovernorate(row: RawRow): TransferGovernoratePrice {
+  return {
+    ...(row as unknown as TransferGovernoratePrice),
+    price_surcharge: Number(row.price_surcharge ?? 0),
+  }
+}
+
+export async function getTestimonials(): Promise<Testimonial[]> {
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('testimonials')
+    .select('*')
+    .eq('is_published', true)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('getTestimonials error:', error)
+    return []
+  }
+  return (data ?? []) as Testimonial[]
 }
 
 export async function getGovernoratePricing(): Promise<GovernoratePricing[]> {

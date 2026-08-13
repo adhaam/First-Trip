@@ -1,34 +1,54 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { MessageCircle } from 'lucide-react'
 import { useLocale } from 'next-intl'
-import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
-export function WhatsAppFloat() {
+/**
+ * Floating WhatsApp button.
+ * Collapses to a circle once the visitor starts scrolling so it stops covering
+ * content on small screens, and expands again on hover/focus.
+ */
+export function WhatsAppFloat({ number }: { number?: string | null }) {
   const locale = useLocale()
+  const [compact, setCompact] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time mount flag to trigger the entrance transition
+    setMounted(true)
+    const onScroll = () => setCompact(window.scrollY > 260)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const digits = (number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
 
   return (
-    <motion.a
-      href={`https://wa.me/${WHATSAPP_NUMBER.replace('+', '')}`}
+    <a
+      href={`https://wa.me/${digits}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 px-4 py-3"
-      style={
-        locale === 'ar'
-          ? { left: '1.5rem' }
-          : { right: '1.5rem' }
-      }
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ delay: 0.5 }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      aria-label="WhatsApp"
+      className={cn(
+        'group fixed bottom-5 z-50 flex items-center gap-2 rounded-full bg-[#25D366] py-3 text-white shadow-[0_6px_24px_-6px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-[#1FBE59] focus-visible:ring-2 focus-visible:ring-white/70',
+        compact ? 'px-3.5' : 'px-4',
+        mounted ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
+        locale === 'ar' ? 'left-5' : 'right-5',
+      )}
     >
-      <MessageCircle className="h-5 w-5" />
-      <span className="text-sm font-medium hidden sm:inline">
-        {locale === 'ar' ? 'واتساب' : 'WhatsApp'}
+      <MessageCircle className="h-5 w-5 shrink-0" />
+      <span
+        className={cn(
+          'overflow-hidden whitespace-nowrap text-sm font-semibold transition-all duration-300',
+          compact ? 'max-w-0 opacity-0 group-hover:max-w-[7rem] group-hover:opacity-100' : 'max-w-[7rem] opacity-100',
+        )}
+      >
+        {locale === 'ar' ? 'كلمنا' : 'WhatsApp'}
       </span>
-    </motion.a>
+    </a>
   )
 }

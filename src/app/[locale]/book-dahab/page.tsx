@@ -1,134 +1,118 @@
 import { getTranslations } from 'next-intl/server'
-import { Badge } from '@/components/ui/badge'
+import { Link } from '@/i18n/navigation'
 import { PLACEHOLDER_IMAGES } from '@/lib/constants'
-import { Calendar } from 'lucide-react'
+import { Calendar, ArrowUpRight } from 'lucide-react'
 import Image from 'next/image'
 import { getAccommodations } from '@/lib/data'
 import { BookDahabClient } from '@/components/BookDahabClient'
+import { SectionHeading, WaveDivider } from '@/components/brand/Section'
+import { Reveal } from '@/components/motion/Reveal'
 
 export const revalidate = 60
 
 export default async function BookDahabPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
+  const ar = locale === 'ar'
   const t = await getTranslations('book')
   const accommodations = await getAccommodations()
 
   return (
-    <div>
-      {/* ─── Hero Banner ─── */}
-      <section className="relative py-20 md:py-28 bg-gradient-to-br from-brand-blue to-brand-blue-dark text-white text-center overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+    <div className="bg-sand-50">
+      {/* ─── Hero ─── */}
+      <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
+        <div className="absolute inset-0 opacity-25">
           <Image src={PLACEHOLDER_IMAGES.dahab1} alt="" fill className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
         <div className="container-main relative z-10">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-3">{t('title')}</h1>
-          <p className="text-lg text-blue-100 max-w-2xl mx-auto">{t('subtitle')}</p>
+          <span className="eyebrow mb-5 justify-center text-sun-300">
+            <span aria-hidden className="h-px w-6 bg-current" />
+            {ar ? 'احجز دهب' : 'Book Dahab'}
+          </span>
+          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
         </div>
+        <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
       </section>
 
-      {/* ─── Photo Gallery ─── */}
-      <section className="section-padding bg-white">
-        <div className="container-main">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8">{t('gallery')}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[160px] md:auto-rows-[180px]">
-            {[
-              { src: PLACEHOLDER_IMAGES.dahab1, span: 'col-span-2 row-span-2' },
-              { src: PLACEHOLDER_IMAGES.dahab2, span: 'col-span-1 row-span-1' },
-              { src: PLACEHOLDER_IMAGES.dahab3, span: 'col-span-1 row-span-1' },
-              { src: PLACEHOLDER_IMAGES.diving, span: 'col-span-1 row-span-1' },
-              { src: PLACEHOLDER_IMAGES.desert2, span: 'col-span-1 row-span-1' },
-            ].map((img, i) => (
-              <div key={i} className={`relative overflow-hidden rounded-xl group ${img.span}`}>
-                <Image src={img.src} alt="" fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── About Trip + Schedule ─── */}
-      <section className="section-padding bg-gray-50">
-        <div className="container-main">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{t('aboutTrip')}</h2>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                {locale === 'ar'
-                  ? 'رحلات First Trip لدهب هي تجربة سياحية متكاملة. بنوفرلك انتقالات مريحة من محافظتك، إقامة في أفضل الفنادق والشاليهات والكمبات، مع رحلتين داخليتين مجاناً. الرحلة مناسبة للأفراد والعائلات والمجموعات.'
-                  : 'First Trip Dahab packages offer a complete tourism experience. We provide comfortable transfers from your governorate, accommodation in the best hotels, chalets & camps, plus 2 free internal trips. Suitable for individuals, families & groups.'}
-              </p>
-              <div className="flex items-center gap-2 text-brand-orange">
-                <Calendar className="h-5 w-5" />
-                <span className="font-medium">{t('schedule')}</span>
-              </div>
-              <p className="text-gray-500 text-sm mt-1">{t('scheduleText')}</p>
+      {/* ─── About + Schedule ─── */}
+      <section className="section-padding bg-sand-50">
+        <div className="container-main grid items-center gap-12 md:grid-cols-2">
+          <Reveal>
+            <SectionHeading eyebrow={ar ? 'عن الرحلة' : 'The trip'} title={t('aboutTrip')} className="mb-6" />
+            <p className="leading-relaxed text-sea-900/65">
+              {ar
+                ? 'رحلات First Trip لدهب تجربة سياحية متكاملة — انتقالات مريحة من محافظتك، إقامة في أفضل الفنادق والشاليهات والكمبات، ورحلتين داخليتين مجانًا. مناسبة للأفراد والعائلات والمجموعات.'
+                : 'First Trip Dahab packages are a complete experience — comfortable transfers from your city, a stay in the best hotels, chalets and camps, plus two day trips included. Great for individuals, families and groups.'}
+            </p>
+            <div className="mt-6 flex items-center gap-2 text-sun-500">
+              <Calendar className="h-5 w-5" />
+              <span className="font-semibold text-sea-900">{t('schedule')}</span>
             </div>
+            <p className="mt-1 text-sm text-sea-900/50">{t('scheduleText')}</p>
+          </Reveal>
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border">
-              <h3 className="font-bold text-gray-900 mb-6 text-lg">
-                {locale === 'ar' ? 'تواريخ الرحلات المتاحة' : 'Available Trip Dates'}
+          <Reveal delay={100}>
+            <div className="border-[1.5px] border-sand-300 bg-white p-7 pin-card">
+              <h3 className="font-display text-lg font-bold text-sea-900">
+                {ar ? 'تواريخ الرحلات المتاحة' : 'Available trip dates'}
               </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-brand-blue/5 rounded-xl">
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between rounded-xl border border-sand-300 bg-sand-50 p-4">
                   <div>
-                    <div className="font-medium text-gray-900">
-                      {locale === 'ar' ? 'كل يوم خميس' : 'Every Thursday'}
+                    <div className="font-semibold text-sea-900">
+                      {ar ? 'كل يوم خميس' : 'Every Thursday'}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {locale === 'ar' ? '4 أيام (خميس → اثنين)' : '4 Days (Thu → Mon)'}
-                    </div>
+                    <div className="text-sm text-sea-900/50">{t('day4')}</div>
                   </div>
-                  <Badge className="bg-brand-blue text-white">{t('day4')}</Badge>
+                  <span className="rounded-full bg-sea-900 px-3 py-1 text-xs font-semibold text-white">
+                    4
+                  </span>
                 </div>
-                <div className="flex items-center justify-between p-4 bg-brand-orange/5 rounded-xl">
+                <div className="flex items-center justify-between rounded-xl border border-sun-300 bg-sun-50 p-4">
                   <div>
-                    <div className="font-medium text-gray-900">
-                      {locale === 'ar' ? 'كل يوم أحد' : 'Every Sunday'}
+                    <div className="font-semibold text-sea-900">
+                      {ar ? 'كل يوم أحد' : 'Every Sunday'}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {locale === 'ar' ? '5 أيام (أحد → جمعة)' : '5 Days (Sun → Fri)'}
-                    </div>
+                    <div className="text-sm text-sea-900/50">{t('day5')}</div>
                   </div>
-                  <Badge className="bg-brand-orange text-white">{t('day5')}</Badge>
+                  <span className="rounded-full bg-sun-400 px-3 py-1 text-xs font-semibold text-white">
+                    5
+                  </span>
                 </div>
               </div>
-              <div className="mt-4 text-sm text-gray-400 text-center">
-                {locale === 'ar' ? 'التواريخ متاحة على مدار السنة' : 'Dates available year-round'}
-              </div>
+              <p className="mt-4 text-center text-xs text-sea-900/40">
+                {ar ? 'متاح على مدار السنة' : 'Available year-round'}
+              </p>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ─── Accommodations Grid ─── */}
-      <section className="section-padding bg-white">
+      {/* ─── Accommodations ─── */}
+      <section className="section-padding bg-sand-100">
         <div className="container-main">
-          <div className="mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">{t('accommodations')}</h2>
-          </div>
+          <SectionHeading title={t('accommodations')} />
           <BookDahabClient accommodations={accommodations} />
         </div>
       </section>
 
-      {/* ─── Quick CTA ─── */}
-      <section className="py-16 bg-gradient-to-r from-brand-blue to-brand-orange text-white text-center">
-        <div className="container-main">
-          <h2 className="text-2xl md:text-3xl font-bold mb-2">
-            {locale === 'ar' ? 'احجز دلوقتي وخلّي الباقي علينا!' : 'Book now and leave the rest to us!'}
+      {/* ─── CTA ─── */}
+      <section className="relative overflow-hidden bg-sun-400 py-16 text-center text-white">
+        <div className="container-main relative">
+          <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
+            {ar ? 'مش لاقي المكان المناسب؟' : 'Can\'t find the right place?'}
           </h2>
-          <p className="text-white/80 mb-6">
-            {locale === 'ar' ? 'تواصل معانا على واتساب للحجز الفوري' : 'Contact us on WhatsApp for instant booking'}
+          <p className="mx-auto mt-2 max-w-lg text-white/85">
+            {ar ? 'كلمنا على واتساب ونرشحلك على مزاجك' : 'Message us on WhatsApp and we\'ll recommend something for you'}
           </p>
-          <div className="flex justify-center gap-4">
-            <a
-              href="https://wa.me/201000000000"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-full text-lg font-medium bg-white text-brand-blue hover:bg-gray-100 transition-all"
-            >
-              💬 WhatsApp
-            </a>
-          </div>
+          <Link
+            href="/transfers"
+            className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-sea-900 px-7 text-sm font-semibold text-white transition-colors hover:bg-sea-700"
+          >
+            {ar ? 'أو احجز انتقالات بس' : 'Or just book a transfer'}
+            <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+          </Link>
         </div>
       </section>
     </div>

@@ -1,31 +1,39 @@
 import { getTranslations } from 'next-intl/server'
 import Image from 'next/image'
-import { getSinaiTrips } from '@/lib/data'
+import { getSinaiTrips, getSiteSettings } from '@/lib/data'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
+import { PLACEHOLDER_IMAGES } from '@/lib/constants'
+import { WaveDivider } from '@/components/brand/Section'
 
 export const revalidate = 60 // re-fetch from Supabase at most once a minute
 
 export default async function SinaiTripsPage() {
   const t = await getTranslations('sinai')
-  const trips = await getSinaiTrips()
+  const [trips, settings] = await Promise.all([getSinaiTrips(), getSiteSettings()])
 
   return (
-    <div>
+    <div className="bg-sand-50">
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-brand-orange to-brand-orange-dark text-white py-20 md:py-28 text-center overflow-hidden">
-        <div className="absolute inset-0 opacity-15">
-          <Image src="https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=1920&q=80" alt="" fill className="object-cover" />
+      <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
+        <div className="absolute inset-0 opacity-25">
+          <Image src={PLACEHOLDER_IMAGES.desert1} alt="" fill className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
         <div className="container-main relative z-10">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-3">{t('title')}</h1>
-          <p className="text-lg text-orange-100 max-w-2xl mx-auto">{t('subtitle')}</p>
+          <span className="eyebrow mb-5 justify-center text-sun-300">
+            <span aria-hidden className="h-px w-6 bg-current" />
+            {t('title')}
+          </span>
+          <h1 className="font-display text-4xl font-extrabold sm:text-5xl">{t('title')}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
         </div>
+        <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
       </section>
 
       {/* Filter + Grid */}
-      <section className="section-padding bg-gray-50">
+      <section className="section-padding bg-sand-50">
         <div className="container-main">
-          <SinaiTripsClient trips={trips} />
+          <SinaiTripsClient trips={trips} whatsapp={settings?.whatsapp_number} />
         </div>
       </section>
     </div>

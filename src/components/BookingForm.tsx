@@ -1,335 +1,498 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { motion } from 'framer-motion'
-import { Accommodation } from '@/lib/types'
-import { GOVERNORATES, WHATSAPP_NUMBER } from '@/lib/constants'
-import { Send, CheckCircle2, MessageCircle } from 'lucide-react'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { WHATSAPP_NUMBER } from '@/lib/constants'
+import {
+  PACKAGE_DEPARTURE_DAYS, PACKAGE_RETURN_DAYS,
+  governoratesFor, quotePackage, upcomingDatesFor, formatEGP,
+} from '@/lib/pricing'
+import type { Accommodation, TransferDirection, TransferPricing } from '@/lib/types'
+import { Send, CheckCircle2, MessageCircle, Loader2, AlertCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-const bookingSchema = z.object({
-  booking_type: z.enum(['package', 'accommodation-only', 'transfer-only']),
+const schema = z.object({
+  booking_type: z.enum(['package', 'accommodation-only']),
   nights: z.string().optional(),
   duration: z.string().optional(),
   governorate: z.string().optional(),
+  transfer_direction: z.enum(['to_dahab', 'round_trip']).optional(),
   travel_date: z.string().optional(),
+  return_date: z.string().optional(),
   num_people: z.string().min(1, 'Required'),
   full_name: z.string().min(3, 'Min 3 chars'),
   phone: z.string().min(10, 'Invalid phone'),
   notes: z.string().optional(),
 })
 
-type BookingFormData = z.infer<typeof bookingSchema>
+type FormData = z.infer<typeof schema>
 
 interface Props {
   accommodation: Accommodation
+  pricing: TransferPricing
+  whatsapp?: string | null
 }
 
-export function BookingForm({ accommodation }: Props) {
+export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
   const t = useTranslations('book')
   const common = useTranslations('common')
   const locale = useLocale()
-  const [submitted, setSubmitted] = useState(false)
-  const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null)
+  const ar = locale === 'ar'
 
-  const { register, handleSubmit, watch, formState: { errors }, setValue } = useForm<BookingFormData>({
-    resolver: zodResolver(bookingSchema),
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [serverError, setServerError] = useState('')
+
+  const {
+    register, handleSubmit, watch, setValue, formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
     defaultValues: {
       booking_type: 'package',
       num_people: '2',
-    }
+      duration: '4',
+      nights: '1',
+      transfer_direction: 'round_trip',
+    },
   })
 
   const bookingType = watch('booking_type')
   const duration = watch('duration')
   const governorate = watch('governorate')
-  const numPeople = parseInt(watch('num_people') || '1')
+  const direction = (watch('transfer_direction') ?? 'round_trip') as TransferDirection
+  const numPeople = Math.max(1, parseInt(watch('num_people') || '1') || 1)
+  const nights = Math.max(1, parseInt(watch('nights') || '1') || 1)
 
-  // Price calculation
-  useMemo(() => {
-    let price = 0
-    if (bookingType === 'package') {
-      const days = parseInt(duration || '4')
-      price = days === 4 ? accommodation.price_4day : accommodation.price_5day
-      const govSurcharge = GOVERNORATES.find(g => g.id === governorate)?.surcharge || 0
-      price += govSurcharge
-    } else if (bookingType === 'accommodation-only') {
-      price = accommodation.price_per_night * parseInt(watch('nights') || '1')
-    } else if (bookingType === 'transfer-only') {
-      const govSurcharge = GOVERNORATES.find(g => g.id === governorate)?.surcharge || 300
-      price = 300 + govSurcharge
-    }
-    setCalculatedPrice(price * numPeople)
-  }, [bookingType, duration, governorate, numPeople, accommodation, watch])
+  const govOptions = useMemo(() => governoratesFor(pricing, 'package_bus'), [pricing])
+  const departureDates = useMemo(() => upcomingDatesFor(PACKAGE_DEPARTURE_DAYS, 14), [])
+  const returnDates = useMemo(() => upcomingDatesFor(PACKAGE_RETURN_DAYS, 14), [])
 
-  const onSubmit = async (data: BookingFormData) => {
+  // ─── live price preview (the server recomputes this on submit) ───
+  const quote = useMemo(() => {
+    if (bookingType === 'accommodation-only') return null
+    const accommodationPrice =
+      duration === '5' ? Number(accommodation.price_5day) : Number(accommodation.price_4day)
+    return quotePackage({
+      pricing,
+      accommodationPrice,
+      governorateCode: governorate,
+      direction,
+      numPeople,
+    })
+  }, [bookingType, duration, governorate, direction, numPeople, accommodation, pricing])
+
+  const accommodationOnlyTotal =
+    Number(accommodation.price_per_night) * nights * numPeople
+
+  const total = bookingType === 'package' ? quote?.total ?? 0 : accommodationOnlyTotal
+
+  const formatDate = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString(ar ? 'ar-EG' : 'en-GB', {
+      weekday: 'long', day: 'numeric', month: 'short',
+    })
+
+  const onSubmit = async (data: FormData) => {
+    setSubmitting(true)
+    setServerError('')
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accommodation_id: accommodation.id,
+          // NOTE: these key names must match the zod schema in /api/bookings —
+          // they used to be full_name/phone/travel_date, which silently 400'd.
+          customer_name: data.full_name,
+          customer_phone: data.phone,
           booking_type: data.booking_type,
-          full_name: data.full_name,
-          phone: data.phone,
-          travel_date: data.travel_date || null,
-          num_people: parseInt(data.num_people),
-          notes: data.notes || null,
-          nights: data.nights ? parseInt(data.nights) : null,
+          accommodation_id: accommodation.id,
+          governorate: data.booking_type === 'package' ? data.governorate : undefined,
+          trip_date: data.travel_date || undefined,
+          return_date:
+            data.booking_type === 'package' && direction === 'round_trip'
+              ? data.return_date || undefined
+              : undefined,
+          duration:
+            data.booking_type === 'package' ? (duration === '5' ? 5 : 4) : undefined,
+          nights: data.booking_type === 'accommodation-only' ? nights : undefined,
+          transfer_type: data.booking_type === 'package' ? 'package_bus' : undefined,
+          transfer_direction: data.booking_type === 'package' ? direction : undefined,
+          num_people: numPeople,
+          notes: data.notes || undefined,
         }),
       })
+
       if (!res.ok) {
-        console.error('Booking submission failed:', await res.text())
+        const body = await res.json().catch(() => ({}))
+        setServerError(
+          body.error ||
+            (ar ? 'حصلت مشكلة في إرسال الحجز. جرّب تاني أو كلمنا على واتساب.'
+                : 'Something went wrong. Please try again or message us on WhatsApp.'),
+        )
         return
       }
-    } catch (err) {
-      console.error('Booking submission error:', err)
+      setSubmitted(true)
+    } catch {
+      setServerError(
+        ar ? 'مفيش اتصال بالإنترنت. جرّب تاني.' : 'Network error. Please try again.',
+      )
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitted(true)
   }
 
   const whatsappLink = () => {
-    const accName = locale === 'ar' ? accommodation.name_ar : accommodation.name_en
+    const accName = ar ? accommodation.name_ar : accommodation.name_en
     const text = encodeURIComponent(
-      locale === 'ar'
-        ? `حجز جديد - ${accName}\nالنوع: ${bookingType}\nالأشخاص: ${numPeople}\n${calculatedPrice ? `السعر التقريبي: ${calculatedPrice} ج.م` : ''}`
-        : `New Booking - ${accName}\nType: ${bookingType}\nPeople: ${numPeople}\n${calculatedPrice ? `Estimated: ${calculatedPrice} EGP` : ''}`
+      ar
+        ? `حجز جديد — ${accName}\nالنوع: ${bookingType === 'package' ? 'باكدج' : 'إقامة فقط'}\nعدد الأفراد: ${numPeople}\nالتكلفة التقريبية: ${formatEGP(total, 'en')} ج.م`
+        : `New booking — ${accName}\nType: ${bookingType}\nPeople: ${numPeople}\nEstimate: ${formatEGP(total, 'en')} EGP`,
     )
-    return `https://wa.me/${WHATSAPP_NUMBER.replace('+', '')}?text=${text}`
+    return `https://wa.me/${(whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')}?text=${text}`
   }
 
   if (submitted) {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              {locale === 'ar' ? 'تم إرسال طلبك!' : 'Booking Sent!'}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              {locale === 'ar'
-                ? 'هنتواصل معاك في أقرب وقت لتأكيد الحجز'
-                : 'We\'ll contact you shortly to confirm your booking'}
-            </p>
-            <a
-              href={whatsappLink()}
-              target="_blank"
-              rel="noopener"
-              className="inline-flex items-center justify-center h-9 px-4 rounded-full font-medium bg-green-600 hover:bg-green-700 text-white transition-all w-full"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              {locale === 'ar' ? 'تواصل عبر واتساب' : 'Chat on WhatsApp'}
-            </a>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <div className="border-[1.5px] border-sea-900/15 bg-white p-8 text-center pin-card">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+          <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+        </div>
+        <h3 className="font-display text-xl font-bold text-sea-900">
+          {ar ? 'وصلنا طلبك!' : 'Your request is in!'}
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-sea-900/60">
+          {ar
+            ? 'هنكلمك خلال ساعات قليلة لتأكيد الحجز وتفاصيل الدفع.'
+            : 'We\'ll call you within a few hours to confirm and sort out payment.'}
+        </p>
+        <a
+          href={whatsappLink()}
+          target="_blank"
+          rel="noopener"
+          className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] font-semibold text-white transition-colors hover:bg-[#1FBE59]"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {ar ? 'كمّل على واتساب' : 'Continue on WhatsApp'}
+        </a>
+      </div>
     )
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            {t('bookingForm')}
-          </h3>
+    <div className="border-[1.5px] border-sand-300 bg-white pin-card">
+      {/* ─── running total ─── */}
+      <div className="border-b border-sand-300 bg-sand-100 p-6">
+        <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sea-900/50">
+          {t('priceBreakdown')}
+        </div>
 
-          {calculatedPrice !== null && (
-            <div className="bg-gradient-to-r from-brand-blue/10 to-brand-orange/10 rounded-xl p-4 mb-5 border border-brand-blue/20">
-              <div className="text-xs text-gray-500 mb-1">
-                {locale === 'ar' ? 'السعر التقريبي' : 'Estimated Price'}
-              </div>
-              <div className="text-3xl font-bold text-brand-blue">
-                {calculatedPrice.toLocaleString()} {common('egp')}
-              </div>
-              <div className="text-xs text-gray-400 mt-1">
-                {locale === 'ar' ? '* السعر النهائي بعد التواصل' : '* Final price after confirmation'}
-              </div>
-            </div>
+        <div className="mt-3 space-y-1.5 text-sm">
+          {bookingType === 'package' && quote ? (
+            <>
+              <Line
+                label={`${t('accommodationLine')} · ${duration === '5' ? t('day5') : t('day4')}`}
+                value={`${formatEGP(quote.accommodationPerPerson, locale)} ${common('egp')}`}
+              />
+              <Line
+                label={`${t('transferLine')} · ${
+                  direction === 'round_trip' ? t('roundTrip') : t('oneWay')
+                }`}
+                value={
+                  quote.transfer.isPriced
+                    ? `${formatEGP(quote.transfer.perPerson, locale)} ${common('egp')}`
+                    : '—'
+                }
+              />
+            </>
+          ) : (
+            <Line
+              label={`${t('accommodationLine')} · ${nights} ${
+                nights === 1 ? common('night') : common('nights')
+              }`}
+              value={`${formatEGP(
+                Number(accommodation.price_per_night) * nights,
+                locale,
+              )} ${common('egp')}`}
+            />
           )}
+        </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Booking Type */}
-            <div>
-              <Label>{t('bookingType')}</Label>
-              <RadioGroup
-                value={bookingType}
-                onValueChange={(v) => setValue('booking_type', v as 'package' | 'accommodation-only' | 'transfer-only')}
-                className="mt-2"
-              >
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <RadioGroupItem value="package" id="package" />
-                  <Label htmlFor="package" className="cursor-pointer font-normal">
-                    {locale === 'ar' ? 'باكدج كامل (انتقالات + إقامة + رحلتين)' : 'Full Package (Transfer + Stay + 2 Trips)'}
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <RadioGroupItem value="accommodation-only" id="accommodation-only" />
-                  <Label htmlFor="accommodation-only" className="cursor-pointer font-normal">
-                    {t('accommodationOnly')}
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <RadioGroupItem value="transfer-only" id="transfer-only" />
-                  <Label htmlFor="transfer-only" className="cursor-pointer font-normal">
-                    {locale === 'ar' ? 'انتقالات فقط' : 'Transfer Only'}
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
+        <div className="mt-4 flex items-end justify-between gap-3 border-t border-sand-300 pt-4">
+          <div className="text-xs text-sea-900/55">
+            {t('totalFor')} {numPeople} {numPeople === 1 ? common('person') : common('people')}
+          </div>
+          <div className="font-display text-3xl font-extrabold text-sea-900">
+            {formatEGP(total, locale)}{' '}
+            <span className="text-base font-semibold text-sea-900/70">{common('egp')}</span>
+          </div>
+        </div>
 
-            {/* Duration OR Nights */}
-            {bookingType === 'package' && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>{t('duration')}</Label>
-                  <Select onValueChange={(v) => v && setValue('duration', v)} defaultValue="4">
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={t('duration')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="4">{t('day4')}</SelectItem>
-                      <SelectItem value="5">{t('day5')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t('governorate')}</Label>
-                  <Select onValueChange={(v) => v && setValue('governorate', v as string)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={t('selectGovernorate')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GOVERNORATES.map(g => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {locale === 'ar' ? g.name_ar : g.name_en}
-                          {g.surcharge > 0 ? ` (+${g.surcharge})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
+        <p className="mt-2 text-[0.7rem] leading-relaxed text-sea-900/45">
+          {ar ? '* السعر النهائي بيتأكد معاك قبل أي دفع.' : '* Final price confirmed before any payment.'}
+        </p>
+      </div>
 
-            {bookingType === 'accommodation-only' && (
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-6">
+        {/* booking type */}
+        <div>
+          <Label className="mb-2.5 block">{t('bookingType')}</Label>
+          <RadioGroup
+            value={bookingType}
+            onValueChange={(v) => setValue('booking_type', v as FormData['booking_type'])}
+            className="grid gap-2"
+          >
+            <TypeOption
+              value="package"
+              id="bt-package"
+              active={bookingType === 'package'}
+              title={ar ? 'باكدج كامل' : 'Full package'}
+              desc={ar ? 'انتقالات + إقامة + رحلتين داخليتين' : 'Transfer + stay + 2 day trips'}
+            />
+            <TypeOption
+              value="accommodation-only"
+              id="bt-acc"
+              active={bookingType === 'accommodation-only'}
+              title={t('accommodationOnly')}
+              desc={ar ? 'الإقامة بس، من غير انتقالات' : 'Just the stay, no transfer'}
+            />
+          </RadioGroup>
+        </div>
+
+        {bookingType === 'package' && (
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <Label>{t('nights')}</Label>
-                <Select onValueChange={(v) => v && setValue('nights', v as string)} defaultValue="1">
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={t('nights')} />
-                  </SelectTrigger>
+                <Label className="mb-1.5 block">{t('duration')}</Label>
+                <Select
+                  value={duration}
+                  onValueChange={(v) => v && setValue('duration', v)}
+                >
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 7].map(n => (
-                      <SelectItem key={n} value={n.toString()}>
-                        {n} {locale === 'ar' ? 'ليلة' : n === 1 ? 'night' : 'nights'}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="4">{t('day4')}</SelectItem>
+                    <SelectItem value="5">{t('day5')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            {bookingType === 'transfer-only' && (
               <div>
-                <Label>{t('governorate')}</Label>
-                <Select onValueChange={(v) => v && setValue('governorate', v as string)}>
-                  <SelectTrigger className="mt-1">
+                <Label className="mb-1.5 block">{t('governorate')}</Label>
+                <Select
+                  value={governorate}
+                  onValueChange={(v) => v && setValue('governorate', v)}
+                >
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t('selectGovernorate')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {GOVERNORATES.map(g => (
-                      <SelectItem key={g.id} value={g.id}>
-                        {locale === 'ar' ? g.name_ar : g.name_en}
+                    {govOptions.map((g) => (
+                      <SelectItem key={g.id} value={g.governorate_code}>
+                        {ar ? g.name_ar : g.name_en}
+                        {g.price_surcharge > 0 ? ` (+${g.price_surcharge})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            </div>
 
-            {/* Travel Date */}
+            {/* transfer direction */}
             <div>
-              <Label>{t('travelDate')}</Label>
+              <Label className="mb-1.5 block">{t('transferDirection')}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['round_trip', 'to_dahab'] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setValue('transfer_direction', d)}
+                    className={cn(
+                      'rounded-xl border-[1.5px] px-3 py-2.5 text-sm font-medium transition-colors',
+                      direction === d
+                        ? 'border-sea-600 bg-sea-50 text-sea-700'
+                        : 'border-sand-300 text-sea-900/65 hover:border-sea-900/25',
+                    )}
+                  >
+                    {d === 'round_trip' ? t('roundTrip') : t('oneWay')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* departure — Sunday / Thursday only */}
+            <div>
+              <Label className="mb-1.5 block">{t('travelDate')}</Label>
+              <Select
+                value={watch('travel_date') ?? ''}
+                onValueChange={(v) => { if (v) setValue('travel_date', v) }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('selectDate')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {departureDates.map((d) => (
+                    <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1.5 text-xs text-sea-900/45">{t('departureDaysNote')}</p>
+            </div>
+
+            {/* return — Monday / Friday only */}
+            {direction === 'round_trip' && (
+              <div>
+                <Label className="mb-1.5 block">{t('returnDate')}</Label>
+                <Select
+                  value={watch('return_date') ?? ''}
+                  onValueChange={(v) => { if (v) setValue('return_date', v) }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t('selectDate')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {returnDates.map((d) => (
+                      <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1.5 text-xs text-sea-900/45">{t('returnDaysNote')}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {bookingType === 'accommodation-only' && (
+          <>
+            <div>
+              <Label className="mb-1.5 block">{t('nights')}</Label>
+              <Select
+                value={String(nights)}
+                onValueChange={(v) => v && setValue('nights', v)}
+              >
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 10, 14].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} {n === 1 ? common('night') : common('nights')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block">{t('travelDate')}</Label>
               <Input
                 type="date"
-                className="mt-1"
                 {...register('travel_date')}
                 min={new Date().toISOString().split('T')[0]}
               />
             </div>
+          </>
+        )}
 
-            {/* Num People */}
-            <div>
-              <Label>{t('numPeople')}</Label>
-              <Input
-                type="number"
-                min="1"
-                max="50"
-                className="mt-1"
-                {...register('num_people')}
-              />
-            </div>
+        <div>
+          <Label className="mb-1.5 block">{t('numPeople')}</Label>
+          <Input type="number" min="1" max="50" inputMode="numeric" {...register('num_people')} />
+        </div>
 
-            {/* Name + Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label>{t('fullName')}</Label>
-                <Input {...register('full_name')} className="mt-1" />
-                {errors.full_name && <p className="text-xs text-red-500 mt-1">{errors.full_name.message}</p>}
-              </div>
-              <div>
-                <Label>{t('phoneNumber')}</Label>
-                <Input type="tel" {...register('phone')} className="mt-1" dir="ltr" />
-                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>}
-              </div>
-            </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label className="mb-1.5 block">{t('fullName')}</Label>
+            <Input {...register('full_name')} aria-invalid={Boolean(errors.full_name)} />
+            {errors.full_name && (
+              <p className="mt-1 text-xs text-red-600">{errors.full_name.message}</p>
+            )}
+          </div>
+          <div>
+            <Label className="mb-1.5 block">{t('phoneNumber')}</Label>
+            <Input
+              type="tel"
+              dir="ltr"
+              inputMode="tel"
+              {...register('phone')}
+              aria-invalid={Boolean(errors.phone)}
+            />
+            {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
+          </div>
+        </div>
 
-            {/* Notes */}
-            <div>
-              <Label>{t('notes')}</Label>
-              <Textarea
-                rows={3}
-                placeholder={t('notesPlaceholder')}
-                className="mt-1"
-                {...register('notes')}
-              />
-            </div>
+        <div>
+          <Label className="mb-1.5 block">{t('notes')}</Label>
+          <Textarea rows={3} placeholder={t('notesPlaceholder')} {...register('notes')} />
+        </div>
 
-            <div className="space-y-2 pt-2">
-              <Button type="submit" className="w-full bg-brand-orange hover:bg-brand-orange-dark" size="lg">
-                <Send className="h-4 w-4 mr-2" />
-                {t('submit')}
-              </Button>
-              <a
-                href={whatsappLink()}
-                target="_blank"
-                rel="noopener"
-                className="inline-flex items-center justify-center h-12 px-4 rounded-full font-medium border border-green-500 text-green-600 hover:bg-green-50 transition-all w-full"
-              >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                {t('whatsappBooking')}
-              </a>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </motion.div>
+        {serverError && (
+          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{serverError}</span>
+          </div>
+        )}
+
+        <div className="space-y-2.5 pt-1">
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="h-12 w-full rounded-full bg-sun-400 text-base font-semibold text-white hover:bg-sun-500"
+          >
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {t('submit')}
+          </Button>
+          <a
+            href={whatsappLink()}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border-[1.5px] border-[#25D366] font-semibold text-[#128C4A] transition-colors hover:bg-[#25D366]/10"
+          >
+            <MessageCircle className="h-4 w-4" />
+            {t('whatsappBooking')}
+          </a>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-sea-900/60">{label}</span>
+      <span className="font-medium text-sea-900">{value}</span>
+    </div>
+  )
+}
+
+function TypeOption({
+  value, id, active, title, desc,
+}: {
+  value: string
+  id: string
+  active: boolean
+  title: string
+  desc: string
+}) {
+  return (
+    <Label
+      htmlFor={id}
+      className={cn(
+        'flex cursor-pointer items-start gap-3 rounded-xl border-[1.5px] p-3.5 font-normal transition-colors',
+        active ? 'border-sea-600 bg-sea-50' : 'border-sand-300 hover:border-sea-900/25',
+      )}
+    >
+      <RadioGroupItem value={value} id={id} className="mt-0.5" />
+      <span>
+        <span className="block text-sm font-semibold text-sea-900">{title}</span>
+        <span className="mt-0.5 block text-xs text-sea-900/55">{desc}</span>
+      </span>
+    </Label>
   )
 }

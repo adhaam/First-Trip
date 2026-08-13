@@ -7,6 +7,44 @@ export type TripDuration = 4 | 5
 export type PostCategory = 'blog' | 'hidden-gems' | 'stories' | 'dahab-guide'
 export type Governorate = 'cairo' | 'alexandria' | 'zagazig' | 'mansoura'
 
+// ─── Transfers ───
+// 'package_bus' = the bus that runs as part of a package (fixed Sun/Thu out, Mon/Fri back)
+// 'hiace'       = standalone transfer booking, any day, independent of any package
+export type TransferType = 'package_bus' | 'hiace'
+export type TransferDirection = 'to_dahab' | 'from_dahab' | 'round_trip'
+
+export interface TransferSettings {
+  transfer_type: TransferType
+  name_ar: string
+  name_en: string
+  vehicle_ar: string
+  vehicle_en: string
+  /** Cairo price, ONE direction, per person. Round trip = base_price * 2. */
+  base_price: number
+  is_active: boolean
+  updated_at?: string
+}
+
+export interface TransferGovernoratePrice {
+  id: string
+  transfer_type: TransferType
+  governorate_code: string
+  name_ar: string
+  name_en: string
+  /** Added on top of the Cairo base price, for ONE direction. */
+  price_surcharge: number
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** Everything the booking forms need to price a transfer, read once on the server. */
+export interface TransferPricing {
+  settings: TransferSettings[]
+  governorates: TransferGovernoratePrice[]
+}
+
 export interface Accommodation {
   id: string
   name_ar: string
@@ -75,9 +113,13 @@ export interface Booking {
   customer_email?: string
   booking_type: BookingType
   accommodation_id?: string
-  governorate?: Governorate
+  governorate?: string
   trip_date?: string
+  return_date?: string
   duration?: TripDuration
+  nights?: number
+  transfer_type?: TransferType
+  transfer_direction?: TransferDirection
   num_people: number
   notes?: string
   status: BookingStatus
@@ -135,11 +177,20 @@ export interface ServiceItem {
 }
 
 export interface Testimonial {
+  id: string
   name: string
   text_ar: string
   text_en: string
   rating: number
-  avatar?: string
+  avatar_url?: string | null
+  trip_ar: string
+  trip_en: string
+  source: string
+  source_url?: string | null
+  sort_order: number
+  is_published: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface WhyUsPoint {

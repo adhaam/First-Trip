@@ -1,4 +1,4 @@
-import { NavItem, ServiceItem, Testimonial, WhyUsPoint } from './types'
+import { NavItem, ServiceItem, WhyUsPoint } from './types'
 
 export const SITE_NAME = 'First Trip'
 export const SITE_DESCRIPTION_AR = 'First Trip – رحلات منظمة لدهب | باقات سياحية شاملة | حجز فنادق وشاليهات وكمبات في دهب، جنوب سيناء'
@@ -10,6 +10,7 @@ export const EMAIL = 'info@firsttrip-eg.com'
 export const NAV_ITEMS: NavItem[] = [
   { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: '🏠' },
   { label_ar: 'احجز دهب', label_en: 'Book Dahab', href: '/book-dahab', icon: '📅' },
+  { label_ar: 'حجز انتقالات', label_en: 'Transfers', href: '/transfers', icon: '🚐' },
   { label_ar: 'رحلات سيناء', label_en: 'Sinai Trips', href: '/sinai-trips', icon: '🏜️' },
   { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: '👥' },
   { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: '🤝' },
@@ -20,6 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
 export const NAV_LABEL_KEYS: Record<string, string> = {
   '/': 'home',
   '/book-dahab': 'book',
+  '/transfers': 'transfers',
   '/sinai-trips': 'trips',
   '/community': 'community',
   '/partner': 'partner',
@@ -47,10 +49,10 @@ export const SERVICES: ServiceItem[] = [
   {
     title_ar: 'انتقالات فقط',
     title_en: 'Transfers Only',
-    description_ar: 'انتقالات من المحافظات لدهب والعكس — مواعيد ثابتة أو VIP خاص',
-    description_en: 'Transfers from governorates to Dahab & back — fixed schedule or VIP private',
+    description_ar: 'هاي إيس من محافظتك لدهب والعكس — أي يوم، ذهاب أو عودة أو الاتنين',
+    description_en: 'Hiace from your governorate to Dahab & back — any day, one way or round trip',
     icon: '🚐',
-    href: '/book-dahab',
+    href: '/transfers',
   },
   {
     title_ar: 'رحلات داخلية',
@@ -93,26 +95,8 @@ export const WHY_US: WhyUsPoint[] = [
   },
 ]
 
-export const TESTIMONIALS: Testimonial[] = [
-  {
-    name: 'أحمد محمد',
-    text_ar: 'من أفضل الرحلات اللي روحتها في حياتي. التنظيم كان ممتاز وكل حاجة كانت مظبوطة من الأول للآخر. شكراً First Trip!',
-    text_en: 'One of the best trips of my life. Organization was excellent and everything was perfect from start to finish. Thank you First Trip!',
-    rating: 5,
-  },
-  {
-    name: 'منى السيد',
-    text_ar: 'رحلة عائلية رائعة مع First Trip. الأطفال استمتعوا جداً والفندق كان تحفة. هنكرر التجربة أكيد!',
-    text_en: 'An amazing family trip with First Trip. The kids had so much fun and the hotel was gorgeous. We\'ll definitely do it again!',
-    rating: 5,
-  },
-  {
-    name: 'كريم الشافعي',
-    text_ar: 'أفضل شركة تنظم رحلات لدهب بدون منازع. سافرت معاهم 3 مرات وكل مرة أحسن من اللي قبلها.',
-    text_en: 'Hands down the best company for Dahab trips. Traveled with them 3 times and each time is better than the last.',
-    rating: 5,
-  },
-]
+// Testimonials now live in Supabase (`testimonials` table) and are managed from
+// the dashboard — see getTestimonials() in lib/data.ts.
 
 export const TRUST_STATS = [
   { label_ar: 'سنوات الخبرة', label_en: 'Years Experience', value: '6', suffix_ar: 'سنوات', suffix_en: 'years' },
@@ -121,12 +105,10 @@ export const TRUST_STATS = [
   { label_ar: 'مكان إقامة', label_en: 'Accommodations', value: '30+', suffix_ar: 'مكان', suffix_en: 'places' },
 ]
 
-export const GOVERNORATES = [
-  { id: 'cairo', name_ar: 'القاهرة', name_en: 'Cairo', surcharge: 0 },
-  { id: 'alexandria', name_ar: 'الإسكندرية', name_en: 'Alexandria', surcharge: 200 },
-  { id: 'zagazig', name_ar: 'الزقازيق', name_en: 'Zagazig', surcharge: 150 },
-  { id: 'mansoura', name_ar: 'المنصورة', name_en: 'Mansoura', surcharge: 150 },
-] as const
+// Governorates + their transfer surcharges now live in Supabase
+// (`transfer_governorate_pricing`), separately per transfer type, and are
+// managed from the dashboard's "النقل" tab. Nothing here is hardcoded so that
+// changing a price never requires a deploy.
 
 export const ACCOMMODATION_TAGS: Record<string, { label_ar: string; label_en: string; emoji: string }> = {
   hotel: { label_ar: 'فندق', label_en: 'Hotel', emoji: '🏨' },

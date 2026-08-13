@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { motion } from 'framer-motion'
 import { LogIn, Lock } from 'lucide-react'
-import Image from 'next/image'
+import { Logo } from '@/components/brand/Logo'
 
 export default function AdminLoginPage() {
   const locale = useLocale()
@@ -43,23 +43,23 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-sand-100 flex items-center justify-center p-4 topo-bg">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <Card className="shadow-lg">
+        <Card className="border-[1.5px] border-sand-300 shadow-none pin-card">
           <CardContent className="p-8">
             <div className="text-center mb-8">
               <div className="flex justify-center mb-4">
-                <Image src="/logo.png" alt="First Trip" width={56} height={56} className="w-14 h-auto" />
+                <Logo size="lg" variant="mark" priority />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                <span className="text-brand-blue">FIRST</span>{' '}
-                <span className="text-brand-orange">TRIP</span>
+              <h1 className="font-display text-2xl font-extrabold text-sea-900">
+                <span className="text-sea-600">FIRST</span>{' '}
+                <span className="text-sun-400">TRIP</span>
               </h1>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-sea-900/50 mt-2">
                 {locale === 'ar' ? 'لوحة تحكم الإدارة' : 'Admin Dashboard'}
               </p>
             </div>
