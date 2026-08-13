@@ -168,24 +168,28 @@ function TrustBar() {
   const ar = locale === 'ar'
 
   return (
-    <section className="border-b border-sand-300 bg-sand-50">
+    <section className="border-b border-sand-200 bg-white">
       <div className="container-main">
-        <div className="grid grid-cols-2 divide-sand-300 md:grid-cols-4 md:divide-x md:rtl:divide-x-reverse">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 py-8 md:grid-cols-4 md:gap-x-6 md:py-12">
           {TRUST_STATS.map((stat, i) => (
             <Reveal
               key={i}
               delay={i * 70}
-              className={cn(
-                'px-4 py-8 text-center md:py-10',
-                i < 2 && 'border-b border-sand-300 md:border-b-0',
-                i % 2 === 0 && 'border-e border-sand-300 md:border-e-0',
-              )}
+              className="group flex items-start gap-3 rounded-2xl p-3 transition-colors hover:bg-sea-50 md:p-4"
             >
-              <div className="font-display text-3xl font-extrabold text-sea-900 sm:text-4xl">
-                {stat.value}
-              </div>
-              <div className="mt-1.5 text-xs font-medium uppercase tracking-wider text-sea-900/50 sm:text-sm sm:normal-case sm:tracking-normal">
-                {ar ? stat.label_ar : stat.label_en}
+              <span
+                aria-hidden
+                className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sun-100 text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6 md:h-12 md:w-12"
+              >
+                {stat.icon}
+              </span>
+              <div className="min-w-0">
+                <div className="font-display text-sm font-extrabold leading-tight text-sea-900 md:text-base">
+                  {ar ? stat.label_ar : stat.label_en}
+                </div>
+                <div className="mt-1 text-xs leading-snug text-sea-900/55 md:text-[0.8rem]">
+                  {ar ? stat.sub_ar : stat.sub_en}
+                </div>
               </div>
             </Reveal>
           ))}

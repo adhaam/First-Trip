@@ -25,41 +25,43 @@
   --font-mono: var(--font-mono);
   --font-heading: var(--font-display);
 
-  /* ─── Sea ─── */
-  --color-sea-50: #EAF6FC;
-  --color-sea-100: #CDEAF8;
-  --color-sea-200: #9AD5F1;
-  --color-sea-300: #5FBDE8;
-  --color-sea-400: #2BA3DC;
-  --color-sea-500: #1391CE;
-  --color-sea-600: #0B74AA;
-  --color-sea-700: #0A5A83;
-  --color-sea-800: #0C4460;
-  --color-sea-900: #0C2B38;
+  /* ─── Sea (matches logo's vivid cyan-blue) ─── */
+  --color-sea-50: #EFF9FF;
+  --color-sea-100: #DEF2FE;
+  --color-sea-200: #B7E7FE;
+  --color-sea-300: #77D3FD;
+  --color-sea-400: #35BCF7;
+  --color-sea-500: #1AA6E8;
+  --color-sea-600: #0F86C6;
+  --color-sea-700: #106BA0;
+  --color-sea-800: #135A85;
+  --color-sea-900: #0F3D5C;
 
-  /* ─── Sun / sandstone ─── */
-  --color-sun-50: #FEF5EA;
-  --color-sun-100: #FCE7CD;
-  --color-sun-200: #F8CB96;
-  --color-sun-300: #F4A93C;
-  --color-sun-400: #F0762A;
-  --color-sun-500: #DE5C1C;
-  --color-sun-600: #B84616;
+  /* ─── Sun (matches logo's warm orange gradient) ─── */
+  --color-sun-50: #FFF8ED;
+  --color-sun-100: #FEECD1;
+  --color-sun-200: #FDD5A0;
+  --color-sun-300: #FBB864;
+  --color-sun-400: #F79333;
+  --color-sun-500: #F17017;
+  --color-sun-600: #DA5610;
 
-  /* ─── Sand (surfaces) ─── */
-  --color-sand-50: #FBF7F1;
-  --color-sand-100: #F6F0E6;
-  --color-sand-200: #EDE3D3;
-  --color-sand-300: #DFD0B8;
-  --color-sand-400: #C4AF91;
+  /* ─── Sand → repurposed as clean neutrals for airy backgrounds
+        The old cream/beige felt muted for a Dahab honeymoon/Gen Z audience.
+        Now these are true whites and cool greys that let the blue+orange pop. ─── */
+  --color-sand-50: #FFFFFF;
+  --color-sand-100: #F5FAFD;
+  --color-sand-200: #EAF3F9;
+  --color-sand-300: #D5E4EF;
+  --color-sand-400: #A8BDCC;
 
   /* Back-compat aliases — older markup still refers to these */
-  --color-brand-blue: #1391CE;
-  --color-brand-blue-light: #5FBDE8;
-  --color-brand-blue-dark: #0B5A83;
-  --color-brand-orange: #F0762A;
-  --color-brand-orange-light: #F4A93C;
-  --color-brand-orange-dark: #DE5C1C;
+  --color-brand-blue: #1AA6E8;
+  --color-brand-blue-light: #77D3FD;
+  --color-brand-blue-dark: #106BA0;
+  --color-brand-orange: #F79333;
+  --color-brand-orange-light: #FBB864;
+  --color-brand-orange-dark: #F17017;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -100,59 +102,58 @@
 }
 
 :root {
-  /* Typography — Bricolage Grotesque (latin display) is deliberately quirky;
-     Noto Kufi Arabic carries the same structural weight for Arabic headings.
-     Body is IBM Plex Sans / IBM Plex Sans Arabic — a humanist pair that reads
-     nothing like the Inter/Poppins default. */
-  --font-display: var(--font-bricolage), var(--font-kufi), ui-sans-serif, system-ui, sans-serif;
+  /* Typography — Bricolage Grotesque for latin display, Tajawal for arabic
+     (a modern warm humanist that reads current, not template). Body copy uses
+     IBM Plex Sans / IBM Plex Sans Arabic for long-form legibility. */
+  --font-display: var(--font-bricolage), var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-plex), var(--font-plex-ar), ui-sans-serif, system-ui, sans-serif;
 
-  --background: #FBF7F1;
-  --foreground: #0C2B38;
+  --background: #FFFFFF;
+  --foreground: #0F3D5C;
   --card: #FFFFFF;
-  --card-foreground: #0C2B38;
+  --card-foreground: #0F3D5C;
   --popover: #FFFFFF;
-  --popover-foreground: #0C2B38;
-  --primary: #1391CE;
+  --popover-foreground: #0F3D5C;
+  --primary: #1AA6E8;
   --primary-foreground: #FFFFFF;
-  --secondary: #F6F0E6;
-  --secondary-foreground: #0C2B38;
-  --muted: #F6F0E6;
-  --muted-foreground: #5F7180;
-  --accent: #F0762A;
+  --secondary: #F5FAFD;
+  --secondary-foreground: #0F3D5C;
+  --muted: #F5FAFD;
+  --muted-foreground: #5A7A90;
+  --accent: #F79333;
   --accent-foreground: #FFFFFF;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #E4D9C7;
-  --input: #E4D9C7;
-  --ring: #1391CE;
-  --chart-1: #1391CE;
-  --chart-2: #F0762A;
-  --chart-3: #0A5A83;
-  --chart-4: #F4A93C;
-  --chart-5: #9AD5F1;
-  --radius: 0.75rem;
+  --border: #D5E4EF;
+  --input: #D5E4EF;
+  --ring: #1AA6E8;
+  --chart-1: #1AA6E8;
+  --chart-2: #F79333;
+  --chart-3: #106BA0;
+  --chart-4: #FBB864;
+  --chart-5: #B7E7FE;
+  --radius: 1rem;
 
-  --sidebar: #0C2B38;
-  --sidebar-foreground: #E9F3F8;
-  --sidebar-primary: #1391CE;
+  --sidebar: #0F3D5C;
+  --sidebar-foreground: #EAF3F9;
+  --sidebar-primary: #1AA6E8;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #0C4460;
+  --sidebar-accent: #135A85;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #1391CE;
+  --sidebar-ring: #1AA6E8;
 
-  /* Signature shapes */
-  --pin-radius: 1.75rem 0.35rem 1.75rem 0.35rem;
-  --pin-radius-rtl: 0.35rem 1.75rem 0.35rem 1.75rem;
-  --ink: #0C2B38;
+  /* Signature shapes — softer, more modern radius */
+  --pin-radius: 1.5rem 1.5rem 1.5rem 1.5rem;
+  --pin-radius-rtl: 1.5rem 1.5rem 1.5rem 1.5rem;
+  --ink: #0F3D5C;
 
   /* First Trip brand color aliases (kept for older markup) */
-  --ft-blue: #1391CE;
-  --ft-blue-light: #5FBDE8;
-  --ft-blue-dark: #0B5A83;
-  --ft-orange: #F0762A;
-  --ft-orange-light: #F4A93C;
-  --ft-orange-dark: #DE5C1C;
+  --ft-blue: #1AA6E8;
+  --ft-blue-light: #77D3FD;
+  --ft-blue-dark: #106BA0;
+  --ft-orange: #F79333;
+  --ft-orange-light: #FBB864;
+  --ft-orange-dark: #F17017;
 }
 
 .dark {
@@ -182,9 +183,9 @@
 /* ─── RTL ─── */
 html[dir="rtl"] {
   direction: rtl;
-  --font-display: var(--font-kufi), var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-plex-ar), var(--font-plex), ui-sans-serif, system-ui, sans-serif;
-  --pin-radius: 0.35rem 1.75rem 0.35rem 1.75rem;
+  /* Tajawal FIRST for Arabic — modern, warm, current. Falls back to Plex Arabic. */
+  --font-display: var(--font-tajawal), var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-tajawal), var(--font-plex-ar), var(--font-plex), ui-sans-serif, system-ui, sans-serif;
 }
 
 html[dir="rtl"] .ltr-only {
@@ -193,7 +194,7 @@ html[dir="rtl"] .ltr-only {
 }
 
 /* Font classes (legacy hooks) */
-.font-arabic { font-family: var(--font-kufi), var(--font-plex-ar), sans-serif; }
+.font-arabic { font-family: var(--font-tajawal), var(--font-plex-ar), sans-serif; }
 .font-english { font-family: var(--font-plex), sans-serif; }
 
 @layer base {

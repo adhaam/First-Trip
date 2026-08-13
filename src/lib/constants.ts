@@ -10,7 +10,6 @@ export const EMAIL = 'info@firsttrip-eg.com'
 export const NAV_ITEMS: NavItem[] = [
   { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: '🏠' },
   { label_ar: 'احجز دهب', label_en: 'Book Dahab', href: '/book-dahab', icon: '📅' },
-  { label_ar: 'حجز انتقالات', label_en: 'Transfers', href: '/transfers', icon: '🚐' },
   { label_ar: 'رحلات سيناء', label_en: 'Sinai Trips', href: '/sinai-trips', icon: '🏜️' },
   { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: '👥' },
   { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: '🤝' },
@@ -21,7 +20,6 @@ export const NAV_ITEMS: NavItem[] = [
 export const NAV_LABEL_KEYS: Record<string, string> = {
   '/': 'home',
   '/book-dahab': 'book',
-  '/transfers': 'transfers',
   '/sinai-trips': 'trips',
   '/community': 'community',
   '/partner': 'partner',
@@ -31,34 +29,34 @@ export const NAV_LABEL_KEYS: Record<string, string> = {
 
 export const SERVICES: ServiceItem[] = [
   {
-    title_ar: 'باقات كاملة',
-    title_en: 'Full Packages',
-    description_ar: 'انتقالات + إقامة + رحلتين داخليتين — 4 أو 5 أيام من محافظتك لدهب',
-    description_en: 'Transfer + Accommodation + 2 Internal Trips — 4 or 5 days from your governorate to Dahab',
+    title_ar: 'الباقة الكاملة',
+    title_en: 'The Full Trip',
+    description_ar: 'انتقالات، إقامة، ورحلتين داخل سيناء — إنت بس تنزل من العربية.',
+    description_en: 'Transfers, stay, and two Sinai day trips — you just show up.',
     icon: '🎯',
     href: '/book-dahab',
   },
   {
-    title_ar: 'إقامة فقط',
-    title_en: 'Accommodation Only',
-    description_ar: 'حجز فنادق، شاليهات، وكمبات في دهب — اختر عدد الليالي اللي يناسبك',
-    description_en: 'Book hotels, chalets & camps in Dahab — choose how many nights',
+    title_ar: 'الإقامة بس',
+    title_en: 'Just the Stay',
+    description_ar: 'كامب على البحر، شاليه هادي، أو فندق فخم — على مزاجك.',
+    description_en: 'A camp on the sea, a quiet chalet, or a proper hotel — your call.',
     icon: '🏨',
     href: '/book-dahab',
   },
   {
-    title_ar: 'انتقالات فقط',
-    title_en: 'Transfers Only',
-    description_ar: 'هاي إيس من محافظتك لدهب والعكس — أي يوم، ذهاب أو عودة أو الاتنين',
-    description_en: 'Hiace from your governorate to Dahab & back — any day, one way or round trip',
+    title_ar: 'الانتقالات بس',
+    title_en: 'Just the Ride',
+    description_ar: 'هايس خاص من محافظتك لدهب — مواعيدك إنت.',
+    description_en: 'A private Hiace from your city to Dahab — on your schedule.',
     icon: '🚐',
-    href: '/transfers',
+    href: '/book-dahab',
   },
   {
-    title_ar: 'رحلات داخلية',
-    title_en: 'Sinai Day Trips',
-    description_ar: 'سفاري، غوص، بلو هول، جبل كاترين، وادي وشواشي، والمزيد',
-    description_en: 'Safari, diving, Blue Hole, Mount Sinai, Wadi Washwashi & more',
+    title_ar: 'رحلات سيناء',
+    title_en: 'Sinai Adventures',
+    description_ar: 'بلو هول، الوادي الملون، جبل موسى، سفاري — الأماكن اللي بتكسر روتين المدينة.',
+    description_en: 'Blue Hole, Colored Canyon, Mt. Sinai, safari — the spots that break the city.',
     icon: '🏜️',
     href: '/sinai-trips',
   },
@@ -66,43 +64,72 @@ export const SERVICES: ServiceItem[] = [
 
 export const WHY_US: WhyUsPoint[] = [
   {
-    title_ar: 'خبرة 6 سنوات',
-    title_en: '6 Years Experience',
-    description_ar: 'من 2017 بننظم رحلات لدهب — نعرف كل تفاصيل الرحلة من الألف للياء',
-    description_en: 'Organizing Dahab trips since 2017 — we know every detail inside out',
-    icon: '⭐',
+    title_ar: 'مش شركة سياحة عادية',
+    title_en: 'Not Your Average Agency',
+    description_ar: 'إحنا كوميونيتي بننظم رحلات لدهب من 2017. عارفين كل نول، وكل صاحب كامب، وكل زاوية في البلد.',
+    description_en: 'We\'re a community running trips to Dahab since 2017. We know every driver, every camp owner, every corner of the town.',
+    icon: '🌊',
   },
   {
-    title_ar: 'رحلات منتظمة',
-    title_en: 'Regular Trips',
-    description_ar: 'رحلات ثابتة كل يوم أحد وخميس — أسبوعياً على مدار السنة',
-    description_en: 'Fixed trips every Sunday & Thursday — weekly, year-round',
+    title_ar: 'مواعيد ثابتة كل أسبوع',
+    title_en: 'Fixed Weekly Rhythm',
+    description_ar: 'كل أحد وخميس بنقوم — من غير شيلة رأس ولا مواعيد بتتلغي.',
+    description_en: 'Every Sunday and Thursday, on the dot. No cancellations, no confusion.',
     icon: '🗓️',
   },
   {
-    title_ar: 'فنادق منتقاة',
-    title_en: 'Handpicked Hotels',
-    description_ar: 'نتعاقد مع أفضل الفنادق والشاليهات والكمبات في دهب',
-    description_en: 'We partner with the best hotels, chalets & camps in Dahab',
-    icon: '🏆',
+    title_ar: 'أماكن اخترناها بنفسنا',
+    title_en: 'Places We\'ve Slept In',
+    description_ar: 'كل كامب وكل فندق في القائمة إحنا مش بس زرناه — إحنا قعدنا فيه.',
+    description_en: 'Every camp and hotel in our list — we didn\'t just visit, we\'ve stayed.',
+    icon: '🏕️',
   },
   {
-    title_ar: 'سعر تنافسي',
-    title_en: 'Competitive Pricing',
-    description_ar: 'أفضل الأسعار مع أعلى جودة خدمة — احجز بمقدم 50% فقط',
-    description_en: 'Best prices with highest service quality — book with only 50% down payment',
-    icon: '💰',
+    title_ar: 'صحبة قبل أي حاجة',
+    title_en: 'Vibes First, Always',
+    description_ar: 'رحلاتنا مش برنامج — دي أيام هتفضل تحكي عنها. الناس بترجع منها بصحاب جداد.',
+    description_en: 'Our trips aren\'t itineraries — they\'re days you\'ll keep talking about. People leave with new friends.',
+    icon: '✨',
   },
 ]
 
 // Testimonials now live in Supabase (`testimonials` table) and are managed from
 // the dashboard — see getTestimonials() in lib/data.ts.
 
+/**
+ * The 4 promises that anchor the brand — shown as the home page trust bar and
+ * used across other pages as a hover-badge row. Wording is intentional; each
+ * one answers a specific first-time visitor doubt.
+ */
 export const TRUST_STATS = [
-  { label_ar: 'سنوات الخبرة', label_en: 'Years Experience', value: '6', suffix_ar: 'سنوات', suffix_en: 'years' },
-  { label_ar: 'عميل سعيد', label_en: 'Happy Customers', value: '500+', suffix_ar: 'عميل', suffix_en: 'customers' },
-  { label_ar: 'رحلات أسبوعية', label_en: 'Weekly Trips', value: '2', suffix_ar: 'رحلات/أسبوع', suffix_en: 'trips/week' },
-  { label_ar: 'مكان إقامة', label_en: 'Accommodations', value: '30+', suffix_ar: 'مكان', suffix_en: 'places' },
+  {
+    icon: '🎯',
+    label_ar: '10 سنوات خبرة',
+    label_en: '10 Years Experience',
+    sub_ar: 'من 2017 وإحنا في السوق',
+    sub_en: 'In the market since 2017',
+  },
+  {
+    icon: '✨',
+    label_ar: 'تنظيم رحلات احترافي',
+    label_en: 'High Quality Tour Operation',
+    sub_ar: 'كل تفصيلة مضبوطة — من الباب للباب',
+    sub_en: 'Every detail dialled — door to door',
+  },
+  {
+    icon: '🤝',
+    label_ar: 'استضافة زي الأصحاب',
+    label_en: 'Hosted Like a Friend',
+    sub_ar: 'مش عميل رقم، إنت واحد مننا',
+    sub_en: 'Not a booking number — one of us',
+  },
+  {
+    icon: '🌱',
+    label_ar: 'بنرد للمجتمع المحلي',
+    label_en: 'Giving Back to Local Communities',
+    sub_ar: 'شغّالين مع أهل دهب مش عليهم',
+    sub_en: 'Working with Dahab locals, not around them',
+  },
 ]
 
 // Governorates + their transfer surcharges now live in Supabase

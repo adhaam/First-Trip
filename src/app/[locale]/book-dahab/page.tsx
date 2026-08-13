@@ -106,13 +106,15 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
           <p className="mx-auto mt-2 max-w-lg text-white/85">
             {ar ? 'كلمنا على واتساب ونرشحلك على مزاجك' : 'Message us on WhatsApp and we\'ll recommend something for you'}
           </p>
-          <Link
-            href="/transfers"
+          <a
+            href="https://wa.me/201005744083"
+            target="_blank"
+            rel="noopener"
             className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-sea-900 px-7 text-sm font-semibold text-white transition-colors hover:bg-sea-700"
           >
-            {ar ? 'أو احجز انتقالات بس' : 'Or just book a transfer'}
+            {ar ? 'كلمنا على واتساب' : 'Message us on WhatsApp'}
             <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
-          </Link>
+          </a>
         </div>
       </section>
     </div>

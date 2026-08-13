@@ -9,27 +9,52 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import {
   PACKAGE_DEPARTURE_DAYS, PACKAGE_RETURN_DAYS,
-  governoratesFor, quotePackage, upcomingDatesFor, formatEGP,
+  governoratesFor, quotePackage, quoteTransfer,
+  upcomingDatesFor, formatEGP,
 } from '@/lib/pricing'
-import type { Accommodation, TransferDirection, TransferPricing } from '@/lib/types'
-import { Send, CheckCircle2, MessageCircle, Loader2, AlertCircle } from 'lucide-react'
+import type {
+  Accommodation, TransferDirection, TransferPricing, TransferType,
+} from '@/lib/types'
+import {
+  Send, CheckCircle2, MessageCircle, Loader2, AlertCircle,
+  Package, Bed, Bus, Calendar, Info,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+// ─── The one form to rule them all ───
+// Adham's brief: no more separate /transfers page. Whether the user wants a
+// full Dahab package, just the stay, or just the ride — same form. And packages
+// have a fixed schedule (Sun/Thu out, Mon/Fri back), so we don't ask the user
+// to pick dates for that mode — we just tell them the next departure.
+
+type Mode = 'package' | 'stay-only' | 'transfer-only'
+
 const schema = z.object({
-  booking_type: z.enum(['package', 'accommodation-only']),
+  mode: z.enum(['package', 'stay-only', 'transfer-only']),
+
+  // package
+  duration: z.string().optional(),           // '4' | '5'
+  package_governorate: z.string().optional(),
+  package_direction: z.enum(['to_dahab', 'round_trip']).optional(),
+
+  // stay-only
   nights: z.string().optional(),
-  duration: z.string().optional(),
-  governorate: z.string().optional(),
-  transfer_direction: z.enum(['to_dahab', 'round_trip']).optional(),
-  travel_date: z.string().optional(),
-  return_date: z.string().optional(),
+  check_in_date: z.string().optional(),
+
+  // transfer-only
+  transfer_type: z.enum(['package_bus', 'hiace']).optional(),
+  transfer_governorate: z.string().optional(),
+  transfer_direction: z.enum(['to_dahab', 'from_dahab', 'round_trip']).optional(),
+  transfer_date: z.string().optional(),
+  transfer_return_date: z.string().optional(),
+
+  // shared
   num_people: z.string().min(1, 'Required'),
   full_name: z.string().min(3, 'Min 3 chars'),
   phone: z.string().min(10, 'Invalid phone'),
@@ -59,85 +84,165 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      booking_type: 'package',
+      mode: 'package',
       num_people: '2',
       duration: '4',
-      nights: '1',
+      nights: '2',
+      package_direction: 'round_trip',
+      transfer_type: 'hiace',
       transfer_direction: 'round_trip',
     },
   })
 
-  const bookingType = watch('booking_type')
-  const duration = watch('duration')
-  const governorate = watch('governorate')
-  const direction = (watch('transfer_direction') ?? 'round_trip') as TransferDirection
-  const numPeople = Math.max(1, parseInt(watch('num_people') || '1') || 1)
+  const mode = watch('mode') as Mode
+  const duration = watch('duration') || '4'
+  const packageGov = watch('package_governorate')
+  const packageDirection = (watch('package_direction') ?? 'round_trip') as 'to_dahab' | 'round_trip'
   const nights = Math.max(1, parseInt(watch('nights') || '1') || 1)
+  const transferType = (watch('transfer_type') ?? 'hiace') as TransferType
+  const transferGov = watch('transfer_governorate')
+  const transferDirection = (watch('transfer_direction') ?? 'round_trip') as TransferDirection
+  const numPeople = Math.max(1, parseInt(watch('num_people') || '1') || 1)
 
-  const govOptions = useMemo(() => governoratesFor(pricing, 'package_bus'), [pricing])
-  const departureDates = useMemo(() => upcomingDatesFor(PACKAGE_DEPARTURE_DAYS, 14), [])
-  const returnDates = useMemo(() => upcomingDatesFor(PACKAGE_RETURN_DAYS, 14), [])
+  // ─── governorate options depend on which transfer type we're pricing ───
+  const packageGovs = useMemo(() => governoratesFor(pricing, 'package_bus'), [pricing])
+  const transferGovs = useMemo(
+    () => governoratesFor(pricing, transferType),
+    [pricing, transferType],
+  )
 
-  // ─── live price preview (the server recomputes this on submit) ───
-  const quote = useMemo(() => {
-    if (bookingType === 'accommodation-only') return null
+  // ─── date options for standalone transfers ───
+  // Bus: only Sun/Thu (out) or Mon/Fri (back). Hiace: any day.
+  const busDepartureDates = useMemo(() => upcomingDatesFor(PACKAGE_DEPARTURE_DAYS, 10), [])
+  const busReturnDates = useMemo(() => upcomingDatesFor(PACKAGE_RETURN_DAYS, 10), [])
+  const anyDates = useMemo(() => upcomingDatesFor(null, 14), [])
+
+  const transferDateOptions =
+    transferType === 'package_bus'
+      ? transferDirection === 'from_dahab' ? busReturnDates : busDepartureDates
+      : anyDates
+
+  const transferReturnDateOptions =
+    transferType === 'package_bus' ? busReturnDates : anyDates
+
+  // ─── auto-computed next departure/return for packages ───
+  // We don't ask the user for dates here — Adham's brief. We just SHOW the next
+  // valid date so they know when the trip actually leaves.
+  const packageSchedule = useMemo(() => {
+    // 5-day trip = Sun → Fri (out on Sunday, back on Friday)
+    // 4-day trip = Thu → Mon (out on Thursday, back on Monday)
+    const departDay = duration === '5' ? 0 : 4 // Sun or Thu
+    const returnDay = duration === '5' ? 5 : 1 // Fri or Mon
+    const [depart] = upcomingDatesFor([departDay], 1)
+    const [ret] = upcomingDatesFor([returnDay], 1, new Date(`${depart}T00:00:00`))
+    return { depart, ret }
+  }, [duration])
+
+  // ─── live price preview (server recomputes on submit) ───
+  const packageQuote = useMemo(() => {
+    if (mode !== 'package') return null
     const accommodationPrice =
       duration === '5' ? Number(accommodation.price_5day) : Number(accommodation.price_4day)
     return quotePackage({
       pricing,
       accommodationPrice,
-      governorateCode: governorate,
-      direction,
+      governorateCode: packageGov,
+      direction: packageDirection,
       numPeople,
     })
-  }, [bookingType, duration, governorate, direction, numPeople, accommodation, pricing])
+  }, [mode, duration, packageGov, packageDirection, numPeople, accommodation, pricing])
 
-  const accommodationOnlyTotal =
+  const transferQuote = useMemo(() => {
+    if (mode !== 'transfer-only') return null
+    return quoteTransfer({
+      pricing,
+      type: transferType,
+      governorateCode: transferGov,
+      direction: transferDirection,
+      numPeople,
+    })
+  }, [mode, transferType, transferGov, transferDirection, numPeople, pricing])
+
+  const stayTotal =
     Number(accommodation.price_per_night) * nights * numPeople
 
-  const total = bookingType === 'package' ? quote?.total ?? 0 : accommodationOnlyTotal
+  const total =
+    mode === 'package'
+      ? packageQuote?.total ?? 0
+      : mode === 'transfer-only'
+      ? transferQuote?.total ?? 0
+      : stayTotal
 
-  const formatDate = (iso: string) =>
-    new Date(`${iso}T00:00:00`).toLocaleDateString(ar ? 'ar-EG' : 'en-GB', {
+  const formatDate = (iso?: string) => {
+    if (!iso) return ''
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(ar ? 'ar-EG' : 'en-GB', {
       weekday: 'long', day: 'numeric', month: 'short',
     })
+  }
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true)
     setServerError('')
+
+    // Assemble the payload the /api/bookings route expects.
+    const payload = (() => {
+      if (data.mode === 'package') {
+        return {
+          customer_name: data.full_name,
+          customer_phone: data.phone,
+          booking_type: 'package' as const,
+          accommodation_id: accommodation.id,
+          governorate: data.package_governorate,
+          trip_date: packageSchedule.depart,
+          return_date: packageDirection === 'round_trip' ? packageSchedule.ret : undefined,
+          duration: duration === '5' ? 5 : 4,
+          transfer_type: 'package_bus' as const,
+          transfer_direction: packageDirection,
+          num_people: numPeople,
+          notes: data.notes || undefined,
+        }
+      }
+      if (data.mode === 'stay-only') {
+        return {
+          customer_name: data.full_name,
+          customer_phone: data.phone,
+          booking_type: 'accommodation-only' as const,
+          accommodation_id: accommodation.id,
+          trip_date: data.check_in_date || undefined,
+          nights,
+          num_people: numPeople,
+          notes: data.notes || undefined,
+        }
+      }
+      // transfer-only
+      return {
+        customer_name: data.full_name,
+        customer_phone: data.phone,
+        booking_type: 'transfer-only' as const,
+        governorate: data.transfer_governorate,
+        trip_date: data.transfer_date || undefined,
+        return_date:
+          transferDirection === 'round_trip' ? data.transfer_return_date : undefined,
+        transfer_type: transferType,
+        transfer_direction: transferDirection,
+        num_people: numPeople,
+        notes: data.notes || undefined,
+      }
+    })()
+
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // NOTE: these key names must match the zod schema in /api/bookings —
-          // they used to be full_name/phone/travel_date, which silently 400'd.
-          customer_name: data.full_name,
-          customer_phone: data.phone,
-          booking_type: data.booking_type,
-          accommodation_id: accommodation.id,
-          governorate: data.booking_type === 'package' ? data.governorate : undefined,
-          trip_date: data.travel_date || undefined,
-          return_date:
-            data.booking_type === 'package' && direction === 'round_trip'
-              ? data.return_date || undefined
-              : undefined,
-          duration:
-            data.booking_type === 'package' ? (duration === '5' ? 5 : 4) : undefined,
-          nights: data.booking_type === 'accommodation-only' ? nights : undefined,
-          transfer_type: data.booking_type === 'package' ? 'package_bus' : undefined,
-          transfer_direction: data.booking_type === 'package' ? direction : undefined,
-          num_people: numPeople,
-          notes: data.notes || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
-
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         setServerError(
           body.error ||
-            (ar ? 'حصلت مشكلة في إرسال الحجز. جرّب تاني أو كلمنا على واتساب.'
-                : 'Something went wrong. Please try again or message us on WhatsApp.'),
+            (ar
+              ? 'حصلت مشكلة في الإرسال. جرّب تاني أو كلمنا على واتساب.'
+              : 'Something went wrong. Try again or WhatsApp us.'),
         )
         return
       }
@@ -153,17 +258,21 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
 
   const whatsappLink = () => {
     const accName = ar ? accommodation.name_ar : accommodation.name_en
+    const modeLabel =
+      mode === 'package' ? (ar ? 'باكدج' : 'Package') :
+      mode === 'stay-only' ? (ar ? 'إقامة بس' : 'Stay only') :
+      (ar ? 'انتقالات بس' : 'Transfer only')
     const text = encodeURIComponent(
       ar
-        ? `حجز جديد — ${accName}\nالنوع: ${bookingType === 'package' ? 'باكدج' : 'إقامة فقط'}\nعدد الأفراد: ${numPeople}\nالتكلفة التقريبية: ${formatEGP(total, 'en')} ج.م`
-        : `New booking — ${accName}\nType: ${bookingType}\nPeople: ${numPeople}\nEstimate: ${formatEGP(total, 'en')} EGP`,
+        ? `عايز أحجز — ${accName}\nالنوع: ${modeLabel}\nعدد الأفراد: ${numPeople}\nالتكلفة التقريبية: ${formatEGP(total, 'en')} ج.م`
+        : `Booking — ${accName}\nType: ${modeLabel}\nPeople: ${numPeople}\nEstimate: ${formatEGP(total, 'en')} EGP`,
     )
     return `https://wa.me/${(whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')}?text=${text}`
   }
 
   if (submitted) {
     return (
-      <div className="border-[1.5px] border-sea-900/15 bg-white p-8 text-center pin-card">
+      <div className="rounded-3xl border-[1.5px] border-sea-100 bg-white p-8 text-center shadow-sm">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
           <CheckCircle2 className="h-7 w-7 text-emerald-600" />
         </div>
@@ -172,8 +281,8 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
         </h3>
         <p className="mt-2 text-sm leading-relaxed text-sea-900/60">
           {ar
-            ? 'هنكلمك خلال ساعات قليلة لتأكيد الحجز وتفاصيل الدفع.'
-            : 'We\'ll call you within a few hours to confirm and sort out payment.'}
+            ? 'هنكلمك خلال ساعات قليلة نأكد الحجز ونظبط التفاصيل.'
+            : 'We\'ll call you within a few hours to confirm and sort details.'}
         </p>
         <a
           href={whatsappLink()}
@@ -189,32 +298,33 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
   }
 
   return (
-    <div className="border-[1.5px] border-sand-300 bg-white pin-card">
+    <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-white shadow-sm">
       {/* ─── running total ─── */}
-      <div className="border-b border-sand-300 bg-sand-100 p-6">
+      <div className="border-b border-sea-100 bg-gradient-to-br from-sea-50 to-sun-50 p-6">
         <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sea-900/50">
           {t('priceBreakdown')}
         </div>
 
         <div className="mt-3 space-y-1.5 text-sm">
-          {bookingType === 'package' && quote ? (
+          {mode === 'package' && packageQuote && (
             <>
               <Line
                 label={`${t('accommodationLine')} · ${duration === '5' ? t('day5') : t('day4')}`}
-                value={`${formatEGP(quote.accommodationPerPerson, locale)} ${common('egp')}`}
+                value={`${formatEGP(packageQuote.accommodationPerPerson, locale)} ${common('egp')}`}
               />
               <Line
                 label={`${t('transferLine')} · ${
-                  direction === 'round_trip' ? t('roundTrip') : t('oneWay')
+                  packageDirection === 'round_trip' ? t('roundTrip') : t('oneWay')
                 }`}
                 value={
-                  quote.transfer.isPriced
-                    ? `${formatEGP(quote.transfer.perPerson, locale)} ${common('egp')}`
+                  packageQuote.transfer.isPriced
+                    ? `${formatEGP(packageQuote.transfer.perPerson, locale)} ${common('egp')}`
                     : '—'
                 }
               />
             </>
-          ) : (
+          )}
+          {mode === 'stay-only' && (
             <Line
               label={`${t('accommodationLine')} · ${nights} ${
                 nights === 1 ? common('night') : common('nights')
@@ -225,9 +335,23 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
               )} ${common('egp')}`}
             />
           )}
+          {mode === 'transfer-only' && transferQuote && (
+            <Line
+              label={`${transferType === 'package_bus'
+                ? (ar ? 'باص جماعي' : 'Shared bus')
+                : (ar ? 'هايس خاص' : 'Private Hiace')} · ${
+                transferDirection === 'round_trip' ? t('roundTrip') : t('oneWay')
+              }`}
+              value={
+                transferQuote.isPriced
+                  ? `${formatEGP(transferQuote.perPerson, locale)} ${common('egp')}`
+                  : '—'
+              }
+            />
+          )}
         </div>
 
-        <div className="mt-4 flex items-end justify-between gap-3 border-t border-sand-300 pt-4">
+        <div className="mt-4 flex items-end justify-between gap-3 border-t border-sea-200/60 pt-4">
           <div className="text-xs text-sea-900/55">
             {t('totalFor')} {numPeople} {numPeople === 1 ? common('person') : common('people')}
           </div>
@@ -242,33 +366,37 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-6">
-        {/* booking type */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
+        {/* ─── mode selector ─── */}
         <div>
           <Label className="mb-2.5 block">{t('bookingType')}</Label>
-          <RadioGroup
-            value={bookingType}
-            onValueChange={(v) => setValue('booking_type', v as FormData['booking_type'])}
-            className="grid gap-2"
-          >
-            <TypeOption
-              value="package"
-              id="bt-package"
-              active={bookingType === 'package'}
-              title={ar ? 'باكدج كامل' : 'Full package'}
-              desc={ar ? 'انتقالات + إقامة + رحلتين داخليتين' : 'Transfer + stay + 2 day trips'}
+          <div className="grid gap-2">
+            <ModeOption
+              icon={Package}
+              active={mode === 'package'}
+              title={ar ? 'الباكدج الكامل' : 'Full package'}
+              desc={ar ? 'انتقالات + إقامة + رحلتين' : 'Transfer + stay + 2 day trips'}
+              onClick={() => setValue('mode', 'package')}
             />
-            <TypeOption
-              value="accommodation-only"
-              id="bt-acc"
-              active={bookingType === 'accommodation-only'}
-              title={t('accommodationOnly')}
-              desc={ar ? 'الإقامة بس، من غير انتقالات' : 'Just the stay, no transfer'}
+            <ModeOption
+              icon={Bed}
+              active={mode === 'stay-only'}
+              title={ar ? 'الإقامة بس' : 'Stay only'}
+              desc={ar ? 'إقامة من غير انتقالات — إنت هتوصل بنفسك' : 'Just the stay — you\'ll get to Dahab on your own'}
+              onClick={() => setValue('mode', 'stay-only')}
             />
-          </RadioGroup>
+            <ModeOption
+              icon={Bus}
+              active={mode === 'transfer-only'}
+              title={ar ? 'الانتقالات بس' : 'Transfer only'}
+              desc={ar ? 'باص جماعي أو هايس خاص — بدون إقامة' : 'Shared bus or private Hiace — no stay'}
+              onClick={() => setValue('mode', 'transfer-only')}
+            />
+          </div>
         </div>
 
-        {bookingType === 'package' && (
+        {/* ─── PACKAGE MODE ─── */}
+        {mode === 'package' && (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
@@ -288,14 +416,14 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
               <div>
                 <Label className="mb-1.5 block">{t('governorate')}</Label>
                 <Select
-                  value={governorate}
-                  onValueChange={(v) => v && setValue('governorate', v)}
+                  value={packageGov}
+                  onValueChange={(v) => v && setValue('package_governorate', v)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder={t('selectGovernorate')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {govOptions.map((g) => (
+                    {packageGovs.map((g) => (
                       <SelectItem key={g.id} value={g.governorate_code}>
                         {ar ? g.name_ar : g.name_en}
                         {g.price_surcharge > 0 ? ` (+${g.price_surcharge})` : ''}
@@ -306,7 +434,6 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
               </div>
             </div>
 
-            {/* transfer direction */}
             <div>
               <Label className="mb-1.5 block">{t('transferDirection')}</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -314,12 +441,12 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
                   <button
                     key={d}
                     type="button"
-                    onClick={() => setValue('transfer_direction', d)}
+                    onClick={() => setValue('package_direction', d)}
                     className={cn(
-                      'rounded-xl border-[1.5px] px-3 py-2.5 text-sm font-medium transition-colors',
-                      direction === d
-                        ? 'border-sea-600 bg-sea-50 text-sea-700'
-                        : 'border-sand-300 text-sea-900/65 hover:border-sea-900/25',
+                      'rounded-2xl border-[1.5px] px-3 py-2.5 text-sm font-medium transition-colors',
+                      packageDirection === d
+                        ? 'border-sea-500 bg-sea-50 text-sea-700'
+                        : 'border-sea-100 text-sea-900/65 hover:border-sea-300',
                     )}
                   >
                     {d === 'round_trip' ? t('roundTrip') : t('oneWay')}
@@ -328,78 +455,218 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
               </div>
             </div>
 
-            {/* departure — Sunday / Thursday only */}
-            <div>
-              <Label className="mb-1.5 block">{t('travelDate')}</Label>
-              <Select
-                value={watch('travel_date') ?? ''}
-                onValueChange={(v) => { if (v) setValue('travel_date', v) }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('selectDate')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {departureDates.map((d) => (
-                    <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="mt-1.5 text-xs text-sea-900/45">{t('departureDaysNote')}</p>
-            </div>
-
-            {/* return — Monday / Friday only */}
-            {direction === 'round_trip' && (
-              <div>
-                <Label className="mb-1.5 block">{t('returnDate')}</Label>
-                <Select
-                  value={watch('return_date') ?? ''}
-                  onValueChange={(v) => { if (v) setValue('return_date', v) }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('selectDate')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {returnDates.map((d) => (
-                      <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1.5 text-xs text-sea-900/45">{t('returnDaysNote')}</p>
+            {/* Fixed-schedule note — the whole reason we removed the date pickers */}
+            <div className="flex items-start gap-3 rounded-2xl bg-sun-50 border border-sun-200 p-4">
+              <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-sun-500" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-sea-900">
+                  {t('fixedSchedule')}
+                </div>
+                <div className="mt-1 text-xs leading-relaxed text-sea-900/65">
+                  {t('fixedScheduleHint')}
+                </div>
+                <div className="mt-3 space-y-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-sea-500" />
+                    <span className="text-sea-900/70">
+                      {ar ? 'قيامتك الجاية:' : 'Your next departure:'}
+                    </span>
+                    <span className="font-semibold text-sea-900">{formatDate(packageSchedule.depart)}</span>
+                  </div>
+                  {packageDirection === 'round_trip' && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-sun-500" />
+                      <span className="text-sea-900/70">
+                        {ar ? 'الرجوع:' : 'Return:'}
+                      </span>
+                      <span className="font-semibold text-sea-900">{formatDate(packageSchedule.ret)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </>
         )}
 
-        {bookingType === 'accommodation-only' && (
+        {/* ─── STAY-ONLY MODE ─── */}
+        {mode === 'stay-only' && (
           <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="mb-1.5 block">{t('nights')}</Label>
+                <Select
+                  value={String(nights)}
+                  onValueChange={(v) => v && setValue('nights', v)}
+                >
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6, 7, 10, 14].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} {n === 1 ? common('night') : common('nights')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="mb-1.5 block">{t('travelDate')}</Label>
+                <Input
+                  type="date"
+                  {...register('check_in_date')}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ─── TRANSFER-ONLY MODE ─── */}
+        {mode === 'transfer-only' && (
+          <>
+            {/* type: bus vs hiace */}
             <div>
-              <Label className="mb-1.5 block">{t('nights')}</Label>
+              <Label className="mb-2 block">{ar ? 'نوع الانتقال' : 'Transfer type'}</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <TransferTypeCard
+                  active={transferType === 'hiace'}
+                  title={t('transferTypeHiace')}
+                  desc={t('transferTypeHiaceDesc')}
+                  onClick={() => setValue('transfer_type', 'hiace')}
+                />
+                <TransferTypeCard
+                  active={transferType === 'package_bus'}
+                  title={t('transferTypeBus')}
+                  desc={t('transferTypeBusDesc')}
+                  onClick={() => setValue('transfer_type', 'package_bus')}
+                />
+              </div>
+            </div>
+
+            {/* direction */}
+            <div>
+              <Label className="mb-1.5 block">{t('transferDirection')}</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['round_trip', 'to_dahab', 'from_dahab'] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setValue('transfer_direction', d)}
+                    className={cn(
+                      'rounded-2xl border-[1.5px] px-2 py-2.5 text-xs font-medium transition-colors sm:text-sm',
+                      transferDirection === d
+                        ? 'border-sea-500 bg-sea-50 text-sea-700'
+                        : 'border-sea-100 text-sea-900/65 hover:border-sea-300',
+                    )}
+                  >
+                    {d === 'round_trip'
+                      ? t('roundTrip')
+                      : d === 'to_dahab'
+                      ? (ar ? 'لدهب' : 'To Dahab')
+                      : (ar ? 'من دهب' : 'From Dahab')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* governorate */}
+            <div>
+              <Label className="mb-1.5 block">{t('governorate')}</Label>
               <Select
-                value={String(nights)}
-                onValueChange={(v) => v && setValue('nights', v)}
+                value={transferGov}
+                onValueChange={(v) => v && setValue('transfer_governorate', v)}
               >
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('selectGovernorate')} />
+                </SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3, 4, 5, 6, 7, 10, 14].map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n} {n === 1 ? common('night') : common('nights')}
+                  {transferGovs.map((g) => (
+                    <SelectItem key={g.id} value={g.governorate_code}>
+                      {ar ? g.name_ar : g.name_en}
+                      {g.price_surcharge > 0 ? ` (+${g.price_surcharge})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label className="mb-1.5 block">{t('travelDate')}</Label>
-              <Input
-                type="date"
-                {...register('travel_date')}
-                min={new Date().toISOString().split('T')[0]}
-              />
+            {/* dates */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="mb-1.5 block">
+                  {transferDirection === 'from_dahab'
+                    ? (ar ? 'تاريخ العودة' : 'Return date')
+                    : (ar ? 'تاريخ الذهاب' : 'Departure date')}
+                </Label>
+                {transferType === 'package_bus' ? (
+                  <Select
+                    value={watch('transfer_date') ?? ''}
+                    onValueChange={(v) => v && setValue('transfer_date', v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t('selectDate')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {transferDateOptions.map((d) => (
+                        <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    type="date"
+                    {...register('transfer_date')}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                )}
+                {transferType === 'package_bus' && (
+                  <p className="mt-1.5 text-xs text-sea-900/45">
+                    {transferDirection === 'from_dahab' ? t('returnDaysNote') : t('departureDaysNote')}
+                  </p>
+                )}
+              </div>
+
+              {transferDirection === 'round_trip' && (
+                <div>
+                  <Label className="mb-1.5 block">{t('returnDate')}</Label>
+                  {transferType === 'package_bus' ? (
+                    <Select
+                      value={watch('transfer_return_date') ?? ''}
+                      onValueChange={(v) => v && setValue('transfer_return_date', v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t('selectDate')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {transferReturnDateOptions.map((d) => (
+                          <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type="date"
+                      {...register('transfer_return_date')}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  )}
+                </div>
+              )}
             </div>
+
+            {mode === 'transfer-only' && (
+              <div className="flex items-start gap-3 rounded-2xl border border-sea-100 bg-sea-50/40 p-4 text-xs leading-relaxed text-sea-900/70">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-sea-500" />
+                <span>
+                  {ar
+                    ? 'الحجز ده للانتقالات فقط — من غير إقامة. المكان اللي إنت بتشوفه فوق مش هيتحسب في السعر.'
+                    : 'This is a transfer-only booking — no stay included. The listing above is not included in the price.'}
+                </span>
+              </div>
+            )}
           </>
         )}
 
+        {/* ─── shared fields ─── */}
         <div>
           <Label className="mb-1.5 block">{t('numPeople')}</Label>
           <Input type="number" min="1" max="50" inputMode="numeric" {...register('num_people')} />
@@ -442,7 +709,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
           <Button
             type="submit"
             disabled={submitting}
-            className="h-12 w-full rounded-full bg-sun-400 text-base font-semibold text-white hover:bg-sun-500"
+            className="h-12 w-full rounded-full bg-gradient-to-r from-sun-500 to-sun-400 text-base font-semibold text-white shadow-sm transition-all hover:from-sun-600 hover:to-sun-500 hover:shadow-md"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {t('submit')}
@@ -471,28 +738,63 @@ function Line({ label, value }: { label: string; value: string }) {
   )
 }
 
-function TypeOption({
-  value, id, active, title, desc,
+function ModeOption({
+  icon: Icon, active, title, desc, onClick,
 }: {
-  value: string
-  id: string
+  icon: React.ComponentType<{ className?: string }>
   active: boolean
   title: string
   desc: string
+  onClick: () => void
 }) {
   return (
-    <Label
-      htmlFor={id}
+    <button
+      type="button"
+      onClick={onClick}
       className={cn(
-        'flex cursor-pointer items-start gap-3 rounded-xl border-[1.5px] p-3.5 font-normal transition-colors',
-        active ? 'border-sea-600 bg-sea-50' : 'border-sand-300 hover:border-sea-900/25',
+        'flex items-start gap-3 rounded-2xl border-[1.5px] p-4 text-start transition-colors',
+        active
+          ? 'border-sea-500 bg-sea-50'
+          : 'border-sea-100 hover:border-sea-300',
       )}
     >
-      <RadioGroupItem value={value} id={id} className="mt-0.5" />
-      <span>
+      <span
+        className={cn(
+          'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+          active ? 'bg-sea-500 text-white' : 'bg-sea-50 text-sea-600',
+        )}
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="flex-1 min-w-0">
         <span className="block text-sm font-semibold text-sea-900">{title}</span>
         <span className="mt-0.5 block text-xs text-sea-900/55">{desc}</span>
       </span>
-    </Label>
+    </button>
+  )
+}
+
+function TransferTypeCard({
+  active, title, desc, onClick,
+}: {
+  active: boolean
+  title: string
+  desc: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-2xl border-[1.5px] p-3 text-start transition-colors',
+        active
+          ? 'border-sea-500 bg-sea-50'
+          : 'border-sea-100 hover:border-sea-300',
+      )}
+    >
+      <div className="text-sm font-semibold text-sea-900">{title}</div>
+      <div className="mt-1 text-xs leading-snug text-sea-900/60">{desc}</div>
+    </button>
   )
 }
