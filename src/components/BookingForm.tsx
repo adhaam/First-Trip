@@ -549,26 +549,6 @@ export function BookingForm({
               </div>
             </div>
 
-            <div>
-              <Label className="mb-1.5 block">{t('transferDirection')}</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['round_trip', 'to_dahab'] as const).map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setValue('package_direction', d)}
-                    className={cn(
-                      'rounded-2xl border-[1.5px] px-3 py-2.5 text-sm font-medium transition-colors',
-                      packageDirection === d
-                        ? 'border-sea-500 bg-sea-50 text-sea-700'
-                        : 'border-sea-100 text-sea-900/65 hover:border-sea-300',
-                    )}
-                  >
-                    {d === 'round_trip' ? t('roundTrip') : t('oneWay')}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {hasRoomPricing && (
               <>

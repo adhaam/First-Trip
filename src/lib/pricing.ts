@@ -260,6 +260,9 @@ export interface AccommodationPackageQuoteInput {
 }
 
 export interface AccommodationPackageQuote {
+  /** Per-person per-night room cost (before multiplying by nights). */
+  roomPerPersonPerNight: number
+  /** roomPerPersonPerNight × nights — total room cost per person. */
   roomPerPerson: number
   mealPlanTotal: number
   includedTripsTotal: number
@@ -285,14 +288,18 @@ export function quoteAccommodationPackage({
   numPeople,
 }: AccommodationPackageQuoteInput): AccommodationPackageQuote {
   const transfer = quoteTransfer({ pricing, type: transferType, governorateCode, direction, numPeople })
-  const roomPerPerson = roomPerPersonPrice(accommodation, roomType)
-  const mealPlanTotal = (Number(mealPlanPricePerNight) || 0) * Math.max(0, nights)
+  const n = Math.max(0, nights)
+  const roomPerPersonPerNight = roomPerPersonPrice(accommodation, roomType)
+  // room cost per person = per-night price × number of nights
+  const roomPerPerson = roomPerPersonPerNight * n
+  const mealPlanTotal = (Number(mealPlanPricePerNight) || 0) * n
   const included = Number(includedTripsTotal) || 0
   const extras = Number(extraTripsTotal) || 0
   const perPersonBeforeExtras = roomPerPerson + mealPlanTotal + included + transfer.perPerson
   const people = transfer.numPeople
 
   return {
+    roomPerPersonPerNight,
     roomPerPerson,
     mealPlanTotal,
     includedTripsTotal: included,
