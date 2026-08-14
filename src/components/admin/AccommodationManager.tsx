@@ -78,47 +78,6 @@ export function AccommodationManager() {
   const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [bookingUrl, setBookingUrl] = useState('')
-  const [importing, setImporting] = useState(false)
-  const [importError, setImportError] = useState('')
-  const [importNote, setImportNote] = useState('')
-
-  const importFromBooking = async () => {
-    if (!bookingUrl.trim()) return
-    setImporting(true)
-    setImportError('')
-    setImportNote('')
-    try {
-      const res = await fetch('/api/admin/import-booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: bookingUrl.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Import failed')
-
-      setForm(prev => ({
-        ...prev,
-        name_en: data.name_en || prev.name_en,
-        description_en: data.description_en || prev.description_en,
-        images: data.images?.length ? Array.from(new Set([...(prev.images || []), ...data.images])) : prev.images,
-        rating: typeof data.rating === 'number' ? data.rating : prev.rating,
-        latitude: typeof data.latitude === 'number' ? data.latitude : prev.latitude,
-        longitude: typeof data.longitude === 'number' ? data.longitude : prev.longitude,
-        amenities_en: data.amenities_en?.length ? data.amenities_en : prev.amenities_en,
-      }))
-      setImportNote(
-        locale === 'ar'
-          ? 'اتسحبت البيانات الإنجليزي. راجعها وكمّل النسخة العربي بنفسك — مش بنسحب ترجمة تلقائي.'
-          : 'English data imported. Review it and fill in the Arabic version yourself — we don\'t auto-translate.',
-      )
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : (locale === 'ar' ? 'فشل السحب من الرابط' : 'Import failed'))
-    } finally {
-      setImporting(false)
-    }
-  }
-
   const mealPlanFor = (key: MealPlanKey): MealPlan | undefined =>
     ((form.meal_plans as MealPlan[]) || []).find(m => m.key === key)
 
@@ -235,8 +194,28 @@ export function AccommodationManager() {
     setSaving(true)
     try {
       const payload = {
-        ...form,
+        name_ar: form.name_ar || '',
+        name_en: form.name_en || '',
+        type: form.type || 'hotel',
+        tier: form.tier || 'standard',
+        description_ar: form.description_ar || '',
+        description_en: form.description_en || '',
         image_url: (form.images as string[])?.[0] || form.image_url || '',
+        images: (form.images as string[]) || [],
+        rating: form.rating || 0,
+        location_ar: form.location_ar || '',
+        location_en: form.location_en || '',
+        latitude: form.latitude ?? 28.5092,
+        longitude: form.longitude ?? 34.5185,
+        amenities_ar: (form.amenities_ar as string[]) || [],
+        amenities_en: (form.amenities_en as string[]) || [],
+        price_per_night: form.price_per_night || 0,
+        price_4day: form.price_4day || 0,
+        price_5day: form.price_5day || 0,
+        price_double_room: form.price_double_room || 0,
+        price_single_room: form.price_single_room || 0,
+        meal_plans: (form.meal_plans as MealPlan[]) || [],
+        is_active: form.is_active ?? true,
       }
       const res = editing
         ? await fetch(`/api/admin/accommodations/${editing.id}`, {
@@ -455,33 +434,6 @@ export function AccommodationManager() {
                 </Button>
               </div>
 
-              {/* Import from Booking.com */}
-              <div className="rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-4 space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Download className="h-4 w-4 text-brand-blue" />
-                  {locale === 'ar' ? 'استيراد من Booking.com' : 'Import from Booking.com'}
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={bookingUrl}
-                    onChange={e => setBookingUrl(e.target.value)}
-                    placeholder="https://www.booking.com/hotel/..."
-                    dir="ltr"
-                    className="flex-1 text-sm"
-                  />
-                  <Button type="button" variant="outline" size="sm" disabled={importing} onClick={importFromBooking} className="gap-1.5 shrink-0">
-                    {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                    {locale === 'ar' ? 'استيراد' : 'Import'}
-                  </Button>
-                </div>
-                <p className="text-[11px] text-gray-500">
-                  {locale === 'ar'
-                    ? 'بيسحب الصور، الخدمات، التقييم، الموقع، والوصف (إنجليزي بس) من صفحة الفندق على بوكينج. راجع الناتج قبل الحفظ، والنسخة العربي محتاجة تكتبها إنت.'
-                    : "Pulls photos, amenities, rating, location and description (English only) from the Booking.com listing. Review the result before saving — the Arabic version still needs you."}
-                </p>
-                {importError && <p className="text-xs text-red-500">{importError}</p>}
-                {importNote && <p className="text-xs text-emerald-600">{importNote}</p>}
-              </div>
 
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -516,11 +468,7 @@ export function AccommodationManager() {
                   <Input type="number" min={0} max={5} step={0.1} value={form.rating || 0} onChange={e => updateField('rating', parseFloat(e.target.value))} className="mt-1" />
                 </div>
                 <div>
-                  <Label>{locale === 'ar' ? 'الموقع (عربي)' : 'Location (Arabic)'}</Label>
-                  <Input value={form.location_ar || ''} onChange={e => updateField('location_ar', e.target.value)} className="mt-1" />
-                </div>
-                <div>
-                  <Label>{locale === 'ar' ? 'الموقع (إنجليزي)' : 'Location (English)'}</Label>
+                  <Label>{locale === 'ar' ? 'الموقع' : 'Location'}</Label>
                   <Input value={form.location_en || ''} onChange={e => updateField('location_en', e.target.value)} className="mt-1" />
                 </div>
                 <div className="md:col-span-2">
@@ -777,46 +725,27 @@ export function AccommodationManager() {
               </div>
 
               {/* Amenities */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="mb-2 block">{locale === 'ar' ? 'الخدمات (عربي)' : 'Amenities (Arabic)'}</Label>
-                  <div className="flex gap-2 mb-2">
-                    <Input id="amenity-ar-input" placeholder={locale === 'ar' ? 'أضف خدمة...' : 'Add amenity...'} className="flex-1" />
-                    <Button type="button" size="sm" variant="outline" onClick={() => addAmenity('ar')}>+</Button>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {((form.amenities_ar as string[]) || []).map((a, i) => (
-                      <Badge key={i} variant="secondary" className="gap-1">
-                        {a}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeAmenity('ar', i)} />
-                      </Badge>
-                    ))}
-                  </div>
+              <div>
+                <Label className="mb-2 block">{locale === 'ar' ? 'الخدمات' : 'Amenities'}</Label>
+                <div className="flex gap-2 mb-2">
+                  <Input id="amenity-en-input" placeholder={locale === 'ar' ? 'أضف خدمة...' : 'Add amenity...'} className="flex-1" />
+                  <Button type="button" size="sm" variant="outline" onClick={() => addAmenity('en')}>+</Button>
                 </div>
-                <div>
-                  <Label className="mb-2 block">{locale === 'ar' ? 'الخدمات (إنجليزي)' : 'Amenities (English)'}</Label>
-                  <div className="flex gap-2 mb-2">
-                    <Input id="amenity-en-input" placeholder={locale === 'ar' ? 'أضف خدمة...' : 'Add amenity...'} className="flex-1" />
-                    <Button type="button" size="sm" variant="outline" onClick={() => addAmenity('en')}>+</Button>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {((form.amenities_en as string[]) || []).map((a, i) => (
-                      <Badge key={i} variant="secondary" className="gap-1">
-                        {a}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeAmenity('en', i)} />
-                      </Badge>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-1">
+                  {((form.amenities_en as string[]) || []).map((a, i) => (
+                    <Badge key={i} variant="secondary" className="gap-1">
+                      {a}
+                      <button type="button" onClick={() => removeAmenity('en', i)} className="ml-1 hover:text-red-600">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
                 </div>
               </div>
 
-              {/* Descriptions */}
+              {/* Description */}
               <div>
-                <Label className="mb-2 block">{locale === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}</Label>
-                <Textarea rows={3} value={form.description_ar || ''} onChange={e => updateField('description_ar', e.target.value)} />
-              </div>
-              <div>
-                <Label className="mb-2 block">{locale === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}</Label>
+                <Label className="mb-2 block">{locale === 'ar' ? 'الوصف' : 'Description'}</Label>
                 <Textarea rows={3} value={form.description_en || ''} onChange={e => updateField('description_en', e.target.value)} />
               </div>
 

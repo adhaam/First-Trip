@@ -41,7 +41,6 @@ const schema = z.object({
   // package
   duration: z.string().optional(),           // '4' | '5'
   package_governorate: z.string().optional(),
-  package_direction: z.enum(['to_dahab', 'round_trip']).optional(),
   package_departure_date: z.string().optional(), // chosen departure date
   package_transfer_type: z.enum(['package_bus', 'hiace']).optional(),
 
@@ -108,7 +107,6 @@ export function BookingForm({
       num_people: '2',
       duration: '4',
       nights: '2',
-      package_direction: 'round_trip',
       package_transfer_type: 'hiace',
       transfer_type: 'hiace',
       transfer_direction: 'round_trip',
@@ -120,9 +118,9 @@ export function BookingForm({
   const mode = watch('mode') as Mode
   const duration = watch('duration') || '4'
   const packageGov = watch('package_governorate')
-  const packageDirection = (watch('package_direction') ?? 'round_trip') as 'to_dahab' | 'round_trip'
   const packageDepartureDate = watch('package_departure_date')
   const packageTransferType = (watch('package_transfer_type') ?? 'hiace') as TransferType
+  const packageDirection: 'round_trip' = 'round_trip' // always round_trip for packages
   const nights = Math.max(1, parseInt(watch('nights') || '1') || 1)
   const transferType = (watch('transfer_type') ?? 'hiace') as TransferType
   const transferGov = watch('transfer_governorate')
@@ -291,10 +289,10 @@ export function BookingForm({
           accommodation_id: accommodation.id,
           governorate: data.package_governorate,
           trip_date: packageDepartureDate || packageDepartureDates[0],
-          return_date: packageDirection === 'round_trip' ? packageReturnDate : undefined,
+          return_date: packageReturnDate,
           duration: duration === '5' ? 5 : 4,
           transfer_type: hasRoomPricing ? packageTransferType : ('package_bus' as const),
-          transfer_direction: packageDirection,
+          transfer_direction: 'round_trip' as const,
           room_type: hasRoomPricing ? roomType : undefined,
           meal_plan_key: hasRoomPricing ? (mealPlanKey || undefined) : undefined,
           extra_trip_ids: hasRoomPricing && extraTripIds.length ? extraTripIds : undefined,
@@ -429,9 +427,7 @@ export function BookingForm({
                 />
               )}
               <Line
-                label={`${t('transferLine')} · ${
-                  packageDirection === 'round_trip' ? t('roundTrip') : t('oneWay')
-                }`}
+                label={t('transferLine')}
                 value={
                   packageQuote.transfer.isPriced
                     ? `${formatEGP(packageQuote.transfer.perPerson, locale)} ${common('egp')}`
