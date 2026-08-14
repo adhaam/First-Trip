@@ -80,9 +80,22 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
                     5
                   </span>
                 </div>
+                <div className="flex items-center justify-between rounded-xl border border-emerald-300 bg-emerald-50 p-4">
+                  <div>
+                    <div className="font-semibold text-sea-900">
+                      {ar ? 'كل يوم بالهايس' : 'Every day with Hiace'}
+                    </div>
+                    <div className="text-sm text-sea-900/50">
+                      {ar ? 'هايس خاص — أي يوم على مزاجك' : 'Private Hiace — any day you want'}
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
+                    {ar ? 'يومي' : 'Daily'}
+                  </span>
+                </div>
               </div>
               <p className="mt-4 text-center text-xs text-sea-900/40">
-                {ar ? 'متاح على مدار السنة' : 'Available year-round'}
+                {ar ? 'الباص كل أحد وخميس · الهايس كل يوم' : 'Bus every Sun & Thu · Hiace every day'}
               </p>
             </div>
           </Reveal>

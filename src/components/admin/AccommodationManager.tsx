@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, Image as ImageIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2 } from 'lucide-react'
 import { Accommodation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -45,6 +45,7 @@ const emptyAccommodation: Partial<Accommodation> = {
   description_ar: '',
   description_en: '',
   image_url: '',
+  images: [],
   latitude: 28.5092,
   longitude: 34.5185,
 }
@@ -64,24 +65,44 @@ export function AccommodationManager() {
   const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (files: FileList) => {
     setUploading(true)
     setUploadError('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/admin/upload-image', {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-      updateField('image_url', data.url)
+      const currentImages = ((form.images as string[]) || []).slice()
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/admin/upload-image', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Upload failed')
+        currentImages.push(data.url)
+      }
+      updateField('images', currentImages)
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setUploading(false)
     }
+  }
+
+  const removeImage = (index: number) => {
+    const current = ((form.images as string[]) || []).slice()
+    current.splice(index, 1)
+    updateField('images', current)
+  }
+
+  const moveImage = (index: number, direction: 'up' | 'down') => {
+    const current = ((form.images as string[]) || []).slice()
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= current.length) return
+    const temp = current[index]
+    current[index] = current[targetIndex]
+    current[targetIndex] = temp
+    updateField('images', current)
   }
 
   const loadAccommodations = async () => {
@@ -117,7 +138,10 @@ export function AccommodationManager() {
 
   const handleEdit = (acc: Accommodation) => {
     setEditing(acc)
-    setForm({ ...acc })
+    const images = acc.images && acc.images.length > 0
+      ? acc.images
+      : acc.image_url ? [acc.image_url] : []
+    setForm({ ...acc, images })
     setShowForm(true)
   }
 
@@ -131,16 +155,20 @@ export function AccommodationManager() {
     if (!form.name_ar || !form.name_en) return
     setSaving(true)
     try {
+      const payload = {
+        ...form,
+        image_url: (form.images as string[])?.[0] || form.image_url || '',
+      }
       const res = editing
         ? await fetch(`/api/admin/accommodations/${editing.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form),
+            body: JSON.stringify(payload),
           })
         : await fetch('/api/admin/accommodations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form),
+            body: JSON.stringify(payload),
           })
 
       if (res.status === 401) {
@@ -178,6 +206,41 @@ export function AccommodationManager() {
 
   const updateField = (field: string, value: string | number | string[]) => {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const [mapUrlInput, setMapUrlInput] = useState('')
+  const [mapUrlError, setMapUrlError] = useState('')
+
+  // Accepts a pasted Google Maps link (share link, "@lat,lng" URL, or a
+  // plain "lat,lng" pair) and extracts coordinates from it — this is the
+  // "link the map location" flow: paste from Google Maps, done.
+  const applyMapUrl = () => {
+    setMapUrlError('')
+    const raw = mapUrlInput.trim()
+    if (!raw) return
+
+    // "lat,lng" typed/pasted directly
+    const plainMatch = raw.match(/^(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)$/)
+    // Google Maps URLs contain "@lat,lng" or "q=lat,lng" or "3d<lat>!4d<lng>"
+    const atMatch = raw.match(/@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/)
+    const qMatch = raw.match(/[?&]q=(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/)
+    const threeDMatch = raw.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/)
+
+    const match = plainMatch || atMatch || qMatch || threeDMatch
+    if (!match) {
+      setMapUrlError(
+        locale === 'ar'
+          ? 'مش قادر أطلع الإحداثيات من الرابط ده. انسخ رابط "مشاركة" من جوجل مابس أو حط الإحداثيات lat,lng مباشرة.'
+          : 'Could not read coordinates from that link. Paste a Google Maps "Share" link or lat,lng directly.',
+      )
+      return
+    }
+    const lat = parseFloat(match[1])
+    const lng = parseFloat(match[2])
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return
+    updateField('latitude', lat)
+    updateField('longitude', lng)
+    setMapUrlInput('')
   }
 
   const addAmenity = (lang: 'ar' | 'en') => {
@@ -354,20 +417,49 @@ export function AccommodationManager() {
                   <Input value={form.location_en || ''} onChange={e => updateField('location_en', e.target.value)} className="mt-1" />
                 </div>
                 <div className="md:col-span-2">
-                  <Label>{locale === 'ar' ? 'صورة الإقامة' : 'Accommodation Photo'}</Label>
-                  <div className="mt-1 space-y-2">
-                    {/* Preview */}
-                    {form.image_url && (
-                      <div className="relative w-full h-36 rounded-xl overflow-hidden border border-sand-300 bg-sand-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={form.image_url} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => updateField('image_url', '')}
-                          className="absolute top-2 right-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                  <Label>{locale === 'ar' ? 'صور الإقامة' : 'Accommodation Photos'}</Label>
+                  <div className="mt-1 space-y-3">
+                    {/* Image gallery grid */}
+                    {((form.images as string[]) || []).length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {((form.images as string[]) || []).map((url, index) => (
+                          <div key={index} className="relative group rounded-xl overflow-hidden border border-sand-300 bg-sand-100 aspect-square">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            {index === 0 && (
+                              <Badge className="absolute top-1.5 left-1.5 bg-brand-blue text-white text-[10px] px-1.5 py-0.5">
+                                {locale === 'ar' ? 'صورة رئيسية' : 'Main photo'}
+                              </Badge>
+                            )}
+                            <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="rounded-full bg-black/50 p-1 text-white hover:bg-red-600"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                              {index > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => moveImage(index, 'up')}
+                                  className="rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                                >
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {index < ((form.images as string[]) || []).length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => moveImage(index, 'down')}
+                                  className="rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                                >
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                     {/* Upload button */}
@@ -375,10 +467,12 @@ export function AccommodationManager() {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       className="hidden"
                       onChange={e => {
-                        const file = e.target.files?.[0]
-                        if (file) handleImageUpload(file)
+                        const files = e.target.files
+                        if (files && files.length > 0) handleImageUpload(files)
+                        e.target.value = ''
                       }}
                     />
                     <div className="flex gap-2">
@@ -395,14 +489,13 @@ export function AccommodationManager() {
                         ) : (
                           <Upload className="h-4 w-4" />
                         )}
-                        {locale === 'ar' ? 'رفع صورة' : 'Upload photo'}
+                        {locale === 'ar' ? 'رفع صور' : 'Upload photos'}
                       </Button>
-                      <Input
-                        value={form.image_url || ''}
-                        onChange={e => updateField('image_url', e.target.value)}
-                        placeholder={locale === 'ar' ? 'أو الصق رابط الصورة...' : 'Or paste image URL...'}
-                        className="flex-1 text-sm"
-                      />
+                      <span className="text-xs text-gray-400 self-center">
+                        {locale === 'ar'
+                          ? `${((form.images as string[]) || []).length} صور مرفوعة`
+                          : `${((form.images as string[]) || []).length} photo(s) uploaded`}
+                      </span>
                     </div>
                     {uploadError && (
                       <p className="text-xs text-red-500">{uploadError}</p>
@@ -411,16 +504,80 @@ export function AccommodationManager() {
                 </div>
               </div>
 
-              {/* Map Preview */}
+              {/* Map Location */}
               <div>
                 <Label className="flex items-center gap-2 mb-2">
                   <MapPin className="h-4 w-4 text-brand-orange" />
                   {locale === 'ar' ? 'الموقع على الخريطة' : 'Map Location'}
                 </Label>
-                <div className="border rounded-xl overflow-hidden bg-gray-100 h-[200px] flex items-center justify-center text-gray-400 text-sm">
-                  🗺️ {locale === 'ar' ? 'خريطة تفاعلية — سيتم ربطها بـ Leaflet' : 'Interactive map — will be connected to Leaflet'}
-                  <br />
-                  <span className="text-xs mt-1 block">Lat: {form.latitude} | Lng: {form.longitude}</span>
+
+                <div className="space-y-3 rounded-xl border p-4 bg-gray-50">
+                  {/* Paste a Google Maps link */}
+                  <div>
+                    <Label className="text-xs text-gray-500 mb-1 block">
+                      {locale === 'ar'
+                        ? 'الصق رابط "مشاركة" من جوجل مابس (أسهل طريقة)'
+                        : 'Paste a Google Maps "Share" link (easiest way)'}
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={mapUrlInput}
+                        onChange={e => setMapUrlInput(e.target.value)}
+                        placeholder={locale === 'ar' ? 'https://maps.app.goo.gl/... أو lat,lng' : 'https://maps.app.goo.gl/... or lat,lng'}
+                        dir="ltr"
+                        className="flex-1 text-sm"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={applyMapUrl} className="gap-1.5 shrink-0">
+                        <Link2 className="h-3.5 w-3.5" />
+                        {locale === 'ar' ? 'ربط' : 'Link'}
+                      </Button>
+                    </div>
+                    {mapUrlError && <p className="text-xs text-red-500 mt-1">{mapUrlError}</p>}
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      {locale === 'ar'
+                        ? 'في جوجل مابس: افتح المكان → مشاركة → نسخ الرابط، والصقه هنا.'
+                        : 'In Google Maps: open the place → Share → Copy link, then paste it here.'}
+                    </p>
+                  </div>
+
+                  {/* Manual lat/lng */}
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                    <div>
+                      <Label className="text-xs">{locale === 'ar' ? 'خط العرض (Lat)' : 'Latitude'}</Label>
+                      <Input
+                        type="number"
+                        step="0.000001"
+                        value={form.latitude ?? ''}
+                        onChange={e => updateField('latitude', parseFloat(e.target.value))}
+                        className="mt-1 text-sm"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">{locale === 'ar' ? 'خط الطول (Lng)' : 'Longitude'}</Label>
+                      <Input
+                        type="number"
+                        step="0.000001"
+                        value={form.longitude ?? ''}
+                        onChange={e => updateField('longitude', parseFloat(e.target.value))}
+                        className="mt-1 text-sm"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Preview link */}
+                  {typeof form.latitude === 'number' && typeof form.longitude === 'number' && (
+                    <a
+                      href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-blue hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      {locale === 'ar' ? 'افتح الموقع الحالي في جوجل مابس' : 'Preview this location on Google Maps'}
+                    </a>
+                  )}
                 </div>
               </div>
 

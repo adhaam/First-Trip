@@ -4,9 +4,9 @@ import { useTranslations, useLocale } from 'next-intl'
 import Image from 'next/image'
 import { Reveal } from '@/components/motion/Reveal'
 import { WaveDivider } from '@/components/brand/Section'
-import { PLACEHOLDER_IMAGES } from '@/lib/constants'
+import { PLACEHOLDER_IMAGES, TRUST_STATS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import { Compass, Eye, Target, Award, Users, Star, MapPin } from 'lucide-react'
+import { Compass, Eye, Target } from 'lucide-react'
 
 const timeline = [
   { year: '2017', title_ar: 'التأسيس', title_en: 'Founded', desc_ar: 'انطلاق First Trip كشركة سياحة متخصصة في رحلات دهب من المحافظات', desc_en: 'First Trip launched as a tourism company specializing in Dahab trips from governorates' },
@@ -15,12 +15,6 @@ const timeline = [
   { year: '2026', title_ar: 'إعادة الإطلاق', title_en: 'Relaunch', desc_ar: 'العودة بقوة أكبر مع تقنيات عصرية وخدمات محسّنة', desc_en: 'Strong return with modern tech and enhanced services' },
 ]
 
-const stats = [
-  { value: '6+', label_ar: 'سنوات خبرة', label_en: 'Years Experience', icon: Award },
-  { value: '500+', label_ar: 'عميل سعيد', label_en: 'Happy Customers', icon: Users },
-  { value: '30+', label_ar: 'مكان إقامة', label_en: 'Accommodations', icon: MapPin },
-  { value: '5★', label_ar: 'تقييم العملاء', label_en: 'Customer Rating', icon: Star },
-]
 
 export default function AboutPage() {
   const t = useTranslations('about')
@@ -108,21 +102,21 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="section-padding bg-sand-50">
+      {/* Stats — matches Home trust bar */}
+      <section className="border-b border-sand-200 bg-card">
         <div className="container-main">
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-            {stats.map((s, i) => (
-              <Reveal key={i} delay={i * 80}>
-                <div className="text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-sea-100">
-                    <s.icon className="h-6 w-6 text-sea-600" />
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 py-8 md:grid-cols-4 md:gap-x-6 md:py-12">
+            {TRUST_STATS.map((stat, i) => (
+              <Reveal key={i} delay={i * 70} className="group flex items-start gap-3 rounded-2xl p-3 transition-colors hover:bg-sea-50 md:p-4">
+                <span aria-hidden className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sun-100 text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6 md:h-12 md:w-12">
+                  {stat.icon}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-display text-sm font-bold leading-tight text-sea-900 md:text-base">
+                    {ar ? stat.label_ar : stat.label_en}
                   </div>
-                  <div className="mb-1 font-display text-3xl font-bold text-sea-900 md:text-4xl">
-                    {s.value}
-                  </div>
-                  <div className="text-sm text-sea-900/55">
-                    {ar ? s.label_ar : s.label_en}
+                  <div className="mt-1 text-xs leading-snug text-sea-900/55 md:text-[0.8rem]">
+                    {ar ? stat.sub_ar : stat.sub_en}
                   </div>
                 </div>
               </Reveal>

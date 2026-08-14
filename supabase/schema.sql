@@ -73,14 +73,23 @@ CREATE TABLE IF NOT EXISTS bookings (
   accommodation_id UUID REFERENCES accommodations(id) ON DELETE SET NULL,
   governorate TEXT,
   trip_date DATE,
+  return_date DATE,
   duration INTEGER,
+  nights INTEGER,
+  transfer_type TEXT CHECK (transfer_type IN ('package_bus', 'hiace')),
+  transfer_direction TEXT CHECK (transfer_direction IN ('to_dahab', 'from_dahab', 'round_trip')),
   num_people INTEGER DEFAULT 1,
   notes TEXT DEFAULT '',
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
   total_price NUMERIC(10,2),
+  source TEXT NOT NULL DEFAULT 'website' CHECK (source IN ('website', 'manual')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_bookings_trip_date ON bookings(trip_date);
+CREATE INDEX IF NOT EXISTS idx_bookings_accommodation_id ON bookings(accommodation_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 
 -- ─── 6. Customers (auto-created from bookings) ───
 CREATE TABLE IF NOT EXISTS customers (
@@ -131,6 +140,17 @@ CREATE TABLE IF NOT EXISTS site_settings (
   CONSTRAINT single_row CHECK (id = 1)
 );
 
+-- ─── 9. Newsletter Subscribers ───
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  locale TEXT NOT NULL DEFAULT 'ar',
+  source TEXT DEFAULT 'homepage-footer',
+  unsubscribed BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ─── ROW LEVEL SECURITY (RLS) ───
 ALTER TABLE accommodations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE governorate_pricing ENABLE ROW LEVEL SECURITY;
@@ -140,6 +160,7 @@ ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE community_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE newsletter_subscribers ENABLE ROW LEVEL SECURITY;
 
 -- ─── Policies: PUBLIC can READ active content ───
 CREATE POLICY "Public can read active accommodations" ON accommodations
@@ -159,6 +180,13 @@ CREATE POLICY "Public can read published community posts" ON community_posts
 
 CREATE POLICY "Public can read site settings" ON site_settings
   FOR SELECT USING (true);
+
+-- ─── Policies: Newsletter subscribers ───
+CREATE POLICY "Anyone can subscribe" ON newsletter_subscribers
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Service role full access" ON newsletter_subscribers
+  FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Policies: ANYONE can INSERT a booking (public form) ───
 CREATE POLICY "Anyone can create a booking" ON bookings
@@ -215,6 +243,9 @@ CREATE TRIGGER update_community_posts_updated_at BEFORE UPDATE ON community_post
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_site_settings_updated_at BEFORE UPDATE ON site_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_newsletter_subscribers_updated_at BEFORE UPDATE ON newsletter_subscribers
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ─── Seed data: governorate pricing ───

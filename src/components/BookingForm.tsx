@@ -59,6 +59,7 @@ const schema = z.object({
   num_people: z.string().min(1, 'Required'),
   full_name: z.string().min(3, 'Min 3 chars'),
   phone: z.string().min(10, 'Invalid phone'),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
   notes: z.string().optional(),
 })
 
@@ -194,6 +195,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
         return {
           customer_name: data.full_name,
           customer_phone: data.phone,
+          customer_email: data.email || undefined,
           booking_type: 'package' as const,
           accommodation_id: accommodation.id,
           governorate: data.package_governorate,
@@ -210,6 +212,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
         return {
           customer_name: data.full_name,
           customer_phone: data.phone,
+          customer_email: data.email || undefined,
           booking_type: 'accommodation-only' as const,
           accommodation_id: accommodation.id,
           trip_date: data.check_in_date || undefined,
@@ -222,6 +225,7 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
       return {
         customer_name: data.full_name,
         customer_phone: data.phone,
+        customer_email: data.email || undefined,
         booking_type: 'transfer-only' as const,
         governorate: data.transfer_governorate,
         trip_date: data.transfer_date || undefined,
@@ -702,6 +706,19 @@ export function BookingForm({ accommodation, pricing, whatsapp }: Props) {
             />
             {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
           </div>
+        </div>
+
+        <div>
+          <Label className="mb-1.5 block">{ar ? 'الإيميل (اختياري)' : 'Email (optional)'}</Label>
+          <Input
+            type="email"
+            dir="ltr"
+            inputMode="email"
+            placeholder="example@email.com"
+            {...register('email')}
+            aria-invalid={Boolean(errors.email)}
+          />
+          {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
         </div>
 
         <div>

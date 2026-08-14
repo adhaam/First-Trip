@@ -14,6 +14,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: '👥' },
   { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: '🤝' },
   { label_ar: 'عن الشركة', label_en: 'About Us', href: '/about', icon: '📖' },
+  { label_ar: 'ميرش', label_en: 'Merch', href: '/merch', icon: '🛍️' },
+  { label_ar: 'إيجار', label_en: 'Rent', href: '/rent', icon: '🔑' },
   { label_ar: 'السياسة والاسترداد', label_en: 'Policy & Refund', href: '/policy', icon: '📋' },
 ]
 
@@ -24,6 +26,8 @@ export const NAV_LABEL_KEYS: Record<string, string> = {
   '/community': 'community',
   '/partner': 'partner',
   '/about': 'about',
+  '/merch': 'merch',
+  '/rent': 'rent',
   '/policy': 'policy',
 }
 

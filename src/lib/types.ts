@@ -113,6 +113,8 @@ export interface Booking {
   customer_email?: string
   booking_type: BookingType
   accommodation_id?: string
+  /** Joined from `accommodations` on the admin GET route — not present on write. */
+  accommodations?: { name_ar: string; name_en: string } | null
   governorate?: string
   trip_date?: string
   return_date?: string
@@ -124,7 +126,10 @@ export interface Booking {
   notes?: string
   status: BookingStatus
   total_price?: number
+  /** 'website' = came through the booking form, 'manual' = logged by an admin (phone/WhatsApp/walk-in). */
+  source?: 'website' | 'manual'
   created_at: string
+  updated_at?: string
 }
 
 export interface CommunityPost {

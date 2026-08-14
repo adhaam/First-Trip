@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard, Building2, Mountain, CalendarDays,
   ClipboardList, Users, MessageSquareText, Settings,
-  Bus, Quote, LogOut, Menu, X
+  Bus, Quote, LogOut, Menu, X, Mail
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/brand/Logo'
@@ -20,6 +20,7 @@ import { DashboardHome } from '@/components/admin/DashboardHome'
 import { TripDatesManager } from '@/components/admin/TripDatesManager'
 import { TransferPricingManager } from '@/components/admin/TransferPricingManager'
 import { TestimonialsManager } from '@/components/admin/TestimonialsManager'
+import { NewsletterManager } from '@/components/admin/NewsletterManager'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
@@ -29,6 +30,7 @@ const sidebarItems = [
   { icon: CalendarDays, key: 'dates', label_ar: 'التواريخ', label_en: 'Dates' },
   { icon: ClipboardList, key: 'bookings', label_ar: 'الحجوزات', label_en: 'Bookings' },
   { icon: Users, key: 'customers', label_ar: 'العملاء', label_en: 'Customers' },
+  { icon: Mail, key: 'newsletter', label_ar: 'المشتركين', label_en: 'Subscribers' },
   { icon: MessageSquareText, key: 'community', label_ar: 'المجتمع', label_en: 'Community' },
   { icon: Quote, key: 'testimonials', label_ar: 'آراء العملاء', label_en: 'Testimonials' },
   { icon: Settings, key: 'settings', label_ar: 'الإعدادات', label_en: 'Settings' },
@@ -122,6 +124,7 @@ export default function AdminDashboardPage() {
           {active === 'dates' && <TripDatesManager />}
           {active === 'bookings' && <BookingsManager />}
           {active === 'customers' && <CustomersManager />}
+          {active === 'newsletter' && <NewsletterManager />}
           {active === 'community' && <CommunityPostManager />}
           {active === 'testimonials' && <TestimonialsManager />}
           {active === 'settings' && <SiteSettingsManager />}
