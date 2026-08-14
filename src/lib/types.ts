@@ -45,6 +45,18 @@ export interface TransferPricing {
   governorates: TransferGovernoratePrice[]
 }
 
+/** A meal plan option an accommodation offers, e.g. room-only or all-inclusive. */
+export type MealPlanKey = 'room_only' | 'breakfast' | 'half_board' | 'all_inclusive'
+
+export interface MealPlan {
+  key: MealPlanKey
+  label_ar: string
+  label_en: string
+  /** Added per person, per night, when the customer picks this plan. */
+  price_per_person_per_night: number
+  is_active: boolean
+}
+
 export interface Accommodation {
   id: string
   name_ar: string
@@ -63,9 +75,14 @@ export interface Accommodation {
   longitude?: number
   amenities_ar: string[]
   amenities_en: string[]
-  price_per_night: number // accommodation-only price per person
-  price_4day: number   // 4-day package price per person
-  price_5day: number   // 5-day package price per person
+  price_per_night: number // accommodation-only price per person (legacy — kept as a fallback)
+  price_4day: number   // 4-day package price per person (legacy — kept as a fallback)
+  price_5day: number   // 5-day package price per person (legacy — kept as a fallback)
+  /** Per-room price for a double/triple occupancy room. Per-person = this / 2. */
+  price_double_room: number
+  /** Per-person price for a single occupancy room. */
+  price_single_room: number
+  meal_plans: MealPlan[]
   is_active: boolean
   created_at: string
   updated_at?: string
@@ -122,6 +139,11 @@ export interface Booking {
   nights?: number
   transfer_type?: TransferType
   transfer_direction?: TransferDirection
+  /** 'double' = split price_double_room / 2 per person, 'single' = price_single_room. */
+  room_type?: 'double' | 'single'
+  meal_plan_key?: MealPlanKey | string
+  /** Sinai trip ids the customer added on top of the two included in the package. */
+  extra_trip_ids?: string[]
   num_people: number
   notes?: string
   status: BookingStatus
@@ -163,6 +185,8 @@ export interface SiteSettings {
   privacy_policy_en: string
   terms_ar: string
   terms_en: string
+  /** Sinai trip ids bundled into every package by default — see lib/pricing.ts. */
+  package_included_trip_ids: string[]
 }
 
 export interface NavItem {

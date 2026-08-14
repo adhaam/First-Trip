@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader2, Save, CheckCircle2 } from 'lucide-react'
-import { SiteSettings } from '@/lib/types'
+import { Loader2, Save, CheckCircle2, Mountain } from 'lucide-react'
+import { SiteSettings, SinaiTrip } from '@/lib/types'
 
 export function SiteSettingsManager() {
   const locale = useLocale()
   const [settings, setSettings] = useState<Partial<SiteSettings>>({})
+  const [trips, setTrips] = useState<SinaiTrip[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -22,11 +23,18 @@ export function SiteSettingsManager() {
     setLoading(true)
     setLoadError('')
     try {
-      const res = await fetch('/api/admin/site-settings')
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const [sRes, tRes] = await Promise.all([
+        fetch('/api/admin/site-settings'),
+        fetch('/api/admin/sinai-trips'),
+      ])
+      if (sRes.status === 401) { window.location.href = `/${locale}/admin`; return }
+      const data = await sRes.json()
+      if (!sRes.ok) throw new Error(data.error)
       setSettings(data.settings || {})
+      if (tRes.ok) {
+        const tData = await tRes.json()
+        setTrips(tData.trips || [])
+      }
     } catch {
       setLoadError(locale === 'ar' ? 'تعذر تحميل الإعدادات' : 'Failed to load settings')
     } finally {
@@ -42,6 +50,13 @@ export function SiteSettingsManager() {
 
   const updateField = (field: string, value: string) => {
     setSettings(prev => ({ ...prev, [field]: value }))
+    setSaved(false)
+  }
+
+  const toggleIncludedTrip = (id: string) => {
+    const current = settings.package_included_trip_ids || []
+    const next = current.includes(id) ? current.filter(t => t !== id) : [...current, id]
+    setSettings(prev => ({ ...prev, package_included_trip_ids: next }))
     setSaved(false)
   }
 
@@ -89,6 +104,38 @@ export function SiteSettingsManager() {
         <CardContent className="p-6 space-y-4">
           <h3 className="font-bold text-gray-900">{locale === 'ar' ? 'الصورة الرئيسية' : 'Hero Media'}</h3>
           <div><Label>{locale === 'ar' ? 'رابط صورة/فيديو الهيرو' : 'Hero Media URL'}</Label><Input dir="ltr" value={settings.hero_media_url || ''} onChange={e => updateField('hero_media_url', e.target.value)} className="mt-1" /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6 space-y-3">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+            <Mountain className="h-4 w-4 text-brand-orange" />
+            {locale === 'ar' ? 'الرحلات المضمّنة في كل باكدج' : 'Trips Included in Every Package'}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {locale === 'ar'
+              ? 'اختار الرحلات اللي بتتضاف تلقائي لسعر أي باكدج (زي الرحلتين الداخليتين). سعرهم بيتحسب في التوتال أوتوماتيك.'
+              : 'Pick the trips that get bundled into every package price automatically (like the two included day trips). Their price is added to the total automatically.'}
+          </p>
+          {trips.length === 0 ? (
+            <p className="text-sm text-gray-400">{locale === 'ar' ? 'لا توجد رحلات مضافة بعد' : 'No trips added yet'}</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {trips.map(trip => (
+                <label key={trip.id} className="flex items-center gap-2 rounded-lg border border-gray-200 p-2.5 text-sm cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={(settings.package_included_trip_ids || []).includes(trip.id)}
+                    onChange={() => toggleIncludedTrip(trip.id)}
+                    className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                  />
+                  <span className="flex-1 truncate">{locale === 'ar' ? trip.name_ar : trip.name_en}</span>
+                  <span className="text-xs text-gray-400 shrink-0">{trip.price?.toLocaleString()} ج.م</span>
+                </label>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

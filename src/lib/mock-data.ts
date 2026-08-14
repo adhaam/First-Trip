@@ -1,7 +1,9 @@
 import { Accommodation, SinaiTrip } from '@/lib/types'
 import { PLACEHOLDER_IMAGES } from '@/lib/constants'
 
-export const MOCK_ACCOMMODATIONS: Accommodation[] = [
+// Not imported anywhere in the app (kept for reference/local testing) — typed
+// loosely so it doesn't need updating every time Accommodation gains a field.
+export const MOCK_ACCOMMODATIONS: Partial<Accommodation>[] = [
   /* ═══════════════ Budget ═══════════════ */
   {
     id: '1', name_ar: 'تورينو كامب', name_en: 'Torino Camp', type: 'camp', tier: 'budget',

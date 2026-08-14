@@ -3,6 +3,14 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
+const mealPlanSchema = z.object({
+  key: z.enum(['room_only', 'breakfast', 'half_board', 'all_inclusive']),
+  label_ar: z.string(),
+  label_en: z.string(),
+  price_per_person_per_night: z.number().min(0),
+  is_active: z.boolean(),
+})
+
 const accommodationSchema = z.object({
   name_ar: z.string().min(1),
   name_en: z.string().min(1),
@@ -23,6 +31,9 @@ const accommodationSchema = z.object({
   price_per_night: z.number().min(0),
   price_4day: z.number().min(0),
   price_5day: z.number().min(0),
+  price_double_room: z.number().min(0).optional().default(0),
+  price_single_room: z.number().min(0).optional().default(0),
+  meal_plans: z.array(mealPlanSchema).optional().default([]),
   is_active: z.boolean().optional().default(true),
 })
 

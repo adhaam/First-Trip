@@ -1,4 +1,4 @@
-import { getAccommodationById, getAccommodations, getRelatedAccommodations, getSiteSettings, getTransferPricing } from '@/lib/data'
+import { getAccommodationById, getAccommodations, getRelatedAccommodations, getSiteSettings, getTransferPricing, getSinaiTrips } from '@/lib/data'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { ButtonLink } from '@/components/ButtonLink'
@@ -22,10 +22,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     )
   }
 
-  const [all, pricing, settings] = await Promise.all([
+  const [all, pricing, settings, sinaiTrips] = await Promise.all([
     getAccommodations(),
     getTransferPricing(),
     getSiteSettings(),
+    getSinaiTrips(),
   ])
   const related = getRelatedAccommodations(accommodation, all)
 
@@ -35,6 +36,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         accommodation={accommodation}
         pricing={pricing}
         whatsapp={settings?.whatsapp_number}
+        sinaiTrips={sinaiTrips}
+        includedTripIds={settings?.package_included_trip_ids || []}
       />
       <RelatedPlaces related={related} />
     </div>

@@ -70,8 +70,8 @@ export const WHY_US: WhyUsPoint[] = [
   {
     title_ar: 'مش شركة سياحة عادية',
     title_en: 'Not Your Average Agency',
-    description_ar: 'إحنا كوميونيتي بننظم رحلات لدهب من 2017. عارفين كل نول، وكل صاحب كامب، وكل زاوية في البلد.',
-    description_en: 'We\'re a community running trips to Dahab since 2017. We know every driver, every camp owner, every corner of the town.',
+    description_ar: 'إحنا كوميونيتي بننظم رحلات لدهب من 2017، وعارفين البلد كويس.',
+    description_en: 'We\'re a community running trips to Dahab since 2017, and we know the town well.',
     icon: '🌊',
   },
   {

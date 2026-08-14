@@ -532,6 +532,9 @@ export function BookingsManager() {
                               : b.transfer_direction === 'to_dahab' ? (ar ? 'لدهب' : 'To Dahab')
                               : b.transfer_direction === 'from_dahab' ? (ar ? 'من دهب' : 'From Dahab') : '—'
                             } />
+                            <DetailField label={ar ? 'نوع الغرفة' : 'Room type'} value={b.room_type === 'single' ? (ar ? 'سينجل' : 'Single') : b.room_type === 'double' ? (ar ? 'دبل/تريبل' : 'Double/Triple') : '—'} />
+                            <DetailField label={ar ? 'نوع الإقامة' : 'Meal plan'} value={b.meal_plan_key || '—'} />
+                            <DetailField label={ar ? 'رحلات إضافية' : 'Extra trips'} value={b.extra_trip_ids?.length ? String(b.extra_trip_ids.length) : '—'} />
                             <DetailField icon={Banknote} label={ar ? 'السعر الإجمالي' : 'Total price'} value={b.total_price ? `${Number(b.total_price).toLocaleString()} ج.م` : '—'} />
                             <DetailField label={ar ? 'المصدر' : 'Source'} value={b.source === 'manual' ? (ar ? 'يدوي (تليفون/واتساب)' : 'Manual (phone/WhatsApp)') : (ar ? 'الموقع' : 'Website')} />
                             <DetailField label={ar ? 'تاريخ الإنشاء' : 'Created at'} value={b.created_at ? new Date(b.created_at).toLocaleString(ar ? 'ar-EG' : 'en-GB') : '—'} />

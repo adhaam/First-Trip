@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS accommodations (
   price_per_night NUMERIC(10,2) NOT NULL DEFAULT 0,
   price_4day NUMERIC(10,2) NOT NULL DEFAULT 0,
   price_5day NUMERIC(10,2) NOT NULL DEFAULT 0,
+  -- Per-room price for a double/triple; per-person price for a single. The
+  -- booking form derives the per-person total from these instead of the
+  -- flat price_4day/price_5day fields — see src/lib/pricing.ts.
+  price_double_room NUMERIC(10,2) NOT NULL DEFAULT 0,
+  price_single_room NUMERIC(10,2) NOT NULL DEFAULT 0,
+  -- [{ key, label_ar, label_en, price_per_person_per_night, is_active }]
+  meal_plans JSONB NOT NULL DEFAULT '[]',
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -78,6 +85,9 @@ CREATE TABLE IF NOT EXISTS bookings (
   nights INTEGER,
   transfer_type TEXT CHECK (transfer_type IN ('package_bus', 'hiace')),
   transfer_direction TEXT CHECK (transfer_direction IN ('to_dahab', 'from_dahab', 'round_trip')),
+  room_type TEXT CHECK (room_type IN ('double', 'single')),
+  meal_plan_key TEXT,
+  extra_trip_ids UUID[] NOT NULL DEFAULT '{}',
   num_people INTEGER DEFAULT 1,
   notes TEXT DEFAULT '',
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
@@ -136,6 +146,9 @@ CREATE TABLE IF NOT EXISTS site_settings (
   privacy_policy_en TEXT DEFAULT '',
   terms_ar TEXT DEFAULT '',
   terms_en TEXT DEFAULT '',
+  -- Sinai trips bundled into every package by default; their price sums
+  -- into the package total automatically (see src/lib/pricing.ts).
+  package_included_trip_ids UUID[] NOT NULL DEFAULT '{}',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT single_row CHECK (id = 1)
 );

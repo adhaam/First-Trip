@@ -18,6 +18,7 @@ const settingsSchema = z.object({
   privacy_policy_en: z.string().optional(),
   terms_ar: z.string().optional(),
   terms_en: z.string().optional(),
+  package_included_trip_ids: z.array(z.string().uuid()).optional(),
 })
 
 export async function GET(req: NextRequest) {

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Accommodation, TransferPricing } from '@/lib/types'
+import type { Accommodation, TransferPricing, SinaiTrip } from '@/lib/types'
 
 const amenityIcons: Record<string, LucideIcon> = {
   'حمام سباحة': Waves, 'Swimming Pool': Waves,
@@ -41,10 +41,14 @@ export function ProductDetailClient({
   accommodation,
   pricing,
   whatsapp,
+  sinaiTrips = [],
+  includedTripIds = [],
 }: {
   accommodation: Accommodation
   pricing: TransferPricing
   whatsapp?: string | null
+  sinaiTrips?: SinaiTrip[]
+  includedTripIds?: string[]
 }) {
   const t = useTranslations('book')
   const common = useTranslations('common')
@@ -273,6 +277,8 @@ export function ProductDetailClient({
                   accommodation={accommodation}
                   pricing={pricing}
                   whatsapp={whatsapp}
+                  sinaiTrips={sinaiTrips}
+                  includedTripIds={includedTripIds}
                 />
               </div>
             </div>

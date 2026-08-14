@@ -207,6 +207,136 @@ export function quotePackage({
   }
 }
 
+// ─── Room-based accommodation pricing ───
+//
+// Replaces the old "admin types in a flat package price" model. The
+// per-person price is now built from real components so it always reflects
+// what's actually configured on the accommodation + site settings:
+//
+//   room (double/triple → price_double_room / 2, single → price_single_room)
+//   + meal plan add-on (per person, per night)
+//   + the trips bundled into every package by default ("x")
+//   + transfer (per person, from quoteTransfer — bus or Hiace, by governorate)
+//   ────────────────────────────────────────────────────────────────
+//   = per-person package price, × number of people
+//   + any extra Sinai trips the customer added on top, × number of people
+//
+// This lives entirely on the server (priced in the booking API route) —
+// the client only ever sees the resulting total, never the formula.
+
+export type RoomType = 'double' | 'single'
+
+export interface RoomPriceInput {
+  price_double_room: number
+  price_single_room: number
+}
+
+/** Double/triple: half the room price (2 people share it). Single: paid in full. */
+export function roomPerPersonPrice(acc: RoomPriceInput, roomType: RoomType): number {
+  if (roomType === 'single') return Number(acc.price_single_room) || 0
+  return (Number(acc.price_double_room) || 0) / 2
+}
+
+/** 4-day package = 3 nights, 5-day package = 4 nights. */
+export function nightsForDuration(duration: 4 | 5): number {
+  return duration === 5 ? 4 : 3
+}
+
+export interface AccommodationPackageQuoteInput {
+  pricing: TransferPricing
+  accommodation: RoomPriceInput
+  roomType: RoomType
+  /** Per-person, per-night add-on for the meal plan the customer picked (0 if none). */
+  mealPlanPricePerNight: number
+  nights: number
+  /** Sum of the prices of the trips bundled into every package by default ("x"). */
+  includedTripsTotal: number
+  /** Sum of the prices of any extra trips the customer added, per person (pre-multiply). */
+  extraTripsTotal: number
+  transferType: TransferType
+  governorateCode?: string | null
+  direction: TransferDirection
+  numPeople: number
+}
+
+export interface AccommodationPackageQuote {
+  roomPerPerson: number
+  mealPlanTotal: number
+  includedTripsTotal: number
+  transfer: TransferQuote
+  /** Everything above, per person, before extra (non-default) trips. */
+  perPersonBeforeExtras: number
+  extraTripsTotal: number
+  numPeople: number
+  total: number
+}
+
+export function quoteAccommodationPackage({
+  pricing,
+  accommodation,
+  roomType,
+  mealPlanPricePerNight,
+  nights,
+  includedTripsTotal,
+  extraTripsTotal,
+  transferType,
+  governorateCode,
+  direction,
+  numPeople,
+}: AccommodationPackageQuoteInput): AccommodationPackageQuote {
+  const transfer = quoteTransfer({ pricing, type: transferType, governorateCode, direction, numPeople })
+  const roomPerPerson = roomPerPersonPrice(accommodation, roomType)
+  const mealPlanTotal = (Number(mealPlanPricePerNight) || 0) * Math.max(0, nights)
+  const included = Number(includedTripsTotal) || 0
+  const extras = Number(extraTripsTotal) || 0
+  const perPersonBeforeExtras = roomPerPerson + mealPlanTotal + included + transfer.perPerson
+  const people = transfer.numPeople
+
+  return {
+    roomPerPerson,
+    mealPlanTotal,
+    includedTripsTotal: included,
+    transfer,
+    perPersonBeforeExtras,
+    extraTripsTotal: extras,
+    numPeople: people,
+    total: perPersonBeforeExtras * people + extras * people,
+  }
+}
+
+export interface StayQuoteInput {
+  accommodation: RoomPriceInput
+  roomType: RoomType
+  mealPlanPricePerNight: number
+  nights: number
+  numPeople: number
+}
+
+export interface StayQuote {
+  roomPerPerson: number
+  perNightPerPerson: number
+  nights: number
+  numPeople: number
+  total: number
+}
+
+/** Stay-only: same room + meal-plan math, no transfer, no trips. */
+export function quoteStay({
+  accommodation, roomType, mealPlanPricePerNight, nights, numPeople,
+}: StayQuoteInput): StayQuote {
+  const roomPerPerson = roomPerPersonPrice(accommodation, roomType)
+  const perNightPerPerson = roomPerPerson + (Number(mealPlanPricePerNight) || 0)
+  const n = Math.max(1, Math.floor(nights) || 1)
+  const people = Math.max(1, Math.floor(numPeople) || 1)
+  return {
+    roomPerPerson,
+    perNightPerPerson,
+    nights: n,
+    numPeople: people,
+    total: perNightPerPerson * n * people,
+  }
+}
+
 // ─── Formatting ───
 
 export function formatEGP(value: number, locale: string): string {

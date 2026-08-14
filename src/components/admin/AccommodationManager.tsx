@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2 } from 'lucide-react'
-import { Accommodation } from '@/lib/types'
+import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, Download, BedDouble, BedSingle, UtensilsCrossed } from 'lucide-react'
+import { Accommodation, MealPlan, MealPlanKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const TYPES = [
@@ -29,6 +29,16 @@ const TIERS = [
   { value: 'lagoon', label_ar: '🌊 Lagoon', label_en: '🌊 Lagoon' },
 ]
 
+// Meal-plan presets — admin just toggles which ones this property offers and
+// sets a price for each; the label/key stay fixed so the booking form and
+// price formula can rely on them.
+const MEAL_PLAN_PRESETS: { key: MealPlanKey; label_ar: string; label_en: string }[] = [
+  { key: 'room_only', label_ar: 'إقامة فقط', label_en: 'Room only' },
+  { key: 'breakfast', label_ar: 'إقامة وإفطار', label_en: 'Bed & breakfast' },
+  { key: 'half_board', label_ar: 'نص إقامة (إفطار وعشاء)', label_en: 'Half board (breakfast & dinner)' },
+  { key: 'all_inclusive', label_ar: 'شامل كليًا (All Inclusive)', label_en: 'All inclusive' },
+]
+
 const emptyAccommodation: Partial<Accommodation> = {
   name_ar: '',
   name_en: '',
@@ -37,6 +47,9 @@ const emptyAccommodation: Partial<Accommodation> = {
   price_per_night: 0,
   price_4day: 0,
   price_5day: 0,
+  price_double_room: 0,
+  price_single_room: 0,
+  meal_plans: [],
   rating: 0,
   location_ar: '',
   location_en: '',
@@ -64,6 +77,72 @@ export function AccommodationManager() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [bookingUrl, setBookingUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState('')
+  const [importNote, setImportNote] = useState('')
+
+  const importFromBooking = async () => {
+    if (!bookingUrl.trim()) return
+    setImporting(true)
+    setImportError('')
+    setImportNote('')
+    try {
+      const res = await fetch('/api/admin/import-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: bookingUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Import failed')
+
+      setForm(prev => ({
+        ...prev,
+        name_en: data.name_en || prev.name_en,
+        description_en: data.description_en || prev.description_en,
+        images: data.images?.length ? Array.from(new Set([...(prev.images || []), ...data.images])) : prev.images,
+        rating: typeof data.rating === 'number' ? data.rating : prev.rating,
+        latitude: typeof data.latitude === 'number' ? data.latitude : prev.latitude,
+        longitude: typeof data.longitude === 'number' ? data.longitude : prev.longitude,
+        amenities_en: data.amenities_en?.length ? data.amenities_en : prev.amenities_en,
+      }))
+      setImportNote(
+        locale === 'ar'
+          ? 'اتسحبت البيانات الإنجليزي. راجعها وكمّل النسخة العربي بنفسك — مش بنسحب ترجمة تلقائي.'
+          : 'English data imported. Review it and fill in the Arabic version yourself — we don\'t auto-translate.',
+      )
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : (locale === 'ar' ? 'فشل السحب من الرابط' : 'Import failed'))
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const mealPlanFor = (key: MealPlanKey): MealPlan | undefined =>
+    ((form.meal_plans as MealPlan[]) || []).find(m => m.key === key)
+
+  const toggleMealPlan = (key: MealPlanKey, label_ar: string, label_en: string) => {
+    const current = ((form.meal_plans as MealPlan[]) || []).slice()
+    const idx = current.findIndex(m => m.key === key)
+    if (idx >= 0) {
+      current[idx] = { ...current[idx], is_active: !current[idx].is_active }
+    } else {
+      current.push({ key, label_ar, label_en, price_per_person_per_night: 0, is_active: true })
+    }
+    updateField('meal_plans', current)
+  }
+
+  const updateMealPlanPrice = (key: MealPlanKey, label_ar: string, label_en: string, price: number) => {
+    const current = ((form.meal_plans as MealPlan[]) || []).slice()
+    const idx = current.findIndex(m => m.key === key)
+    if (idx >= 0) {
+      current[idx] = { ...current[idx], price_per_person_per_night: price }
+    } else {
+      current.push({ key, label_ar, label_en, price_per_person_per_night: price, is_active: true })
+    }
+    updateField('meal_plans', current)
+  }
 
   const handleImageUpload = async (files: FileList) => {
     setUploading(true)
@@ -204,7 +283,7 @@ export function AccommodationManager() {
     setAccommodations(prev => prev.filter(a => a.id !== id))
   }
 
-  const updateField = (field: string, value: string | number | string[]) => {
+  const updateField = (field: string, value: string | number | string[] | MealPlan[]) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
@@ -374,6 +453,34 @@ export function AccommodationManager() {
                 <Button variant="ghost" size="icon" onClick={() => { setShowForm(false); setEditing(null) }}>
                   <X className="h-5 w-5" />
                 </Button>
+              </div>
+
+              {/* Import from Booking.com */}
+              <div className="rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-4 space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Download className="h-4 w-4 text-brand-blue" />
+                  {locale === 'ar' ? 'استيراد من Booking.com' : 'Import from Booking.com'}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={bookingUrl}
+                    onChange={e => setBookingUrl(e.target.value)}
+                    placeholder="https://www.booking.com/hotel/..."
+                    dir="ltr"
+                    className="flex-1 text-sm"
+                  />
+                  <Button type="button" variant="outline" size="sm" disabled={importing} onClick={importFromBooking} className="gap-1.5 shrink-0">
+                    {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                    {locale === 'ar' ? 'استيراد' : 'Import'}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-gray-500">
+                  {locale === 'ar'
+                    ? 'بيسحب الصور، الخدمات، التقييم، الموقع، والوصف (إنجليزي بس) من صفحة الفندق على بوكينج. راجع الناتج قبل الحفظ، والنسخة العربي محتاجة تكتبها إنت.'
+                    : "Pulls photos, amenities, rating, location and description (English only) from the Booking.com listing. Review the result before saving — the Arabic version still needs you."}
+                </p>
+                {importError && <p className="text-xs text-red-500">{importError}</p>}
+                {importNote && <p className="text-xs text-emerald-600">{importNote}</p>}
               </div>
 
               {/* Basic Info */}
@@ -581,9 +688,78 @@ export function AccommodationManager() {
                 </div>
               </div>
 
-              {/* Prices */}
+              {/* Room pricing — drives the booking form's price calc */}
               <div>
-                <Label className="font-bold text-gray-900 mb-3 block">{locale === 'ar' ? 'الأسعار (بالجنيه المصري)' : 'Prices (EGP)'}</Label>
+                <Label className="font-bold text-gray-900 mb-1 block">
+                  {locale === 'ar' ? 'أسعار الغرف (بالجنيه المصري)' : 'Room Prices (EGP)'}
+                </Label>
+                <p className="text-xs text-gray-500 mb-3">
+                  {locale === 'ar'
+                    ? 'دي اللي بتحدد سعر الحجز الفعلي — سعر الفرد في الدبل/التريبل = سعر الغرفة الدبل ÷ 2.'
+                    : "These drive the actual booking price — per-person in double/triple = double room price ÷ 2."}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs flex items-center gap-1"><BedDouble className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'سعر الغرفة الدبل/التريبل (لليلة)' : 'Double/Triple room (per night)'}</Label>
+                    <Input type="number" min={0} value={form.price_double_room || 0} onChange={e => updateField('price_double_room', parseInt(e.target.value))} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs flex items-center gap-1"><BedSingle className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'سعر الغرفة السينجل (للفرد/لليلة)' : 'Single room (per person/night)'}</Label>
+                    <Input type="number" min={0} value={form.price_single_room || 0} onChange={e => updateField('price_single_room', parseInt(e.target.value))} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Meal plans */}
+              <div>
+                <Label className="font-bold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <UtensilsCrossed className="h-4 w-4 text-gray-400" />
+                  {locale === 'ar' ? 'أنواع الإقامة (نوع الوجبات)' : 'Meal Plans'}
+                </Label>
+                <p className="text-xs text-gray-500 mb-3">
+                  {locale === 'ar'
+                    ? 'فعّل الخيارات المتاحة في المكان ده وحط سعرها للفرد في الليلة — العميل يختار واحد منها وقت الحجز.'
+                    : 'Enable what this property offers and price it per person, per night — the customer picks one at booking.'}
+                </p>
+                <div className="space-y-2">
+                  {MEAL_PLAN_PRESETS.map(preset => {
+                    const plan = mealPlanFor(preset.key)
+                    const active = plan?.is_active ?? false
+                    return (
+                      <div key={preset.key} className={cn('flex items-center gap-3 rounded-lg border p-2.5', active ? 'border-brand-blue/30 bg-brand-blue/5' : 'border-gray-200')}>
+                        <label className="flex items-center gap-2 flex-1 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={() => toggleMealPlan(preset.key, preset.label_ar, preset.label_en)}
+                            className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                          />
+                          {locale === 'ar' ? preset.label_ar : preset.label_en}
+                        </label>
+                        {active && (
+                          <Input
+                            type="number"
+                            min={0}
+                            value={plan?.price_per_person_per_night || 0}
+                            onChange={e => updateMealPlanPrice(preset.key, preset.label_ar, preset.label_en, parseInt(e.target.value) || 0)}
+                            placeholder={locale === 'ar' ? 'إضافة للفرد/لليلة' : 'Add-on per person/night'}
+                            className="w-40 h-8 text-sm"
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Legacy flat prices — kept as a fallback where room prices aren't set yet */}
+              <div>
+                <Label className="font-bold text-gray-900 mb-1 block">{locale === 'ar' ? 'أسعار احتياطية قديمة (اختياري)' : 'Legacy Fallback Prices (optional)'}</Label>
+                <p className="text-xs text-gray-500 mb-3">
+                  {locale === 'ar'
+                    ? 'تستخدم بس لو مفيش سعر غرف متحدد فوق. الأفضل تسيبها وتعتمد على أسعار الغرف.'
+                    : "Only used if the room prices above aren't set. Prefer relying on room prices instead."}
+                </p>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label className="text-xs">{locale === 'ar' ? 'سعر الليلة' : 'Per Night'}</Label>
