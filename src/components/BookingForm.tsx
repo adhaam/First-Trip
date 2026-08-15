@@ -19,7 +19,8 @@ import {
   nightsForDuration, upcomingDatesFor, formatEGP,
 } from '@/lib/pricing'
 import type {
-  Accommodation, MealPlan, SinaiTrip, TransferDirection, TransferPricing, TransferType,
+  Accommodation, MealPlan, SinaiTrip, TransferDirection, TransferGovernoratePrice,
+  TransferPricing, TransferType,
 } from '@/lib/types'
 import {
   Send, CheckCircle2, MessageCircle, Loader2, AlertCircle,
@@ -156,12 +157,24 @@ export function BookingForm({
     [selectedExtraTrips],
   )
 
-  // ─── governorate options depend on which transfer type we're pricing ───
+  // ─── governorate options ───
+  // Picked first, before the bus/hiace choice — so we show the union of
+  // governorates configured for either transfer type. The per-governorate
+  // surcharge for whichever type gets picked afterward is resolved later,
+  // at quote time, from the matching (type, code) pair.
   const packageGovs = useMemo(() => governoratesFor(pricing, 'package_bus'), [pricing])
-  const transferGovs = useMemo(
-    () => governoratesFor(pricing, transferType),
-    [pricing, transferType],
-  )
+  const transferGovs = useMemo(() => {
+    const merged = new Map<string, TransferGovernoratePrice>()
+    for (const g of [
+      ...governoratesFor(pricing, 'package_bus'),
+      ...governoratesFor(pricing, 'hiace'),
+    ]) {
+      if (!merged.has(g.governorate_code)) merged.set(g.governorate_code, g)
+    }
+    return [...merged.values()].sort(
+      (a, b) => a.sort_order - b.sort_order || a.name_en.localeCompare(b.name_en),
+    )
+  }, [pricing])
 
   // ─── date options for standalone transfers ───
   // Bus: only Sun/Thu (out) or Mon/Fri (back). Hiace: any day.
@@ -805,6 +818,27 @@ export function BookingForm({
         {/* ─── TRANSFER-ONLY MODE ─── */}
         {mode === 'transfer-only' && (
           <>
+            {/* governorate — picked first, before the ride type */}
+            <div>
+              <Label className="mb-1.5 block">{t('governorate')}</Label>
+              <Select
+                value={transferGov}
+                onValueChange={(v) => v && setValue('transfer_governorate', v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('selectGovernorate')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {transferGovs.map((g) => (
+                    <SelectItem key={g.id} value={g.governorate_code}>
+                      {ar ? g.name_ar : g.name_en}
+                      {g.price_surcharge > 0 ? ` (+${g.price_surcharge})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* type: bus vs hiace */}
             <div>
               <Label className="mb-2 block">{ar ? 'نوع الانتقال' : 'Transfer type'}</Label>
@@ -848,27 +882,6 @@ export function BookingForm({
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* governorate */}
-            <div>
-              <Label className="mb-1.5 block">{t('governorate')}</Label>
-              <Select
-                value={transferGov}
-                onValueChange={(v) => v && setValue('transfer_governorate', v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('selectGovernorate')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {transferGovs.map((g) => (
-                    <SelectItem key={g.id} value={g.governorate_code}>
-                      {ar ? g.name_ar : g.name_en}
-                      {g.price_surcharge > 0 ? ` (+${g.price_surcharge})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* dates */}

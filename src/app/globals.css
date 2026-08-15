@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ═══════════════════════════════════════════════════════════════
-   FIRST TRIP — "Desert Meets Sea"
+   WEEMAP SINAI — "Desert Meets Sea"
    ───────────────────────────────────────────────────────────────
    The visual system is built on the two things Dahab actually is:
    a sunburnt mountain desert that stops abruptly at a very blue sea.
@@ -147,7 +147,7 @@
   --pin-radius-rtl: 1.5rem 1.5rem 1.5rem 1.5rem;
   --ink: #10333F;
 
-  /* First Trip brand color aliases (kept for older markup) */
+  /* WEEMAP SINAI brand color aliases (kept for older markup) */
   --ft-blue: #1D86A3;
   --ft-blue-light: #6FC0D2;
   --ft-blue-dark: #135971;

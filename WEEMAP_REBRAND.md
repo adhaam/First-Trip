@@ -205,3 +205,42 @@ Remaining launch steps for the owner:
 - `tsc --noEmit --strict` clean on `src/lib/pricing.ts` + `types.ts`
 - Zero `First Trip` / `firsttrip` / `2017` occurrences left in `src/` or `package.json`
 - Locale JSON files re-validated after edits
+
+## Audit pass — real state vs. this document (later session)
+
+Before trusting this document, a fresh audit re-read every file directly off
+the machine (not off an earlier working copy) and found a few things that had
+drifted from what's described above. Fixed in this pass:
+
+- **`src/components/brand/Logo.tsx` was still the OLD First Trip logo** —
+  `next/image` pointed at `/logo.png` with `alt="First Trip"` and rendered the
+  visible text "FIRST TRIP". Replaced with the WEEMAP pin-mark + "WEEMAP
+  SINAI" wordmark version (no image dependency).
+- **`public/logo.png` and `src/app/favicon.ico` were still the old First Trip
+  artwork** — this is what showed up as the browser tab icon, the Open Graph
+  share image, and the schema.org organization logo. Regenerated both as
+  simple WEEMAP-branded placeholders (orange pin mark on sand background).
+  Replace with real exported brand assets when the vector logo is ready —
+  see `WEEMAP_ASSET_CHECKLIST.md`.
+- **`src/app/api/bookings/route.ts` (the actual public booking-creation
+  endpoint) was still the pre-rebrand version** — no triple-room support, no
+  `price_snapshot`, no `payment_status`/`source`/`status: 'new'` defaults, and
+  it used the old v1 `quoteAccommodationPackage` math instead of the
+  seasonal-aware `quotePackageV2`. Rewritten to match the admin side: prices
+  every booking with `quotePackageV2`/`buildStaySnapshot`, freezes a
+  `price_snapshot`, sets `status: 'new'`, `payment_status: 'unpaid'`,
+  `source: 'website'`.
+- **Bus-schedule validation on the server only checked `booking_type ===
+  'package'`** — a `transfer-only` booking with the shared bus could bypass
+  the Sun/Thu-out, Mon/Fri-back restriction via a direct API call (the client
+  date picker enforced it, but the server didn't). Fixed.
+- **Governorate was picked *after* bus/hiace in the transfer-only form** —
+  the spec requires governorate first. Reordered, and the governorate list
+  is now the union of both transfer types' configured governorates so it can
+  render before the type is chosen.
+
+Re-validated after these fixes: `tsc --noEmit` clean, 12/12 pricing tests
+pass, `npm run lint` → 0 errors (37 pre-existing warnings, unchanged), and a
+full production build (`npm run build`) succeeds generating all 23+ routes
+(fonts + Supabase env vars stubbed only inside the sandbox for this check —
+Vercel has real network access and the real env vars already configured).

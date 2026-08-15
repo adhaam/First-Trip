@@ -21,7 +21,7 @@ const WORD: Record<LogoSize, string> = {
  * Single source of truth for the WEEMAP SINAI logo lockup.
  *
  * TEMPORARY MARK — the approved logo direction lives in
- * `_weemap_reference/01_brand/logo/weemap-sinai-logo-brand-board.png`
+ * `_weemap_reference/WEEMAP_REFERENCE_PACK_FINAL/01_brand/logo/weemap-sinai-logo-brand-board.png`
  * (location-pin + hand gesture + Sinai mountain cue), but no production
  * vector exists yet. Until a clean SVG is exported, the mark is a styled
  * pin in WEEMAP orange and the lockup is set in the site's display face:
@@ -30,7 +30,8 @@ const WORD: Record<LogoSize, string> = {
  *   SINAI    (ink / light)
  *
  * See WEEMAP_ASSET_CHECKLIST.md — replacing the pin with the real mark
- * only touches this file.
+ * only touches this file. Deliberately does NOT use /logo.png (that file
+ * is the old First Trip artwork and must not be referenced anywhere).
  */
 export function Logo({
   size = 'md',

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { getTransferPricing } from '@/lib/data'
+import { getTransferPricing, getAccommodationById } from '@/lib/data'
 import {
-  quotePackage, quoteTransfer, quotePackageV2,
-  buildPriceSnapshot, buildStaySnapshot, toISODate,
+  quotePackage, quotePackageV2, quoteTransfer,
+  buildPriceSnapshot, buildStaySnapshot,
   nightsForDuration, isPackageDepartureDay, isPackageReturnDay,
 } from '@/lib/pricing'
 import type { TripPriceInput } from '@/lib/pricing'
-import type { AccommodationSeasonalRate, MealPlan, PriceSnapshot } from '@/lib/types'
+import type { MealPlan, PriceSnapshot } from '@/lib/types'
 
 // Rate limiting (simple in-memory store — for production use Upstash Redis)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -51,109 +51,88 @@ const bookingSchema = z.object({
 
 type BookingInput = z.infer<typeof bookingSchema>
 
-interface PricedBooking {
-  total: number
-  snapshot: PriceSnapshot | null
+interface PricingResult {
+  total_price: number | null
+  price_snapshot: PriceSnapshot | null
 }
 
 /**
- * The price is ALWAYS recomputed on the server from the dashboard-managed
- * tables — whatever the browser thinks the price is, is only ever a preview.
- * Alongside the total, a frozen breakdown of every rate used is captured into
- * `price_snapshot`, so later price changes never affect this booking.
+ * The price is always recomputed on the server from the dashboard-managed
+ * tables. Whatever the browser thinks the price is, is only ever a preview.
+ * Every priced booking freezes a `price_snapshot` — see lib/pricing.ts — so a
+ * later change to hotel/trip/transfer prices can never retroactively change
+ * what this customer was quoted.
  */
-async function priceBooking(input: BookingInput): Promise<PricedBooking | null> {
+async function priceBooking(input: BookingInput): Promise<PricingResult> {
   const supabase = getSupabaseAdmin()
 
+  // ─── transfer-only ───
   if (input.booking_type === 'transfer-only') {
     const pricing = await getTransferPricing()
-    const q = quoteTransfer({
+    const transferType = input.transfer_type ?? 'hiace'
+    const quote = quoteTransfer({
       pricing,
-      type: input.transfer_type ?? 'hiace',
+      type: transferType,
       governorateCode: input.governorate,
       direction: input.transfer_direction ?? 'to_dahab',
       numPeople: input.num_people,
     })
     return {
-      total: q.total,
-      snapshot: {
-        transfer_rate_used: q.perPerson,
-        transfer_subtotal: q.total,
-        num_people: q.numPeople,
-        total: q.total,
+      total_price: quote.total,
+      price_snapshot: {
+        transfer_rate_used: quote.perPerson,
+        transfer_subtotal: quote.total,
+        num_people: quote.numPeople,
+        total: quote.total,
         computed_at: new Date().toISOString(),
       },
     }
   }
 
-  if (!input.accommodation_id) return null
+  if (!input.accommodation_id) return { total_price: null, price_snapshot: null }
 
-  const [{ data: acc }, { data: seasonalRows }] = await Promise.all([
-    supabase
-      .from('accommodations')
-      .select('price_per_night, price_4day, price_5day, price_double_room, price_single_room, price_triple_room, meal_plans')
-      .eq('id', input.accommodation_id)
-      .single(),
-    supabase
-      .from('accommodation_seasonal_rates')
-      .select('*')
-      .eq('accommodation_id', input.accommodation_id)
-      .eq('is_active', true),
-  ])
+  const acc = await getAccommodationById(input.accommodation_id)
+  if (!acc) return { total_price: null, price_snapshot: null }
 
-  if (!acc) return null
-
-  const accWithRates = {
-    price_double_room: Number(acc.price_double_room) || 0,
-    price_single_room: Number(acc.price_single_room) || 0,
-    price_triple_room: Number(acc.price_triple_room) || 0,
-    seasonal_rates: (seasonalRows ?? []) as AccommodationSeasonalRate[],
-  }
-
-  const hasRoomPricing =
-    accWithRates.price_double_room > 0 || accWithRates.price_single_room > 0
-
+  const hasRoomPricing = Number(acc.price_double_room) > 0 || Number(acc.price_single_room) > 0
   const mealPlans = (acc.meal_plans || []) as MealPlan[]
-  const mealPlanPricePerNight =
-    mealPlans.find((m) => m.key === input.meal_plan_key && m.is_active)?.price_per_person_per_night || 0
+  const mealPlan = mealPlans.find((m) => m.key === input.meal_plan_key && m.is_active)
+  const mealPlanPricePerNight = mealPlan?.price_per_person_per_night || 0
 
-  // Check-in date drives night-by-night seasonal resolution; without one we
-  // still price correctly from base rates starting today.
-  const checkIn = input.trip_date ?? toISODate(new Date())
-
+  // ─── accommodation-only (stay-only) ───
   if (input.booking_type === 'accommodation-only') {
-    if (hasRoomPricing) {
+    if (hasRoomPricing && input.trip_date) {
       const { total, snapshot } = buildStaySnapshot(
-        accWithRates,
+        acc,
         input.room_type ?? 'double',
-        checkIn,
+        input.trip_date,
         input.nights ?? 1,
         mealPlanPricePerNight,
         input.num_people,
-        input.meal_plan_key,
+        mealPlan?.key,
       )
-      return { total, snapshot }
+      return { total_price: total, price_snapshot: snapshot }
     }
-    // legacy flat per-night fallback
+    // legacy fallback — no room pricing configured for this property yet
     const total = Number(acc.price_per_night) * (input.nights ?? 1) * input.num_people
-    return { total, snapshot: null }
+    return { total_price: total, price_snapshot: null }
   }
 
   // ─── package ───
   const pricing = await getTransferPricing()
 
-  if (hasRoomPricing) {
-    // The two trips bundled into every package (admin-configured) are charged
-    // at their PACKAGE cost; extra trips at their normal public price.
+  if (hasRoomPricing && input.trip_date) {
+    // The two trips bundled into every package by default, admin-configured
+    // in Website settings; their package cost sums into the total automatically.
     const { data: settings } = await supabase
       .from('site_settings')
       .select('package_included_trip_ids')
       .eq('id', 1)
       .single()
     const includedIds: string[] = settings?.package_included_trip_ids || []
-    const extraIds = (input.extra_trip_ids || []).filter((id) => !includedIds.includes(id))
-
+    const extraIds = input.extra_trip_ids || []
     const tripIds = Array.from(new Set([...includedIds, ...extraIds]))
+
     let includedTrips: TripPriceInput[] = []
     let extraTrips: TripPriceInput[] = []
     if (tripIds.length > 0) {
@@ -163,39 +142,42 @@ async function priceBooking(input: BookingInput): Promise<PricedBooking | null> 
         .in('id', tripIds)
       const byId = new Map<string, TripPriceInput>(
         (trips || []).map((t) => [
-          t.id as string,
-          {
-            id: t.id as string,
-            name_en: t.name_en as string,
-            price: Number(t.price) || 0,
-            package_price: t.package_price == null ? null : Number(t.package_price),
-          },
+          t.id,
+          { id: t.id, name_en: t.name_en, price: Number(t.price) || 0, package_price: t.package_price },
         ]),
       )
       includedTrips = includedIds.flatMap((id) => byId.get(id) ?? [])
       extraTrips = extraIds.flatMap((id) => byId.get(id) ?? [])
     }
 
+    const transferType = input.transfer_type ?? 'hiace'
+    const direction = input.transfer_direction ?? 'round_trip'
+    const nights = nightsForDuration(input.duration === 5 ? 5 : 4)
+    const roomType = input.room_type ?? 'double'
+
     const quoteInput = {
       pricing,
-      accommodation: accWithRates,
-      roomType: input.room_type ?? 'double',
-      checkIn,
-      nights: input.nights ?? nightsForDuration(input.duration === 5 ? 5 : 4),
+      accommodation: acc,
+      roomType,
+      checkIn: input.trip_date,
+      nights,
+      numRooms: 1,
       mealPlanPricePerNight,
-      mealPlanKey: input.meal_plan_key,
+      mealPlanKey: mealPlan?.key,
       includedTrips,
       extraTrips,
-      transferType: input.transfer_type ?? 'package_bus',
+      transferType,
       governorateCode: input.governorate,
-      direction: input.transfer_direction ?? 'round_trip',
+      direction,
       numPeople: input.num_people,
     }
     const quote = quotePackageV2(quoteInput)
-    return { total: quote.total, snapshot: buildPriceSnapshot(quoteInput, quote) }
+    const snapshot = buildPriceSnapshot(quoteInput, quote)
+    return { total_price: quote.total, price_snapshot: snapshot }
   }
 
-  // legacy fallback — flat price_4day/price_5day, bus transfer only
+  // legacy fallback — flat price_4day/price_5day, bus transfer only, no room
+  // pricing configured yet for this property
   const accommodationPrice = input.duration === 5 ? Number(acc.price_5day) : Number(acc.price_4day)
   const total = quotePackage({
     pricing,
@@ -204,27 +186,26 @@ async function priceBooking(input: BookingInput): Promise<PricedBooking | null> 
     direction: input.transfer_direction ?? 'round_trip',
     numPeople: input.num_people,
   }).total
-  return { total, snapshot: null }
+  return { total_price: total, price_snapshot: null }
 }
 
 /**
  * The shared package bus only leaves Sun/Thu and only comes back Mon/Fri.
  * A private Hiace runs any day, so the restriction only applies when the
- * customer picked (or defaulted to) the shared bus.
+ * customer picked (or defaulted to) the shared bus — whether that's inside
+ * a package or a standalone transfer-only booking.
  */
 function validateDates(input: BookingInput): string | null {
-  if (input.trip_date && input.return_date && input.return_date < input.trip_date) {
-    return 'Return date cannot be before the departure date'
-  }
-  const usesBus =
-    (input.booking_type === 'package' && input.transfer_type !== 'hiace') ||
-    (input.booking_type === 'transfer-only' && input.transfer_type === 'package_bus')
-  if (!usesBus) return null
+  if (input.booking_type !== 'package' && input.booking_type !== 'transfer-only') return null
+  if (input.transfer_type === 'hiace') return null
   if (input.trip_date && !isPackageDepartureDay(input.trip_date)) {
-    return 'Bus departures are only available on Sunday or Thursday'
+    return 'Package departures are only available on Sunday or Thursday'
   }
   if (input.return_date && !isPackageReturnDay(input.return_date)) {
-    return 'Bus returns are only available on Monday or Friday'
+    return 'Package returns are only available on Monday or Friday'
+  }
+  if (input.trip_date && input.return_date && input.return_date < input.trip_date) {
+    return 'Return date cannot be before the departure date'
   }
   return null
 }
@@ -255,7 +236,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin()
-    const priced = await priceBooking(validated.data)
+    const { total_price, price_snapshot } = await priceBooking(validated.data)
 
     const { customer_email, ...rest } = validated.data
 
@@ -264,9 +245,11 @@ export async function POST(req: NextRequest) {
       .insert({
         ...rest,
         customer_email: customer_email || null,
-        total_price: priced?.total ?? null,
-        price_snapshot: priced?.snapshot ?? null,
+        total_price,
+        price_snapshot,
         status: 'new',
+        payment_status: 'unpaid',
+        amount_paid: 0,
         source: 'website',
       })
       .select()
