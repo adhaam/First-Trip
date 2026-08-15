@@ -15,9 +15,10 @@ development — placeholders are in place and clearly marked in code.
   apple-touch-icon and OG share image. Export a square WEEMAP mark to replace it.
 - [ ] **`src/app/favicon.ico`** — still First Trip; regenerate from the new mark.
 - [ ] **Social share image (1200×630)** — dedicated OG image rather than the logo square.
-- [ ] **Hero photography/plates** — `_weemap_reference/03_hero/hero-assets/final/` is empty;
-  the placeholders folder is also empty. The cinematic hero (Phase 4) needs the layered
-  road/dusk/night plates described in `HERO_MOTION_BLUEPRINT.md`.
+- [x] **Hero video** — `public/media/herovideo.mp4` (3.6MB) + `public/media/heroposter.png`
+  (2.1MB poster/reduced-motion fallback) are the approved final cinematic plate and are live
+  on the homepage (Phase 7 — see WEEMAP_REBRAND.md). Optional polish: the poster PNG could be
+  re-exported as a compressed JPEG/WebP to shave its 2.1MB down, not blocking.
 - [ ] **Photography library** — all `04_photography/*` folders are empty (.gitkeep only):
   roads, mountains, desert, sea, people, stays, trips.
 

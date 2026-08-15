@@ -23,7 +23,7 @@ Public email: TBD
 ## Web
 
 Current First Trip website: https://firsttrip-eg.com
-New WEEMAP domain: TBD
+New WEEMAP domain: https://weemapsinai.com (confirmed — owner instruction; DNS/Vercel wiring still pending, see WEEMAP_ASSET_CHECKLIST.md)
 
 ## Business / legal display name
 

@@ -32,18 +32,27 @@ export function Header() {
   const otherLocale = locale === 'ar' ? 'en' : 'ar'
   const cleanPath = pathname.replace(`/${locale}`, '') || '/'
 
+  // The homepage opens on a full-bleed dark video hero — the header starts
+  // transparent with light text over it, then crossfades into the normal
+  // solid header once the visitor scrolls past it. Every other page has no
+  // hero to be transparent over, so it stays solid from the start.
+  const isHome = pathname === `/${locale}` || pathname === `/${locale}/` || pathname === '/'
+  const transparent = isHome && !scrolled
+
   return (
     <header
       className={cn(
         'sticky top-0 z-50 w-full transition-all duration-300',
         scrolled
           ? 'border-b border-sand-300/70 bg-sand-50/90 backdrop-blur-md supports-[backdrop-filter]:bg-sand-50/75'
-          : 'border-b border-transparent bg-sand-50',
+          : transparent
+            ? 'border-b border-transparent bg-transparent'
+            : 'border-b border-transparent bg-sand-50',
       )}
     >
       <div className="container-main flex h-[4.5rem] items-center justify-between gap-4">
         <Link href="/" aria-label="WEEMAP SINAI" className="shrink-0">
-          <Logo size="md" priority />
+          <Logo size="md" priority tone={transparent ? 'light' : 'ink'} />
         </Link>
 
         {/* Desktop nav — a single ink hairline rail rather than floating pills */}
@@ -57,7 +66,9 @@ export function Header() {
                 href={item.href}
                 className={cn(
                   'relative px-3 py-2 text-[0.9rem] font-medium transition-colors',
-                  active ? 'text-sea-700' : 'text-sea-900/65 hover:text-sea-700',
+                  transparent
+                    ? active ? 'text-white' : 'text-white/75 hover:text-white'
+                    : active ? 'text-sea-700' : 'text-sea-900/65 hover:text-sea-700',
                 )}
               >
                 {t(labelKey)}
@@ -77,7 +88,12 @@ export function Header() {
           <Link
             href={cleanPath}
             locale={otherLocale}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium text-sea-900/70 transition-colors hover:bg-sand-200 hover:text-sea-900"
+            className={cn(
+              'inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors',
+              transparent
+                ? 'text-white/85 hover:bg-white/10 hover:text-white'
+                : 'text-sea-900/70 hover:bg-sand-200 hover:text-sea-900',
+            )}
           >
             <Globe className="h-4 w-4" />
             <span className="hidden sm:inline">{otherLocale === 'ar' ? 'العربية' : 'English'}</span>
@@ -85,14 +101,24 @@ export function Header() {
 
           <Link
             href="/book-dahab"
-            className="hidden h-10 items-center gap-1.5 rounded-full bg-sea-900 px-5 text-sm font-semibold text-sand-50 transition-all hover:bg-sea-700 sm:inline-flex"
+            className={cn(
+              'hidden h-10 items-center gap-1.5 rounded-full px-5 text-sm font-semibold transition-all sm:inline-flex',
+              transparent
+                ? 'bg-white text-sea-900 hover:bg-sand-100'
+                : 'bg-sea-900 text-sand-50 hover:bg-sea-700',
+            )}
           >
             {locale === 'ar' ? 'احجز' : 'Book'}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
 
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sea-900 transition-colors hover:bg-sand-200 lg:hidden">
+            <SheetTrigger
+              className={cn(
+                'inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors lg:hidden',
+                transparent ? 'text-white hover:bg-white/10' : 'text-sea-900 hover:bg-sand-200',
+              )}
+            >
               <Menu className="h-5 w-5" />
               <span className="sr-only">{locale === 'ar' ? 'القائمة' : 'Menu'}</span>
             </SheetTrigger>

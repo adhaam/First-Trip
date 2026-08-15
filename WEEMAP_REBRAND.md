@@ -244,3 +244,70 @@ pass, `npm run lint` → 0 errors (37 pre-existing warnings, unchanged), and a
 full production build (`npm run build`) succeeds generating all 23+ routes
 (fonts + Supabase env vars stubbed only inside the sandbox for this check —
 Vercel has real network access and the real env vars already configured).
+
+## Phase 7 — video-first hero, SEO fixes, full re-verification (later session)
+
+The hero direction changed: the scroll-driven day-to-night CSS scene from
+Phase 4 is no longer the approved direction. A final cinematic hero video was
+delivered to `public/media/herovideo.mp4` (3.6MB) + `public/media/heroposter.png`
+(2.1MB), and the brief was explicit — replace the layered hero entirely, don't
+recreate the video's motion (Jeep, road, sky, stars) with CSS/GSAP/canvas.
+
+- **`src/components/home/HomeClient.tsx`** — the ~150-line day/night scene
+  (`useHeroProgress`, sky gradients, star fields, moon, ridge SVGs, road SVG,
+  the tiny car-with-headlights) is gone. `Hero` is now a plain full-viewport
+  `<video autoPlay muted loop playsInline poster=... >` with one readability
+  overlay (a bottom-heavy gradient + a flat wash — no directional gradient,
+  so it reads correctly in both LTR and RTL). `prefers-reduced-motion` swaps
+  the `<video>` for a static `<Image>` of the poster frame. Site Settings →
+  Homepage's `hero_media_url`/`hero_type` still work as an optional override;
+  absent one, the shipped `/media/herovideo.mp4` + `/media/heroposter.png`
+  are the default. Copy: headline stays settings-driven (defaults to "We map
+  Sinai." / "You live it.", rendered uppercase to match the brief's "WE MAP
+  SINAI. / YOU LIVE IT." treatment); CTAs are now **Plan your trip** (→
+  `/book-dahab`) and **Explore Sinai** (→ `/sinai-trips`), replacing the old
+  WhatsApp button (still available site-wide via the floating WhatsApp
+  button and the final CTA section).
+- **`src/components/layout/Header.tsx`** — the header is transparent with
+  light text/logo over the homepage hero (`isHome && !scrolled`), then
+  crossfades to the normal solid sand header once the visitor scrolls past
+  it or navigates to any other page (which has no hero to be transparent
+  over). Reuses `Logo`'s existing `tone="light"` prop rather than adding new
+  color logic.
+- **`src/app/sitemap.ts`** — was listing `/book-dahab/1..4`, leftover mock
+  product ids from before the Supabase migration; real accommodation ids
+  never made it into the sitemap. Now calls `getAccommodations()` and lists
+  every real, active property. Fails soft (empty array) if Supabase is
+  unreachable rather than breaking the build.
+- **`src/app/manifest.ts`** (new) — basic installable web-app manifest
+  (name, theme color, icons) for mobile visitors adding the site from
+  Instagram/WhatsApp browsers, per the spec's SEO checklist.
+- **Full audit re-run**: read every admin manager (Dashboard/Bookings/
+  Accommodations incl. `SeasonalRatesEditor`/Trips/Transfers/Site Settings)
+  and the public booking API against the spec line by line — Phases 1–6's
+  claims held up against the actual files, no further drift found beyond
+  the sitemap issue above. `git status` initially showed ~130 files
+  "modified" — a false signal from a Windows CRLF checkout being read
+  through a Linux mount without `core.autocrlf` set locally; once set, the
+  real diff was exactly the files this session touched.
+- **Verification**: 12/12 pricing tests, `tsc --noEmit` clean, `npm run
+  lint` → 0 errors (same 37 pre-existing style warnings), full `next build`
+  succeeds generating all routes incl. `/sitemap.xml` and
+  `/manifest.webmanifest` (Google Fonts stubbed only inside the sandbox
+  build check, exactly as in Phase 6 — untouched in the committed code).
+
+### Still open (owner / external, unchanged from Phase 6)
+1. Run `supabase/migrations/005_weemap_website_cms.sql` in Supabase if not
+   already applied (004 must already be live given seasonal rates/triple
+   rooms are wired into the admin UI).
+2. Add `weemapsinai.com` to the existing Vercel project; set
+   `NEXT_PUBLIC_SITE_URL`; redirect `firsttrip-eg.com` → `weemapsinai.com`
+   once DNS is live.
+3. Work through `WEEMAP_ASSET_CHECKLIST.md` — production logo SVG,
+   `public/logo.png`/favicon regeneration, verified phone/WhatsApp/Facebook,
+   real testimonials to replace the seeded placeholders.
+4. Canonical/`hreflang` tags were deliberately **not** added this pass —
+   `localePrefix: 'as-needed'` (Arabic has no `/ar` prefix) makes this easy
+   to get subtly wrong without a way to test every route's mapping in this
+   session; flagging it as a follow-up rather than shipping an unverified
+   guess.
