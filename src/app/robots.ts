@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin/', '/api/'],
     },
-    sitemap: 'https://firsttrip-eg.com/sitemap.xml',
+    sitemap: 'https://weemapsinai.com/sitemap.xml',
   }
 }

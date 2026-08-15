@@ -32,7 +32,7 @@ export default function MerchPage() {
         <div className="container-main relative z-10">
           <span className="eyebrow mb-5 justify-center text-sun-300">
             <span aria-hidden className="h-px w-6 bg-current" />
-            {ar ? 'ميرش First Trip' : 'First Trip Merch'}
+            {ar ? 'ميرش WEEMAP' : 'WEEMAP Merch'}
           </span>
           <ShoppingBag className="mx-auto mb-4 h-10 w-10 opacity-80" />
           <h1 className="font-display text-4xl font-bold sm:text-5xl">

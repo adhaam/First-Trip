@@ -8,11 +8,14 @@ import { PLACEHOLDER_IMAGES, TRUST_STATS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { Compass, Eye, Target } from 'lucide-react'
 
+// WEEMAP is presented simply as the active brand — no origin/relaunch story
+// (see _weemap_reference/06_business-info/WEEMAP_INFO.md: historical claims
+// must be verified before publishing). These are what-we-do pillars instead.
 const timeline = [
-  { year: '2017', title_ar: 'التأسيس', title_en: 'Founded', desc_ar: 'انطلاق First Trip كشركة سياحة متخصصة في رحلات دهب من المحافظات', desc_en: 'First Trip launched as a tourism company specializing in Dahab trips from governorates' },
-  { year: '2017-2023', title_ar: 'النمو والاستمرارية', title_en: 'Growth & Continuity', desc_ar: '6 سنوات من تنظيم مئات الرحلات وكسب ثقة آلاف العملاء', desc_en: '6 years of organizing hundreds of trips & earning trust of thousands of customers' },
-  { year: '2023', title_ar: 'توقف مؤقت', title_en: 'Temporary Pause', desc_ar: 'إغلاق مؤقت لإعادة التنظيم والتخطيط لإعادة الإطلاق', desc_en: 'Temporary pause for reorganization and relaunch planning' },
-  { year: '2026', title_ar: 'إعادة الإطلاق', title_en: 'Relaunch', desc_ar: 'العودة بقوة أكبر مع تقنيات عصرية وخدمات محسّنة', desc_en: 'Strong return with modern tech and enhanced services' },
+  { year: '01', title_ar: 'بنرسم الطريق', title_en: 'We Map the Way', desc_ar: 'باقات كاملة من محافظتك لدهب — انتقالات، إقامة، ورحلات داخل سيناء في حجز واحد', desc_en: 'Full packages from your governorate to Dahab — transfers, stays, and Sinai trips in one booking' },
+  { year: '02', title_ar: 'أماكن مختارة', title_en: 'Places We Choose', desc_ar: 'كل كامب وشاليه وفندق في القائمة اتقعدنا فيه بنفسنا قبل ما نرشحه', desc_en: 'Every camp, chalet, and hotel on our list — we stayed there ourselves before recommending it' },
+  { year: '03', title_ar: 'كوميونيتي مش عملاء', title_en: 'Community, Not Customers', desc_ar: 'الرحلة بتخلص وإنت راجع بصحاب جداد — دي الفكرة من الأول', desc_en: 'You come back with new friends — that was always the point' },
+  { year: '04', title_ar: 'مع أهل سيناء', title_en: 'With Sinai Locals', desc_ar: 'شغالين مع أهل دهب وسيناء مش من غيرهم — الخير يرجع للبلد', desc_en: 'We work with Dahab and Sinai locals, not around them — value stays local' },
 ]
 
 

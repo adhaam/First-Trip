@@ -22,6 +22,7 @@ const emptyTrip: Partial<SinaiTrip> = {
   images: [],
   duration: '', duration_en: '',
   price: 0,
+  package_price: null,
   includes_ar: [], includes_en: [],
   is_active: true,
 }
@@ -69,7 +70,7 @@ export function SinaiTripManager() {
   const handleEdit = (t: SinaiTrip) => { setEditing(t); setForm({ ...t }); setShowForm(true) }
   const handleAdd = () => { setEditing(null); setForm({ ...emptyTrip }); setShowForm(true) }
 
-  const updateField = (field: string, value: string | number | string[] | boolean) => {
+  const updateField = (field: string, value: string | number | string[] | boolean | null) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
@@ -153,7 +154,14 @@ export function SinaiTripManager() {
                   <TableCell className="font-medium">{locale === 'ar' ? t.name_ar : t.name_en}</TableCell>
                   <TableCell>{locale === 'ar' ? t.category_ar : t.category_en}</TableCell>
                   <TableCell>{locale === 'ar' ? t.duration : t.duration_en}</TableCell>
-                  <TableCell>{t.price?.toLocaleString()} ج.م</TableCell>
+                  <TableCell>
+                    <div>{t.price?.toLocaleString()} ج.م</div>
+                    <div className={cn('text-[11px]', t.package_price == null ? 'text-amber-600' : 'text-gray-400')}>
+                      {t.package_price != null
+                        ? `${locale === 'ar' ? 'باكدج: ' : 'Pkg: '}${Number(t.package_price).toLocaleString()}`
+                        : (locale === 'ar' ? 'سعر الباكدج غير مضبوط' : 'Package cost not set')}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={t.is_active ? 'default' : 'outline'} className={t.is_active ? 'bg-green-100 text-green-700' : ''}>
                       {t.is_active ? (locale === 'ar' ? 'نشط' : 'Active') : (locale === 'ar' ? 'متوقف' : 'Inactive')}
@@ -195,7 +203,25 @@ export function SinaiTripManager() {
                 <div><Label>{locale === 'ar' ? 'الفئة (إنجليزي)' : 'Category (English)'}</Label><Input value={form.category_en || ''} onChange={e => updateField('category_en', e.target.value)} className="mt-1" /></div>
                 <div><Label>{locale === 'ar' ? 'المدة (عربي)' : 'Duration (Arabic)'}</Label><Input value={form.duration || ''} onChange={e => updateField('duration', e.target.value)} className="mt-1" /></div>
                 <div><Label>{locale === 'ar' ? 'المدة (إنجليزي)' : 'Duration (English)'}</Label><Input value={form.duration_en || ''} onChange={e => updateField('duration_en', e.target.value)} className="mt-1" /></div>
-                <div><Label>{locale === 'ar' ? 'السعر' : 'Price'}</Label><Input type="number" min={0} value={form.price || 0} onChange={e => updateField('price', parseInt(e.target.value) || 0)} className="mt-1" /></div>
+                <div>
+                  <Label>{locale === 'ar' ? 'السعر العام (للعميل)' : 'Public price (customer)'}</Label>
+                  <Input type="number" min={0} value={form.price || 0} onChange={e => updateField('price', parseInt(e.target.value) || 0)} className="mt-1" />
+                </div>
+                <div>
+                  <Label>{locale === 'ar' ? 'سعر الباكدج (لما تكون رحلة مشمولة)' : 'Package cost (when included in a package)'}</Label>
+                  <Input
+                    type="number" min={0}
+                    value={form.package_price ?? ''}
+                    placeholder={locale === 'ar' ? 'فاضي = السعر العام' : 'Empty = public price'}
+                    onChange={e => updateField('package_price', e.target.value === '' ? null : (parseInt(e.target.value) || 0))}
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    {locale === 'ar'
+                      ? 'ده اللي بيدخل في حساب الباقة لو الرحلة دي من الرحلتين المشمولين.'
+                      : 'Used inside the package total when this trip is one of the two included trips.'}
+                  </p>
+                </div>
                 <div><Label>{locale === 'ar' ? 'رابط الصورة' : 'Image URL'}</Label><Input value={(form.images || [])[0] || ''} onChange={e => updateField('images', [e.target.value])} className="mt-1" placeholder="https://..." /></div>
               </div>
 

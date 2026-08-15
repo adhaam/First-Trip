@@ -42,10 +42,18 @@ const manualBookingSchema = z.object({
   nights: z.number().int().min(1).max(60).optional(),
   transfer_type: z.enum(['package_bus', 'hiace']).optional(),
   transfer_direction: z.enum(['to_dahab', 'from_dahab', 'round_trip']).optional(),
+  room_type: z.enum(['double', 'single', 'triple']).optional(),
+  meal_plan_key: z.string().optional().or(z.literal('')),
   num_people: z.number().int().min(1).max(50),
   notes: z.string().max(1000).optional(),
-  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).optional().default('confirmed'),
+  internal_notes: z.string().max(2000).optional(),
+  status: z.enum(['new', 'pending', 'confirmed', 'cancelled', 'completed']).optional().default('confirmed'),
   total_price: z.number().min(0).optional(),
+  // Manual payment tracking — no gateway, just the owner's own records.
+  payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
+  amount_paid: z.number().min(0).optional(),
+  // Where this booking actually came from (manual entry can be any channel).
+  source: z.enum(['manual', 'whatsapp', 'instagram', 'facebook', 'referral', 'other']).optional().default('manual'),
 })
 
 export async function POST(req: NextRequest) {
@@ -59,7 +67,8 @@ export async function POST(req: NextRequest) {
   }
 
   const {
-    customer_email, accommodation_id, governorate, trip_date, return_date, ...rest
+    customer_email, accommodation_id, governorate, trip_date, return_date,
+    meal_plan_key, ...rest
   } = validated.data
 
   const supabase = getSupabaseAdmin()
@@ -72,7 +81,7 @@ export async function POST(req: NextRequest) {
       governorate: governorate || null,
       trip_date: trip_date || null,
       return_date: return_date || null,
-      source: 'manual',
+      meal_plan_key: meal_plan_key || null,
     })
     .select('*, accommodations(name_ar, name_en)')
     .single()

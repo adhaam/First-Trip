@@ -42,8 +42,8 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
             <SectionHeading eyebrow={ar ? 'عن الرحلة' : 'The trip'} title={t('aboutTrip')} className="mb-6" />
             <p className="leading-relaxed text-sea-900/65">
               {ar
-                ? 'رحلات First Trip لدهب تجربة سياحية متكاملة — انتقالات مريحة من محافظتك، إقامة في أفضل الفنادق والشاليهات والكمبات، ورحلتين داخليتين مجانًا. مناسبة للأفراد والعائلات والمجموعات.'
-                : 'First Trip Dahab packages are a complete experience — comfortable transportation from your city, accommodation in the best hotels, chalets and camps, plus two day trips included. Great for individuals, families and groups.'}
+                ? 'رحلات WEEMAP لدهب تجربة سياحية متكاملة — انتقالات مريحة من محافظتك، إقامة في أفضل الفنادق والشاليهات والكمبات، ورحلتين داخليتين ضمن الباقة. مناسبة للأفراد والعائلات والمجموعات.'
+                : 'WEEMAP Dahab packages are a complete experience — comfortable transportation from your city, accommodation in the best hotels, chalets and camps, plus two day trips included. Great for individuals, families and groups.'}
             </p>
             <div className="mt-6 flex items-center gap-2 text-sun-500">
               <Calendar className="h-5 w-5" />

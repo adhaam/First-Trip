@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "First Trip — Dahab isn't a trip, it's a mood",
-    "description": "First Trip — your first trip to Dahab. Packages, stays, transfers, Sinai adventures. Running trips since 2017 for a community that loves the sea, the desert, and the freedom in between."
+    "title": "WEEMAP SINAI — We map Sinai. You live it.",
+    "description": "WEEMAP SINAI — packages, stays, transfers, and Sinai adventures. We map the way to Dahab and South Sinai for a community that loves the sea, the desert, and the freedom in between."
   },
   "nav": {
     "home": "Home",
@@ -165,9 +165,9 @@
     "success": "Got it. We'll be in touch within a day."
   },
   "about": {
-    "title": "About First Trip",
+    "title": "About WEEMAP",
     "story": "The story",
-    "storyText": "We started in 2017. Not really a tour company — just a group of friends who loved Dahab, running trips for people we knew. The trips grew, the friends grew, and it became a community. Six years and hundreds of trips and thousands of happy people later, we returned in 2026 with a new look and a sharper operation — but the same reason for doing this.",
+    "storyText": "We were never really a tour company — more a group of friends who loved Dahab, running trips for people we knew. The trips grew, the friends grew, and it became a community. WEEMAP is that same idea, sharpened: we map the way to Sinai — the transfers, the stays, the trips — so all you have to do is live it.",
     "vision": "Vision",
     "visionText": "Build Egypt's biggest Dahab-loving community — where people meet through the trip and keep the connection alive after.",
     "mission": "Mission",
@@ -183,7 +183,7 @@
     "privacy": "Privacy"
   },
   "footer": {
-    "rights": "First Trip © 2026 — Made with love in Egypt",
+    "rights": "WEEMAP © 2026 — Made with love in Egypt",
     "quickLinks": "Quick links",
     "contact": "Contact",
     "followUs": "Follow us",

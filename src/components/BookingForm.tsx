@@ -49,7 +49,7 @@ const schema = z.object({
   check_in_date: z.string().optional(),
 
   // room + meal plan (package & stay-only)
-  room_type: z.enum(['double', 'single']).optional(),
+  room_type: z.enum(['double', 'single', 'triple']).optional(),
   meal_plan_key: z.string().optional(),
 
   // transfer-only
@@ -120,13 +120,13 @@ export function BookingForm({
   const packageGov = watch('package_governorate')
   const packageDepartureDate = watch('package_departure_date')
   const packageTransferType = (watch('package_transfer_type') ?? 'hiace') as TransferType
-  const packageDirection: 'round_trip' = 'round_trip' // always round_trip for packages
+  const packageDirection = 'round_trip' as const // always round_trip for packages
   const nights = Math.max(1, parseInt(watch('nights') || '1') || 1)
   const transferType = (watch('transfer_type') ?? 'hiace') as TransferType
   const transferGov = watch('transfer_governorate')
   const transferDirection = (watch('transfer_direction') ?? 'round_trip') as TransferDirection
   const numPeople = Math.max(1, parseInt(watch('num_people') || '1') || 1)
-  const roomType = (watch('room_type') ?? 'double') as 'double' | 'single'
+  const roomType = (watch('room_type') ?? 'double') as 'double' | 'single' | 'triple'
   const mealPlanKey = watch('meal_plan_key') || ''
 
   const selectedMealPlan = useMemo(
@@ -411,7 +411,7 @@ export function BookingForm({
           {mode === 'package' && packageQuote && (
             <>
               <Line
-                label={`${t('accommodationLine')} · ${roomType === 'single' ? (ar ? 'سينجل' : 'Single') : (ar ? 'دبل/تريبل' : 'Double/Triple')}`}
+                label={`${t('accommodationLine')} · ${roomType === 'single' ? (ar ? 'سينجل' : 'Single') : roomType === 'triple' ? (ar ? 'تريبل' : 'Triple') : (ar ? 'دبل' : 'Double')}`}
                 value={`${formatEGP(packageQuote.roomPerPerson, locale)} ${common('egp')}`}
               />
               {packageQuote.mealPlanTotal > 0 && (
@@ -574,20 +574,27 @@ export function BookingForm({
                 {/* Room type */}
                 <div>
                   <Label className="mb-2 block">{ar ? 'نوع الغرفة' : 'Room type'}</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <RoomTypeCard
-                      icon={BedDouble}
-                      active={roomType === 'double'}
-                      title={ar ? 'دبل / تريبل' : 'Double / Triple'}
-                      desc={ar ? 'مشتركة — السعر للفرد' : 'Shared — price is per person'}
-                      onClick={() => setValue('room_type', 'double')}
-                    />
+                  <div className="grid grid-cols-3 gap-2">
                     <RoomTypeCard
                       icon={BedSingle}
                       active={roomType === 'single'}
                       title={ar ? 'سينجل' : 'Single'}
                       desc={ar ? 'غرفة لوحدك' : 'A room to yourself'}
                       onClick={() => setValue('room_type', 'single')}
+                    />
+                    <RoomTypeCard
+                      icon={BedDouble}
+                      active={roomType === 'double'}
+                      title={ar ? 'دبل' : 'Double'}
+                      desc={ar ? 'لفردين — السعر للفرد' : 'For 2 — price per person'}
+                      onClick={() => setValue('room_type', 'double')}
+                    />
+                    <RoomTypeCard
+                      icon={BedDouble}
+                      active={roomType === 'triple'}
+                      title={ar ? 'تريبل' : 'Triple'}
+                      desc={ar ? 'لـ 3 أفراد — السعر للفرد' : 'For 3 — price per person'}
+                      onClick={() => setValue('room_type', 'triple')}
                     />
                   </div>
                 </div>
@@ -746,20 +753,27 @@ export function BookingForm({
               <>
                 <div>
                   <Label className="mb-2 block">{ar ? 'نوع الغرفة' : 'Room type'}</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <RoomTypeCard
-                      icon={BedDouble}
-                      active={roomType === 'double'}
-                      title={ar ? 'دبل / تريبل' : 'Double / Triple'}
-                      desc={ar ? 'مشتركة — السعر للفرد' : 'Shared — price is per person'}
-                      onClick={() => setValue('room_type', 'double')}
-                    />
+                  <div className="grid grid-cols-3 gap-2">
                     <RoomTypeCard
                       icon={BedSingle}
                       active={roomType === 'single'}
                       title={ar ? 'سينجل' : 'Single'}
                       desc={ar ? 'غرفة لوحدك' : 'A room to yourself'}
                       onClick={() => setValue('room_type', 'single')}
+                    />
+                    <RoomTypeCard
+                      icon={BedDouble}
+                      active={roomType === 'double'}
+                      title={ar ? 'دبل' : 'Double'}
+                      desc={ar ? 'لفردين — السعر للفرد' : 'For 2 — price per person'}
+                      onClick={() => setValue('room_type', 'double')}
+                    />
+                    <RoomTypeCard
+                      icon={BedDouble}
+                      active={roomType === 'triple'}
+                      title={ar ? 'تريبل' : 'Triple'}
+                      desc={ar ? 'لـ 3 أفراد — السعر للفرد' : 'For 3 — price per person'}
+                      onClick={() => setValue('room_type', 'triple')}
                     />
                   </div>
                 </div>

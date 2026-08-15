@@ -14,6 +14,8 @@ const tripUpdateSchema = z.object({
   duration: z.string().optional(),
   duration_en: z.string().optional(),
   price: z.number().min(0).optional(),
+  // Package cost — used when this trip is included in a package (null = unset).
+  package_price: z.number().min(0).nullable().optional(),
   includes_ar: z.array(z.string()).optional(),
   includes_en: z.array(z.string()).optional(),
   is_active: z.boolean().optional(),

@@ -2,16 +2,15 @@ export function getSchemaOrg() {
   return {
     '@context': 'https://schema.org',
     '@type': 'TourismBusiness',
-    '@id': 'https://firsttrip-eg.com/#organization',
-    name: 'First Trip',
-    alternateName: 'First Trip Tourism Company',
+    '@id': 'https://weemapsinai.com/#organization',
+    name: 'WEEMAP',
+    alternateName: 'WEEMAP SINAI',
     description: {
       '@language': 'ar',
-      '@value': 'شركة سياحة في دهب متخصصة في الباقات الشاملة، حجز الفنادق والشاليهات والكمبات، والرحلات الداخلية في جنوب سيناء',
+      '@value': 'منصة سفر محلية في سيناء متخصصة في الباقات الشاملة، حجز الفنادق والشاليهات والكمبات، والرحلات الداخلية في جنوب سيناء',
     },
-    url: 'https://firsttrip-eg.com',
-    logo: 'https://firsttrip-eg.com/logo.png',
-    foundingDate: '2017',
+    url: 'https://weemapsinai.com',
+    logo: 'https://weemapsinai.com/logo.png',
     address: {
       '@type': 'PostalAddress',
       addressLocality: 'Dahab',
@@ -30,8 +29,8 @@ export function getSchemaOrg() {
       availableLanguage: ['Arabic', 'English'],
     },
     sameAs: [
-      'https://facebook.com/firsttrip',
-      'https://instagram.com/firsttrip',
+      // Verified channels only — see _weemap_reference/06_business-info/WEEMAP_INFO.md
+      'https://www.instagram.com/weemapeg/',
     ],
     areaServed: {
       '@type': 'City',

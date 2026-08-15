@@ -10,6 +10,9 @@
 //   total                           = that, times the number of people
 
 import type {
+  AccommodationSeasonalRate,
+  PriceSnapshot,
+  SinaiTrip,
   TransferDirection,
   TransferGovernoratePrice,
   TransferPricing,
@@ -224,17 +227,131 @@ export function quotePackage({
 // This lives entirely on the server (priced in the booking API route) —
 // the client only ever sees the resulting total, never the formula.
 
-export type RoomType = 'double' | 'single'
+export type RoomType = 'double' | 'single' | 'triple'
 
 export interface RoomPriceInput {
   price_double_room: number
   price_single_room: number
+  price_triple_room?: number
+  /** Active date-range overrides for this accommodation (optional). */
+  seasonal_rates?: AccommodationSeasonalRate[]
 }
 
-/** Double/triple: half the room price (2 people share it). Single: paid in full. */
-export function roomPerPersonPrice(acc: RoomPriceInput, roomType: RoomType): number {
+/** How many people the room type is priced for. */
+export function roomOccupancy(roomType: RoomType): number {
+  if (roomType === 'single') return 1
+  if (roomType === 'triple') return 3
+  return 2
+}
+
+/**
+ * The BASE nightly rate for a room type (no seasonal override).
+ * Always the TOTAL room price — per-person shares are derived, never stored.
+ * A missing triple rate falls back to double × 1.5 as a display suggestion,
+ * matching the admin UI default (which stays editable, never hardcoded).
+ */
+export function baseNightlyRoomRate(acc: RoomPriceInput, roomType: RoomType): number {
   if (roomType === 'single') return Number(acc.price_single_room) || 0
-  return (Number(acc.price_double_room) || 0) / 2
+  if (roomType === 'triple') {
+    const triple = Number(acc.price_triple_room) || 0
+    if (triple > 0) return triple
+    return (Number(acc.price_double_room) || 0) * 1.5
+  }
+  return Number(acc.price_double_room) || 0
+}
+
+/** Per-person share of the base nightly rate (kept for stay-only / legacy callers). */
+export function roomPerPersonPrice(acc: RoomPriceInput, roomType: RoomType): number {
+  return baseNightlyRoomRate(acc, roomType) / roomOccupancy(roomType)
+}
+
+// ─── Seasonal night-by-night resolution ───
+
+export interface ResolvedNight {
+  /** ISO date of the night (the evening the guest sleeps). */
+  date: string
+  /** TOTAL room rate for that night. */
+  rate: number
+  source: 'seasonal' | 'base'
+  seasonal_rate_name?: string
+}
+
+function seasonalRateFor(
+  rates: AccommodationSeasonalRate[] | undefined,
+  isoDate: string,
+): AccommodationSeasonalRate | undefined {
+  if (!rates?.length) return undefined
+  // start_date/end_date are inclusive; the DB guards against overlapping
+  // active periods, so at most one row can match.
+  return rates.find(
+    (r) => r.is_active && r.start_date <= isoDate && isoDate <= r.end_date,
+  )
+}
+
+function seasonalPriceForRoom(rate: AccommodationSeasonalRate, roomType: RoomType): number {
+  if (roomType === 'single') return Number(rate.single_price) || 0
+  if (roomType === 'triple') return Number(rate.triple_price) || 0
+  return Number(rate.double_price) || 0
+}
+
+/**
+ * Resolve the TOTAL room rate for EVERY night of a stay individually.
+ * A stay that crosses a seasonal boundary is charged night-by-night — never
+ * priced wholesale from the check-in date. A night with no active seasonal
+ * period (or a seasonal price of 0) falls back to the accommodation base rate.
+ */
+export function resolveNightlyRates(
+  acc: RoomPriceInput,
+  roomType: RoomType,
+  checkIn: Date | string,
+  nights: number,
+): ResolvedNight[] {
+  const out: ResolvedNight[] = []
+  const cursor = toDate(checkIn)
+  const n = Math.max(0, Math.floor(nights) || 0)
+  const base = baseNightlyRoomRate(acc, roomType)
+  for (let i = 0; i < n; i++) {
+    const iso = toISODate(cursor)
+    const seasonal = seasonalRateFor(acc.seasonal_rates, iso)
+    const seasonalPrice = seasonal ? seasonalPriceForRoom(seasonal, roomType) : 0
+    if (seasonal && seasonalPrice > 0) {
+      out.push({ date: iso, rate: seasonalPrice, source: 'seasonal', seasonal_rate_name: seasonal.name })
+    } else {
+      out.push({ date: iso, rate: base, source: 'base' })
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return out
+}
+
+/** Sum of TOTAL room rates across a stay (one room). Multiply by numRooms if needed. */
+export function accommodationSubtotal(nightly: ResolvedNight[], numRooms = 1): number {
+  return nightly.reduce((sum, n) => sum + n.rate, 0) * Math.max(1, numRooms)
+}
+
+// ─── Trip pricing (public vs package cost) ───
+
+export interface TripPriceInput {
+  id: string
+  name_en: string
+  price: number
+  package_price?: number | null
+}
+
+/**
+ * The rate used when a trip is one of the two INCLUDED package trips.
+ * Uses the admin-configured package cost; falls back to the public price when
+ * unconfigured (the dashboard warns about that state — it never blocks a sale).
+ */
+export function includedTripCost(trip: TripPriceInput): number {
+  const pkg = Number(trip.package_price)
+  if (Number.isFinite(pkg) && pkg > 0) return pkg
+  return Number(trip.price) || 0
+}
+
+/** Extra (customer-added) trips are always charged at the normal public price. */
+export function extraTripCost(trip: TripPriceInput): number {
+  return Number(trip.price) || 0
 }
 
 /** 4-day package = 3 nights, 5-day package = 4 nights. */
@@ -309,6 +426,182 @@ export function quoteAccommodationPackage({
     numPeople: people,
     total: perPersonBeforeExtras * people + extras * people,
   }
+}
+
+// ─── Package quote v2 — seasonal, room-level, snapshot-backed ───
+//
+// The financially correct formula from the WEEMAP spec:
+//
+//   Accommodation subtotal   sum of applicable nightly TOTAL room rates × rooms
+// + Transfer subtotal        selected transfer per-person rate × travelers
+// + Included-trip subtotal   2 included trips at their PACKAGE cost × travelers
+// + Meal subtotal            meal price / person / night × travelers × nights
+// + Extra-trip subtotal      extra trips at PUBLIC price × travelers
+// ─────────────────────────
+// = Booking total
+//
+// The per-person display value is derived (total / travelers) — the engine
+// itself always reasons from the total room price.
+
+export interface PackageQuoteV2Input {
+  pricing: TransferPricing
+  accommodation: RoomPriceInput
+  roomType: RoomType
+  /** Check-in date — needed to resolve each night against seasonal periods. */
+  checkIn: Date | string
+  nights: number
+  numRooms?: number
+  /** Per-person, per-night meal add-on (0 if none picked). */
+  mealPlanPricePerNight: number
+  mealPlanKey?: string
+  /** The two (or however many) trips bundled into the package. */
+  includedTrips: TripPriceInput[]
+  /** Extra trips the customer added on top. */
+  extraTrips: TripPriceInput[]
+  transferType: TransferType
+  governorateCode?: string | null
+  direction: TransferDirection
+  numPeople: number
+}
+
+export interface PackageQuoteV2 {
+  nightly: ResolvedNight[]
+  nights: number
+  numRooms: number
+  accommodationSubtotal: number
+  transfer: TransferQuote
+  transferSubtotal: number
+  includedTripsSubtotal: number
+  mealSubtotal: number
+  extraTripsSubtotal: number
+  numPeople: number
+  total: number
+  /** total / numPeople — display only. */
+  perPerson: number
+}
+
+export function quotePackageV2(input: PackageQuoteV2Input): PackageQuoteV2 {
+  const people = Math.max(1, Math.floor(input.numPeople) || 1)
+  const rooms = Math.max(1, Math.floor(input.numRooms ?? 1) || 1)
+  const nights = Math.max(0, Math.floor(input.nights) || 0)
+
+  const nightly = resolveNightlyRates(input.accommodation, input.roomType, input.checkIn, nights)
+  const accSubtotal = accommodationSubtotal(nightly, rooms)
+
+  const transfer = quoteTransfer({
+    pricing: input.pricing,
+    type: input.transferType,
+    governorateCode: input.governorateCode,
+    direction: input.direction,
+    numPeople: people,
+  })
+  const transferSubtotal = transfer.perPerson * people
+
+  const includedTripsSubtotal =
+    input.includedTrips.reduce((s, t) => s + includedTripCost(t), 0) * people
+  const extraTripsSubtotal =
+    input.extraTrips.reduce((s, t) => s + extraTripCost(t), 0) * people
+  const mealSubtotal = (Number(input.mealPlanPricePerNight) || 0) * nights * people
+
+  const total = accSubtotal + transferSubtotal + includedTripsSubtotal + mealSubtotal + extraTripsSubtotal
+
+  return {
+    nightly,
+    nights,
+    numRooms: rooms,
+    accommodationSubtotal: accSubtotal,
+    transfer,
+    transferSubtotal,
+    includedTripsSubtotal,
+    mealSubtotal,
+    extraTripsSubtotal,
+    numPeople: people,
+    total,
+    perPerson: people > 0 ? total / people : total,
+  }
+}
+
+/**
+ * Freeze everything that went into a quote so the booking row stores the
+ * exact rates used. Changing hotel/trip/transfer prices later must NEVER
+ * change a past booking — admins read this snapshot, not live prices.
+ */
+export function buildPriceSnapshot(
+  input: PackageQuoteV2Input,
+  quote: PackageQuoteV2,
+): PriceSnapshot {
+  return {
+    room_type: input.roomType,
+    nightly_room_rates: quote.nightly.map((n) => ({
+      date: n.date,
+      rate: n.rate,
+      source: n.source,
+      ...(n.seasonal_rate_name ? { seasonal_rate_name: n.seasonal_rate_name } : {}),
+    })),
+    nights: quote.nights,
+    accommodation_subtotal: quote.accommodationSubtotal,
+    transfer_rate_used: quote.transfer.perPerson,
+    transfer_subtotal: quote.transferSubtotal,
+    included_trips: input.includedTrips.map((t) => ({
+      trip_id: t.id,
+      name_en: t.name_en,
+      package_cost: includedTripCost(t),
+    })),
+    included_trips_subtotal: quote.includedTripsSubtotal,
+    ...(input.mealPlanKey ? { meal_plan_key: input.mealPlanKey } : {}),
+    meal_plan_price_per_person_per_night: Number(input.mealPlanPricePerNight) || 0,
+    meal_subtotal: quote.mealSubtotal,
+    extra_trips: input.extraTrips.map((t) => ({
+      trip_id: t.id,
+      name_en: t.name_en,
+      price: extraTripCost(t),
+    })),
+    extra_trips_subtotal: quote.extraTripsSubtotal,
+    num_people: quote.numPeople,
+    total: quote.total,
+    computed_at: new Date().toISOString(),
+  }
+}
+
+/** Stay-only snapshot: same idea, no transfer and no trips. */
+export function buildStaySnapshot(
+  acc: RoomPriceInput,
+  roomType: RoomType,
+  checkIn: Date | string,
+  nights: number,
+  mealPlanPricePerNight: number,
+  numPeople: number,
+  mealPlanKey?: string,
+): { total: number; snapshot: PriceSnapshot } {
+  const n = Math.max(1, Math.floor(nights) || 1)
+  const people = Math.max(1, Math.floor(numPeople) || 1)
+  const nightly = resolveNightlyRates(acc, roomType, checkIn, n)
+  const accSubtotal = accommodationSubtotal(nightly, 1)
+  const mealSubtotal = (Number(mealPlanPricePerNight) || 0) * n * people
+  const total = accSubtotal + mealSubtotal
+  return {
+    total,
+    snapshot: {
+      room_type: roomType,
+      nightly_room_rates: nightly.map((x) => ({
+        date: x.date, rate: x.rate, source: x.source,
+        ...(x.seasonal_rate_name ? { seasonal_rate_name: x.seasonal_rate_name } : {}),
+      })),
+      nights: n,
+      accommodation_subtotal: accSubtotal,
+      ...(mealPlanKey ? { meal_plan_key: mealPlanKey } : {}),
+      meal_plan_price_per_person_per_night: Number(mealPlanPricePerNight) || 0,
+      meal_subtotal: mealSubtotal,
+      num_people: people,
+      total,
+      computed_at: new Date().toISOString(),
+    },
+  }
+}
+
+// Keep the SinaiTrip type import in play for callers that pass whole trips.
+export function toTripPriceInput(trip: SinaiTrip): TripPriceInput {
+  return { id: trip.id, name_en: trip.name_en, price: trip.price, package_price: trip.package_price }
 }
 
 export interface StayQuoteInput {

@@ -4,15 +4,21 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const updateSchema = z.object({
-  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).optional(),
+  status: z.enum(['new', 'pending', 'confirmed', 'cancelled', 'completed']).optional(),
   customer_name: z.string().min(2).max(100).optional(),
   customer_phone: z.string().min(6).max(20).optional(),
   customer_email: z.string().email().optional().or(z.literal('')),
   notes: z.string().max(1000).optional(),
+  internal_notes: z.string().max(2000).optional(),
   trip_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
   return_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
   num_people: z.number().int().min(1).max(50).optional(),
   total_price: z.number().min(0).optional(),
+  // Manual payment tracking: remaining balance = total_price - amount_paid
+  // (computed in the UI — never stored, so it can't drift).
+  payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
+  amount_paid: z.number().min(0).optional(),
+  source: z.enum(['website', 'manual', 'whatsapp', 'instagram', 'facebook', 'referral', 'other']).optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

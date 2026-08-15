@@ -42,7 +42,7 @@ export function Header() {
       )}
     >
       <div className="container-main flex h-[4.5rem] items-center justify-between gap-4">
-        <Link href="/" aria-label="First Trip" className="shrink-0">
+        <Link href="/" aria-label="WEEMAP SINAI" className="shrink-0">
           <Logo size="md" priority />
         </Link>
 

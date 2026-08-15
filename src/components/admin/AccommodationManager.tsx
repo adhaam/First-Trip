@@ -15,6 +15,7 @@ import {
 import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, Download, BedDouble, BedSingle, UtensilsCrossed } from 'lucide-react'
 import { Accommodation, MealPlan, MealPlanKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { SeasonalRatesEditor } from './SeasonalRatesEditor'
 
 const TYPES = [
   { value: 'hotel', label_ar: '🏨 فندق', label_en: '🏨 Hotel' },
@@ -49,6 +50,7 @@ const emptyAccommodation: Partial<Accommodation> = {
   price_5day: 0,
   price_double_room: 0,
   price_single_room: 0,
+  price_triple_room: 0,
   meal_plans: [],
   rating: 0,
   location_ar: '',
@@ -214,6 +216,7 @@ export function AccommodationManager() {
         price_5day: form.price_5day || 0,
         price_double_room: form.price_double_room || 0,
         price_single_room: form.price_single_room || 0,
+        price_triple_room: form.price_triple_room || 0,
         meal_plans: (form.meal_plans as MealPlan[]) || [],
         is_active: form.is_active ?? true,
       }
@@ -643,20 +646,52 @@ export function AccommodationManager() {
                 </Label>
                 <p className="text-xs text-gray-500 mb-3">
                   {locale === 'ar'
-                    ? 'دي اللي بتحدد سعر الحجز الفعلي — سعر الفرد في الدبل/التريبل = سعر الغرفة الدبل ÷ 2.'
-                    : "These drive the actual booking price — per-person in double/triple = double room price ÷ 2."}
+                    ? 'السعر هنا هو سعر الغرفة كاملة لليلة — سعر الفرد بيتحسب تلقائيًا (دبل ÷ 2، تريبل ÷ 3).'
+                    : 'Each price is the TOTAL room price per night — per-person is derived (double ÷ 2, triple ÷ 3).'}
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-xs flex items-center gap-1"><BedDouble className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'سعر الغرفة الدبل/التريبل (لليلة)' : 'Double/Triple room (per night)'}</Label>
+                    <Label className="text-xs flex items-center gap-1"><BedSingle className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'سينجل (فرد — لليلة)' : 'Single (1 — per night)'}</Label>
+                    <Input type="number" min={0} value={form.price_single_room || 0} onChange={e => updateField('price_single_room', parseInt(e.target.value))} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs flex items-center gap-1"><BedDouble className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'دبل (فردين — لليلة)' : 'Double (2 — per night)'}</Label>
                     <Input type="number" min={0} value={form.price_double_room || 0} onChange={e => updateField('price_double_room', parseInt(e.target.value))} className="mt-1" />
                   </div>
                   <div>
-                    <Label className="text-xs flex items-center gap-1"><BedSingle className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'سعر الغرفة السينجل (للفرد/لليلة)' : 'Single room (per person/night)'}</Label>
-                    <Input type="number" min={0} value={form.price_single_room || 0} onChange={e => updateField('price_single_room', parseInt(e.target.value))} className="mt-1" />
+                    <Label className="text-xs flex items-center gap-1"><BedDouble className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'تريبل (3 أفراد — لليلة)' : 'Triple (3 — per night)'}</Label>
+                    <Input
+                      type="number" min={0}
+                      value={form.price_triple_room || 0}
+                      placeholder={form.price_double_room ? String(Math.round(Number(form.price_double_room) * 1.5)) : ''}
+                      onChange={e => updateField('price_triple_room', parseInt(e.target.value) || 0)}
+                      className="mt-1"
+                    />
+                    {!form.price_triple_room && !!form.price_double_room && (
+                      <button
+                        type="button"
+                        className="mt-1 text-[11px] text-brand-blue hover:underline"
+                        onClick={() => updateField('price_triple_room', Math.round(Number(form.price_double_room) * 1.5))}
+                      >
+                        {locale === 'ar'
+                          ? `اقتراح: ${Math.round(Number(form.price_double_room) * 1.5).toLocaleString()} (الدبل × 1.5)`
+                          : `Suggest: ${Math.round(Number(form.price_double_room) * 1.5).toLocaleString()} (double × 1.5)`}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* Seasonal pricing periods — only when editing (needs a saved id) */}
+              {editing?.id ? (
+                <SeasonalRatesEditor accommodationId={editing.id} locale={locale} />
+              ) : (
+                <p className="rounded-lg border border-dashed p-3 text-xs text-gray-400">
+                  {locale === 'ar'
+                    ? 'احفظ المكان الأول، وبعدين تقدر تضيف فترات أسعار موسمية (زي الكريسماس ورأس السنة).'
+                    : 'Save the accommodation first, then you can add seasonal pricing periods (e.g. Christmas / New Year).'}
+                </p>
+              )}
 
               {/* Meal plans */}
               <div>

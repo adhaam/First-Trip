@@ -7,13 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader2, Save, CheckCircle2, Mountain } from 'lucide-react'
-import { SiteSettings, SinaiTrip } from '@/lib/types'
+import { Loader2, Save, CheckCircle2, Mountain, Home, Search as SearchIcon, AlertTriangle } from 'lucide-react'
+import { Accommodation, SiteSettings, SinaiTrip } from '@/lib/types'
 
 export function SiteSettingsManager() {
   const locale = useLocale()
   const [settings, setSettings] = useState<Partial<SiteSettings>>({})
   const [trips, setTrips] = useState<SinaiTrip[]>([])
+  const [accommodations, setAccommodations] = useState<Accommodation[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -23,9 +24,10 @@ export function SiteSettingsManager() {
     setLoading(true)
     setLoadError('')
     try {
-      const [sRes, tRes] = await Promise.all([
+      const [sRes, tRes, aRes] = await Promise.all([
         fetch('/api/admin/site-settings'),
         fetch('/api/admin/sinai-trips'),
+        fetch('/api/admin/accommodations'),
       ])
       if (sRes.status === 401) { window.location.href = `/${locale}/admin`; return }
       const data = await sRes.json()
@@ -34,6 +36,10 @@ export function SiteSettingsManager() {
       if (tRes.ok) {
         const tData = await tRes.json()
         setTrips(tData.trips || [])
+      }
+      if (aRes.ok) {
+        const aData = await aRes.json()
+        setAccommodations(aData.accommodations || [])
       }
     } catch {
       setLoadError(locale === 'ar' ? 'تعذر تحميل الإعدادات' : 'Failed to load settings')
@@ -48,17 +54,18 @@ export function SiteSettingsManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const updateField = (field: string, value: string) => {
+  const updateField = (field: string, value: string | boolean | string[]) => {
     setSettings(prev => ({ ...prev, [field]: value }))
     setSaved(false)
   }
 
-  const toggleIncludedTrip = (id: string) => {
-    const current = settings.package_included_trip_ids || []
+  const toggleInList = (field: 'package_included_trip_ids' | 'featured_trip_ids' | 'featured_accommodation_ids', id: string) => {
+    const current = (settings[field] as string[] | undefined) || []
     const next = current.includes(id) ? current.filter(t => t !== id) : [...current, id]
-    setSettings(prev => ({ ...prev, package_included_trip_ids: next }))
-    setSaved(false)
+    updateField(field, next)
   }
+
+  const toggleIncludedTrip = (id: string) => toggleInList('package_included_trip_ids', id)
 
   const handleSave = async () => {
     setSaving(true)
@@ -118,6 +125,14 @@ export function SiteSettingsManager() {
               ? 'اختار الرحلات اللي بتتضاف تلقائي لسعر أي باكدج (زي الرحلتين الداخليتين). سعرهم بيتحسب في التوتال أوتوماتيك.'
               : 'Pick the trips that get bundled into every package price automatically (like the two included day trips). Their price is added to the total automatically.'}
           </p>
+          {(settings.package_included_trip_ids || []).length !== 2 && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-600">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {locale === 'ar'
+                ? `الباكدج المفروض يشمل رحلتين بالظبط — المحدد حاليًا: ${(settings.package_included_trip_ids || []).length}`
+                : `A package should include exactly 2 trips — currently selected: ${(settings.package_included_trip_ids || []).length}`}
+            </p>
+          )}
           {trips.length === 0 ? (
             <p className="text-sm text-gray-400">{locale === 'ar' ? 'لا توجد رحلات مضافة بعد' : 'No trips added yet'}</p>
           ) : (
@@ -136,6 +151,93 @@ export function SiteSettingsManager() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* ─── Homepage content (Website CMS) ─── */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+            <Home className="h-4 w-4 text-brand-orange" />
+            {locale === 'ar' ? 'محتوى الصفحة الرئيسية' : 'Homepage Content'}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {locale === 'ar' ? 'سيب أي خانة فاضية عشان يستخدم النص الافتراضي.' : 'Leave any field empty to use the built-in default.'}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><Label>{locale === 'ar' ? 'عنوان الهيرو (عربي)' : 'Hero heading (Arabic)'}</Label><Input value={settings.hero_heading_ar || ''} onChange={e => updateField('hero_heading_ar', e.target.value)} className="mt-1" placeholder="إحنا بنرسم لك سيناء" /></div>
+            <div><Label>{locale === 'ar' ? 'عنوان الهيرو (إنجليزي)' : 'Hero heading (English)'}</Label><Input dir="ltr" value={settings.hero_heading_en || ''} onChange={e => updateField('hero_heading_en', e.target.value)} className="mt-1" placeholder="We map Sinai." /></div>
+            <div><Label>{locale === 'ar' ? 'العنوان الفرعي (عربي)' : 'Hero subheading (Arabic)'}</Label><Input value={settings.hero_subheading_ar || ''} onChange={e => updateField('hero_subheading_ar', e.target.value)} className="mt-1" placeholder="وإنت بتعيشها" /></div>
+            <div><Label>{locale === 'ar' ? 'العنوان الفرعي (إنجليزي)' : 'Hero subheading (English)'}</Label><Input dir="ltr" value={settings.hero_subheading_en || ''} onChange={e => updateField('hero_subheading_en', e.target.value)} className="mt-1" placeholder="You live it." /></div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <Label className="font-semibold">{locale === 'ar' ? 'إظهار/إخفاء الأقسام' : 'Section visibility'}</Label>
+            {([
+              ['show_community', locale === 'ar' ? 'قسم الكوميونيتي' : 'Community section'],
+              ['show_partners', locale === 'ar' ? 'قسم الشركاء' : 'Partners section'],
+              ['show_newsletter', locale === 'ar' ? 'النشرة البريدية' : 'Newsletter signup'],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings[key] !== false}
+                  onChange={e => updateField(key, e.target.checked)}
+                  className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+
+          <div className="pt-2">
+            <Label className="font-semibold">{locale === 'ar' ? 'أماكن الإقامة المميزة (فاضي = تلقائي)' : 'Featured accommodations (empty = automatic)'}</Label>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {accommodations.filter(a => a.is_active).map(a => (
+                <label key={a.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 p-2.5 text-sm hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={(settings.featured_accommodation_ids || []).includes(a.id)}
+                    onChange={() => toggleInList('featured_accommodation_ids', a.id)}
+                    className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                  />
+                  <span className="flex-1 truncate">{locale === 'ar' ? a.name_ar : a.name_en}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Label className="font-semibold">{locale === 'ar' ? 'الرحلات المميزة (فاضي = تلقائي)' : 'Featured trips (empty = automatic)'}</Label>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {trips.filter(t => t.is_active).map(t => (
+                <label key={t.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 p-2.5 text-sm hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={(settings.featured_trip_ids || []).includes(t.id)}
+                    onChange={() => toggleInList('featured_trip_ids', t.id)}
+                    className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                  />
+                  <span className="flex-1 truncate">{locale === 'ar' ? t.name_ar : t.name_en}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ─── Global SEO ─── */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+            <SearchIcon className="h-4 w-4 text-brand-orange" />
+            {locale === 'ar' ? 'إعدادات SEO' : 'SEO Settings'}
+          </h3>
+          <div className="grid grid-cols-1 gap-4">
+            <div><Label>{locale === 'ar' ? 'عنوان الموقع (فاضي = الافتراضي)' : 'Site title (empty = default)'}</Label><Input dir="ltr" value={settings.seo_title || ''} onChange={e => updateField('seo_title', e.target.value)} className="mt-1" placeholder="WEEMAP SINAI — We map Sinai. You live it." /></div>
+            <div><Label>{locale === 'ar' ? 'وصف الموقع (عربي)' : 'Site description (Arabic)'}</Label><Textarea rows={2} value={settings.seo_description_ar || ''} onChange={e => updateField('seo_description_ar', e.target.value)} className="mt-1" /></div>
+            <div><Label>{locale === 'ar' ? 'وصف الموقع (إنجليزي)' : 'Site description (English)'}</Label><Textarea rows={2} value={settings.seo_description_en || ''} onChange={e => updateField('seo_description_en', e.target.value)} className="mt-1" /></div>
+          </div>
         </CardContent>
       </Card>
 

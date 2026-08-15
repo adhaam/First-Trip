@@ -1,8 +1,11 @@
-// ─── First Trip — Types ───
+// ─── WEEMAP SINAI — Types ───
 
 export type AccommodationType = 'hotel' | 'chalet' | 'camp'
 export type BookingType = 'package' | 'accommodation-only' | 'transfer-only'
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+export type BookingStatus = 'new' | 'pending' | 'confirmed' | 'cancelled' | 'completed'
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded'
+export type BookingSource =
+  | 'website' | 'manual' | 'whatsapp' | 'instagram' | 'facebook' | 'referral' | 'other'
 export type TripDuration = 4 | 5
 export type PostCategory = 'blog' | 'hidden-gems' | 'stories' | 'dahab-guide'
 export type Governorate = 'cairo' | 'alexandria' | 'zagazig' | 'mansoura'
@@ -78,13 +81,32 @@ export interface Accommodation {
   price_per_night: number // accommodation-only price per person (legacy — kept as a fallback)
   price_4day: number   // 4-day package price per person (legacy — kept as a fallback)
   price_5day: number   // 5-day package price per person (legacy — kept as a fallback)
-  /** Per-room price for a double/triple occupancy room. Per-person = this / 2. */
+  /** Per-room price for a double occupancy room. Per-person = this / 2. */
   price_double_room: number
   /** Per-person price for a single occupancy room. */
   price_single_room: number
+  /** Per-room price for a triple occupancy room. Per-person = this / 3. */
+  price_triple_room: number
   meal_plans: MealPlan[]
+  /** Date-range overrides on top of the base price_* columns — see lib/pricing.ts. */
+  seasonal_rates?: AccommodationSeasonalRate[]
   is_active: boolean
   created_at: string
+  updated_at?: string
+}
+
+/** A named date-range pricing period for one accommodation (e.g. "Christmas / New Year"). */
+export interface AccommodationSeasonalRate {
+  id: string
+  accommodation_id: string
+  name: string
+  start_date: string // ISO date
+  end_date: string // ISO date, inclusive
+  single_price: number
+  double_price: number
+  triple_price: number
+  is_active: boolean
+  created_at?: string
   updated_at?: string
 }
 
@@ -108,7 +130,14 @@ export interface SinaiTrip {
   images: string[]
   duration: string   // e.g. "نصف يوم", "Full Day"
   duration_en: string
+  /** Normal selling price — used when the trip is booked separately or added as an extra. */
   price: number
+  /**
+   * What WEEMAP uses when this trip is one of the two included package trips.
+   * NULL/undefined = not configured yet; the pricing engine falls back to
+   * `price` and the admin dashboard should warn that it's unconfigured.
+   */
+  package_price?: number | null
   includes_ar: string[]
   includes_en: string[]
   is_active: boolean
@@ -139,19 +168,51 @@ export interface Booking {
   nights?: number
   transfer_type?: TransferType
   transfer_direction?: TransferDirection
-  /** 'double' = split price_double_room / 2 per person, 'single' = price_single_room. */
-  room_type?: 'double' | 'single'
+  /** 'double'/'triple' split the room price per occupant, 'single' = price_single_room. */
+  room_type?: 'double' | 'single' | 'triple'
   meal_plan_key?: MealPlanKey | string
   /** Sinai trip ids the customer added on top of the two included in the package. */
   extra_trip_ids?: string[]
   num_people: number
   notes?: string
+  /** Admin-only note, never shown to the customer. */
+  internal_notes?: string
   status: BookingStatus
   total_price?: number
-  /** 'website' = came through the booking form, 'manual' = logged by an admin (phone/WhatsApp/walk-in). */
-  source?: 'website' | 'manual'
+  /** Manual payment tracking — no payment gateway involved. */
+  payment_status?: PaymentStatus
+  amount_paid?: number
+  /** Frozen breakdown of every rate used at booking time — see lib/pricing.ts buildPriceSnapshot(). */
+  price_snapshot?: PriceSnapshot | null
+  /** Which channel this booking came in through. */
+  source?: BookingSource
   created_at: string
   updated_at?: string
+}
+
+/**
+ * Everything that went into a booking's total_price, frozen at creation time.
+ * A later change to hotel/trip/transfer prices must NEVER retroactively change
+ * a past booking — this snapshot is what the admin bookings detail view reads.
+ */
+export interface PriceSnapshot {
+  room_type?: 'double' | 'single' | 'triple'
+  /** Nightly room rate actually charged, one entry per night of the stay. */
+  nightly_room_rates?: { date: string; rate: number; source: 'seasonal' | 'base'; seasonal_rate_name?: string }[]
+  nights?: number
+  accommodation_subtotal?: number
+  transfer_rate_used?: number
+  transfer_subtotal?: number
+  included_trips?: { trip_id: string; name_en: string; package_cost: number }[]
+  included_trips_subtotal?: number
+  meal_plan_key?: string
+  meal_plan_price_per_person_per_night?: number
+  meal_subtotal?: number
+  extra_trips?: { trip_id: string; name_en: string; price: number }[]
+  extra_trips_subtotal?: number
+  num_people?: number
+  total: number
+  computed_at: string
 }
 
 export interface CommunityPost {
@@ -187,6 +248,43 @@ export interface SiteSettings {
   terms_en: string
   /** Sinai trip ids bundled into every package by default — see lib/pricing.ts. */
   package_included_trip_ids: string[]
+  // ─── Website CMS (migration 005) — empty string/array = built-in default ───
+  hero_heading_ar?: string
+  hero_heading_en?: string
+  hero_subheading_ar?: string
+  hero_subheading_en?: string
+  featured_accommodation_ids?: string[]
+  featured_trip_ids?: string[]
+  show_community?: boolean
+  show_partners?: boolean
+  show_newsletter?: boolean
+  seo_title?: string
+  seo_description_ar?: string
+  seo_description_en?: string
+}
+
+/** General, structured website/business settings — the "Website" admin section. */
+export interface WeemapSiteSettings {
+  site_title?: string
+  site_description_ar?: string
+  site_description_en?: string
+  social_share_image?: string
+  organization_name?: string
+  hero_heading_ar?: string
+  hero_heading_en?: string
+  hero_subheading_ar?: string
+  hero_subheading_en?: string
+  primary_cta_label_ar?: string
+  primary_cta_label_en?: string
+  secondary_cta_label_ar?: string
+  secondary_cta_label_en?: string
+  featured_accommodation_ids?: string[]
+  featured_trip_ids?: string[]
+  weemap_picks_ids?: string[]
+  show_community_section?: boolean
+  show_partners_section?: boolean
+  show_newsletter_section?: boolean
+  homepage_section_order?: string[]
 }
 
 export interface NavItem {

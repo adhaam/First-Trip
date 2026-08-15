@@ -19,6 +19,19 @@ const settingsSchema = z.object({
   terms_ar: z.string().optional(),
   terms_en: z.string().optional(),
   package_included_trip_ids: z.array(z.string().uuid()).optional(),
+  // ─── Website CMS (migration 005) ───
+  hero_heading_ar: z.string().max(160).optional(),
+  hero_heading_en: z.string().max(160).optional(),
+  hero_subheading_ar: z.string().max(240).optional(),
+  hero_subheading_en: z.string().max(240).optional(),
+  featured_accommodation_ids: z.array(z.string().uuid()).optional(),
+  featured_trip_ids: z.array(z.string().uuid()).optional(),
+  show_community: z.boolean().optional(),
+  show_partners: z.boolean().optional(),
+  show_newsletter: z.boolean().optional(),
+  seo_title: z.string().max(160).optional(),
+  seo_description_ar: z.string().max(400).optional(),
+  seo_description_en: z.string().max(400).optional(),
 })
 
 export async function GET(req: NextRequest) {

@@ -1,11 +1,11 @@
 import { NavItem, ServiceItem, WhyUsPoint } from './types'
 
-export const SITE_NAME = 'First Trip'
-export const SITE_DESCRIPTION_AR = 'First Trip – رحلات منظمة لدهب | باقات سياحية شاملة | حجز فنادق وشاليهات وكمبات في دهب، جنوب سيناء'
-export const SITE_DESCRIPTION_EN = 'First Trip – Organized trips to Dahab | All-inclusive packages | Hotels, chalets & camps in Dahab, South Sinai'
+export const SITE_NAME = 'WEEMAP SINAI'
+export const SITE_DESCRIPTION_AR = 'WEEMAP SINAI – رحلات منظمة لدهب وسيناء | باقات سياحية شاملة | حجز فنادق وشاليهات وكمبات في دهب، جنوب سيناء'
+export const SITE_DESCRIPTION_EN = 'WEEMAP SINAI – Organized trips to Dahab & Sinai | All-inclusive packages | Hotels, chalets & camps in Dahab, South Sinai'
 export const WHATSAPP_NUMBER = '+201005744083'
 export const PHONE_NUMBER = '+201005744083'
-export const EMAIL = 'info@firsttrip-eg.com'
+export const EMAIL = 'info@weemapsinai.com'
 
 export const NAV_ITEMS: NavItem[] = [
   { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: '🏠' },
@@ -70,8 +70,8 @@ export const WHY_US: WhyUsPoint[] = [
   {
     title_ar: 'مش شركة سياحة عادية',
     title_en: 'Not Your Average Agency',
-    description_ar: 'إحنا كوميونيتي بننظم رحلات لدهب من 2017، وعارفين البلد كويس.',
-    description_en: 'We\'re a community running trips to Dahab since 2017, and we know the town well.',
+    description_ar: 'إحنا كوميونيتي بننظم رحلات لدهب وسيناء، وعارفين البلد كويس.',
+    description_en: 'We\'re a community running trips to Dahab and Sinai, and we know the place well.',
     icon: '🌊',
   },
   {
@@ -108,10 +108,10 @@ export const WHY_US: WhyUsPoint[] = [
 export const TRUST_STATS = [
   {
     icon: '🎯',
-    label_ar: '10 سنوات خبرة',
-    label_en: '10 Years Experience',
-    sub_ar: 'من 2017 وإحنا في السوق',
-    sub_en: 'In the market since 2017',
+    label_ar: 'خبرة سنين في سيناء',
+    label_en: 'Years of Sinai Experience',
+    sub_ar: 'عارفين الطريق كويس — والناس اللي عليه',
+    sub_en: 'We know the road well — and the people on it',
   },
   {
     icon: '✨',

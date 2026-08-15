@@ -21,6 +21,7 @@ import { Booking, BookingStatus, BookingType, Accommodation, TransferType, Trans
 import { cn } from '@/lib/utils'
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
+  new: 'bg-purple-100 text-purple-700',
   pending: 'bg-yellow-100 text-yellow-700',
   confirmed: 'bg-green-100 text-green-700',
   cancelled: 'bg-red-100 text-red-700',
@@ -28,10 +29,28 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
 }
 
 const STATUS_LABELS: Record<BookingStatus, { ar: string; en: string }> = {
+  new: { ar: 'جديد', en: 'New' },
   pending: { ar: 'معلق', en: 'Pending' },
   confirmed: { ar: 'مؤكد', en: 'Confirmed' },
   cancelled: { ar: 'ملغي', en: 'Cancelled' },
   completed: { ar: 'مكتمل', en: 'Completed' },
+}
+
+const PAYMENT_LABELS: Record<string, { ar: string; en: string; cls: string }> = {
+  unpaid: { ar: 'لم يُدفع', en: 'Unpaid', cls: 'bg-red-50 text-red-600' },
+  partial: { ar: 'جزئي', en: 'Partial', cls: 'bg-yellow-50 text-yellow-700' },
+  paid: { ar: 'مدفوع', en: 'Paid', cls: 'bg-green-50 text-green-700' },
+  refunded: { ar: 'مسترد', en: 'Refunded', cls: 'bg-gray-100 text-gray-600' },
+}
+
+const SOURCE_LABELS: Record<string, { ar: string; en: string }> = {
+  website: { ar: 'الموقع', en: 'Website' },
+  manual: { ar: 'يدوي', en: 'Manual' },
+  whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
+  instagram: { ar: 'انستجرام', en: 'Instagram' },
+  facebook: { ar: 'فيسبوك', en: 'Facebook' },
+  referral: { ar: 'ترشيح', en: 'Referral' },
+  other: { ar: 'أخرى', en: 'Other' },
 }
 
 const TYPE_LABELS: Record<BookingType, { ar: string; en: string; icon: typeof Package }> = {
@@ -72,10 +91,14 @@ const emptyManual = {
   nights: 2,
   transfer_type: 'hiace' as TransferType,
   transfer_direction: 'round_trip' as TransferDirection,
+  room_type: '' as '' | 'double' | 'single' | 'triple',
   num_people: 2,
   notes: '',
   status: 'confirmed' as BookingStatus,
   total_price: undefined as number | undefined,
+  source: 'manual',
+  payment_status: 'unpaid',
+  amount_paid: undefined as number | undefined,
 }
 
 export function BookingsManager() {
@@ -151,19 +174,22 @@ export function BookingsManager() {
     return Array.from(set).sort()
   }, [bookings])
 
-  const updateStatus = async (id: string, status: BookingStatus) => {
+  const patchBooking = async (id: string, patch: Record<string, unknown>) => {
     setUpdatingId(id)
     try {
       const res = await fetch(`/api/admin/bookings/${id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || (ar ? 'فشل التحديث' : 'Update failed')); return }
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
+      if (res.status === 401) { window.location.href = `/${locale}/admin`; return false }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || (ar ? 'فشل التحديث' : 'Update failed')); return false }
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b))
+      return true
     } finally {
       setUpdatingId(null)
     }
   }
+
+  const updateStatus = (id: string, status: BookingStatus) => patchBooking(id, { status })
 
   const deleteBooking = async (id: string) => {
     if (!confirm(ar ? 'متأكد من حذف الحجز؟' : 'Delete this booking?')) return
@@ -192,12 +218,13 @@ export function BookingsManager() {
   }, [bookings, search, filterType, filterStatus, filterSource, filterAccommodation, filterGovernorate, dateFrom, dateTo])
 
   const stats = useMemo(() => {
-    const revenue = filtered
-      .filter(b => b.status !== 'cancelled')
-      .reduce((sum, b) => sum + (Number(b.total_price) || 0), 0)
-    const pending = filtered.filter(b => b.status === 'pending').length
-    const manualCount = filtered.filter(b => b.source === 'manual').length
-    return { count: filtered.length, revenue, pending, manualCount }
+    // "Booked value" is NOT revenue — it's the total of non-cancelled booking
+    // totals. What was actually collected lives in amount_paid.
+    const active = filtered.filter(b => b.status !== 'cancelled')
+    const bookedValue = active.reduce((sum, b) => sum + (Number(b.total_price) || 0), 0)
+    const collected = active.reduce((sum, b) => sum + (Number(b.amount_paid) || 0), 0)
+    const needsAction = filtered.filter(b => b.status === 'new' || b.status === 'pending').length
+    return { count: filtered.length, bookedValue, collected, outstanding: bookedValue - collected, needsAction }
   }, [filtered])
 
   const clearFilters = () => {
@@ -223,7 +250,8 @@ export function BookingsManager() {
     const headers = [
       'Name', 'Phone', 'Email', 'Type', 'Accommodation', 'Governorate',
       'Trip date', 'Return date', 'People', 'Transfer type', 'Transfer direction',
-      'Price', 'Status', 'Source', 'Notes', 'Created at',
+      'Room type', 'Meal plan', 'Price', 'Payment status', 'Amount paid', 'Remaining',
+      'Status', 'Source', 'Notes', 'Created at',
     ]
     const rows = filtered.map(b => [
       b.customer_name, b.customer_phone, b.customer_email || '',
@@ -231,7 +259,11 @@ export function BookingsManager() {
       accName(b.accommodation_id, b.accommodations),
       b.governorate || '', b.trip_date || '', b.return_date || '',
       String(b.num_people), b.transfer_type || '', b.transfer_direction || '',
-      b.total_price ? String(b.total_price) : '', b.status, b.source || 'website',
+      b.room_type || '', b.meal_plan_key || '',
+      b.total_price ? String(b.total_price) : '',
+      b.payment_status || 'unpaid', String(b.amount_paid ?? 0),
+      String((Number(b.total_price) || 0) - (Number(b.amount_paid) || 0)),
+      b.status, b.source || 'website',
       (b.notes || '').replace(/\n/g, ' '), b.created_at,
     ])
     const csv = [headers, ...rows]
@@ -275,7 +307,11 @@ export function BookingsManager() {
         payload.transfer_type = manual.transfer_type
         payload.transfer_direction = manual.transfer_direction
       }
+      if (manual.booking_type !== 'transfer-only' && manual.room_type) payload.room_type = manual.room_type
       if (manual.total_price) payload.total_price = Number(manual.total_price)
+      payload.source = manual.source
+      payload.payment_status = manual.payment_status
+      if (manual.amount_paid) payload.amount_paid = Number(manual.amount_paid)
 
       const res = await fetch('/api/admin/bookings', {
         method: 'POST',
@@ -308,9 +344,9 @@ export function BookingsManager() {
       {/* ─── Stat cards ─── */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label={ar ? 'الحجوزات (مفلترة)' : 'Bookings (filtered)'} value={String(stats.count)} icon={Users} />
-        <StatCard label={ar ? 'إجمالي الإيرادات' : 'Total revenue'} value={`${stats.revenue.toLocaleString()} ج.م`} icon={Banknote} />
-        <StatCard label={ar ? 'معلقة' : 'Pending'} value={String(stats.pending)} icon={Calendar} tone="warn" />
-        <StatCard label={ar ? 'حجوزات يدوية' : 'Manual entries'} value={String(stats.manualCount)} icon={PhoneCall} tone="info" />
+        <StatCard label={ar ? 'القيمة المحجوزة' : 'Booked value'} value={`${stats.bookedValue.toLocaleString()} ج.م`} icon={Banknote} />
+        <StatCard label={ar ? 'المحصّل' : 'Collected'} value={`${stats.collected.toLocaleString()} ج.م`} icon={PhoneCall} tone="info" />
+        <StatCard label={ar ? 'محتاجة إجراء' : 'Needs action'} value={String(stats.needsAction)} icon={Calendar} tone="warn" />
       </div>
 
       {/* ─── Toolbar ─── */}
@@ -369,8 +405,9 @@ export function BookingsManager() {
           <SelectTrigger className="w-[130px]"><SelectValue placeholder={ar ? 'المصدر' : 'Source'} /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{ar ? 'كل المصادر' : 'All sources'}</SelectItem>
-            <SelectItem value="website">{ar ? 'الموقع' : 'Website'}</SelectItem>
-            <SelectItem value="manual">{ar ? 'يدوي' : 'Manual'}</SelectItem>
+            {Object.keys(SOURCE_LABELS).map(s => (
+              <SelectItem key={s} value={s}>{ar ? SOURCE_LABELS[s].ar : SOURCE_LABELS[s].en}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -490,8 +527,8 @@ export function BookingsManager() {
                       {visibleCols.has('price') && <TableCell className="font-medium">{b.total_price ? `${Number(b.total_price).toLocaleString()} ج.م` : '—'}</TableCell>}
                       {visibleCols.has('source') && (
                         <TableCell>
-                          <Badge variant="outline" className={cn('text-xs', b.source === 'manual' ? 'border-purple-300 text-purple-700' : 'border-sky-300 text-sky-700')}>
-                            {b.source === 'manual' ? (ar ? 'يدوي' : 'Manual') : (ar ? 'الموقع' : 'Website')}
+                          <Badge variant="outline" className={cn('text-xs', b.source === 'website' ? 'border-sky-300 text-sky-700' : 'border-purple-300 text-purple-700')}>
+                            {(() => { const s = SOURCE_LABELS[b.source || 'website'] || SOURCE_LABELS.other; return ar ? s.ar : s.en })()}
                           </Badge>
                         </TableCell>
                       )}
@@ -532,15 +569,106 @@ export function BookingsManager() {
                               : b.transfer_direction === 'to_dahab' ? (ar ? 'لدهب' : 'To Dahab')
                               : b.transfer_direction === 'from_dahab' ? (ar ? 'من دهب' : 'From Dahab') : '—'
                             } />
-                            <DetailField label={ar ? 'نوع الغرفة' : 'Room type'} value={b.room_type === 'single' ? (ar ? 'سينجل' : 'Single') : b.room_type === 'double' ? (ar ? 'دبل/تريبل' : 'Double/Triple') : '—'} />
+                            <DetailField label={ar ? 'نوع الغرفة' : 'Room type'} value={b.room_type === 'single' ? (ar ? 'سينجل' : 'Single') : b.room_type === 'triple' ? (ar ? 'تريبل' : 'Triple') : b.room_type === 'double' ? (ar ? 'دبل' : 'Double') : '—'} />
                             <DetailField label={ar ? 'نوع الإقامة' : 'Meal plan'} value={b.meal_plan_key || '—'} />
                             <DetailField label={ar ? 'رحلات إضافية' : 'Extra trips'} value={b.extra_trip_ids?.length ? String(b.extra_trip_ids.length) : '—'} />
                             <DetailField icon={Banknote} label={ar ? 'السعر الإجمالي' : 'Total price'} value={b.total_price ? `${Number(b.total_price).toLocaleString()} ج.م` : '—'} />
-                            <DetailField label={ar ? 'المصدر' : 'Source'} value={b.source === 'manual' ? (ar ? 'يدوي (تليفون/واتساب)' : 'Manual (phone/WhatsApp)') : (ar ? 'الموقع' : 'Website')} />
+                            <DetailField label={ar ? 'المصدر' : 'Source'} value={(() => { const s = SOURCE_LABELS[b.source || 'website'] || SOURCE_LABELS.other; return ar ? s.ar : s.en })()} />
                             <DetailField label={ar ? 'تاريخ الإنشاء' : 'Created at'} value={b.created_at ? new Date(b.created_at).toLocaleString(ar ? 'ar-EG' : 'en-GB') : '—'} />
+
+                            {/* ─── Payment tracking (manual, no gateway) ─── */}
+                            <div className="col-span-2 md:col-span-4 rounded-lg border bg-white p-4">
+                              <div className="mb-3 text-xs font-semibold text-gray-500">{ar ? 'الدفع' : 'Payment'}</div>
+                              <div className="flex flex-wrap items-end gap-4">
+                                <div>
+                                  <Label className="text-xs text-gray-500">{ar ? 'حالة الدفع' : 'Payment status'}</Label>
+                                  <Select
+                                    value={b.payment_status || 'unpaid'}
+                                    onValueChange={(v) => v && patchBooking(b.id, { payment_status: v })}
+                                    disabled={updatingId === b.id}
+                                  >
+                                    <SelectTrigger className={cn('mt-1 h-8 w-[130px] text-xs border-0', PAYMENT_LABELS[b.payment_status || 'unpaid']?.cls)}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Object.keys(PAYMENT_LABELS).map(p => (
+                                        <SelectItem key={p} value={p}>{ar ? PAYMENT_LABELS[p].ar : PAYMENT_LABELS[p].en}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-gray-500">{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
+                                  <Input
+                                    type="number" min={0} dir="ltr"
+                                    className="mt-1 h-8 w-[120px]"
+                                    defaultValue={b.amount_paid ?? 0}
+                                    onBlur={e => {
+                                      const v = Number(e.target.value) || 0
+                                      if (v !== Number(b.amount_paid || 0)) patchBooking(b.id, { amount_paid: v })
+                                    }}
+                                  />
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-xs text-gray-500">{ar ? 'المتبقي: ' : 'Remaining: '}</span>
+                                  <span className={cn('font-semibold', (Number(b.total_price) || 0) - (Number(b.amount_paid) || 0) > 0 ? 'text-red-600' : 'text-green-600')}>
+                                    {((Number(b.total_price) || 0) - (Number(b.amount_paid) || 0)).toLocaleString()} ج.م
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* ─── Frozen price breakdown (snapshot at booking time) ─── */}
+                            {b.price_snapshot && (
+                              <div className="col-span-2 md:col-span-4 rounded-lg border bg-white p-4">
+                                <div className="mb-2 text-xs font-semibold text-gray-500">
+                                  {ar ? 'تفاصيل السعر (وقت الحجز — مش بتتغير أبدًا)' : 'Price breakdown (frozen at booking time)'}
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm md:grid-cols-3">
+                                  {b.price_snapshot.accommodation_subtotal != null && (
+                                    <div>{ar ? 'الإقامة: ' : 'Accommodation: '}<b>{Number(b.price_snapshot.accommodation_subtotal).toLocaleString()}</b></div>
+                                  )}
+                                  {b.price_snapshot.transfer_subtotal != null && (
+                                    <div>{ar ? 'الانتقالات: ' : 'Transfers: '}<b>{Number(b.price_snapshot.transfer_subtotal).toLocaleString()}</b></div>
+                                  )}
+                                  {b.price_snapshot.included_trips_subtotal != null && (
+                                    <div>{ar ? 'الرحلات المشمولة: ' : 'Included trips: '}<b>{Number(b.price_snapshot.included_trips_subtotal).toLocaleString()}</b></div>
+                                  )}
+                                  {(b.price_snapshot.meal_subtotal ?? 0) > 0 && (
+                                    <div>{ar ? 'الوجبات: ' : 'Meals: '}<b>{Number(b.price_snapshot.meal_subtotal).toLocaleString()}</b></div>
+                                  )}
+                                  {(b.price_snapshot.extra_trips_subtotal ?? 0) > 0 && (
+                                    <div>{ar ? 'رحلات إضافية: ' : 'Extra trips: '}<b>{Number(b.price_snapshot.extra_trips_subtotal).toLocaleString()}</b></div>
+                                  )}
+                                  <div>{ar ? 'الإجمالي: ' : 'Total: '}<b>{Number(b.price_snapshot.total).toLocaleString()}</b></div>
+                                </div>
+                                {!!b.price_snapshot.nightly_room_rates?.length && (
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {b.price_snapshot.nightly_room_rates.map(n => (
+                                      <span key={n.date} className={cn('rounded px-1.5 py-0.5 text-[11px]', n.source === 'seasonal' ? 'bg-sun-400/15 text-sun-600' : 'bg-gray-100 text-gray-600')} title={n.seasonal_rate_name || (ar ? 'سعر أساسي' : 'Base rate')}>
+                                        {n.date}: {Number(n.rate).toLocaleString()}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                             <div className="col-span-2 md:col-span-4">
                               <div className="text-xs font-semibold text-gray-500 mb-1">{ar ? 'ملاحظات' : 'Notes'}</div>
                               <div className="text-sm text-gray-800 whitespace-pre-wrap">{b.notes || '—'}</div>
+                            </div>
+                            <div className="col-span-2 md:col-span-4">
+                              <Label className="text-xs font-semibold text-gray-500">{ar ? 'ملاحظات داخلية (للإدارة فقط)' : 'Internal notes (admin only)'}</Label>
+                              <Textarea
+                                className="mt-1 text-sm"
+                                rows={2}
+                                defaultValue={b.internal_notes || ''}
+                                onBlur={e => {
+                                  const v = e.target.value
+                                  if (v !== (b.internal_notes || '')) patchBooking(b.id, { internal_notes: v })
+                                }}
+                              />
                             </div>
                             <div className="col-span-2 md:col-span-4 flex justify-end pt-2 border-t">
                               <Button
@@ -683,6 +811,20 @@ export function BookingsManager() {
                   <Label>{ar ? 'تاريخ العودة (اختياري)' : 'Return date (optional)'}</Label>
                   <Input type="date" value={manual.return_date} onChange={e => setManual(m => ({ ...m, return_date: e.target.value }))} className="mt-1" />
                 </div>
+                {manual.booking_type !== 'transfer-only' && (
+                  <div>
+                    <Label>{ar ? 'نوع الغرفة' : 'Room type'}</Label>
+                    <Select value={manual.room_type || 'none'} onValueChange={v => v && setManual(m => ({ ...m, room_type: v === 'none' ? '' : v as 'double' | 'single' | 'triple' }))}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{ar ? 'غير محدد' : 'Not set'}</SelectItem>
+                        <SelectItem value="single">{ar ? 'سينجل (فرد)' : 'Single (1)'}</SelectItem>
+                        <SelectItem value="double">{ar ? 'دبل (فردين)' : 'Double (2)'}</SelectItem>
+                        <SelectItem value="triple">{ar ? 'تريبل (3 أفراد)' : 'Triple (3)'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div>
                   <Label>{ar ? 'السعر الإجمالي (اختياري)' : 'Total price (optional)'}</Label>
                   <Input type="number" min={0} value={manual.total_price ?? ''} onChange={e => setManual(m => ({ ...m, total_price: e.target.value ? Number(e.target.value) : undefined }))} className="mt-1" />
@@ -697,6 +839,32 @@ export function BookingsManager() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>{ar ? 'مصدر الحجز' : 'Booking source'}</Label>
+                  <Select value={manual.source} onValueChange={v => v && setManual(m => ({ ...m, source: v }))}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['manual', 'whatsapp', 'instagram', 'facebook', 'referral', 'other'].map(s => (
+                        <SelectItem key={s} value={s}>{ar ? SOURCE_LABELS[s].ar : SOURCE_LABELS[s].en}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{ar ? 'حالة الدفع' : 'Payment status'}</Label>
+                  <Select value={manual.payment_status} onValueChange={v => v && setManual(m => ({ ...m, payment_status: v }))}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(PAYMENT_LABELS).map(p => (
+                        <SelectItem key={p} value={p}>{ar ? PAYMENT_LABELS[p].ar : PAYMENT_LABELS[p].en}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
+                  <Input type="number" min={0} value={manual.amount_paid ?? ''} onChange={e => setManual(m => ({ ...m, amount_paid: e.target.value ? Number(e.target.value) : undefined }))} className="mt-1" />
                 </div>
               </div>
 

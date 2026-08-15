@@ -34,34 +34,49 @@ const almarai = Almarai({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://firsttrip-eg.com'),
-  title: {
-    default: 'First Trip — دهب مش رحلة، دي كوميونيتي',
-    template: '%s | First Trip',
-  },
-  description: 'First Trip — أول رحلة ليك لدهب. باقات، إقامة، انتقالات، ورحلات سيناء. من 2017 بننظم رحلات لكوميونيتي بيحبوا الحرية والبحر والصحراء.',
-  keywords: 'دهب, سياحة, رحلات, باقات سياحية, فنادق دهب, شاليهات, جنوب سيناء, البحر الأحمر, Dahab, Egypt, tourism, packages, Sinai',
-  authors: [{ name: 'First Trip' }],
-  // src/app/favicon.ico is served automatically at /favicon.ico by Next's file
-  // convention — only the apple-touch-icon needs to be declared explicitly.
-  icons: {
-    apple: '/logo.png',
-  },
-  openGraph: {
-    title: 'First Trip — دهب مش رحلة، دي كوميونيتي',
-    description: 'انتقالات، إقامة، ورحلات — إحنا بنظبط كل حاجة، إنت بس تعيشها.',
-    type: 'website',
-    locale: 'ar_EG',
-    siteName: 'First Trip',
-    images: [{ url: '/logo.png', width: 1200, height: 1200, alt: 'First Trip' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'First Trip — دهب مش رحلة، دي كوميونيتي',
-    description: 'انتقالات، إقامة، ورحلات — إحنا بنظبط كل حاجة، إنت بس تعيشها.',
-    images: ['/logo.png'],
-  },
+const DEFAULT_TITLE = 'WEEMAP SINAI — We map Sinai. You live it.'
+const DEFAULT_DESC_AR = 'WEEMAP SINAI — باقات، إقامة، انتقالات، ورحلات سيناء. بنرسم لك الطريق لدهب وجنوب سيناء — إنت بس تعيشها.'
+
+// SEO fields are owner-editable from the dashboard (Site Settings → SEO);
+// anything left empty falls back to the WEEMAP defaults here.
+export async function generateMetadata({ params }: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const settings = await getSiteSettings().catch(() => null)
+  const title = settings?.seo_title || DEFAULT_TITLE
+  const description =
+    (locale === 'ar' ? settings?.seo_description_ar : settings?.seo_description_en) ||
+    DEFAULT_DESC_AR
+  return {
+    metadataBase: new URL('https://weemapsinai.com'),
+    title: {
+      default: title,
+      template: '%s | WEEMAP SINAI',
+    },
+    description,
+    keywords: 'دهب, سيناء, سياحة, رحلات, باقات سياحية, فنادق دهب, شاليهات, جنوب سيناء, البحر الأحمر, Dahab, Sinai, Egypt, travel, packages, WEEMAP',
+    authors: [{ name: 'WEEMAP' }],
+    // src/app/favicon.ico is served automatically at /favicon.ico by Next's file
+    // convention — only the apple-touch-icon needs to be declared explicitly.
+    icons: {
+      apple: '/logo.png',
+    },
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      locale: locale === 'ar' ? 'ar_EG' : 'en_US',
+      siteName: 'WEEMAP SINAI',
+      images: [{ url: '/logo.png', width: 1200, height: 1200, alt: 'WEEMAP SINAI' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/logo.png'],
+    },
+  }
 }
 
 export default async function RootLayout({
@@ -92,7 +107,7 @@ export default async function RootLayout({
             <div className="flex min-h-screen flex-col">
               <Header />
               <main className="flex-1">{children}</main>
-              <NewsletterSignup />
+              {settings?.show_newsletter !== false && <NewsletterSignup />}
               <Footer settings={settings} />
               <WhatsAppFloat number={settings?.whatsapp_number} />
             </div>

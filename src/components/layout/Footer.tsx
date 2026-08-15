@@ -16,8 +16,10 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
   const whatsapp = settings?.whatsapp_number || WHATSAPP_NUMBER
   const phone = settings?.phone_number || PHONE_NUMBER
   const email = settings?.email || EMAIL
-  const facebook = settings?.facebook_url || 'https://www.facebook.com/FirstTrip.eg/'
-  const instagram = settings?.instagram_url || 'https://www.instagram.com/'
+  // Verified WEEMAP channels only — Facebook is TBD, so it stays settings-driven
+  // with no legacy fallback (see _weemap_reference/06_business-info/WEEMAP_INFO.md).
+  const facebook = settings?.facebook_url || ''
+  const instagram = settings?.instagram_url || 'https://www.instagram.com/weemapeg/'
 
   return (
     <footer className="relative mt-auto bg-sea-900 text-sand-100">
@@ -32,14 +34,16 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               <Logo size="lg" tone="light" />
               <p className="mt-5 max-w-xs text-sm leading-relaxed text-sand-100/65">
                 {ar
-                  ? 'بننظم رحلات لدهب من 2017. انتقالات، إقامة، ورحلات داخلية — من غير ما تفكر في حاجة.'
-                  : 'Organising trips to Dahab since 2017. Transfers, stays and day trips — without you having to think about any of it.'}
+                  ? 'بنرسم لك الطريق لدهب وسيناء. انتقالات، إقامة، ورحلات داخلية — من غير ما تفكر في حاجة.'
+                  : 'We map the way to Dahab and Sinai. Transfers, stays and day trips — without you having to think about any of it.'}
               </p>
 
               <div className="mt-6 flex gap-2">
-                <SocialLink href={facebook} label="Facebook">
-                  <path d="M22 12.07C22 6.51 17.52 2 12 2S2 6.51 2 12.07c0 5.02 3.66 9.18 8.44 9.93v-7.02H7.9v-2.91h2.54V9.84c0-2.52 1.49-3.91 3.78-3.91 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.88h2.78l-.45 2.91h-2.33V22c4.78-.75 8.44-4.91 8.44-9.93z" />
-                </SocialLink>
+                {facebook && (
+                  <SocialLink href={facebook} label="Facebook">
+                    <path d="M22 12.07C22 6.51 17.52 2 12 2S2 6.51 2 12.07c0 5.02 3.66 9.18 8.44 9.93v-7.02H7.9v-2.91h2.54V9.84c0-2.52 1.49-3.91 3.78-3.91 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.88h2.78l-.45 2.91h-2.33V22c4.78-.75 8.44-4.91 8.44-9.93z" />
+                  </SocialLink>
+                )}
                 <SocialLink href={instagram} label="Instagram" stroke>
                   <rect x="2" y="2" width="20" height="20" rx="5" />
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />

@@ -5,6 +5,7 @@
 import { getSupabaseAdmin } from './supabase'
 import type {
   Accommodation,
+  AccommodationSeasonalRate,
   SinaiTrip,
   CommunityPost,
   SiteSettings,
@@ -33,17 +34,39 @@ export async function getAccommodations(): Promise<Accommodation[]> {
 
 export async function getAccommodationById(id: string): Promise<Accommodation | null> {
   const supabase = getSupabaseAdmin()
-  const { data, error } = await supabase
-    .from('accommodations')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data, error }, rates] = await Promise.all([
+    supabase.from('accommodations').select('*').eq('id', id).single(),
+    getSeasonalRates(id),
+  ])
 
   if (error) {
     console.error('getAccommodationById error:', error)
     return null
   }
-  return data as Accommodation
+  return { ...(data as Accommodation), seasonal_rates: rates }
+}
+
+/** Active seasonal pricing periods for one accommodation, soonest first. */
+export async function getSeasonalRates(accommodationId: string): Promise<AccommodationSeasonalRate[]> {
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('accommodation_seasonal_rates')
+    .select('*')
+    .eq('accommodation_id', accommodationId)
+    .eq('is_active', true)
+    .order('start_date', { ascending: true })
+
+  if (error) {
+    console.error('getSeasonalRates error:', error)
+    return []
+  }
+  // NUMERIC comes back as strings — coerce once here.
+  return (data ?? []).map((r) => ({
+    ...(r as AccommodationSeasonalRate),
+    single_price: Number(r.single_price ?? 0),
+    double_price: Number(r.double_price ?? 0),
+    triple_price: Number(r.triple_price ?? 0),
+  }))
 }
 
 export async function getSinaiTrips(): Promise<SinaiTrip[]> {

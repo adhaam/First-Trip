@@ -33,6 +33,7 @@ const accommodationUpdateSchema = z.object({
   price_5day: z.number().min(0).optional(),
   price_double_room: z.number().min(0).optional(),
   price_single_room: z.number().min(0).optional(),
+  price_triple_room: z.number().min(0).optional(),
   meal_plans: z.array(mealPlanSchema).optional(),
   is_active: z.boolean().optional(),
 })
