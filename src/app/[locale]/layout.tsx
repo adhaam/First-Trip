@@ -12,6 +12,7 @@ import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat'
 import { NewsletterSignup } from '@/components/NewsletterSignup'
 import { getSchemaOrg } from '@/lib/schema-org'
 import { getSiteSettings } from '@/lib/data'
+import { SITE_URL } from '@/lib/seo'
 import '../globals.css'
 
 // ─── Typeface pairing ───
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: {
     (locale === 'ar' ? settings?.seo_description_ar : settings?.seo_description_en) ||
     DEFAULT_DESC_AR
   return {
-    metadataBase: new URL('https://weemapsinai.com'),
+    metadataBase: new URL(SITE_URL),
     title: {
       default: title,
       template: '%s | WEEMAP SINAI',
@@ -67,6 +68,8 @@ export async function generateMetadata({ params }: {
       description,
       type: 'website',
       locale: locale === 'ar' ? 'ar_EG' : 'en_US',
+      // The other locale this same content is available in — og:locale:alternate.
+      alternateLocale: locale === 'ar' ? 'en_US' : 'ar_EG',
       siteName: 'WEEMAP SINAI',
       images: [{ url: '/logo.png', width: 1200, height: 1200, alt: 'WEEMAP SINAI' }],
     },
@@ -96,7 +99,7 @@ export default async function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(getSchemaOrg()) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(getSchemaOrg(settings)) }}
         />
       </head>
       <body

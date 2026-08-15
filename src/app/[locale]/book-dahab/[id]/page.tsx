@@ -1,9 +1,27 @@
+import type { Metadata } from 'next'
 import { getAccommodationById, getAccommodations, getRelatedAccommodations, getSiteSettings, getTransferPricing, getSinaiTrips } from '@/lib/data'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { ButtonLink } from '@/components/ButtonLink'
+import { buildAlternates, SITE_URL } from '@/lib/seo'
+import { getProductSchema } from '@/lib/schema-org'
 
 export const revalidate = 60
+
+export async function generateMetadata({ params }: {
+  params: Promise<{ id: string; locale: string }>
+}): Promise<Metadata> {
+  const { id, locale } = await params
+  const acc = await getAccommodationById(id).catch(() => null)
+  const alternates = buildAlternates(`/book-dahab/${id}`, locale)
+  if (!acc) return { alternates }
+  const name = locale === 'ar' ? acc.name_ar || acc.name_en : acc.name_en || acc.name_ar
+  return {
+    title: name,
+    description: locale === 'ar' ? acc.description_ar : acc.description_en,
+    alternates,
+  }
+}
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const { id, locale } = await params
@@ -30,8 +48,26 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   ])
   const related = getRelatedAccommodations(accommodation, all)
 
+  // Representative per-person nightly starting price for the Product schema —
+  // same room-price-first logic the booking engine uses, never a fabricated
+  // figure: double room ÷ 2, falling back to the legacy per-night field only
+  // for properties that haven't had room pricing configured yet.
+  const startingPrice = Number(accommodation.price_double_room) > 0
+    ? Number(accommodation.price_double_room) / 2
+    : Number(accommodation.price_per_night) || 0
+  const productSchema = getProductSchema({
+    name: locale === 'ar' ? accommodation.name_ar || accommodation.name_en : accommodation.name_en || accommodation.name_ar,
+    description: locale === 'ar' ? accommodation.description_ar : accommodation.description_en,
+    image: accommodation.image_url || accommodation.images?.[0] || `${SITE_URL}/logo.png`,
+    price: startingPrice,
+  })
+
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
       <ProductDetailClient
         accommodation={accommodation}
         pricing={pricing}

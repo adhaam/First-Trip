@@ -311,3 +311,96 @@ recreate the video's motion (Jeep, road, sky, stars) with CSS/GSAP/canvas.
    to get subtly wrong without a way to test every route's mapping in this
    session; flagging it as a follow-up rather than shipping an unverified
    guess.
+
+## Phase 8 — migrations confirmed live, canonical/hreflang, contact-data audit
+
+Migrations 004 and 005 were confirmed applied to production Supabase. This
+pass finished the SEO items deferred at the end of Phase 7 and did a
+dedicated pass over every public-facing contact value.
+
+- **`src/lib/seo.ts`** (new) — `buildAlternates(pathname, locale)`, built on
+  next-intl's own `getPathname` (from `createNavigation`), which is next-intl's
+  documented mechanism for exactly this — correct per-locale URLs under
+  `localePrefix: 'as-needed'` without hand-rolling prefix logic. No
+  `pathnames` map is configured (route segments are identical in both
+  locales), so this only had to resolve the locale prefix, not translate
+  slugs.
+- **Canonical + hreflang wired into every public route** via each page's own
+  `generateMetadata` (merges with the root layout's title/description/OG —
+  Next.js merges metadata top-level-key-by-key across the segment tree, so
+  this only had to return `{ alternates }`):
+  - Already-server pages (`/`, `/book-dahab`, `/book-dahab/[id]`,
+    `/sinai-trips`, `/community`) — `generateMetadata` added directly.
+  - `/about`, `/partner`, `/policy`, `/merch`, `/rent` were `'use client'`
+    page files — Next.js doesn't allow `generateMetadata` in a Client
+    Component module, so each was split the same way `book-dahab`,
+    `community`, and `sinai-trips` already were: the existing content moved
+    verbatim into `src/components/{Name}Client.tsx`, and `page.tsx` became a
+    thin Server Component exporting `generateMetadata` and rendering the
+    client component. No visual or behavioral change — same pattern already
+    used elsewhere in this codebase.
+  - `/book-dahab/[id]` also gets a real per-property `title`/`description`
+    (previously every page shared the exact same title/description from the
+    layout).
+- **`src/app/sitemap.ts` — second bug found and fixed**: even after Phase 7's
+  fix (real accommodation ids instead of mock ids), every URL was still built
+  as `` `${BASE_URL}/${locale}${page}` ``, which unconditionally prepends the
+  locale segment — producing `/ar`, `/ar/about`, `/ar/book-dahab/<id>` for
+  the *default* locale, which under `as-needed` routing has NO `/ar` prefix
+  and doesn't actually resolve. Rewritten to use the same `getPathname`
+  helper as `buildAlternates`. Also added the missing `/merch` and `/rent`
+  entries (real, indexable "Coming Soon" pages that were never in the
+  sitemap at all).
+- **`src/app/robots.ts`** — `disallow` only listed `/admin/`, which (given
+  the same as-needed prefix behavior) blocked the Arabic admin path but not
+  `/en/admin/`. Added the second form. Sitemap URL now reads from the same
+  `SITE_URL` constant as everything else instead of a separately hardcoded
+  string.
+- **`src/app/[locale]/layout.tsx`** — added `openGraph.alternateLocale`
+  (og:locale:alternate); `metadataBase` now reads `SITE_URL` instead of a
+  second hardcoded domain string.
+- **`src/lib/schema-org.ts` — fake data bug found and fixed**: the
+  organization JSON-LD's `contactPoint.telephone` was a hardcoded
+  `+20-100-000-0000` — an obviously fabricated placeholder (note the
+  all-zeros pattern), inconsistent with the real operating number used
+  everywhere else in the app. `getSchemaOrg()` now takes the Site Settings
+  object and uses `settings?.phone_number || PHONE_NUMBER` — the exact same
+  real-number-fallback pattern the footer and floating WhatsApp button
+  already use. `sameAs` now includes Facebook only when the owner has set it
+  in Site Settings (never invented). Also wired the previously-unused
+  `getProductSchema()` into `/book-dahab/[id]` (name/description/image/
+  starting price per property — the starting price uses the same
+  double-room-first pricing logic as the booking engine, not a guess).
+- **One more hardcoded contact value found**: `src/app/[locale]/book-dahab/page.tsx`
+  had a literal `href="https://wa.me/201005744083"` instead of reading Site
+  Settings like every other WhatsApp link on the site. Fixed to match the
+  `settings?.whatsapp_number || WHATSAPP_NUMBER` pattern used everywhere else.
+  Repo-wide search for other hardcoded `wa.me`/`tel:`/email values turned up
+  nothing else — `src/lib/mock-data.ts` (which has placeholder content) is
+  confirmed unimported anywhere in the app.
+- **Hero re-verification**: re-read the Phase 7 video hero end to end —
+  `min-h-svh` (mobile-safe viewport unit), `object-cover` for crop on any
+  aspect ratio, RTL-safe overlay (vertical gradient only, no left/right skew
+  that would need flipping), logical-property spacing (`border-s-2`,
+  `ps-4`) already correct for Arabic, `prefers-reduced-motion` swap to the
+  static poster confirmed still wired. No changes needed — Phase 7 held up.
+- **Migration 004/005 code re-check**: confirmed no leftover
+  "migration hasn't run yet" gating logic anywhere in the app code — the
+  `hasRoomPricing` style fallbacks that exist are per-accommodation data
+  fallbacks (a property that hasn't had room prices entered yet), not a
+  migration-version check, so they correctly stay regardless of migration
+  state.
+- **Found, not fixed (needs the owner)**: `supabase/migration_v3.sql` — an
+  already-run, historical migration — seeded 3 placeholder testimonials, 2 of
+  which literally say "First Trip" in the review text. These are very likely
+  still live on the homepage. This session has no database credentials to
+  check or remove them; a ready-to-run, non-destructive SQL snippet (SELECT
+  first, DELETE commented out) is in `WEEMAP_COMPLETION_CHECKLIST.md`.
+- **Re-verification**: 12/12 pricing tests, `tsc --noEmit` clean, `npm run
+  lint` → 0 errors (same 37 pre-existing warnings), full `next build`
+  succeeds generating all ~39 routes including the five newly-split pages.
+  Repo-wide `First Trip`/`firsttrip` grep re-run — same intentional matches
+  as Phase 7, nothing new.
+- **Not pushed** — committed locally only, per instruction. See
+  `WEEMAP_COMPLETION_CHECKLIST.md` for the exact commit(s) and remaining
+  external items.

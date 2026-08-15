@@ -1,20 +1,34 @@
+import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { PLACEHOLDER_IMAGES } from '@/lib/constants'
 import { Calendar, ArrowUpRight } from 'lucide-react'
 import Image from 'next/image'
-import { getAccommodations } from '@/lib/data'
+import { getAccommodations, getSiteSettings } from '@/lib/data'
 import { BookDahabClient } from '@/components/BookDahabClient'
 import { SectionHeading, WaveDivider } from '@/components/brand/Section'
 import { Reveal } from '@/components/motion/Reveal'
+import { buildAlternates } from '@/lib/seo'
+import { WHATSAPP_NUMBER } from '@/lib/constants'
 
 export const revalidate = 60
+
+export async function generateMetadata({ params }: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  return { alternates: buildAlternates('/book-dahab', locale) }
+}
 
 export default async function BookDahabPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const ar = locale === 'ar'
   const t = await getTranslations('book')
-  const accommodations = await getAccommodations()
+  const [accommodations, settings] = await Promise.all([
+    getAccommodations(),
+    getSiteSettings(),
+  ])
+  const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
 
   return (
     <div className="bg-sand-50">
@@ -120,7 +134,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
             {ar ? 'كلمنا على واتساب ونرشحلك على مزاجك' : 'Message us on WhatsApp and we\'ll recommend something for you'}
           </p>
           <a
-            href="https://wa.me/201005744083"
+            href={`https://wa.me/${whatsapp}`}
             target="_blank"
             rel="noopener"
             className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-sea-900 px-7 text-sm font-semibold text-white transition-colors hover:bg-sea-700"

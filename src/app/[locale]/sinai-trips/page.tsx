@@ -1,11 +1,20 @@
+import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import Image from 'next/image'
 import { getSinaiTrips, getSiteSettings } from '@/lib/data'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
 import { PLACEHOLDER_IMAGES } from '@/lib/constants'
 import { WaveDivider } from '@/components/brand/Section'
+import { buildAlternates } from '@/lib/seo'
 
 export const revalidate = 60 // re-fetch from Supabase at most once a minute
+
+export async function generateMetadata({ params }: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  return { alternates: buildAlternates('/sinai-trips', locale) }
+}
 
 export default async function SinaiTripsPage() {
   const t = await getTranslations('sinai')

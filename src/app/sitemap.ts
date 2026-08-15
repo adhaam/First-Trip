@@ -1,31 +1,40 @@
 import type { MetadataRoute } from 'next'
 import { getAccommodations } from '@/lib/data'
+import { getPathname } from '@/i18n/navigation'
+import { routing } from '@/i18n/routing'
+import { SITE_URL } from '@/lib/seo'
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://weemapsinai.com'
+// Locale-agnostic route paths → `getPathname` resolves the correctly
+// prefixed URL per locale (Arabic — the default locale — has NO `/ar`
+// prefix under `localePrefix: 'as-needed'`; English is served under `/en`).
+// Building these by hand (`/${locale}${page}`) previously produced `/ar/...`
+// URLs that don't actually resolve — fixed here.
+const STATIC_PAGES: { path: string; priority: number; changeFrequency: 'daily' | 'weekly' }[] = [
+  { path: '/', priority: 1, changeFrequency: 'daily' },
+  { path: '/book-dahab', priority: 0.9, changeFrequency: 'weekly' },
+  { path: '/sinai-trips', priority: 0.7, changeFrequency: 'weekly' },
+  { path: '/community', priority: 0.7, changeFrequency: 'weekly' },
+  { path: '/partner', priority: 0.7, changeFrequency: 'weekly' },
+  { path: '/about', priority: 0.7, changeFrequency: 'weekly' },
+  { path: '/policy', priority: 0.7, changeFrequency: 'weekly' },
+  { path: '/merch', priority: 0.5, changeFrequency: 'weekly' },
+  { path: '/rent', priority: 0.5, changeFrequency: 'weekly' },
+]
+
+function localizedUrl(path: string, locale: string): string {
+  return `${SITE_URL}${getPathname({ href: path, locale })}`
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const locales = ['ar', 'en']
-
-  // Static pages
-  const staticPages = [
-    '',
-    '/book-dahab',
-    '/sinai-trips',
-    '/community',
-    '/partner',
-    '/about',
-    '/policy',
-  ]
-
   const entries: MetadataRoute.Sitemap = []
 
-  for (const locale of locales) {
-    for (const page of staticPages) {
+  for (const locale of routing.locales) {
+    for (const { path, priority, changeFrequency } of STATIC_PAGES) {
       entries.push({
-        url: `${BASE_URL}/${locale}${page}`,
+        url: localizedUrl(path, locale),
         lastModified: new Date(),
-        changeFrequency: page === '' ? 'daily' : 'weekly',
-        priority: page === '' ? 1 : page === '/book-dahab' ? 0.9 : 0.7,
+        changeFrequency,
+        priority,
       })
     }
   }
@@ -33,10 +42,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Real accommodation detail pages — never hardcode ids here, the list
   // changes as the owner adds/removes properties from the dashboard.
   const accommodations = await getAccommodations().catch(() => [])
-  for (const locale of locales) {
+  for (const locale of routing.locales) {
     for (const acc of accommodations) {
       entries.push({
-        url: `${BASE_URL}/${locale}/book-dahab/${acc.id}`,
+        url: localizedUrl(`/book-dahab/${acc.id}`, locale),
         lastModified: new Date(),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
