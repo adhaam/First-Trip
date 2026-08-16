@@ -72,12 +72,26 @@ export function CommunityPostManager() {
     if (!form.title_ar || !form.title_en) return
     setSaving(true)
     try {
+      // Only send editable fields — never the raw fetched row (id, created_at,
+      // updated_at, etc.), so the payload matches what the API schema expects.
+      const payload = {
+        title_ar: form.title_ar,
+        title_en: form.title_en,
+        content_ar: form.content_ar,
+        content_en: form.content_en,
+        category: form.category,
+        image_url: form.image_url,
+        video_url: form.video_url,
+        sort_order: form.sort_order,
+        is_pinned: form.is_pinned,
+        is_published: form.is_published,
+      }
       const res = editing
         ? await fetch(`/api/admin/community-posts/${editing.id}`, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
           })
         : await fetch('/api/admin/community-posts', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
           })
       if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
       const data = await res.json()
