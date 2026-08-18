@@ -30,7 +30,7 @@ export function Header() {
   }
 
   const otherLocale = locale === 'ar' ? 'en' : 'ar'
-  const cleanPath = pathname.replace(`/${locale}`, '') || '/'
+  const cleanPath = pathname.replace(/^\/(?:ar|en)(?=\/|$)/, '') || '/'
 
   // The homepage opens on a full-bleed dark video hero — the header starts
   // transparent with light text over it, then crossfades into the normal
@@ -38,6 +38,13 @@ export function Header() {
   // hero to be transparent over, so it stays solid from the start.
   const isHome = pathname === `/${locale}` || pathname === `/${locale}/` || pathname === '/'
   const transparent = isHome && !scrolled
+  const isAdminRoute =
+    pathname === '/admin' ||
+    pathname.startsWith('/admin/') ||
+    pathname === '/en/admin' ||
+    pathname.startsWith('/en/admin/')
+
+  if (isAdminRoute) return null
 
   return (
     <header
@@ -65,6 +72,7 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative px-3 py-2 text-[0.9rem] font-medium transition-colors',
                   transparent
@@ -89,8 +97,9 @@ export function Header() {
           <Link
             href={cleanPath}
             locale={otherLocale}
+            aria-label={otherLocale === 'ar' ? 'التبديل إلى العربية' : 'Switch to English'}
             className={cn(
-              'inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors',
+              'inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors',
               transparent
                 ? 'text-white/85 hover:bg-white/10 hover:text-white'
                 : 'text-sea-900/70 hover:bg-sand-200 hover:text-sea-900',
@@ -103,7 +112,7 @@ export function Header() {
           <Link
             href="/book-dahab"
             className={cn(
-              'hidden h-10 items-center gap-1.5 rounded-full px-5 text-sm font-semibold transition-all sm:inline-flex',
+              'hidden h-11 items-center gap-1.5 rounded-full px-5 text-sm font-semibold transition-all sm:inline-flex',
               transparent
                 ? 'bg-white text-sea-900 hover:bg-sand-100'
                 : 'bg-sun-500 text-white hover:bg-sun-600',
@@ -116,7 +125,7 @@ export function Header() {
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               className={cn(
-                'inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors xl:hidden',
+                'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors xl:hidden',
                 transparent ? 'text-white hover:bg-white/10' : 'text-sea-900 hover:bg-sand-200',
               )}
             >
@@ -125,6 +134,7 @@ export function Header() {
             </SheetTrigger>
             <SheetContent
               side={locale === 'ar' ? 'right' : 'left'}
+              closeLabel={locale === 'ar' ? 'إغلاق القائمة' : 'Close menu'}
               className="w-[290px] border-sand-300 bg-sand-50 sm:w-[330px]"
             >
               <SheetTitle className="sr-only">{locale === 'ar' ? 'القائمة' : 'Menu'}</SheetTitle>
@@ -132,22 +142,24 @@ export function Header() {
                 <Logo size="md" />
               </div>
               <nav className="mt-6 flex flex-col px-3">
-                {NAV_ITEMS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-3 text-[0.95rem] font-medium transition-colors',
-                      isActive(item.href)
-                        ? 'bg-sun-500 text-white'
-                        : 'text-sea-900/80 hover:bg-sand-200',
-                    )}
-                  >
-                    <span aria-hidden className="text-base">{item.icon}</span>
-                    <span>{item[locale === 'ar' ? 'label_ar' : 'label_en']}</span>
-                  </Link>
-                ))}
+                {NAV_ITEMS.map((item) => {
+                  const active = isActive(item.href)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'flex min-h-11 items-center gap-3 rounded-xl px-3 py-3 text-[0.95rem] font-medium transition-colors',
+                        active ? 'bg-sun-500 text-white' : 'text-sea-900/80 hover:bg-sand-200',
+                      )}
+                    >
+                      <span aria-hidden className="text-base">{item.icon}</span>
+                      <span>{t(NAV_LABEL_KEYS[item.href] || 'home')}</span>
+                    </Link>
+                  )
+                })}
               </nav>
               <div className="mt-6 px-5">
                 <Link

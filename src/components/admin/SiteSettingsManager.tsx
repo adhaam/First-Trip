@@ -29,7 +29,7 @@ export function SiteSettingsManager() {
         fetch('/api/admin/sinai-trips'),
         fetch('/api/admin/accommodations'),
       ])
-      if (sRes.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (sRes.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await sRes.json()
       if (!sRes.ok) throw new Error(data.error)
       setSettings(data.settings || {})
@@ -73,7 +73,7 @@ export function SiteSettingsManager() {
       const res = await fetch('/api/admin/site-settings', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) { alert(data.error || (locale === 'ar' ? 'فشل الحفظ' : 'Save failed')); return }
       setSettings(data.settings)

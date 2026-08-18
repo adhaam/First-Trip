@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { getAccommodationById, getAccommodations, getRelatedAccommodations, getSiteSettings, getTransferPricing, getSinaiTrips } from '@/lib/data'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
-import { ButtonLink } from '@/components/ButtonLink'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getProductSchema } from '@/lib/schema-org'
 
@@ -28,16 +28,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const accommodation = await getAccommodationById(id)
 
   if (!accommodation) {
-    return (
-      <div className="container-main py-24 text-center">
-        <h2 className="font-display text-2xl font-bold text-sea-900 mb-4">
-          {locale === 'ar' ? 'غير موجود' : 'Not Found'}
-        </h2>
-        <ButtonLink href="/book-dahab" variant="ink">
-          {locale === 'ar' ? 'رجوع' : 'Go Back'}
-        </ButtonLink>
-      </div>
-    )
+    notFound()
   }
 
   const [all, pricing, settings, sinaiTrips] = await Promise.all([
@@ -63,7 +54,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     <div>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema).replace(/</g, '\\u003c') }}
       />
       <ProductDetailClient
         accommodation={accommodation}

@@ -12,7 +12,12 @@ export async function generateMetadata({ params }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
-  return { alternates: buildAlternates('/community', locale) }
+  const t = await getTranslations({ locale, namespace: 'community' })
+  return {
+    title: t('title'),
+    description: t('subtitle'),
+    alternates: buildAlternates('/community', locale),
+  }
 }
 
 export default async function CommunityPage() {

@@ -71,7 +71,7 @@ export function DashboardHome() {
           fetch('/api/admin/sinai-trips'),
           fetch('/api/admin/site-settings'),
         ])
-        if (bookingsRes.status === 401) { window.location.href = `/${locale}/admin`; return }
+        if (bookingsRes.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
         const bookingsData = await bookingsRes.json().catch(() => ({}))
         const accData = await accRes.json().catch(() => ({}))
         const custData = await custRes.json().catch(() => ({}))

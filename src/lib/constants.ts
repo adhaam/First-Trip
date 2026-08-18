@@ -1,4 +1,4 @@
-import { NavItem, ServiceItem, WhyUsPoint } from './types'
+import { NavItem, ServiceItem } from './types'
 
 export const SITE_NAME = 'WEEMAP SINAI'
 export const SITE_DESCRIPTION_AR = 'WEEMAP SINAI – رحلات منظمة لدهب وسيناء | باقات سياحية شاملة | حجز فنادق وشاليهات وكمبات في دهب، جنوب سيناء'
@@ -14,8 +14,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: '👥' },
   { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: '🤝' },
   { label_ar: 'عن الشركة', label_en: 'About Us', href: '/about', icon: '📖' },
-  { label_ar: 'ميرش', label_en: 'Merch', href: '/merch', icon: '🛍️' },
-  { label_ar: 'إيجار', label_en: 'Rent', href: '/rent', icon: '🔑' },
   { label_ar: 'السياسة والاسترداد', label_en: 'Policy & Refund', href: '/policy', icon: '📋' },
 ]
 
@@ -66,75 +64,8 @@ export const SERVICES: ServiceItem[] = [
   },
 ]
 
-export const WHY_US: WhyUsPoint[] = [
-  {
-    title_ar: 'مش شركة سياحة عادية',
-    title_en: 'Not Your Average Agency',
-    description_ar: 'إحنا كوميونيتي بننظم رحلات لدهب وسيناء، وعارفين البلد كويس.',
-    description_en: 'We\'re a community running trips to Dahab and Sinai, and we know the place well.',
-    icon: '🌊',
-  },
-  {
-    title_ar: 'مواعيد ثابتة كل أسبوع',
-    title_en: 'Fixed Weekly Rhythm',
-    description_ar: 'كل أحد وخميس بنقوم — من غير شيلة رأس ولا مواعيد بتتلغي.',
-    description_en: 'Every Sunday and Thursday, on the dot. No cancellations, no confusion.',
-    icon: '🗓️',
-  },
-  {
-    title_ar: 'أماكن اخترناها بنفسنا',
-    title_en: 'Places We\'ve Stayed In',
-    description_ar: 'كل كامب وكل فندق في القائمة إحنا مش بس زرناه — إحنا قعدنا فيه.',
-    description_en: 'Every camp and hotel in our list — we didn\'t just visit, we\'ve stayed.',
-    icon: '🏕️',
-  },
-  {
-    title_ar: 'صحبة قبل أي حاجة',
-    title_en: 'Vibes First, Always',
-    description_ar: 'رحلاتنا مش برنامج — دي أيام هتفضل تحكي عنها. الناس بترجع منها بصحاب جداد.',
-    description_en: 'Our trips aren\'t itineraries — they\'re days you\'ll keep talking about. People leave with new friends.',
-    icon: '✨',
-  },
-]
-
 // Testimonials now live in Supabase (`testimonials` table) and are managed from
 // the dashboard — see getTestimonials() in lib/data.ts.
-
-/**
- * The 4 promises that anchor the brand — shown as the home page trust bar and
- * used across other pages as a hover-badge row. Wording is intentional; each
- * one answers a specific first-time visitor doubt.
- */
-export const TRUST_STATS = [
-  {
-    icon: '🎯',
-    label_ar: 'حجز واحد واضح',
-    label_en: 'One Clear Booking',
-    sub_ar: 'الإقامة والنقل والرحلات في ملخص واحد',
-    sub_en: 'Stay, transfer, and trips in one summary',
-  },
-  {
-    icon: '✨',
-    label_ar: 'أسعار غرف مفهومة',
-    label_en: 'Clear Room Pricing',
-    sub_ar: 'سعر الغرفة الكامل لكل ليلة',
-    sub_en: 'Total room price for each night',
-  },
-  {
-    icon: '🤝',
-    label_ar: 'اختيارات مرنة',
-    label_en: 'Flexible Choices',
-    sub_ar: 'باكدج كامل أو إقامة أو انتقالات',
-    sub_en: 'Package, stay, or transfer',
-  },
-  {
-    icon: '🌱',
-    label_ar: 'عربي وإنجليزي',
-    label_en: 'Arabic & English',
-    sub_ar: 'تجربة متناسقة باللغتين',
-    sub_en: 'One coherent bilingual experience',
-  },
-]
 
 // Governorates + their transfer surcharges now live in Supabase
 // (`transfer_governorate_pricing`), separately per transfer type, and are

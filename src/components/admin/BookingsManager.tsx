@@ -140,7 +140,7 @@ export function BookingsManager() {
         fetch('/api/admin/bookings'),
         fetch('/api/admin/accommodations'),
       ])
-      if (bRes.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (bRes.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const bData = await bRes.json()
       if (!bRes.ok) throw new Error(bData.error)
       setBookings(bData.bookings || [])
@@ -180,7 +180,7 @@ export function BookingsManager() {
       const res = await fetch(`/api/admin/bookings/${id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return false }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return false }
       if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || (ar ? 'فشل التحديث' : 'Update failed')); return false }
       setBookings(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b))
       return true
@@ -194,7 +194,7 @@ export function BookingsManager() {
   const deleteBooking = async (id: string) => {
     if (!confirm(ar ? 'متأكد من حذف الحجز؟' : 'Delete this booking?')) return
     const res = await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE' })
-    if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+    if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
     if (!res.ok) { alert(ar ? 'فشل الحذف' : 'Delete failed'); return }
     setBookings(prev => prev.filter(b => b.id !== id))
   }
@@ -318,7 +318,7 @@ export function BookingsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) {
         setManualError(data.error || (ar ? 'فشل الحفظ' : 'Save failed'))

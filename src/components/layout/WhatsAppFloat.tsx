@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { MessageCircle } from 'lucide-react'
 import { useLocale } from 'next-intl'
+import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 /**
@@ -13,6 +14,7 @@ import { cn } from '@/lib/utils'
  */
 export function WhatsAppFloat({ number }: { number?: string | null }) {
   const locale = useLocale()
+  const pathname = usePathname()
   const [compact, setCompact] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -26,6 +28,13 @@ export function WhatsAppFloat({ number }: { number?: string | null }) {
   }, [])
 
   const digits = (number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
+  const isAdminRoute =
+    pathname === '/admin' ||
+    pathname.startsWith('/admin/') ||
+    pathname === '/en/admin' ||
+    pathname.startsWith('/en/admin/')
+
+  if (isAdminRoute) return null
 
   return (
     <a

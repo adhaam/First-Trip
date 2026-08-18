@@ -1,16 +1,19 @@
 'use client'
 
 import { useLocale, useTranslations } from 'next-intl'
+import { usePathname } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
 import { Logo } from '@/components/brand/Logo'
 import { WaveDivider } from '@/components/brand/Section'
-import { NAV_ITEMS, WHATSAPP_NUMBER, PHONE_NUMBER, EMAIL } from '@/lib/constants'
+import { NAV_LABEL_KEYS, WHATSAPP_NUMBER, PHONE_NUMBER, EMAIL } from '@/lib/constants'
 import { MapPin, Phone, Mail, ArrowUpRight } from 'lucide-react'
 import type { SiteSettings } from '@/lib/types'
 
 export function Footer({ settings }: { settings?: SiteSettings | null }) {
   const t = useTranslations('footer')
+  const nav = useTranslations('nav')
   const locale = useLocale()
+  const pathname = usePathname()
   const ar = locale === 'ar'
 
   const whatsapp = settings?.whatsapp_number || WHATSAPP_NUMBER
@@ -20,6 +23,28 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
   // with no legacy fallback (see _weemap_reference/06_business-info/WEEMAP_INFO.md).
   const facebook = settings?.facebook_url || ''
   const instagram = settings?.instagram_url || 'https://www.instagram.com/weemapeg/'
+  const isAdminRoute =
+    pathname === '/admin' ||
+    pathname.startsWith('/admin/') ||
+    pathname === '/en/admin' ||
+    pathname.startsWith('/en/admin/')
+
+  const linkGroups = [
+    {
+      title: t('explore'),
+      links: ['/book-dahab', '/sinai-trips', '/community'],
+    },
+    {
+      title: t('company'),
+      links: ['/about', '/partner'],
+    },
+    {
+      title: t('support'),
+      links: ['/policy'],
+    },
+  ]
+
+  if (isAdminRoute) return null
 
   return (
     <footer className="relative mt-auto bg-sea-900 text-sand-100">
@@ -28,14 +53,12 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
 
       <div className="depth-bg">
         <div className="container-main py-16 md:py-20">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-12 md:grid-cols-4 lg:gap-12">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-12 md:grid-cols-5 lg:gap-12">
             {/* Brand */}
             <div className="col-span-2 lg:col-span-1">
               <Logo size="lg" tone="light" />
               <p className="mt-5 max-w-xs text-sm leading-relaxed text-sand-100/65">
-                {ar
-                  ? 'بنرسم لك الطريق لدهب وسيناء. انتقالات، إقامة، ورحلات داخلية — من غير ما تفكر في حاجة.'
-                  : 'We map the way to Dahab and Sinai. Transfers, stays and day trips — without you having to think about any of it.'}
+                {t('description')}
               </p>
 
               <div className="mt-6 flex gap-2">
@@ -52,27 +75,28 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               </div>
             </div>
 
-            {/* Quick links */}
-            <div>
-              <h3 className="mb-5 font-display text-xs font-bold uppercase tracking-[0.2em] text-sun-300">
-                {t('quickLinks')}
-              </h3>
-              <ul className="space-y-2.5">
-                {NAV_ITEMS.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className="text-sm text-sand-100/70 transition-colors hover:text-white"
-                    >
-                      {item[ar ? 'label_ar' : 'label_en']}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {linkGroups.map((group) => (
+              <div key={group.title}>
+                <h3 className="mb-5 font-display text-xs font-bold uppercase tracking-[0.2em] text-sun-300">
+                  {group.title}
+                </h3>
+                <ul className="space-y-2.5">
+                  {group.links.map((href) => (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        className="inline-flex min-h-11 items-center text-sm text-sand-100/70 transition-colors hover:text-white"
+                      >
+                        {nav(NAV_LABEL_KEYS[href])}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
 
             {/* Contact */}
-            <div>
+            <div className="col-span-2 md:col-span-1">
               <h3 className="mb-5 font-display text-xs font-bold uppercase tracking-[0.2em] text-sun-300">
                 {t('contact')}
               </h3>
@@ -102,26 +126,21 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               </ul>
             </div>
 
-            {/* WhatsApp */}
-            <div className="col-span-2 md:col-span-1">
-              <h3 className="mb-5 font-display text-xs font-bold uppercase tracking-[0.2em] text-sun-300">
-                {t('followUs')}
-              </h3>
-              <p className="mb-5 text-sm leading-relaxed text-sand-100/70">
-                {ar
-                  ? 'عندك سؤال؟ ابعتلنا على واتساب ونرد عليك.'
-                  : 'Got a question? Send us a message on WhatsApp.'}
-              </p>
-              <a
-                href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
-                target="_blank"
-                rel="noopener"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-sun-400 px-6 text-sm font-semibold text-white transition-colors hover:bg-sun-500"
-              >
-                WhatsApp
-                <ArrowUpRight className="h-4 w-4" />
-              </a>
-            </div>
+          </div>
+
+          <div className="mt-10 flex flex-col gap-5 border-t border-white/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-xl text-sm leading-relaxed text-sand-100/70">
+              {t('whatsappText')}
+            </p>
+            <a
+              href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-sun-400 px-6 text-sm font-semibold text-white transition-colors hover:bg-sun-500"
+            >
+              WhatsApp
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
           </div>
         </div>
 

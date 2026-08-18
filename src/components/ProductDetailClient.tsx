@@ -98,7 +98,7 @@ export function ProductDetailClient({
           {/* back */}
           <Link
             href="/book-dahab"
-            className="absolute start-4 top-4 z-10 inline-flex h-10 items-center gap-1.5 rounded-full bg-sand-50/90 px-4 text-sm font-semibold text-sea-900 backdrop-blur transition-colors hover:bg-white"
+            className="absolute start-4 top-4 z-10 inline-flex h-11 items-center gap-1.5 rounded-full bg-sand-50/90 px-4 text-sm font-semibold text-sea-900 backdrop-blur transition-colors hover:bg-white"
           >
             <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" />
             {common('back')}
@@ -112,6 +112,7 @@ export function ProductDetailClient({
           {images.length > 1 && (
             <>
               <button
+                type="button"
                 onClick={() => setGalleryIdx((g) => (g - 1 + images.length) % images.length)}
                 aria-label={ar ? 'السابق' : 'Previous'}
                 className="absolute start-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition-colors hover:bg-white/35 sm:inline-flex"
@@ -119,6 +120,7 @@ export function ProductDetailClient({
                 <ChevronLeft className="h-5 w-5 rtl:-scale-x-100" />
               </button>
               <button
+                type="button"
                 onClick={() => setGalleryIdx((g) => (g + 1) % images.length)}
                 aria-label={ar ? 'التالي' : 'Next'}
                 className="absolute end-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition-colors hover:bg-white/35 sm:inline-flex"
@@ -157,6 +159,7 @@ export function ProductDetailClient({
             {images.map((img, i) => (
               <button
                 key={img + i}
+                type="button"
                 onClick={() => setGalleryIdx(i)}
                 aria-label={`${i + 1}`}
                 className={cn(

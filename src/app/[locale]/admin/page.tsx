@@ -9,9 +9,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { motion } from 'framer-motion'
 import { LogIn, Lock } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
+import { useRouter } from '@/i18n/navigation'
 
 export default function AdminLoginPage() {
   const locale = useLocale()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -31,7 +33,7 @@ export default function AdminLoginPage() {
       })
       const data = await res.json()
       if (res.ok && data.success) {
-        window.location.href = `/${locale}/admin/dashboard`
+        router.replace('/admin/dashboard')
         return
       }
       setError(data.error || (locale === 'ar' ? 'بيانات غير صحيحة' : 'Invalid credentials'))
@@ -52,20 +54,19 @@ export default function AdminLoginPage() {
         <Card className="border-[1.5px] border-sand-300 shadow-none pin-card">
           <CardContent className="p-8">
             <div className="text-center mb-8">
-              <div className="flex justify-center mb-4">
-                <Logo size="lg" variant="mark" priority />
+              <div className="mb-5 flex justify-center">
+                <Logo size="lg" priority />
               </div>
               <h1 className="font-display text-2xl font-extrabold text-sea-900">
-                <span className="text-sea-600">FIRST</span>{' '}
-                <span className="text-sun-400">TRIP</span>
+                {locale === 'ar' ? 'مركز تحكم WEEMAP' : 'WEEMAP Business Control Center'}
               </h1>
-              <p className="text-sm text-sea-900/50 mt-2">
-                {locale === 'ar' ? 'لوحة تحكم الإدارة' : 'Admin Dashboard'}
+              <p className="mt-2 text-sm text-sea-900/50">
+                {locale === 'ar' ? 'دخول فريق الإدارة' : 'Team sign in'}
               </p>
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 text-center">
+              <div role="alert" aria-live="polite" className="mb-4 rounded-lg bg-red-50 p-3 text-center text-sm text-red-600">
                 {error}
               </div>
             )}
@@ -84,6 +85,7 @@ export default function AdminLoginPage() {
                   className="mt-1"
                   dir="ltr"
                   autoFocus
+                  autoComplete="current-password"
                 />
               </div>
               <Button

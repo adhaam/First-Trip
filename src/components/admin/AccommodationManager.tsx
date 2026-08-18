@@ -151,7 +151,7 @@ export function AccommodationManager() {
     try {
       const res = await fetch('/api/admin/accommodations')
       if (res.status === 401) {
-        window.location.href = `/${locale}/admin`
+        window.location.href = locale === 'en' ? '/en/admin' : '/admin'
         return
       }
       const data = await res.json()
@@ -233,7 +233,7 @@ export function AccommodationManager() {
           })
 
       if (res.status === 401) {
-        window.location.href = `/${locale}/admin`
+        window.location.href = locale === 'en' ? '/en/admin' : '/admin'
         return
       }
       const data = await res.json()
@@ -254,7 +254,7 @@ export function AccommodationManager() {
     if (!confirm(locale === 'ar' ? 'متأكد من الحذف؟' : 'Confirm delete?')) return
     const res = await fetch(`/api/admin/accommodations/${id}`, { method: 'DELETE' })
     if (res.status === 401) {
-      window.location.href = `/${locale}/admin`
+      window.location.href = locale === 'en' ? '/en/admin' : '/admin'
       return
     }
     if (!res.ok) {

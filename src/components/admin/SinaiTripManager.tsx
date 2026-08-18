@@ -44,7 +44,7 @@ export function SinaiTripManager() {
     try {
       const res = await fetch('/api/admin/sinai-trips')
       if (res.status === 401) {
-        window.location.href = `/${locale}/admin`
+        window.location.href = locale === 'en' ? '/en/admin' : '/admin'
         return
       }
       const data = await res.json()
@@ -96,7 +96,7 @@ export function SinaiTripManager() {
         : await fetch('/api/admin/sinai-trips', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
           })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) { alert(data.error || (locale === 'ar' ? 'فشل الحفظ' : 'Save failed')); return }
       await load()
@@ -109,7 +109,7 @@ export function SinaiTripManager() {
   const handleDelete = async (id: string) => {
     if (!confirm(locale === 'ar' ? 'متأكد من الحذف؟' : 'Confirm delete?')) return
     const res = await fetch(`/api/admin/sinai-trips/${id}`, { method: 'DELETE' })
-    if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+    if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
     if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || (locale === 'ar' ? 'فشل الحذف' : 'Delete failed')); return }
     setTrips(prev => prev.filter(t => t.id !== id))
   }

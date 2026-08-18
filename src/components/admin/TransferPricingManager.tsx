@@ -54,7 +54,7 @@ export function TransferPricingManager() {
     setLoadError('')
     try {
       const res = await fetch('/api/admin/transfer-pricing')
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSettings(data.settings || [])
@@ -95,7 +95,7 @@ export function TransferPricingManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transfer_type: type, base_price: value }),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) { alert(data.error || (ar ? 'فشل الحفظ' : 'Save failed')); return }
       setSettings(prev => prev.map(s => (s.transfer_type === type ? { ...s, base_price: value } : s)))
@@ -115,7 +115,7 @@ export function TransferPricingManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ price_surcharge: value }),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) {
         alert(data.error || (ar ? 'فشل الحفظ' : 'Save failed'))
@@ -136,7 +136,7 @@ export function TransferPricingManager() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !gov.is_active }),
     })
-    if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+    if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
       alert(d.error || (ar ? 'فشل التحديث' : 'Update failed'))
@@ -150,7 +150,7 @@ export function TransferPricingManager() {
   const remove = async (gov: TransferGovernoratePrice) => {
     if (!confirm(ar ? 'متأكد من الحذف؟' : 'Confirm delete?')) return
     const res = await fetch(`/api/admin/transfer-pricing/governorates/${gov.id}`, { method: 'DELETE' })
-    if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+    if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
       alert(d.error || (ar ? 'فشل الحذف' : 'Delete failed'))
@@ -178,7 +178,7 @@ export function TransferPricingManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) { alert(data.error || (ar ? 'فشل الإضافة' : 'Create failed')); return }
       await load()

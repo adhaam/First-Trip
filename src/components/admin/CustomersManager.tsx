@@ -29,7 +29,7 @@ export function CustomersManager() {
     setLoadError('')
     try {
       const res = await fetch('/api/admin/customers')
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setCustomers(data.customers || [])

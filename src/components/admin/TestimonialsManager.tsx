@@ -58,7 +58,7 @@ export function TestimonialsManager() {
     setLoadError('')
     try {
       const res = await fetch('/api/admin/testimonials')
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setItems(data.testimonials || [])
@@ -123,7 +123,7 @@ export function TestimonialsManager() {
           body: JSON.stringify(payload),
         },
       )
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) { alert(data.error || (ar ? 'فشل الحفظ' : 'Save failed')); return }
       await load()
@@ -139,7 +139,7 @@ export function TestimonialsManager() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_published: !t.is_published }),
     })
-    if (res.status === 401) { window.location.assign(`/${locale}/admin`); return }
+    if (res.status === 401) { window.location.assign(locale === 'en' ? '/en/admin' : '/admin'); return }
     if (!res.ok) return
     setItems(prev => prev.map(x => (x.id === t.id ? { ...x, is_published: !x.is_published } : x)))
   }
@@ -147,7 +147,7 @@ export function TestimonialsManager() {
   const remove = async (id: string) => {
     if (!confirm(ar ? 'متأكد من الحذف؟' : 'Confirm delete?')) return
     const res = await fetch(`/api/admin/testimonials/${id}`, { method: 'DELETE' })
-    if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+    if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
     if (!res.ok) return
     setItems(prev => prev.filter(x => x.id !== id))
   }

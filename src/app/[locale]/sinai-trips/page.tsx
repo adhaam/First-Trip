@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import Image from 'next/image'
-import { getSinaiTrips, getSiteSettings } from '@/lib/data'
+import { getSinaiTrips } from '@/lib/data'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
 import { WaveDivider } from '@/components/brand/Section'
 import { buildAlternates } from '@/lib/seo'
@@ -12,12 +12,17 @@ export async function generateMetadata({ params }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
-  return { alternates: buildAlternates('/sinai-trips', locale) }
+  const t = await getTranslations({ locale, namespace: 'sinai' })
+  return {
+    title: t('title'),
+    description: t('subtitle'),
+    alternates: buildAlternates('/sinai-trips', locale),
+  }
 }
 
 export default async function SinaiTripsPage() {
   const t = await getTranslations('sinai')
-  const [trips, settings] = await Promise.all([getSinaiTrips(), getSiteSettings()])
+  const trips = await getSinaiTrips()
   const heroImage = trips[0]?.images?.[0] || '/media/heroposter.png'
 
   return (
@@ -42,7 +47,7 @@ export default async function SinaiTripsPage() {
       {/* Filter + Grid */}
       <section className="section-padding bg-sand-50">
         <div className="container-main">
-          <SinaiTripsClient trips={trips} whatsapp={settings?.whatsapp_number} />
+          <SinaiTripsClient trips={trips} />
         </div>
       </section>
     </div>

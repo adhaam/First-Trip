@@ -10,6 +10,7 @@ import { Reveal, GlowCard } from '@/components/motion/Reveal'
 import { AccommodationCard } from '@/components/cards/AccommodationCard'
 import { TripCard } from '@/components/cards/TripCard'
 import { NewsletterSignup } from '@/components/NewsletterSignup'
+import { TrustSection } from '@/components/TrustSection'
 import { SERVICES, WHATSAPP_NUMBER } from '@/lib/constants'
 import { ArrowUpRight, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -39,11 +40,12 @@ export function HomeClient({ accommodations, trips, posts, settings }: Props) {
     <div className="overflow-x-clip">
       <Hero settings={settings} />
       <Services />
-      <Trips items={featuredTrips} whatsapp={settings?.whatsapp_number} />
+      <Trips items={featuredTrips} />
       <Accommodations items={featuredAccs} />
       <ExploreSinai trip={featuredTrips[0]} />
       <WeemapPicks accommodation={featuredAccs[0]} trip={featuredTrips[1] || featuredTrips[0]} />
       <HowItWorks />
+      <TrustSection />
       {settings?.show_community !== false && <Community posts={posts} />}
       {settings?.show_partners !== false && <Partners />}
       <DahabGuide />
@@ -302,7 +304,7 @@ function Accommodations({ items }: { items: Accommodation[] }) {
 
 /* ─────────────────────────── SINAI TRIPS ─────────────────────────── */
 
-function Trips({ items, whatsapp }: { items: SinaiTrip[]; whatsapp?: string | null }) {
+function Trips({ items }: { items: SinaiTrip[] }) {
   const t = useTranslations('home')
   const locale = useLocale()
   const ar = locale === 'ar'
@@ -329,7 +331,7 @@ function Trips({ items, whatsapp }: { items: SinaiTrip[]; whatsapp?: string | nu
         <ScrollRail cols={3}>
           {picks.map((trip, i) => (
             <Reveal key={trip.id} delay={i * 80} className="w-[78vw] shrink-0 sm:w-auto">
-              <TripCard trip={trip} whatsapp={whatsapp} />
+              <TripCard trip={trip} />
             </Reveal>
           ))}
         </ScrollRail>

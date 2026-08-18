@@ -1,8 +1,9 @@
 import type { MetadataRoute } from 'next'
-import { getAccommodations } from '@/lib/data'
+import { getAccommodations, getSinaiTrips } from '@/lib/data'
 import { getPathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { SITE_URL } from '@/lib/seo'
+import { getTripRouteSlug } from '@/lib/trips'
 
 // Locale-agnostic route paths → `getPathname` resolves the correctly
 // prefixed URL per locale (Arabic — the default locale — has NO `/ar`
@@ -41,12 +42,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Real accommodation detail pages — never hardcode ids here, the list
   // changes as the owner adds/removes properties from the dashboard.
-  const accommodations = await getAccommodations().catch(() => [])
+  const [accommodations, trips] = await Promise.all([
+    getAccommodations().catch(() => []),
+    getSinaiTrips().catch(() => []),
+  ])
   for (const locale of routing.locales) {
     for (const acc of accommodations) {
       entries.push({
         url: localizedUrl(`/book-dahab/${acc.id}`, locale),
         lastModified: new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      })
+    }
+  }
+
+  for (const locale of routing.locales) {
+    for (const trip of trips) {
+      entries.push({
+        url: localizedUrl(`/sinai-trips/${getTripRouteSlug(trip)}`, locale),
+        lastModified: trip.created_at ? new Date(trip.created_at) : new Date(),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
       })

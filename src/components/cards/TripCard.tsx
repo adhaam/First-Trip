@@ -2,28 +2,26 @@
 
 import Image from 'next/image'
 import { useLocale, useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { Clock, ArrowUpRight, Check } from 'lucide-react'
-import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
+import { getTripRouteSlug } from '@/lib/trips'
 import type { SinaiTrip } from '@/lib/types'
 
 export function TripCard({
   trip,
   className,
-  whatsapp,
   includesLabel,
   featured = false,
 }: {
   trip: SinaiTrip
   className?: string
-  whatsapp?: string | null
   /** Pass a label to show the first 3 "includes" items — omit on compact/home cards. */
   includesLabel?: string
   featured?: boolean
 }) {
   const common = useTranslations('common')
-  const sinai = useTranslations('sinai')
   const locale = useLocale()
   const ar = locale === 'ar'
 
@@ -31,14 +29,13 @@ export function TripCard({
   const cover = trip.images?.[0] || '/media/heroposter.png'
   const duration = ar ? trip.duration : trip.duration_en || trip.duration
   const category = ar ? trip.category_ar : trip.category_en
-  const digits = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
-  const message = encodeURIComponent(
-    ar ? `عايز أحجز رحلة: ${name}` : `I'd like to book: ${name}`,
-  )
+  const href = `/sinai-trips/${getTripRouteSlug(trip)}`
+  const detail = useTranslations('tripDetail')
 
   return (
     <GlowCard className={cn('h-full', className)}>
-      <article className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
+      <Link href={href} aria-label={`${detail('viewTrip')}: ${name}`} className="block h-full rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun-500 focus-visible:ring-offset-3">
+       <article className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
         <div className={cn('relative overflow-hidden', featured ? 'aspect-[16/8]' : 'aspect-[3/2]')}>
           <Image
             src={cover}
@@ -94,18 +91,16 @@ export function TripCard({
               {Number(trip.price).toLocaleString()}{' '}
               <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
             </div>
-            <a
-              href={`https://wa.me/${digits}?text=${message}`}
-              target="_blank"
-              rel="noopener"
+            <span
               className="inline-flex items-center gap-1.5 rounded-md border border-sun-500 px-4 py-2 text-xs font-semibold text-sun-600 transition-colors hover:bg-sun-500 hover:text-white"
             >
-              {sinai('bookNow')}
+              {detail('viewTrip')}
               <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" />
-            </a>
+            </span>
           </div>
         </div>
       </article>
+      </Link>
     </GlowCard>
   )
 }

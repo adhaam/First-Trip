@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Reveal } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { POST_CATEGORY_LABELS } from '@/lib/community'
@@ -21,6 +21,8 @@ const icons: Partial<Record<PostCategory, typeof BookOpen>> = {
 
 export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
   const locale = useLocale()
+  const t = useTranslations('community')
+  const states = useTranslations('states')
   const ar = locale === 'ar'
   const [filter, setFilter] = useState<PostCategory | 'all'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -39,15 +41,17 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
         {(['all', ...categories] as const).map((category) => (
           <button
             key={category}
+            type="button"
             onClick={() => setFilter(category)}
+            aria-pressed={filter === category}
             className={cn(
-              'shrink-0 rounded-md border px-4 py-2 text-sm font-semibold transition-colors',
+              'min-h-11 shrink-0 rounded-md border px-4 py-2 text-sm font-semibold transition-colors',
               filter === category
                 ? 'border-sun-500 bg-sun-500 text-white'
                 : 'border-sand-300 bg-sand-50 text-sea-900/70 hover:border-sun-400 hover:text-sea-900',
             )}
           >
-            {category === 'all' ? (ar ? 'الكل' : 'All stories') : POST_CATEGORY_LABELS[category][ar ? 'ar' : 'en']}
+            {category === 'all' ? t('categories.all') : POST_CATEGORY_LABELS[category][ar ? 'ar' : 'en']}
           </button>
         ))}
       </div>
@@ -66,7 +70,7 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
                 {post.image_url && (
                   <div className={cn('overflow-hidden bg-sand-200', featured ? 'aspect-[16/8]' : 'aspect-[4/3]')}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- CMS URLs are not limited to one image host. */}
-                    <img src={post.image_url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
+                    <img src={post.image_url} alt={ar ? post.title_ar : post.title_en} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
                   </div>
                 )}
                 <div className={cn('p-6', featured && 'md:p-8')}>
@@ -75,7 +79,7 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
                       <Icon className="h-3.5 w-3.5" />
                       {POST_CATEGORY_LABELS[post.category][ar ? 'ar' : 'en']}
                     </span>
-                    {post.is_pinned && <span className="inline-flex items-center gap-1"><Pin className="h-3 w-3" />{ar ? 'مثبت' : 'Featured'}</span>}
+                    {post.is_pinned && <span className="inline-flex items-center gap-1"><Pin className="h-3 w-3" />{t('pinned')}</span>}
                     <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(post.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-GB')}</span>
                     <span>{readingMinutes} {ar ? 'د قراءة' : 'min read'}</span>
                   </div>
@@ -87,9 +91,9 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
                   </p>
                   {expanded && post.video_url && <video src={post.video_url} controls preload="metadata" className="mt-5 aspect-video w-full bg-black" />}
                   {(wordCount > 45 || post.video_url) && (
-                    <button onClick={() => setExpandedId(expanded ? null : post.id)} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-sun-600 hover:text-sun-500">
+                    <button type="button" aria-expanded={expanded} onClick={() => setExpandedId(expanded ? null : post.id)} className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-sun-600 hover:text-sun-500">
                       <BookOpen className="h-4 w-4" />
-                      {expanded ? (ar ? 'عرض أقل' : 'Show less') : (ar ? 'اقرأ القصة' : 'Read story')}
+                      {expanded ? t('showLess') : t('readMore')}
                     </button>
                   )}
                 </div>
@@ -99,7 +103,7 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
         })}
       </div>
 
-      {sorted.length === 0 && <div className="border border-sand-300 py-16 text-center text-sea-900/50">{ar ? 'لا يوجد محتوى في هذه الفئة بعد' : 'No published stories in this category yet.'}</div>}
+      {sorted.length === 0 && <div className="border border-sand-300 py-16 text-center text-sea-900/50">{states('noContent')}</div>}
     </>
   )
 }

@@ -89,6 +89,23 @@ export async function getSinaiTrips(): Promise<SinaiTrip[]> {
   return (data ?? []) as SinaiTrip[]
 }
 
+export async function getSinaiTripById(id: string): Promise<SinaiTrip | null> {
+  if (!isSupabaseConfigured()) return null
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('sinai_trips')
+    .select('*')
+    .eq('id', id)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (error) {
+    console.error('getSinaiTripById error:', error)
+    return null
+  }
+  return data as SinaiTrip | null
+}
+
 export async function getCommunityPosts(): Promise<CommunityPost[]> {
   if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()

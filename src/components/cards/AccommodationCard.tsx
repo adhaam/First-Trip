@@ -40,6 +40,7 @@ export function AccommodationCard({
     <GlowCard className={cn('h-full', className)}>
       <Link
         href={`/book-dahab/${acc.id}`}
+        aria-label={`${t('viewDetails')}: ${name}`}
         className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card transition-colors hover:border-sea-900/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea-500"
       >
         <div className="relative aspect-[4/3] overflow-hidden">
@@ -99,8 +100,9 @@ export function AccommodationCard({
 
             <span
               aria-hidden
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sand-100 text-sea-900 transition-all duration-300 group-hover:bg-sun-400 group-hover:text-white"
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-md bg-sand-100 px-3 text-xs font-semibold text-sea-900 transition-all duration-300 group-hover:bg-sun-400 group-hover:text-white"
             >
+              {t('viewDetails')}
               <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
             </span>
           </div>

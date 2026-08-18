@@ -37,7 +37,7 @@ export function TripDatesManager() {
     setLoadError('')
     try {
       const res = await fetch('/api/admin/trip-dates')
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setDates(data.dates || [])
@@ -63,7 +63,7 @@ export function TripDatesManager() {
       const res = await fetch('/api/admin/trip-dates', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
       })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) { alert(data.error || (locale === 'ar' ? 'فشل الحفظ' : 'Save failed')); return }
       await load()
@@ -77,7 +77,7 @@ export function TripDatesManager() {
     const res = await fetch(`/api/admin/trip-dates/${d.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !d.is_active }),
     })
-    if (res.status === 401) { window.location.assign(`/${locale}/admin`); return }
+    if (res.status === 401) { window.location.assign(locale === 'en' ? '/en/admin' : '/admin'); return }
     if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || (locale === 'ar' ? 'فشل التحديث' : 'Update failed')); return }
     setDates(prev => prev.map(x => x.id === d.id ? { ...x, is_active: !x.is_active } : x))
   }
@@ -85,7 +85,7 @@ export function TripDatesManager() {
   const handleDelete = async (id: string) => {
     if (!confirm(locale === 'ar' ? 'متأكد من الحذف؟' : 'Confirm delete?')) return
     const res = await fetch(`/api/admin/trip-dates/${id}`, { method: 'DELETE' })
-    if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+    if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
     if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || (locale === 'ar' ? 'فشل الحذف' : 'Delete failed')); return }
     setDates(prev => prev.filter(x => x.id !== id))
   }

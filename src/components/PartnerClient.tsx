@@ -1,41 +1,108 @@
 'use client'
 
-import { useLocale } from 'next-intl'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
+import { Building2, Bus, Compass, Handshake, Mail, MessageCircle } from 'lucide-react'
+import { Reveal } from '@/components/motion/Reveal'
 import { WHATSAPP_NUMBER, EMAIL } from '@/lib/constants'
-import { Handshake, Building2, Compass, Bus, MessageCircle, Mail } from 'lucide-react'
 import type { SiteSettings } from '@/lib/types'
 
 export function PartnerClient({ settings }: { settings: SiteSettings | null }) {
-  const ar = useLocale() === 'ar'
+  const t = useTranslations('partner')
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
   const email = settings?.email || EMAIL
   const groups = [
-    { icon: Building2, ar: 'أماكن إقامة', en: 'Stays' },
-    { icon: Compass, ar: 'تجارب ورحلات', en: 'Experiences' },
-    { icon: Bus, ar: 'خدمات نقل', en: 'Transport' },
+    { icon: Building2, title: t('hotels'), text: t('hotelsText') },
+    { icon: Compass, title: t('experiences'), text: t('experiencesText') },
+    { icon: Bus, title: t('transport'), text: t('transportText') },
   ]
+  const steps = [
+    { title: t('step1Title'), text: t('step1Text') },
+    { title: t('step2Title'), text: t('step2Text') },
+    { title: t('step3Title'), text: t('step3Text') },
+    { title: t('step4Title'), text: t('step4Text') },
+  ]
+
   return (
     <div className="bg-sand-50">
-      <section className="relative isolate min-h-[64svh] overflow-hidden bg-sea-900 py-20 text-white md:py-28">
-        <Image src="/media/heroposter.png" alt="" fill sizes="100vw" className="-z-20 object-cover" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 via-black/60 to-black/20 rtl:bg-gradient-to-l" />
-        <div className="container-main">
-          <Handshake className="h-10 w-10 text-sun-300" />
-          <p className="eyebrow mt-6 text-sun-300">{ar ? 'اشتغل مع وي ماب' : 'Partner with WEEMAP'}</p>
-          <h1 className="mt-4 max-w-4xl text-4xl font-extrabold leading-tight sm:text-5xl md:text-7xl">{ar ? 'خلّي تجربتك جزء من خريطة سينا.' : 'Bring your Sinai experience onto the map.'}</h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/75">{ar ? 'بنرحب بالتواصل مع مقدمي الخدمات الحقيقيين في سينا. كل تعاون بيتراجع ويتفق عليه بشكل مباشر.' : 'We welcome conversations with real Sinai operators. Every collaboration is reviewed and agreed directly.'}</p>
+      <section className="relative isolate min-h-[60svh] overflow-hidden bg-sea-900 py-24 text-white md:py-32">
+        <Image src="/media/heroposter.png" alt="" fill priority sizes="100vw" className="-z-20 object-cover" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 via-black/60 to-black/25 rtl:bg-gradient-to-l" />
+        <div className="container-main flex min-h-[34svh] items-end">
+          <Reveal>
+            <Handshake className="h-9 w-9 text-sun-300" aria-hidden="true" />
+            <p className="eyebrow mt-6 text-sun-300">{t('eyebrow')}</p>
+            <h1 className="mt-4 max-w-4xl font-display text-4xl font-extrabold leading-tight sm:text-5xl md:text-7xl">
+              {t('title')}
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/78">{t('subtitle')}</p>
+          </Reveal>
         </div>
       </section>
-      <main className="container-main py-14 md:py-20">
-        <div className="grid gap-5 md:grid-cols-3">
-          {groups.map(({ icon: Icon, ar: labelAr, en }) => <div key={en} className="border-t-2 border-sun-500 bg-[#fffdf8] p-7"><Icon className="h-6 w-6 text-sun-500" /><h2 className="mt-5 text-xl font-bold">{ar ? labelAr : en}</h2></div>)}
-        </div>
-        <section className="mt-12 grid gap-8 bg-[#1b1b17] p-8 text-white md:grid-cols-[1fr_auto] md:items-center md:p-12">
-          <div><h2 className="text-3xl font-bold">{ar ? 'عرّفنا بتجربتك.' : 'Tell us about what you do.'}</h2><p className="mt-3 text-white/65">{ar ? 'تواصل من خلال بيانات وي ماب الرسمية.' : 'Reach us through WEEMAP’s official contact channels.'}</p></div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-sun-500 px-6 font-semibold hover:bg-sun-600"><MessageCircle className="h-4 w-4" />WhatsApp</a>
-            <a href={`mailto:${email}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-white/30 px-6 font-semibold hover:bg-white/10"><Mail className="h-4 w-4" />Email</a>
+
+      <main>
+        <section className="section-padding">
+          <div className="container-main">
+            <Reveal>
+              <h2 className="font-display text-3xl font-bold text-sea-900 md:text-4xl">{t('typesTitle')}</h2>
+            </Reveal>
+            <div className="mt-9 grid gap-5 md:grid-cols-3">
+              {groups.map(({ icon: Icon, title, text }, index) => (
+                <Reveal key={title} delay={index * 70}>
+                  <article className="h-full border-t-2 border-sun-500 bg-card p-7">
+                    <Icon className="h-7 w-7 text-sun-500" aria-hidden="true" />
+                    <h3 className="mt-5 font-display text-xl font-bold text-sea-900">{title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-sea-900/65">{text}</p>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-sand-100 py-14 md:py-20">
+          <div className="container-main grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16">
+            <Reveal>
+              <div>
+                <h2 className="font-display text-3xl font-bold text-sea-900">{t('whyTitle')}</h2>
+                <p className="mt-5 text-base leading-8 text-sea-900/68">{t('whyText')}</p>
+              </div>
+            </Reveal>
+            <div>
+              <Reveal>
+                <h2 className="font-display text-3xl font-bold text-sea-900">{t('processTitle')}</h2>
+              </Reveal>
+              <ol className="mt-7 divide-y divide-sand-300 border-y border-sand-300">
+                {steps.map((step, index) => (
+                  <li key={step.title} className="grid gap-3 py-6 sm:grid-cols-[3rem_1fr]">
+                    <span className="font-display text-xl font-extrabold text-sun-500" aria-hidden="true">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-sea-900">{step.title}</h3>
+                      <p className="mt-2 text-sm leading-7 text-sea-900/65">{step.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section className="container-main py-14 md:py-20">
+          <div className="grid gap-8 bg-sea-900 p-7 text-white sm:p-9 md:grid-cols-[1fr_auto] md:items-center md:p-12">
+            <div>
+              <h2 className="font-display text-3xl font-bold">{t('contactTitle')}</h2>
+              <p className="mt-3 max-w-xl leading-7 text-white/68">{t('contactText')}</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-sun-500 px-6 font-semibold hover:bg-sun-600">
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />{t('whatsapp')}
+              </a>
+              <a href={`mailto:${email}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-white/30 px-6 font-semibold hover:bg-white/10">
+                <Mail className="h-4 w-4" aria-hidden="true" />{t('email')}
+              </a>
+            </div>
           </div>
         </section>
       </main>

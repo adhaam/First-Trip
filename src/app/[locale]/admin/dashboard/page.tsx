@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocale } from 'next-intl'
+import { useRouter } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard, Building2, Mountain, CalendarDays,
@@ -30,7 +31,7 @@ const sidebarItems = [
   { icon: CalendarDays, key: 'dates', label_ar: 'التواريخ', label_en: 'Dates' },
   { icon: ClipboardList, key: 'bookings', label_ar: 'الحجوزات', label_en: 'Bookings' },
   { icon: Users, key: 'customers', label_ar: 'العملاء', label_en: 'Customers' },
-  { icon: Mail, key: 'newsletter', label_ar: 'المشتركين', label_en: 'Subscribers' },
+  { icon: Mail, key: 'newsletter', label_ar: 'النشرة البريدية', label_en: 'Newsletter' },
   { icon: MessageSquareText, key: 'community', label_ar: 'المجتمع', label_en: 'Community' },
   { icon: Quote, key: 'testimonials', label_ar: 'آراء العملاء', label_en: 'Testimonials' },
   { icon: Settings, key: 'settings', label_ar: 'الإعدادات', label_en: 'Settings' },
@@ -40,28 +41,56 @@ const CONNECTED_KEYS = sidebarItems.map(i => i.key)
 
 export default function AdminDashboardPage() {
   const locale = useLocale()
+  const router = useRouter()
   const [active, setActive] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!sidebarOpen) return
+    closeButtonRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [sidebarOpen])
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className={cn(
+      <aside id="admin-sidebar" className={cn(
         'fixed inset-y-0 z-50 flex w-64 flex-col bg-gray-900 text-white transition-transform lg:static',
         locale === 'ar'
           ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0')
           : (sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
       )}>
-        <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 px-5 py-5">
           <Logo size="md" tone="light" priority />
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-gray-300 hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun-400 lg:hidden"
+            aria-label={locale === 'ar' ? 'إغلاق القائمة' : 'Close menu'}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav aria-label={locale === 'ar' ? 'أقسام لوحة التحكم' : 'Dashboard sections'} className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {sidebarItems.map(item => {
             const Icon = item.icon
             return (
               <button
                 key={item.key}
+                type="button"
                 onClick={() => { setActive(item.key); setSidebarOpen(false) }}
+                aria-current={active === item.key ? 'page' : undefined}
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                   active === item.key
@@ -81,7 +110,7 @@ export default function AdminDashboardPage() {
             className="w-full justify-start text-gray-300 hover:bg-gray-800 hover:text-white"
             onClick={async () => {
               await fetch('/api/admin/logout', { method: 'POST' })
-              window.location.href = `/${locale}/admin`
+              router.replace('/admin')
             }}
           >
             <LogOut className="h-4 w-4 mr-2" />
@@ -92,9 +121,11 @@ export default function AdminDashboardPage() {
 
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div
+        <button
+          type="button"
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-label={locale === 'ar' ? 'إغلاق القائمة' : 'Close menu'}
         />
       )}
 
@@ -103,12 +134,19 @@ export default function AdminDashboardPage() {
         {/* Top Bar */}
         <header className="bg-white border-b px-4 lg:px-8 h-16 flex items-center justify-between">
           <button
+            type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden p-2 rounded-md hover:bg-gray-100"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange lg:hidden"
+            aria-label={locale === 'ar' ? 'فتح قائمة لوحة التحكم' : 'Open dashboard menu'}
+            aria-controls="admin-sidebar"
+            aria-expanded={sidebarOpen}
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="hidden truncate font-semibold text-gray-900 sm:inline">
+              {locale === 'ar' ? 'مركز تحكم WEEMAP' : 'WEEMAP Business Control Center'}
+            </span>
             <span className="text-sm text-gray-500">
               {locale === 'ar' ? 'مرحباً، أدمن' : 'Welcome, Admin'}
             </span>
@@ -116,7 +154,7 @@ export default function AdminDashboardPage() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-8">
+        <main id="admin-main" className="min-w-0 flex-1 p-4 lg:p-8">
           {active === 'dashboard' && <DashboardHome />}
           {active === 'accommodations' && <AccommodationManager />}
           {active === 'sinai-trips' && <SinaiTripManager />}

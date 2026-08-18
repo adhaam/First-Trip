@@ -44,7 +44,7 @@ export function CommunityPostManager() {
     setLoadError('')
     try {
       const res = await fetch('/api/admin/community-posts')
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setPosts(data.posts || [])
@@ -112,7 +112,7 @@ export function CommunityPostManager() {
         : await fetch('/api/admin/community-posts', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
           })
-      if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+      if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const data = await res.json()
       if (!res.ok) { alert(data.error || (locale === 'ar' ? 'فشل الحفظ' : 'Save failed')); return }
       await load()
@@ -125,7 +125,7 @@ export function CommunityPostManager() {
   const handleDelete = async (id: string) => {
     if (!confirm(locale === 'ar' ? 'متأكد من الحذف؟' : 'Confirm delete?')) return
     const res = await fetch(`/api/admin/community-posts/${id}`, { method: 'DELETE' })
-    if (res.status === 401) { window.location.href = `/${locale}/admin`; return }
+    if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
     if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || (locale === 'ar' ? 'فشل الحذف' : 'Delete failed')); return }
     setPosts(prev => prev.filter(p => p.id !== id))
   }

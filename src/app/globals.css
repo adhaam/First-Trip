@@ -225,6 +225,10 @@ html[dir="rtl"] .ltr-only {
     background: var(--color-sun-300);
     color: #0C2B38;
   }
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--color-sun-500);
+    outline-offset: 3px;
+  }
 }
 
 /* ═══════════ Layout utilities ═══════════ */

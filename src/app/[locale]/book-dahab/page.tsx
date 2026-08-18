@@ -15,7 +15,12 @@ export async function generateMetadata({ params }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
-  return { alternates: buildAlternates('/book-dahab', locale) }
+  const t = await getTranslations({ locale, namespace: 'book' })
+  return {
+    title: t('title'),
+    description: t('subtitle'),
+    alternates: buildAlternates('/book-dahab', locale),
+  }
 }
 
 export default async function BookDahabPage({ params }: { params: Promise<{ locale: string }> }) {

@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
  */
 export function NewsletterSignup() {
   const t = useTranslations('home')
+  const common = useTranslations('common')
   const locale = useLocale()
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
@@ -31,21 +32,13 @@ export function NewsletterSignup() {
       })
       if (!res.ok) {
         setState('err')
-        setErrMsg(
-          locale === 'ar'
-            ? 'حصلت مشكلة. جرّب تاني.'
-            : 'Something went wrong. Try again.',
-        )
+        setErrMsg(t('newsletterError'))
         return
       }
       setState('ok')
     } catch {
       setState('err')
-      setErrMsg(
-        locale === 'ar'
-          ? 'مفيش اتصال بالإنترنت.'
-          : 'Network error.',
-      )
+      setErrMsg(t('newsletterNetworkError'))
     }
   }
 
@@ -89,6 +82,7 @@ export function NewsletterSignup() {
               </div>
             ) : (
               <form onSubmit={onSubmit} className="mx-auto mt-8 max-w-md">
+                <label htmlFor="newsletter-email" className="sr-only">{t('newsletterPlaceholder')}</label>
                 <div
                   className={cn(
                     'flex items-center rounded-full border-[1.5px] bg-white/95 p-1.5 pe-2 shadow-lg backdrop-blur transition-all focus-within:border-sun-300 focus-within:ring-4 focus-within:ring-sun-300/25',
@@ -96,21 +90,25 @@ export function NewsletterSignup() {
                   )}
                 >
                   <input
+                    id="newsletter-email"
                     type="email"
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); if (state === 'err') setState('idle') }}
                     placeholder={t('newsletterPlaceholder')}
                     required
+                    autoComplete="email"
+                    aria-invalid={state === 'err'}
+                    aria-describedby={state === 'err' ? 'newsletter-error' : undefined}
                     dir="ltr"
                     className="min-w-0 flex-1 border-0 bg-transparent px-4 py-2 text-sm text-sea-900 placeholder:text-sea-900/40 outline-none"
                   />
                   <button
                     type="submit"
                     disabled={state === 'loading'}
-                    className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-sun-500 to-sun-400 px-5 text-sm font-semibold text-white transition-all hover:from-sun-600 hover:to-sun-500 disabled:opacity-70"
+                    className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-sun-500 to-sun-400 px-5 text-sm font-semibold text-white transition-all hover:from-sun-600 hover:to-sun-500 disabled:opacity-70"
                   >
                     {state === 'loading' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <><Loader2 className="h-4 w-4 animate-spin" /><span className="sr-only">{common('loading')}</span></>
                     ) : (
                       <>
                         {t('newsletterCta')}
@@ -120,7 +118,7 @@ export function NewsletterSignup() {
                   </button>
                 </div>
                 {errMsg && (
-                  <p className="mt-3 text-xs text-red-200">{errMsg}</p>
+                  <p id="newsletter-error" role="alert" className="mt-3 text-xs text-red-200">{errMsg}</p>
                 )}
               </form>
             )}

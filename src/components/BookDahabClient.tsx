@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Reveal } from '@/components/motion/Reveal'
 import { AccommodationCard } from '@/components/cards/AccommodationCard'
 import { ArrowUpDown } from 'lucide-react'
@@ -10,6 +10,7 @@ import type { Accommodation } from '@/lib/types'
 
 export function BookDahabClient({ accommodations }: { accommodations: Accommodation[] }) {
   const locale = useLocale()
+  const states = useTranslations('states')
   const ar = locale === 'ar'
   const [filterType, setFilterType] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('default')
@@ -42,9 +43,11 @@ export function BookDahabClient({ accommodations }: { accommodations: Accommodat
           {filters.map((f) => (
             <button
               key={f.key}
+              type="button"
               onClick={() => setFilterType(f.key)}
+              aria-pressed={filterType === f.key}
               className={cn(
-                'rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
+                'min-h-11 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
                 filterType === f.key
                   ? 'bg-sea-900 text-sand-50'
                   : 'text-sea-900/60 hover:text-sea-900',
@@ -60,9 +63,11 @@ export function BookDahabClient({ accommodations }: { accommodations: Accommodat
           {sorts.map((s) => (
             <button
               key={s.key}
+              type="button"
               onClick={() => setSortBy(s.key)}
+              aria-pressed={sortBy === s.key}
               className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                'min-h-11 rounded-full px-3 py-2 text-xs font-medium transition-colors',
                 sortBy === s.key
                   ? 'bg-sea-900 text-sand-50'
                   : 'text-sea-900/60 hover:text-sea-900',
@@ -80,7 +85,7 @@ export function BookDahabClient({ accommodations }: { accommodations: Accommodat
 
       {sorted.length === 0 ? (
         <div className="py-20 text-center text-sea-900/40">
-          {ar ? 'لا توجد أماكن إقامة متاحة حالياً' : 'No accommodations available right now'}
+          {accommodations.length === 0 ? states('noAccommodations') : states('noAccommodationMatches')}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
