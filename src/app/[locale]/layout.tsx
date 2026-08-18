@@ -13,6 +13,7 @@ import { NewsletterSignup } from '@/components/NewsletterSignup'
 import { getSchemaOrg } from '@/lib/schema-org'
 import { getSiteSettings } from '@/lib/data'
 import { SITE_URL } from '@/lib/seo'
+import { Analytics } from '@vercel/analytics/next'
 import '../globals.css'
 
 // ─── Typeface pairing ───
@@ -116,6 +117,7 @@ export default async function RootLayout({
             </div>
           </TooltipProvider>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   )
