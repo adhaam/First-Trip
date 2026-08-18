@@ -7,7 +7,21 @@ export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded'
 export type BookingSource =
   | 'website' | 'manual' | 'whatsapp' | 'instagram' | 'facebook' | 'referral' | 'other'
 export type TripDuration = 4 | 5
-export type PostCategory = 'blog' | 'hidden-gems' | 'stories' | 'dahab-guide'
+export type PostCategory =
+  | 'stories'
+  | 'dahab-guide'
+  | 'sinai-guide'
+  | 'hidden-gems'
+  | 'diving'
+  | 'freediving'
+  | 'climbing'
+  | 'hiking'
+  | 'watersports'
+  | 'history'
+  | 'culture'
+  | 'itineraries'
+  | 'advanced-adventure'
+  | 'blog'
 export type Governorate = 'cairo' | 'alexandria' | 'zagazig' | 'mansoura'
 
 // ─── Transfers ───
@@ -197,6 +211,8 @@ export interface Booking {
  */
 export interface PriceSnapshot {
   room_type?: 'double' | 'single' | 'triple'
+  /** Number of rooms charged for this party at booking time. */
+  num_rooms?: number
   /** Nightly room rate actually charged, one entry per night of the stay. */
   nightly_room_rates?: { date: string; rate: number; source: 'seasonal' | 'base'; seasonal_rate_name?: string }[]
   nights?: number
@@ -222,8 +238,8 @@ export interface CommunityPost {
   content_ar: string
   content_en: string
   category: PostCategory
-  image_url?: string
-  video_url?: string
+  image_url?: string | null
+  video_url?: string | null
   sort_order: number
   is_pinned: boolean
   is_published: boolean
@@ -239,6 +255,7 @@ export interface SiteSettings {
   email: string
   facebook_url: string
   instagram_url: string
+  location?: string
   logo_url: string
   refund_policy_ar: string
   refund_policy_en: string
@@ -253,6 +270,10 @@ export interface SiteSettings {
   hero_heading_en?: string
   hero_subheading_ar?: string
   hero_subheading_en?: string
+  primary_cta_label_ar?: string
+  primary_cta_label_en?: string
+  secondary_cta_label_ar?: string
+  secondary_cta_label_en?: string
   featured_accommodation_ids?: string[]
   featured_trip_ids?: string[]
   show_community?: boolean
@@ -261,6 +282,8 @@ export interface SiteSettings {
   seo_title?: string
   seo_description_ar?: string
   seo_description_en?: string
+  social_share_image?: string
+  organization_name?: string
 }
 
 /** General, structured website/business settings — the "Website" admin section. */

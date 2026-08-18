@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
@@ -10,24 +9,22 @@ import { SectionHeading, WaveDivider, TopoBackdrop } from '@/components/brand/Se
 import { Reveal, GlowCard } from '@/components/motion/Reveal'
 import { AccommodationCard } from '@/components/cards/AccommodationCard'
 import { TripCard } from '@/components/cards/TripCard'
-import {
-  SERVICES, WHY_US, TRUST_STATS, WHATSAPP_NUMBER,
-} from '@/lib/constants'
-import { Star, ArrowUpRight, Quote, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react'
+import { NewsletterSignup } from '@/components/NewsletterSignup'
+import { SERVICES, WHATSAPP_NUMBER } from '@/lib/constants'
+import { ArrowUpRight, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type {
-  Accommodation, CommunityPost, SinaiTrip, SiteSettings, Testimonial,
+  Accommodation, CommunityPost, SinaiTrip, SiteSettings,
 } from '@/lib/types'
 
 interface Props {
   accommodations: Accommodation[]
   trips: SinaiTrip[]
   posts: CommunityPost[]
-  testimonials: Testimonial[]
   settings: SiteSettings | null
 }
 
-export function HomeClient({ accommodations, trips, posts, testimonials, settings }: Props) {
+export function HomeClient({ accommodations, trips, posts, settings }: Props) {
   // Owner-picked featured content (Site Settings → Homepage); empty = automatic
   const featuredAccIds = settings?.featured_accommodation_ids || []
   const featuredTripIds = settings?.featured_trip_ids || []
@@ -41,15 +38,16 @@ export function HomeClient({ accommodations, trips, posts, testimonials, setting
   return (
     <div className="overflow-x-clip">
       <Hero settings={settings} />
-      <TrustBar />
       <Services />
-      <HowItWorks />
-      <Accommodations items={featuredAccs} />
       <Trips items={featuredTrips} whatsapp={settings?.whatsapp_number} />
-      <WhyUs />
-      <Testimonials items={testimonials} />
+      <Accommodations items={featuredAccs} />
+      <ExploreSinai trip={featuredTrips[0]} />
+      <WeemapPicks accommodation={featuredAccs[0]} trip={featuredTrips[1] || featuredTrips[0]} />
+      <HowItWorks />
       {settings?.show_community !== false && <Community posts={posts} />}
+      {settings?.show_partners !== false && <Partners />}
       <DahabGuide />
+      {settings?.show_newsletter !== false && <NewsletterSignup />}
       <FinalCta settings={settings} />
     </div>
   )
@@ -71,25 +69,8 @@ export function HomeClient({ accommodations, trips, posts, testimonials, setting
 function Hero({ settings }: { settings: SiteSettings | null }) {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const [reducedMotion, setReducedMotion] = useState(false)
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from an external media query on mount
-    setReducedMotion(mq.matches)
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mq.addEventListener?.('change', onChange)
-    return () => mq.removeEventListener?.('change', onChange)
-  }, [])
-
-  // Site Settings → Homepage can still override the hero media; absent an
-  // override the approved final cinematic plate ships by default.
-  const customVideo =
-    settings?.hero_type === 'video' && settings?.hero_media_url ? settings.hero_media_url : null
-  const customPoster =
-    settings?.hero_type === 'image' && settings?.hero_media_url ? settings.hero_media_url : null
-  const videoSrc = customVideo || '/media/herovideo.mp4'
-  const posterSrc = customPoster || '/media/heroposter.png'
+  const videoSrc = '/media/herovideo.mp4'
+  const posterSrc = '/media/heroposter.png'
 
   // Owner-editable hero copy (Site Settings → Homepage). Empty = default.
   const headingAr = settings?.hero_heading_ar || 'إحنا بنرسم لك سيناء'
@@ -100,30 +81,10 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   return (
     <section className="relative isolate flex min-h-svh items-center overflow-hidden bg-sea-900">
       <div className="absolute inset-0 -z-10">
-        {reducedMotion ? (
-          <Image
-            src={posterSrc}
-            alt={ar ? 'طريق صحراوي في سيناء ليلاً' : 'A Sinai desert road at night'}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-        ) : (
-          <video
-            key={videoSrc}
-            autoPlay
-            muted
-            loop
-            playsInline
-            poster={posterSrc}
-            preload="auto"
-            aria-hidden
-            className="h-full w-full object-cover"
-          >
-            <source src={videoSrc} type="video/mp4" />
-          </video>
-        )}
+        <Image src={posterSrc} alt={ar ? 'طريق صحراوي في سيناء ليلاً' : 'A Sinai desert road at night'} fill priority sizes="100vw" className="hidden object-cover motion-reduce:block" />
+        <video key={videoSrc} autoPlay muted loop playsInline poster={posterSrc} preload="metadata" aria-hidden className="h-full w-full object-cover motion-reduce:hidden">
+          <source src={videoSrc} type="video/mp4" />
+        </video>
 
         {/* Readability overlay only — all motion already lives in the video. */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
@@ -149,8 +110,8 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-base leading-relaxed text-sand-100/85 sm:text-lg">
               {ar
-                ? 'انتقالات، إقامة في أماكن نزلنا فيها بنفسنا، ورحلتين داخليتين. إحنا بنظبط كل التفاصيل — وإنت بس تعيشها.'
-                : "Transfers, stays we've tried ourselves, and two included trips. We handle every detail — you just live it."}
+                ? 'انتقالات، إقامة، ورحلات سينا في مكان واحد. اختار اللي يناسب رحلتك وإحنا نأكد معاك التفاصيل.'
+                : 'Transfers, stays, and Sinai trips in one place. Choose what fits and we will confirm the details with you.'}
             </p>
           </Reveal>
 
@@ -162,7 +123,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
                 variant="sun"
                 className="group justify-center"
               >
-                {ar ? 'خطط رحلتك' : 'Plan your trip'}
+                {(ar ? settings?.primary_cta_label_ar : settings?.primary_cta_label_en) || (ar ? 'خطط رحلتك' : 'PLAN YOUR TRIP')}
                 <ArrowUpRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 rtl:-scale-x-100" />
               </ButtonLink>
 
@@ -172,7 +133,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
                 variant="outline-light"
                 className="justify-center backdrop-blur"
               >
-                {ar ? 'استكشف سيناء' : 'Explore Sinai'}
+                {(ar ? settings?.secondary_cta_label_ar : settings?.secondary_cta_label_en) || (ar ? 'استكشف سيناء' : 'EXPLORE SINAI')}
               </ButtonLink>
             </div>
           </Reveal>
@@ -202,42 +163,6 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
 
 /* ─────────────────────────── TRUST BAR ─────────────────────────── */
 
-function TrustBar() {
-  const locale = useLocale()
-  const ar = locale === 'ar'
-
-  return (
-    <section className="border-b border-sand-200 bg-card">
-      <div className="container-main">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 py-8 md:grid-cols-4 md:gap-x-6 md:py-12">
-          {TRUST_STATS.map((stat, i) => (
-            <Reveal
-              key={i}
-              delay={i * 70}
-              className="group flex items-start gap-3 rounded-2xl p-3 transition-colors hover:bg-sea-50 md:p-4"
-            >
-              <span
-                aria-hidden
-                className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sun-100 text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6 md:h-12 md:w-12"
-              >
-                {stat.icon}
-              </span>
-              <div className="min-w-0">
-                <div className="font-display text-sm font-bold leading-tight text-sea-900 md:text-base">
-                  {ar ? stat.label_ar : stat.label_en}
-                </div>
-                <div className="mt-1 text-xs leading-snug text-sea-900/55 md:text-[0.8rem]">
-                  {ar ? stat.sub_ar : stat.sub_en}
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 /* ─────────────────────────── SERVICES ─────────────────────────── */
 
 function Services() {
@@ -254,14 +179,14 @@ function Services() {
           title={t('home.servicesTitle')}
           subtitle={
             ar
-              ? 'أربع خدمات تغطي رحلتك من باب بيتك لحد ما ترجع.'
-              : 'Four services that cover your trip from your door and back.'
+              ? 'ابدأ باللي محتاجه: باكدج كامل، إقامة، رحلة، أو انتقال.'
+              : 'Start with what you need: a full package, stay, trip, or transfer.'
           }
         />
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
           {SERVICES.map((service, i) => (
-            <Reveal key={i} delay={i * 80} className="h-full">
+            <Reveal key={i} delay={i * 80} className={cn('h-full', i < 2 ? 'lg:col-span-6' : i === 2 ? 'lg:col-span-5' : 'lg:col-span-7')}>
               <GlowCard className="h-full">
                 <Link
                   href={service.href}
@@ -415,148 +340,75 @@ function Trips({ items, whatsapp }: { items: SinaiTrip[]; whatsapp?: string | nu
 
 /* ─────────────────────────── WHY US ─────────────────────────── */
 
-function WhyUs() {
-  const t = useTranslations()
+function ExploreSinai({ trip }: { trip?: SinaiTrip }) {
   const locale = useLocale()
   const ar = locale === 'ar'
+  const image = trip?.images?.[0] || '/media/heroposter.png'
+  return (
+    <section className="relative isolate min-h-[34rem] overflow-hidden bg-[#171713] text-white md:min-h-[42rem]">
+      <Image src={image} alt="" fill sizes="100vw" className="-z-20 object-cover" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 via-black/55 to-black/15 rtl:bg-gradient-to-l" />
+      <div className="container-main flex min-h-[34rem] items-end py-16 md:min-h-[42rem] md:items-center md:py-24">
+        <Reveal className="max-w-xl">
+          <span className="eyebrow text-sun-300">{ar ? 'استكشف سينا' : 'Explore Sinai'}</span>
+          <h2 className="mt-5 text-4xl font-extrabold leading-[1.04] sm:text-5xl md:text-7xl">
+            {ar ? 'البحر. الجبل. والطريق بينهم.' : 'Sea. Mountain. Everything between.'}
+          </h2>
+          <p className="mt-6 max-w-lg text-base leading-relaxed text-white/75 md:text-lg">
+            {trip ? (ar ? trip.description_ar : trip.description_en) : (ar ? 'شوف رحلات سينا المتاحة واختر اليوم اللي يناسبك.' : 'Browse the available Sinai trips and choose the day that fits your journey.')}
+          </p>
+          <ButtonLink href="/sinai-trips" variant="sun" size="lg" className="mt-8">
+            {ar ? 'شوف رحلات سينا' : 'Explore Sinai trips'}
+            <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+          </ButtonLink>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
 
+function WeemapPicks({ accommodation, trip }: { accommodation?: Accommodation; trip?: SinaiTrip }) {
+  const locale = useLocale()
+  const ar = locale === 'ar'
+  if (!accommodation && !trip) return null
   return (
     <section className="section-padding bg-sand-50">
       <div className="container-main">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
-          <div className="lg:sticky lg:top-28 lg:self-start">
-            <SectionHeading
-              eyebrow={ar ? 'ليه إحنا' : 'Why us'}
-              title={t('home.whyUsTitle')}
-              subtitle={
-                ar
-                  ? 'مش أكبر شركة، بس على الأرجح أكترهم اهتمامًا بالتفاصيل الصغيرة.'
-                  : 'Not the biggest company, but probably the most caring and detail-oriented.'
-              }
-              className="mb-0"
-            />
-          </div>
-
-          <div className="grid gap-px overflow-hidden border-[1.5px] border-sand-300 bg-sand-300 pin-card sm:grid-cols-2">
-            {WHY_US.map((point, i) => (
-              <Reveal key={i} delay={i * 70} className="bg-card p-6 md:p-7">
-                <span aria-hidden className="mb-4 block text-3xl">{point.icon}</span>
-                <h3 className="font-display text-base font-semibold text-sea-900">
-                  {ar ? point.title_ar : point.title_en}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sea-900/60">
-                  {ar ? point.description_ar : point.description_en}
-                </p>
-              </Reveal>
-            ))}
-          </div>
+        <SectionHeading
+          eyebrow={ar ? 'اختيارات وي ماب' : 'WEEMAP Picks'}
+          title={ar ? 'نقط بداية لرحلة أحلى' : 'A considered place to start'}
+          subtitle={ar ? 'اختيارات من الإقامة والرحلات المميزة الموجودة دلوقتي.' : 'A focused edit from the stays and trips currently available.'}
+        />
+        <div className="grid gap-5 lg:grid-cols-12 lg:items-stretch">
+          {accommodation && <div className="lg:col-span-7"><AccommodationCard acc={accommodation} /></div>}
+          {trip && <div className="lg:col-span-5"><TripCard trip={trip} /></div>}
         </div>
       </div>
     </section>
   )
 }
 
-/* ─────────────────────────── TESTIMONIALS ─────────────────────────── */
-
-function Testimonials({ items }: { items: Testimonial[] }) {
-  const t = useTranslations('home')
+function Partners() {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const [index, setIndex] = useState(0)
-
-  const len = items.length
-  const next = useCallback(() => setIndex((c) => (c + 1) % len), [len])
-  const prev = useCallback(() => setIndex((c) => (c - 1 + len) % len), [len])
-
-  if (len === 0) return null
-  // Math.min guards against `index` briefly pointing past the end if the
-  // testimonial list shrinks between renders (admin edits while a visitor is
-  // browsing) — no effect needed, this is just render-time clamping.
-  const current = items[Math.min(index, len - 1)]
-
   return (
-    <section className="relative overflow-hidden bg-sea-800 py-20 text-white md:py-28">
-      <div className="absolute inset-0 depth-bg opacity-60" />
-
-      <div className="container-main relative">
-        <SectionHeading
-          eyebrow={ar ? 'آراء' : 'Reviews'}
-          title={t('testimonialsTitle')}
-          subtitle={t('testimonialsSub')}
-          tone="light"
-        />
-
+    <section className="border-y border-white/10 bg-[#1b1b17] py-16 text-sand-50 md:py-20">
+      <div className="container-main grid gap-8 md:grid-cols-[1.4fr_0.6fr] md:items-end">
         <Reveal>
-          <figure className="relative mx-auto max-w-3xl border-[1.5px] border-white/15 bg-white/[0.06] p-8 pin-card backdrop-blur-sm md:p-12">
-            <Quote
-              aria-hidden
-              className="absolute -top-5 start-8 h-12 w-12 fill-sun-400 text-sun-400 rtl:-scale-x-100"
-            />
-
-            <div className="mb-5 flex gap-1">
-              {Array.from({ length: current.rating }).map((_, i) => (
-                <Star key={i} className="h-4 w-4 fill-sun-300 text-sun-300" />
-              ))}
-            </div>
-
-            <blockquote
-              key={current.id}
-              className="text-lg leading-relaxed text-white/90 md:text-xl"
-            >
-              {ar ? current.text_ar || current.text_en : current.text_en || current.text_ar}
-            </blockquote>
-
-            <figcaption className="mt-7 flex items-center gap-3">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-sun-400 font-display text-base font-bold text-white">
-                {current.name.trim().charAt(0)}
-              </span>
-              <span>
-                <span className="block font-semibold text-white">{current.name}</span>
-                {(current.trip_ar || current.trip_en) && (
-                  <span className="block text-xs text-sand-100/60">
-                    {ar
-                      ? current.trip_ar || current.trip_en
-                      : current.trip_en || current.trip_ar}
-                  </span>
-                )}
-              </span>
-            </figcaption>
-          </figure>
+          <span className="eyebrow text-sun-300">{ar ? 'شركاء الرحلة' : 'Partners in the journey'}</span>
+          <h2 className="mt-4 max-w-3xl text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
+            {ar ? 'بنبني الرحلة مع الناس اللي عايشة سينا.' : 'The strongest Sinai journeys are built locally.'}
+          </h2>
+          <p className="mt-5 max-w-2xl leading-relaxed text-sand-100/70">
+            {ar ? 'لو بتدير مكان إقامة أو تجربة أو خدمة نقل، نحب نسمع منك.' : 'If you run a stay, experience, or transport service, we would like to hear from you.'}
+          </p>
         </Reveal>
-
-        {len > 1 && (
-          <div className="mt-8 flex items-center justify-center gap-4">
-            <button
-              onClick={prev}
-              aria-label={ar ? 'السابق' : 'Previous'}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10"
-            >
-              <ChevronLeft className="h-5 w-5 rtl:-scale-x-100" />
-            </button>
-
-            <div className="flex items-center gap-1.5">
-              {items.map((item, i) => (
-                <button
-                  key={item.id}
-                  onClick={() => setIndex(i)}
-                  aria-label={`${i + 1}`}
-                  className={cn(
-                    'h-2 rounded-full transition-all duration-300',
-                    i === index ? 'w-6 bg-sun-400' : 'w-2 bg-white/30 hover:bg-white/50',
-                  )}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={next}
-              aria-label={ar ? 'التالي' : 'Next'}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10"
-            >
-              <ChevronRight className="h-5 w-5 rtl:-scale-x-100" />
-            </button>
-          </div>
-        )}
+        <Reveal delay={80} className="md:text-end">
+          <ButtonLink href="/partner" variant="outline-light" size="lg">
+            {ar ? 'اشتغل مع وي ماب' : 'Work with WEEMAP'}
+            <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+          </ButtonLink>
+        </Reveal>
       </div>
     </section>
   )

@@ -13,6 +13,8 @@ import {
   buildPriceSnapshot,
   isPackageDepartureDay,
   isPackageReturnDay,
+  roomsForPeople,
+  quoteStay,
 } from './pricing'
 import type { TransferPricing } from './types'
 
@@ -47,6 +49,32 @@ test('double room: 2,000 × 3 nights = 6,000 total, 3,000/person', () => {
   const total = accommodationSubtotal(nightly)
   assert.equal(total, 6000)
   assert.equal(total / 2, 3000)
+})
+
+test('room count follows selected occupancy and never undercharges larger parties', () => {
+  assert.equal(roomsForPeople('single', 3), 3)
+  assert.equal(roomsForPeople('double', 4), 2)
+  assert.equal(roomsForPeople('triple', 4), 2)
+  const quote = quotePackageV2({
+    pricing, accommodation: acc, roomType: 'double', checkIn: '2026-10-01', nights: 3,
+    numRooms: roomsForPeople('double', 4), mealPlanPricePerNight: 0,
+    includedTrips: [], extraTrips: [], transferType: 'package_bus',
+    governorateCode: 'cairo', direction: 'round_trip', numPeople: 4,
+  })
+  assert.equal(quote.numRooms, 2)
+  assert.equal(quote.accommodationSubtotal, 12000)
+})
+
+test('stay-only quote uses seasonal rates night by night and derived rooms', () => {
+  const quote = quoteStay({
+    accommodation: acc, roomType: 'double', checkIn: '2026-12-18', nights: 4,
+    numPeople: 4, mealPlanPricePerNight: 100,
+  })
+  assert.equal(quote.numRooms, 2)
+  assert.deepEqual(quote.nightly.map((night) => night.rate), [2000, 2000, 3200, 3200])
+  assert.equal(quote.accommodationSubtotal, 20800)
+  assert.equal(quote.mealSubtotal, 1600)
+  assert.equal(quote.total, 22400)
 })
 
 test('triple room: 3,000 × 3 nights = 9,000 total, 3,000/person', () => {

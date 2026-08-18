@@ -33,9 +33,9 @@
   --color-sea-400: #3AA2BC;
   --color-sea-500: #1D86A3;
   --color-sea-600: #146D89;
-  --color-sea-700: #135971;
-  --color-sea-800: #144A5D;
-  --color-sea-900: #10333F;
+  --color-sea-700: #155D68;
+  --color-sea-800: #292B27;
+  --color-sea-900: #1A1B18;
 
   /* ─── Sun (warm Sinai golden-hour orange) ─── */
   --color-sun-50: #FFF8ED;
@@ -109,15 +109,15 @@
   --font-body: var(--font-jakarta), var(--font-almarai), ui-sans-serif, system-ui, sans-serif;
 
   --background: #FBF7F0;
-  --foreground: #10333F;
+  --foreground: #1A1B18;
   --card: #FFFDF8;
-  --card-foreground: #10333F;
+  --card-foreground: #1A1B18;
   --popover: #FFFDF8;
-  --popover-foreground: #10333F;
-  --primary: #1D86A3;
+  --popover-foreground: #1A1B18;
+  --primary: #D97F22;
   --primary-foreground: #FFFDF8;
   --secondary: #F6EEDE;
-  --secondary-foreground: #10333F;
+  --secondary-foreground: #1A1B18;
   --muted: #F6EEDE;
   --muted-foreground: #6B7E82;
   --accent: #EA9A3E;
@@ -125,27 +125,27 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: #DFCBA0;
   --input: #DFCBA0;
-  --ring: #1D86A3;
+  --ring: #D97F22;
   --chart-1: #1D86A3;
   --chart-2: #EA9A3E;
   --chart-3: #135971;
   --chart-4: #F3B563;
   --chart-5: #AEDCE6;
-  --radius: 1rem;
+  --radius: 0.75rem;
 
-  --sidebar: #10333F;
+  --sidebar: #1A1B18;
   --sidebar-foreground: #EEE1C6;
-  --sidebar-primary: #1D86A3;
+  --sidebar-primary: #D97F22;
   --sidebar-primary-foreground: #FFFDF8;
-  --sidebar-accent: #144A5D;
+  --sidebar-accent: #292B27;
   --sidebar-accent-foreground: #FFFDF8;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #1D86A3;
+  --sidebar-ring: #D97F22;
 
   /* Signature shapes — softer, more modern radius */
-  --pin-radius: 1.5rem 1.5rem 1.5rem 1.5rem;
-  --pin-radius-rtl: 1.5rem 1.5rem 1.5rem 1.5rem;
-  --ink: #10333F;
+  --pin-radius: 0.875rem;
+  --pin-radius-rtl: 0.875rem;
+  --ink: #1A1B18;
 
   /* WEEMAP SINAI brand color aliases (kept for older markup) */
   --ft-blue: #1D86A3;

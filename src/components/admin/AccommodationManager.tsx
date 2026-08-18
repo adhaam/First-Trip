@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, Download, BedDouble, BedSingle, UtensilsCrossed } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, BedDouble, BedSingle, UtensilsCrossed } from 'lucide-react'
 import { Accommodation, MealPlan, MealPlanKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { SeasonalRatesEditor } from './SeasonalRatesEditor'

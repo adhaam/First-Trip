@@ -7,7 +7,7 @@ import { Link } from '@/i18n/navigation'
 import { BookingForm } from '@/components/BookingForm'
 import { MapPreview } from '@/components/MapPreview'
 import { Reveal } from '@/components/motion/Reveal'
-import { ACCOMMODATION_TAGS, PLACEHOLDER_IMAGES, WHATSAPP_NUMBER } from '@/lib/constants'
+import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
 import { formatEGP } from '@/lib/pricing'
 import {
   Star, MapPin, Check, ChevronLeft, ChevronRight, ArrowLeft,
@@ -60,7 +60,7 @@ export function ProductDetailClient({
   const tag = ACCOMMODATION_TAGS[accommodation.type]
   const images = accommodation.images?.length
     ? accommodation.images
-    : [accommodation.image_url || PLACEHOLDER_IMAGES.dahab1]
+    : [accommodation.image_url || '/media/heroposter.png']
   const name = ar ? accommodation.name_ar : accommodation.name_en
   const amenities = (ar ? accommodation.amenities_ar : accommodation.amenities_en) ?? []
   const location = ar
@@ -73,7 +73,11 @@ export function ProductDetailClient({
     ar ? `استفسار عن ${accommodation.name_ar}` : `Question about ${accommodation.name_en}`,
   )}`
 
-  const cheapest = Number(accommodation.price_4day) || Number(accommodation.price_per_night)
+  const roomRates = [accommodation.price_single_room, accommodation.price_double_room, accommodation.price_triple_room]
+    .map(Number)
+    .filter((price) => price > 0)
+  const hasRoomPricing = roomRates.length > 0
+  const cheapest = hasRoomPricing ? Math.min(...roomRates) : Number(accommodation.price_per_night) || 0
 
   return (
     <div className="bg-sand-50 pb-24 lg:pb-0">
@@ -179,18 +183,18 @@ export function ProductDetailClient({
               <div className="grid gap-px overflow-hidden border-[1.5px] border-sand-300 bg-sand-300 pin-card sm:grid-cols-3">
                 <IncludedTile
                   icon={BusFront}
-                  title={ar ? 'انتقالات مكيفة' : 'A/C transfers'}
-                  desc={ar ? 'من محافظتك للفندق ورجوع' : 'From your city to the door and back'}
+                  title={ar ? 'اختيارات انتقال' : 'Transfer choices'}
+                  desc={ar ? 'باص أو هايس حسب الإعدادات المتاحة' : 'Bus or Hiace when configured and available'}
                 />
                 <IncludedTile
                   icon={Mountain}
-                  title={ar ? 'رحلتين داخليتين' : 'Two day trips'}
-                  desc={ar ? 'ضمن الباكدج من غير فلوس زيادة' : 'Included in the package, no extra cost'}
+                  title={ar ? 'رحلات الباكدج' : 'Package trips'}
+                  desc={ar ? 'الرحلات المضمّنة بتظهر في ملخص السعر' : 'Included trips appear in the price summary'}
                 />
                 <IncludedTile
                   icon={ShieldCheck}
-                  title={ar ? 'مقدم 50% بس' : '50% deposit only'}
-                  desc={ar ? 'والباقي لما توصل دهب' : 'The rest when you arrive in Dahab'}
+                  title={ar ? 'تأكيد قبل الدفع' : 'Confirm before payment'}
+                  desc={ar ? 'السعر النهائي بيتأكد معاك أولاً' : 'Your final total is confirmed with you first'}
                 />
               </div>
             </Reveal>
@@ -241,32 +245,22 @@ export function ProductDetailClient({
               {/* price card */}
               <div className="overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
                 <div className="space-y-2.5 p-6">
-                  <PriceRow
-                    label={ar ? 'إقامة فقط' : 'Stay only'}
-                    sub={`${t('perNight')} · ${t('perPerson')}`}
-                    value={formatEGP(Number(accommodation.price_per_night), locale)}
-                    currency={common('egp')}
-                  />
-                  <PriceRow
-                    label={t('package4')}
-                    sub={ar ? 'انتقالات + إقامة + رحلتين' : 'Transfer + stay + 2 trips'}
-                    value={formatEGP(Number(accommodation.price_4day), locale)}
-                    currency={common('egp')}
-                    highlight
-                  />
-                  <PriceRow
-                    label={t('package5')}
-                    sub={ar ? 'انتقالات + إقامة + رحلتين' : 'Transfer + stay + 2 trips'}
-                    value={formatEGP(Number(accommodation.price_5day), locale)}
-                    currency={common('egp')}
-                  />
+                  {hasRoomPricing ? (
+                    <>
+                      {Number(accommodation.price_single_room) > 0 && <PriceRow label={ar ? 'غرفة سينجل' : 'Single room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_single_room), locale)} currency={common('egp')} />}
+                      {Number(accommodation.price_double_room) > 0 && <PriceRow label={ar ? 'غرفة دبل' : 'Double room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_double_room), locale)} currency={common('egp')} highlight />}
+                      {Number(accommodation.price_triple_room) > 0 && <PriceRow label={ar ? 'غرفة تريبل' : 'Triple room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_triple_room), locale)} currency={common('egp')} />}
+                    </>
+                  ) : (
+                    <PriceRow label={ar ? 'إقامة فقط' : 'Stay only'} sub={`${t('perNight')} · ${t('perPerson')}`} value={formatEGP(Number(accommodation.price_per_night), locale)} currency={common('egp')} />
+                  )}
                 </div>
 
                 <div className="border-t border-sand-300 bg-sand-100 px-6 py-4">
                   <p className="text-xs leading-relaxed text-sea-900/55">
-                    {ar
-                      ? 'أسعار الباكدج فوق مش شاملة زيادة المحافظة — بتتحسب تحت لما تختار محافظتك.'
-                      : 'Package prices above exclude the governorate surcharge — it\'s added below once you pick your city.'}
+                    {accommodation.seasonal_rates?.length
+                      ? (ar ? 'الفترات الموسمية بتتحسب ليلة بليلة في نموذج الحجز.' : 'Seasonal periods are calculated night by night in the booking form.')
+                      : (ar ? 'اختار التواريخ والتفاصيل تحت علشان تشوف الملخص الكامل.' : 'Choose dates and details below to see the full calculated summary.')}
                   </p>
                 </div>
               </div>

@@ -102,6 +102,7 @@ export function SiteSettingsManager() {
             <div><Label>{locale === 'ar' ? 'البريد الإلكتروني' : 'Email'}</Label><Input dir="ltr" value={settings.email || ''} onChange={e => updateField('email', e.target.value)} className="mt-1" /></div>
             <div><Label>{locale === 'ar' ? 'رابط الفيسبوك' : 'Facebook URL'}</Label><Input dir="ltr" value={settings.facebook_url || ''} onChange={e => updateField('facebook_url', e.target.value)} className="mt-1" /></div>
             <div><Label>{locale === 'ar' ? 'رابط الإنستجرام' : 'Instagram URL'}</Label><Input dir="ltr" value={settings.instagram_url || ''} onChange={e => updateField('instagram_url', e.target.value)} className="mt-1" /></div>
+            <div><Label>{locale === 'ar' ? 'الموقع' : 'Location'}</Label><Input value={settings.location || ''} onChange={e => updateField('location', e.target.value)} className="mt-1" /></div>
             <div><Label>{locale === 'ar' ? 'رابط اللوجو' : 'Logo URL'}</Label><Input dir="ltr" value={settings.logo_url || ''} onChange={e => updateField('logo_url', e.target.value)} className="mt-1" /></div>
           </div>
         </CardContent>
@@ -169,6 +170,10 @@ export function SiteSettingsManager() {
             <div><Label>{locale === 'ar' ? 'عنوان الهيرو (إنجليزي)' : 'Hero heading (English)'}</Label><Input dir="ltr" value={settings.hero_heading_en || ''} onChange={e => updateField('hero_heading_en', e.target.value)} className="mt-1" placeholder="We map Sinai." /></div>
             <div><Label>{locale === 'ar' ? 'العنوان الفرعي (عربي)' : 'Hero subheading (Arabic)'}</Label><Input value={settings.hero_subheading_ar || ''} onChange={e => updateField('hero_subheading_ar', e.target.value)} className="mt-1" placeholder="وإنت بتعيشها" /></div>
             <div><Label>{locale === 'ar' ? 'العنوان الفرعي (إنجليزي)' : 'Hero subheading (English)'}</Label><Input dir="ltr" value={settings.hero_subheading_en || ''} onChange={e => updateField('hero_subheading_en', e.target.value)} className="mt-1" placeholder="You live it." /></div>
+            <div><Label>{locale === 'ar' ? 'زر الحجز (عربي)' : 'Primary CTA (Arabic)'}</Label><Input value={settings.primary_cta_label_ar || ''} onChange={e => updateField('primary_cta_label_ar', e.target.value)} className="mt-1" /></div>
+            <div><Label>{locale === 'ar' ? 'زر الحجز (إنجليزي)' : 'Primary CTA (English)'}</Label><Input dir="ltr" value={settings.primary_cta_label_en || ''} onChange={e => updateField('primary_cta_label_en', e.target.value)} className="mt-1" placeholder="PLAN YOUR TRIP" /></div>
+            <div><Label>{locale === 'ar' ? 'زر الاستكشاف (عربي)' : 'Secondary CTA (Arabic)'}</Label><Input value={settings.secondary_cta_label_ar || ''} onChange={e => updateField('secondary_cta_label_ar', e.target.value)} className="mt-1" /></div>
+            <div><Label>{locale === 'ar' ? 'زر الاستكشاف (إنجليزي)' : 'Secondary CTA (English)'}</Label><Input dir="ltr" value={settings.secondary_cta_label_en || ''} onChange={e => updateField('secondary_cta_label_en', e.target.value)} className="mt-1" placeholder="EXPLORE SINAI" /></div>
           </div>
 
           <div className="space-y-2 pt-2">
@@ -191,7 +196,7 @@ export function SiteSettingsManager() {
           </div>
 
           <div className="pt-2">
-            <Label className="font-semibold">{locale === 'ar' ? 'أماكن الإقامة المميزة (فاضي = تلقائي)' : 'Featured accommodations (empty = automatic)'}</Label>
+            <Label className="font-semibold">{locale === 'ar' ? 'الإقامات المميزة واختيارات وي ماب (فاضي = تلقائي)' : 'Featured stays & WEEMAP Picks (empty = automatic)'}</Label>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {accommodations.filter(a => a.is_active).map(a => (
                 <label key={a.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 p-2.5 text-sm hover:bg-gray-50">
@@ -208,7 +213,7 @@ export function SiteSettingsManager() {
           </div>
 
           <div className="pt-2">
-            <Label className="font-semibold">{locale === 'ar' ? 'الرحلات المميزة (فاضي = تلقائي)' : 'Featured trips (empty = automatic)'}</Label>
+            <Label className="font-semibold">{locale === 'ar' ? 'الرحلات المميزة واختيارات وي ماب (فاضي = تلقائي)' : 'Featured trips & WEEMAP Picks (empty = automatic)'}</Label>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {trips.filter(t => t.is_active).map(t => (
                 <label key={t.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 p-2.5 text-sm hover:bg-gray-50">
@@ -237,6 +242,8 @@ export function SiteSettingsManager() {
             <div><Label>{locale === 'ar' ? 'عنوان الموقع (فاضي = الافتراضي)' : 'Site title (empty = default)'}</Label><Input dir="ltr" value={settings.seo_title || ''} onChange={e => updateField('seo_title', e.target.value)} className="mt-1" placeholder="WEEMAP SINAI — We map Sinai. You live it." /></div>
             <div><Label>{locale === 'ar' ? 'وصف الموقع (عربي)' : 'Site description (Arabic)'}</Label><Textarea rows={2} value={settings.seo_description_ar || ''} onChange={e => updateField('seo_description_ar', e.target.value)} className="mt-1" /></div>
             <div><Label>{locale === 'ar' ? 'وصف الموقع (إنجليزي)' : 'Site description (English)'}</Label><Textarea rows={2} value={settings.seo_description_en || ''} onChange={e => updateField('seo_description_en', e.target.value)} className="mt-1" /></div>
+            <div><Label>{locale === 'ar' ? 'اسم المؤسسة' : 'Organization name'}</Label><Input value={settings.organization_name || ''} onChange={e => updateField('organization_name', e.target.value)} className="mt-1" placeholder="WEEMAP SINAI" /></div>
+            <div><Label>{locale === 'ar' ? 'رابط صورة المشاركة الاجتماعية' : 'Social share image URL'}</Label><Input dir="ltr" value={settings.social_share_image || ''} onChange={e => updateField('social_share_image', e.target.value)} className="mt-1" placeholder="https://..." /></div>
           </div>
         </CardContent>
       </Card>

@@ -48,13 +48,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   ])
   const related = getRelatedAccommodations(accommodation, all)
 
-  // Representative per-person nightly starting price for the Product schema —
-  // same room-price-first logic the booking engine uses, never a fabricated
-  // figure: double room ÷ 2, falling back to the legacy per-night field only
-  // for properties that haven't had room pricing configured yet.
-  const startingPrice = Number(accommodation.price_double_room) > 0
-    ? Number(accommodation.price_double_room) / 2
-    : Number(accommodation.price_per_night) || 0
+  const roomRates = [accommodation.price_single_room, accommodation.price_double_room, accommodation.price_triple_room]
+    .map(Number)
+    .filter((price) => price > 0)
+  const startingPrice = roomRates.length ? Math.min(...roomRates) : Number(accommodation.price_per_night) || 0
   const productSchema = getProductSchema({
     name: locale === 'ar' ? accommodation.name_ar || accommodation.name_en : accommodation.name_en || accommodation.name_ar,
     description: locale === 'ar' ? accommodation.description_ar : accommodation.description_en,

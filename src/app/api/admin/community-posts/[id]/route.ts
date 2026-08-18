@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { POST_CATEGORIES } from '@/lib/community'
 
 const postUpdateSchema = z.object({
   title_ar: z.string().min(1).optional(),
   title_en: z.string().min(1).optional(),
   content_ar: z.string().optional(),
   content_en: z.string().optional(),
-  category: z.enum(['blog', 'hidden-gems', 'stories', 'dahab-guide']).optional(),
+  category: z.enum(POST_CATEGORIES).optional(),
   image_url: z.string().optional().nullable(),
   video_url: z.string().optional().nullable(),
   sort_order: z.number().optional(),

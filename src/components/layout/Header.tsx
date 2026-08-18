@@ -42,7 +42,8 @@ export function Header() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full transition-all duration-300',
+        'top-0 z-50 w-full transition-all duration-300',
+        isHome ? 'fixed' : 'sticky',
         scrolled
           ? 'border-b border-sand-300/70 bg-sand-50/90 backdrop-blur-md supports-[backdrop-filter]:bg-sand-50/75'
           : transparent
@@ -56,7 +57,7 @@ export function Header() {
         </Link>
 
         {/* Desktop nav — a single ink hairline rail rather than floating pills */}
-        <nav className="hidden items-center lg:flex">
+        <nav className="hidden items-center xl:flex">
           {NAV_ITEMS.map((item) => {
             const labelKey = NAV_LABEL_KEYS[item.href] || 'home'
             const active = isActive(item.href)
@@ -105,7 +106,7 @@ export function Header() {
               'hidden h-10 items-center gap-1.5 rounded-full px-5 text-sm font-semibold transition-all sm:inline-flex',
               transparent
                 ? 'bg-white text-sea-900 hover:bg-sand-100'
-                : 'bg-sea-900 text-sand-50 hover:bg-sea-700',
+                : 'bg-sun-500 text-white hover:bg-sun-600',
             )}
           >
             {locale === 'ar' ? 'احجز' : 'Book'}
@@ -115,7 +116,7 @@ export function Header() {
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               className={cn(
-                'inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors lg:hidden',
+                'inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors xl:hidden',
                 transparent ? 'text-white hover:bg-white/10' : 'text-sea-900 hover:bg-sand-200',
               )}
             >
@@ -139,7 +140,7 @@ export function Header() {
                     className={cn(
                       'flex items-center gap-3 rounded-xl px-3 py-3 text-[0.95rem] font-medium transition-colors',
                       isActive(item.href)
-                        ? 'bg-sea-900 text-sand-50'
+                        ? 'bg-sun-500 text-white'
                         : 'text-sea-900/80 hover:bg-sand-200',
                     )}
                   >

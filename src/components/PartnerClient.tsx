@@ -1,119 +1,44 @@
 'use client'
 
-import { useState } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
+import { useLocale } from 'next-intl'
 import Image from 'next/image'
-import { Reveal } from '@/components/motion/Reveal'
-import { WaveDivider } from '@/components/brand/Section'
-import { PLACEHOLDER_IMAGES } from '@/lib/constants'
-import { Handshake, Users, TrendingUp, Megaphone, CheckCircle2, Send } from 'lucide-react'
+import { WHATSAPP_NUMBER, EMAIL } from '@/lib/constants'
+import { Handshake, Building2, Compass, Bus, MessageCircle, Mail } from 'lucide-react'
+import type { SiteSettings } from '@/lib/types'
 
-const benefits = [
-  { icon: Users, key: 'benefit1' },
-  { icon: TrendingUp, key: 'benefit2' },
-  { icon: Megaphone, key: 'benefit3' },
-  { icon: CheckCircle2, key: 'benefit4' },
-] as const
-
-export function PartnerClient() {
-  const t = useTranslations('partner')
-  const locale = useLocale()
-  const ar = locale === 'ar'
-  const [submitted, setSubmitted] = useState(false)
-
+export function PartnerClient({ settings }: { settings: SiteSettings | null }) {
+  const ar = useLocale() === 'ar'
+  const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
+  const email = settings?.email || EMAIL
+  const groups = [
+    { icon: Building2, ar: 'أماكن إقامة', en: 'Stays' },
+    { icon: Compass, ar: 'تجارب ورحلات', en: 'Experiences' },
+    { icon: Bus, ar: 'خدمات نقل', en: 'Transport' },
+  ]
   return (
     <div className="bg-sand-50">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
-        <div className="absolute inset-0 opacity-20">
-          <Image src={PLACEHOLDER_IMAGES.desert1} alt="" fill className="object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
-        </div>
-        <div className="container-main relative z-10">
-          <span className="eyebrow mb-5 justify-center text-sun-300">
-            <span aria-hidden className="h-px w-6 bg-current" />
-            {ar ? 'شراكات' : 'Partnerships'}
-          </span>
-          <Handshake className="mx-auto mb-4 h-10 w-10 opacity-80" />
-          <h1 className="font-display text-4xl font-bold sm:text-5xl">{t('title')}</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
-        </div>
-        <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
-      </section>
-
-      {/* Benefits */}
-      <section className="section-padding bg-sand-50">
+      <section className="relative isolate min-h-[64svh] overflow-hidden bg-sea-900 py-20 text-white md:py-28">
+        <Image src="/media/heroposter.png" alt="" fill sizes="100vw" className="-z-20 object-cover" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 via-black/60 to-black/20 rtl:bg-gradient-to-l" />
         <div className="container-main">
-          <Reveal>
-            <h2 className="mb-12 text-center font-display text-2xl font-semibold text-sea-900 md:text-3xl">
-              {t('benefits')}
-            </h2>
-          </Reveal>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {benefits.map((b, i) => (
-              <Reveal key={i} delay={i * 80}>
-                <article className="border-[1.5px] border-sand-300 bg-card p-6 text-center pin-card transition-shadow hover:shadow-sm">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sun-400 text-white">
-                    <b.icon className="h-6 w-6" />
-                  </div>
-                  <p className="text-sm leading-relaxed text-sea-900/70">{t(b.key)}</p>
-                </article>
-              </Reveal>
-            ))}
+          <Handshake className="h-10 w-10 text-sun-300" />
+          <p className="eyebrow mt-6 text-sun-300">{ar ? 'اشتغل مع وي ماب' : 'Partner with WEEMAP'}</p>
+          <h1 className="mt-4 max-w-4xl text-4xl font-extrabold leading-tight sm:text-5xl md:text-7xl">{ar ? 'خلّي تجربتك جزء من خريطة سينا.' : 'Bring your Sinai experience onto the map.'}</h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/75">{ar ? 'بنرحب بالتواصل مع مقدمي الخدمات الحقيقيين في سينا. كل تعاون بيتراجع ويتفق عليه بشكل مباشر.' : 'We welcome conversations with real Sinai operators. Every collaboration is reviewed and agreed directly.'}</p>
+        </div>
+      </section>
+      <main className="container-main py-14 md:py-20">
+        <div className="grid gap-5 md:grid-cols-3">
+          {groups.map(({ icon: Icon, ar: labelAr, en }) => <div key={en} className="border-t-2 border-sun-500 bg-[#fffdf8] p-7"><Icon className="h-6 w-6 text-sun-500" /><h2 className="mt-5 text-xl font-bold">{ar ? labelAr : en}</h2></div>)}
+        </div>
+        <section className="mt-12 grid gap-8 bg-[#1b1b17] p-8 text-white md:grid-cols-[1fr_auto] md:items-center md:p-12">
+          <div><h2 className="text-3xl font-bold">{ar ? 'عرّفنا بتجربتك.' : 'Tell us about what you do.'}</h2><p className="mt-3 text-white/65">{ar ? 'تواصل من خلال بيانات وي ماب الرسمية.' : 'Reach us through WEEMAP’s official contact channels.'}</p></div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-sun-500 px-6 font-semibold hover:bg-sun-600"><MessageCircle className="h-4 w-4" />WhatsApp</a>
+            <a href={`mailto:${email}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-white/30 px-6 font-semibold hover:bg-white/10"><Mail className="h-4 w-4" />Email</a>
           </div>
-        </div>
-      </section>
-
-      {/* Contact Form */}
-      <section className="section-padding bg-sand-100">
-        <div className="container-main max-w-2xl">
-          <Reveal>
-            <article className="border-[1.5px] border-sand-300 bg-sand-50 p-8 pin-card">
-              <h2 className="mb-6 text-center font-display text-2xl font-semibold text-sea-900">
-                {t('contactForm')}
-              </h2>
-
-              {submitted ? (
-                <div className="py-10 text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-                  </div>
-                  <p className="text-lg text-sea-900/70">{t('success')}</p>
-                </div>
-              ) : (
-                <form
-                  onSubmit={(e) => { e.preventDefault(); setSubmitted(true) }}
-                  className="space-y-4"
-                >
-                  <div>
-                    <label htmlFor="name" className="mb-1 block text-sm font-medium text-sea-900/80">{t('name')}</label>
-                    <input id="name" required className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
-                  </div>
-                  <div>
-                    <label htmlFor="business" className="mb-1 block text-sm font-medium text-sea-900/80">{t('business')}</label>
-                    <input id="business" required className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
-                  </div>
-                  <div>
-                    <label htmlFor="phone" className="mb-1 block text-sm font-medium text-sea-900/80">{t('phone')}</label>
-                    <input id="phone" type="tel" required dir="ltr" className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
-                  </div>
-                  <div>
-                    <label htmlFor="message" className="mb-1 block text-sm font-medium text-sea-900/80">{t('message')}</label>
-                    <textarea id="message" rows={4} className="w-full rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-sm text-sea-900 outline-none transition-colors focus:border-sea-600 focus:ring-1 focus:ring-sea-600" />
-                  </div>
-                  <button
-                    type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-sea-900 px-6 py-3 text-sm font-semibold text-sand-50 transition-colors hover:bg-sea-800"
-                  >
-                    <Send className="h-4 w-4" />
-                    {t('send')}
-                  </button>
-                </form>
-              )}
-            </article>
-          </Reveal>
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   )
 }

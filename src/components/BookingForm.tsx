@@ -15,8 +15,8 @@ import {
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import {
   PACKAGE_DEPARTURE_DAYS, PACKAGE_RETURN_DAYS,
-  governoratesFor, quoteAccommodationPackage, quoteStay, quoteTransfer,
-  nightsForDuration, upcomingDatesFor, formatEGP,
+  governoratesFor, quotePackageV2, quoteStay, quoteTransfer,
+  nightsForDuration, upcomingDatesFor, formatEGP, roomsForPeople,
 } from '@/lib/pricing'
 import type {
   Accommodation, MealPlan, SinaiTrip, TransferDirection, TransferGovernoratePrice,
@@ -66,6 +66,17 @@ const schema = z.object({
   phone: z.string().min(10, 'Invalid phone'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   notes: z.string().optional(),
+}).superRefine((value, ctx) => {
+  const required = (path: keyof typeof value) => {
+    if (!value[path]) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: 'Required' })
+  }
+  if (value.mode === 'package') required('package_governorate')
+  if (value.mode === 'stay-only') required('check_in_date')
+  if (value.mode === 'transfer-only') {
+    required('transfer_governorate')
+    required('transfer_date')
+    if (value.transfer_direction === 'round_trip') required('transfer_return_date')
+  }
 })
 
 type FormData = z.infer<typeof schema>
@@ -123,6 +134,7 @@ export function BookingForm({
   const packageTransferType = (watch('package_transfer_type') ?? 'hiace') as TransferType
   const packageDirection = 'round_trip' as const // always round_trip for packages
   const nights = Math.max(1, parseInt(watch('nights') || '1') || 1)
+  const stayCheckIn = watch('check_in_date')
   const transferType = (watch('transfer_type') ?? 'hiace') as TransferType
   const transferGov = watch('transfer_governorate')
   const transferDirection = (watch('transfer_direction') ?? 'round_trip') as TransferDirection
@@ -140,10 +152,6 @@ export function BookingForm({
     () => sinaiTrips.filter((trip) => includedTripIds.includes(trip.id)),
     [sinaiTrips, includedTripIds],
   )
-  const includedTripsTotal = useMemo(
-    () => includedTrips.reduce((sum, trip) => sum + (Number(trip.price) || 0), 0),
-    [includedTrips],
-  )
   const extraTripsAvailable = useMemo(
     () => sinaiTrips.filter((trip) => !includedTripIds.includes(trip.id) && !extraTripIds.includes(trip.id)),
     [sinaiTrips, includedTripIds, extraTripIds],
@@ -152,17 +160,23 @@ export function BookingForm({
     () => sinaiTrips.filter((trip) => extraTripIds.includes(trip.id)),
     [sinaiTrips, extraTripIds],
   )
-  const extraTripsTotal = useMemo(
-    () => selectedExtraTrips.reduce((sum, trip) => sum + (Number(trip.price) || 0), 0),
-    [selectedExtraTrips],
-  )
+  const numRooms = roomsForPeople(roomType, numPeople)
 
   // ─── governorate options ───
   // Picked first, before the bus/hiace choice — so we show the union of
   // governorates configured for either transfer type. The per-governorate
   // surcharge for whichever type gets picked afterward is resolved later,
   // at quote time, from the matching (type, code) pair.
-  const packageGovs = useMemo(() => governoratesFor(pricing, 'package_bus'), [pricing])
+  const packageGovs = useMemo(() => {
+    const merged = new Map<string, TransferGovernoratePrice>()
+    for (const g of [
+      ...governoratesFor(pricing, 'package_bus'),
+      ...governoratesFor(pricing, 'hiace'),
+    ]) {
+      if (!merged.has(g.governorate_code)) merged.set(g.governorate_code, g)
+    }
+    return [...merged.values()].sort((a, b) => a.sort_order - b.sort_order || a.name_en.localeCompare(b.name_en))
+  }, [pricing])
   const transferGovs = useMemo(() => {
     const merged = new Map<string, TransferGovernoratePrice>()
     for (const g of [
@@ -193,17 +207,23 @@ export function BookingForm({
   // ─── upcoming departure dates for packages (user picks which one) ───
   // 4-day: departs Thu, returns Mon | 5-day: departs Sun, returns Fri
   const packageDepartureDates = useMemo(() => {
+    if (packageTransferType === 'hiace') return upcomingDatesFor(null, 14)
     const departDay = duration === '5' ? 0 : 4 // Sun(0) or Thu(4)
     return upcomingDatesFor([departDay], 8) // next 8 options
-  }, [duration])
+  }, [duration, packageTransferType])
 
   const packageReturnDate = useMemo(() => {
-    const returnDay = duration === '5' ? 5 : 1 // Fri(5) or Mon(1)
     const base = packageDepartureDate || packageDepartureDates[0]
     if (!base) return ''
+    if (packageTransferType === 'hiace') {
+      const date = new Date(`${base}T00:00:00`)
+      date.setDate(date.getDate() + (duration === '5' ? 5 : 4))
+      return date.toISOString().slice(0, 10)
+    }
+    const returnDay = duration === '5' ? 5 : 1 // Fri(5) or Mon(1)
     const [ret] = upcomingDatesFor([returnDay], 1, new Date(`${base}T00:00:00`))
     return ret
-  }, [duration, packageDepartureDate, packageDepartureDates])
+  }, [duration, packageDepartureDate, packageDepartureDates, packageTransferType])
 
   // ─── live price preview (server recomputes on submit) ───
   // Room + meal-plan pricing when this property has room prices configured;
@@ -211,14 +231,16 @@ export function BookingForm({
   const packageQuote = useMemo(() => {
     if (mode !== 'package') return null
     if (hasRoomPricing) {
-      return quoteAccommodationPackage({
+      return quotePackageV2({
         pricing,
         accommodation,
         roomType,
+        checkIn: packageDepartureDate || packageDepartureDates[0],
         mealPlanPricePerNight,
         nights: nightsForDuration(duration === '5' ? 5 : 4),
-        includedTripsTotal,
-        extraTripsTotal,
+        numRooms,
+        includedTrips,
+        extraTrips: selectedExtraTrips,
         transferType: packageTransferType,
         governorateCode: packageGov,
         direction: packageDirection,
@@ -232,18 +254,20 @@ export function BookingForm({
       pricing, type: 'package_bus', governorateCode: packageGov, direction: packageDirection, numPeople,
     })
     return {
-      roomPerPerson: accommodationPrice,
-      mealPlanTotal: 0,
-      includedTripsTotal: 0,
+      accommodationSubtotal: accommodationPrice * numPeople,
+      mealSubtotal: 0,
+      includedTripsSubtotal: 0,
       transfer,
-      perPersonBeforeExtras: accommodationPrice + transfer.perPerson,
-      extraTripsTotal: 0,
+      transferSubtotal: transfer.total,
+      extraTripsSubtotal: 0,
+      numRooms,
       numPeople: transfer.numPeople,
       total: (accommodationPrice + transfer.perPerson) * transfer.numPeople,
     }
   }, [
     mode, hasRoomPricing, accommodation, pricing, roomType, mealPlanPricePerNight, duration,
-    includedTripsTotal, extraTripsTotal, packageTransferType, packageGov, packageDirection, numPeople,
+    includedTrips, selectedExtraTrips, packageTransferType, packageGov, packageDirection, numPeople,
+    numRooms, packageDepartureDate, packageDepartureDates,
   ])
 
   const transferQuote = useMemo(() => {
@@ -260,18 +284,24 @@ export function BookingForm({
   const stayQuote = useMemo(() => {
     if (mode !== 'stay-only') return null
     if (hasRoomPricing) {
-      return quoteStay({ accommodation, roomType, mealPlanPricePerNight, nights, numPeople })
+      if (!stayCheckIn) return null
+      return quoteStay({
+        accommodation, roomType, checkIn: stayCheckIn, mealPlanPricePerNight,
+        nights, numPeople, numRooms,
+      })
     }
     // legacy fallback
     const perNightPerPerson = Number(accommodation.price_per_night)
     return {
-      roomPerPerson: perNightPerPerson,
-      perNightPerPerson,
+      nightly: [],
+      accommodationSubtotal: perNightPerPerson * nights * numPeople,
+      mealSubtotal: 0,
+      numRooms,
       nights,
       numPeople,
       total: perNightPerPerson * nights * numPeople,
     }
-  }, [mode, hasRoomPricing, accommodation, roomType, mealPlanPricePerNight, nights, numPeople])
+  }, [mode, hasRoomPricing, accommodation, roomType, mealPlanPricePerNight, nights, numPeople, numRooms, stayCheckIn])
 
   const total =
     mode === 'package'
@@ -424,33 +454,33 @@ export function BookingForm({
           {mode === 'package' && packageQuote && (
             <>
               <Line
-                label={`${t('accommodationLine')} · ${roomType === 'single' ? (ar ? 'سينجل' : 'Single') : roomType === 'triple' ? (ar ? 'تريبل' : 'Triple') : (ar ? 'دبل' : 'Double')}`}
-                value={`${formatEGP(packageQuote.roomPerPerson, locale)} ${common('egp')}`}
+                label={`${t('accommodationLine')} · ${packageQuote.numRooms} ${packageQuote.numRooms === 1 ? (ar ? 'غرفة' : 'room') : (ar ? 'غرف' : 'rooms')}`}
+                value={`${formatEGP(packageQuote.accommodationSubtotal, locale)} ${common('egp')}`}
               />
-              {packageQuote.mealPlanTotal > 0 && (
+              {packageQuote.mealSubtotal > 0 && (
                 <Line
                   label={selectedMealPlan ? (ar ? selectedMealPlan.label_ar : selectedMealPlan.label_en) : ''}
-                  value={`${formatEGP(packageQuote.mealPlanTotal, locale)} ${common('egp')}`}
+                  value={`${formatEGP(packageQuote.mealSubtotal, locale)} ${common('egp')}`}
                 />
               )}
               {includedTrips.length > 0 && (
                 <Line
                   label={ar ? 'رحلات مضمّنة' : 'Included trips'}
-                  value={`${formatEGP(packageQuote.includedTripsTotal, locale)} ${common('egp')}`}
+                  value={`${formatEGP(packageQuote.includedTripsSubtotal, locale)} ${common('egp')}`}
                 />
               )}
               <Line
                 label={t('transferLine')}
                 value={
                   packageQuote.transfer.isPriced
-                    ? `${formatEGP(packageQuote.transfer.perPerson, locale)} ${common('egp')}`
+                    ? `${formatEGP(packageQuote.transferSubtotal, locale)} ${common('egp')}`
                     : '—'
                 }
               />
-              {packageQuote.extraTripsTotal > 0 && (
+              {packageQuote.extraTripsSubtotal > 0 && (
                 <Line
                   label={ar ? 'رحلات إضافية' : 'Extra trips'}
-                  value={`${formatEGP(packageQuote.extraTripsTotal, locale)} ${common('egp')} × ${numPeople}`}
+                  value={`${formatEGP(packageQuote.extraTripsSubtotal, locale)} ${common('egp')}`}
                 />
               )}
             </>
@@ -599,14 +629,14 @@ export function BookingForm({
                       icon={BedDouble}
                       active={roomType === 'double'}
                       title={ar ? 'دبل' : 'Double'}
-                      desc={ar ? 'لفردين — السعر للفرد' : 'For 2 — price per person'}
+                      desc={ar ? 'غرفة لفردين' : 'Sleeps up to 2'}
                       onClick={() => setValue('room_type', 'double')}
                     />
                     <RoomTypeCard
                       icon={BedDouble}
                       active={roomType === 'triple'}
                       title={ar ? 'تريبل' : 'Triple'}
-                      desc={ar ? 'لـ 3 أفراد — السعر للفرد' : 'For 3 — price per person'}
+                      desc={ar ? 'غرفة لـ 3 أفراد' : 'Sleeps up to 3'}
                       onClick={() => setValue('room_type', 'triple')}
                     />
                   </div>
@@ -778,14 +808,14 @@ export function BookingForm({
                       icon={BedDouble}
                       active={roomType === 'double'}
                       title={ar ? 'دبل' : 'Double'}
-                      desc={ar ? 'لفردين — السعر للفرد' : 'For 2 — price per person'}
+                      desc={ar ? 'غرفة لفردين' : 'Sleeps up to 2'}
                       onClick={() => setValue('room_type', 'double')}
                     />
                     <RoomTypeCard
                       icon={BedDouble}
                       active={roomType === 'triple'}
                       title={ar ? 'تريبل' : 'Triple'}
-                      desc={ar ? 'لـ 3 أفراد — السعر للفرد' : 'For 3 — price per person'}
+                      desc={ar ? 'غرفة لـ 3 أفراد' : 'Sleeps up to 3'}
                       onClick={() => setValue('room_type', 'triple')}
                     />
                   </div>
@@ -870,7 +900,7 @@ export function BookingForm({
                     className={cn(
                       'rounded-2xl border-[1.5px] px-2 py-2.5 text-xs font-medium transition-colors sm:text-sm',
                       transferDirection === d
-                        ? 'border-sea-500 bg-sea-50 text-sea-700'
+                        ? 'border-sun-500 bg-sun-50 text-sea-900'
                         : 'border-sea-100 text-sea-900/65 hover:border-sea-300',
                     )}
                   >
@@ -1062,14 +1092,14 @@ function ModeOption({
       className={cn(
         'flex items-start gap-3 rounded-2xl border-[1.5px] p-4 text-start transition-colors',
         active
-          ? 'border-sea-500 bg-sea-50'
+          ? 'border-sun-500 bg-sun-50'
           : 'border-sea-100 hover:border-sea-300',
       )}
     >
       <span
         className={cn(
           'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
-          active ? 'bg-sea-500 text-white' : 'bg-sea-50 text-sea-600',
+          active ? 'bg-sun-500 text-white' : 'bg-sand-100 text-sea-700',
         )}
       >
         <Icon className="h-5 w-5" />
@@ -1097,7 +1127,7 @@ function RoomTypeCard({
       onClick={onClick}
       className={cn(
         'flex items-center gap-2.5 rounded-2xl border-[1.5px] p-3 text-start transition-colors',
-        active ? 'border-sea-500 bg-sea-50' : 'border-sea-100 hover:border-sea-300',
+        active ? 'border-sun-500 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
       )}
     >
       <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-sea-600' : 'text-sea-900/40')} />
@@ -1123,7 +1153,7 @@ function MealPlanCard({
       onClick={onClick}
       className={cn(
         'flex items-center justify-between gap-3 rounded-2xl border-[1.5px] px-4 py-2.5 text-start transition-colors',
-        active ? 'border-sea-500 bg-sea-50' : 'border-sea-100 hover:border-sea-300',
+        active ? 'border-sun-500 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
       )}
     >
       <span className="text-sm font-medium text-sea-900">{ar ? plan.label_ar : plan.label_en}</span>
@@ -1149,7 +1179,7 @@ function TransferTypeCard({
       className={cn(
         'rounded-2xl border-[1.5px] p-3 text-start transition-colors',
         active
-          ? 'border-sea-500 bg-sea-50'
+          ? 'border-sun-500 bg-sun-50'
           : 'border-sea-100 hover:border-sea-300',
       )}
     >

@@ -11,8 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'We map Sinai. You live it. Packages, stays, transfers, and Sinai trips.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0a1220',
-    theme_color: '#0a1220',
+    background_color: '#1a1b18',
+    theme_color: '#1a1b18',
     icons: [
       { src: '/logo.png', sizes: '512x512', type: 'image/png' },
       { src: '/logo.png', sizes: '192x192', type: 'image/png' },

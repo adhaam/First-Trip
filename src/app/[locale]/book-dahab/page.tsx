@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { Link } from '@/i18n/navigation'
-import { PLACEHOLDER_IMAGES } from '@/lib/constants'
 import { Calendar, ArrowUpRight } from 'lucide-react'
 import Image from 'next/image'
 import { getAccommodations, getSiteSettings } from '@/lib/data'
@@ -29,13 +27,14 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
     getSiteSettings(),
   ])
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
+  const heroImage = accommodations[0]?.image_url || accommodations[0]?.images?.[0] || '/media/heroposter.png'
 
   return (
     <div className="bg-sand-50">
       {/* ─── Hero ─── */}
       <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
         <div className="absolute inset-0 opacity-25">
-          <Image src={PLACEHOLDER_IMAGES.dahab1} alt="" fill className="object-cover" />
+          <Image src={heroImage} alt="" fill sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
         <div className="container-main relative z-10">
@@ -56,8 +55,8 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
             <SectionHeading eyebrow={ar ? 'عن الرحلة' : 'The trip'} title={t('aboutTrip')} className="mb-6" />
             <p className="leading-relaxed text-sea-900/65">
               {ar
-                ? 'رحلات WEEMAP لدهب تجربة سياحية متكاملة — انتقالات مريحة من محافظتك، إقامة في أفضل الفنادق والشاليهات والكمبات، ورحلتين داخليتين ضمن الباقة. مناسبة للأفراد والعائلات والمجموعات.'
-                : 'WEEMAP Dahab packages are a complete experience — comfortable transportation from your city, accommodation in the best hotels, chalets and camps, plus two day trips included. Great for individuals, families and groups.'}
+                ? 'باكدج WEEMAP بيجمع الانتقالات والإقامة والرحلات المضمّنة في طلب واحد، وتقدر كمان تحجز الإقامة أو الانتقال لوحده.'
+                : 'A WEEMAP package brings transfers, accommodation, and included trips into one request. You can also book a stay or transfer on its own.'}
             </p>
             <div className="mt-6 flex items-center gap-2 text-sun-500">
               <Calendar className="h-5 w-5" />

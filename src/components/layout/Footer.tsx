@@ -79,7 +79,7 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               <ul className="space-y-3.5">
                 <li className="flex items-start gap-2.5 text-sm text-sand-100/70">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sun-300" />
-                  <span>{t('dahab')}</span>
+                  <span>{settings?.location || t('dahab')}</span>
                 </li>
                 <li>
                   <a
@@ -109,8 +109,8 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               </h3>
               <p className="mb-5 text-sm leading-relaxed text-sand-100/70">
                 {ar
-                  ? 'عندك سؤال؟ إحنا موجودين على واتساب طول اليوم.'
-                  : 'Got a question? We\'re on WhatsApp all day.'}
+                  ? 'عندك سؤال؟ ابعتلنا على واتساب ونرد عليك.'
+                  : 'Got a question? Send us a message on WhatsApp.'}
               </p>
               <a
                 href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}

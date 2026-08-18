@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Star, MapPin, ArrowUpRight } from 'lucide-react'
-import { ACCOMMODATION_TAGS, PLACEHOLDER_IMAGES } from '@/lib/constants'
+import { ACCOMMODATION_TAGS } from '@/lib/constants'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import type { Accommodation } from '@/lib/types'
@@ -24,7 +24,13 @@ export function AccommodationCard({
   const ar = locale === 'ar'
 
   const tag = ACCOMMODATION_TAGS[acc.type]
-  const cover = acc.image_url || acc.images?.[0] || PLACEHOLDER_IMAGES.dahab1
+  const cover = acc.image_url || acc.images?.[0] || '/media/heroposter.png'
+  const configuredRoomRates = [acc.price_single_room, acc.price_double_room, acc.price_triple_room]
+    .map(Number)
+    .filter((price) => price > 0)
+  const startingRoomRate = configuredRoomRates.length
+    ? Math.min(...configuredRoomRates)
+    : Number(acc.price_per_night) || 0
   const name = ar ? acc.name_ar : acc.name_en
   const location = ar
     ? acc.location_ar || acc.location
@@ -83,11 +89,11 @@ export function AccommodationCard({
                 {t('priceStartsFrom')}
               </div>
               <div className="font-display text-xl font-bold text-sea-900">
-                {Number(acc.price_per_night).toLocaleString()}{' '}
+                {startingRoomRate.toLocaleString()}{' '}
                 <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
               </div>
               <div className="text-[0.7rem] text-sea-900/45">
-                {t('perNight')} · {t('perPerson')}
+                {t('perNight')} · {ar ? 'للغرفة' : 'per room'}
               </div>
             </div>
 

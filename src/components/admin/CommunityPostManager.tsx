@@ -12,19 +12,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, Pin } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, Pin, ImagePlus } from 'lucide-react'
 import { CommunityPost } from '@/lib/types'
+import { POST_CATEGORIES, POST_CATEGORY_LABELS } from '@/lib/community'
 
-const CATEGORIES = [
-  { value: 'blog', label_ar: 'مدونة', label_en: 'Blog' },
-  { value: 'hidden-gems', label_ar: 'أماكن مخفية', label_en: 'Hidden Gems' },
-  { value: 'stories', label_ar: 'قصص', label_en: 'Stories' },
-  { value: 'dahab-guide', label_ar: 'دليل دهب', label_en: 'Dahab Guide' },
-]
+const CATEGORIES = POST_CATEGORIES.map((value) => ({
+  value,
+  label_ar: POST_CATEGORY_LABELS[value].ar,
+  label_en: POST_CATEGORY_LABELS[value].en,
+}))
 
 const emptyPost: Partial<CommunityPost> = {
   title_ar: '', title_en: '', content_ar: '', content_en: '',
-  category: 'blog', image_url: '', sort_order: 0, is_pinned: false, is_published: true,
+  category: 'stories', image_url: null, video_url: null, sort_order: 0, is_pinned: false, is_published: false,
 }
 
 export function CommunityPostManager() {
@@ -32,6 +32,7 @@ export function CommunityPostManager() {
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [editing, setEditing] = useState<CommunityPost | null>(null)
   const [form, setForm] = useState<Partial<CommunityPost>>({})
@@ -68,6 +69,24 @@ export function CommunityPostManager() {
   const handleAdd = () => { setEditing(null); setForm({ ...emptyPost }); setShowForm(true) }
   const updateField = (field: string, value: string | number | boolean) => setForm(prev => ({ ...prev, [field]: value }))
 
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return
+    setUploading(true)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('folder', 'community')
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+      updateField('image_url', data.url)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSave = async () => {
     if (!form.title_ar || !form.title_en) return
     setSaving(true)
@@ -80,8 +99,8 @@ export function CommunityPostManager() {
         content_ar: form.content_ar,
         content_en: form.content_en,
         category: form.category,
-        image_url: form.image_url,
-        video_url: form.video_url,
+        image_url: form.image_url?.trim() || null,
+        video_url: form.video_url?.trim() || null,
         sort_order: form.sort_order,
         is_pinned: form.is_pinned,
         is_published: form.is_published,
@@ -194,7 +213,19 @@ export function CommunityPostManager() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label>{locale === 'ar' ? 'رابط الصورة' : 'Image URL'}</Label><Input value={form.image_url || ''} onChange={e => updateField('image_url', e.target.value)} className="mt-1" placeholder="https://..." /></div>
+                <div>
+                  <Label>{locale === 'ar' ? 'رابط الصورة' : 'Image URL'}</Label>
+                  <label className="mt-1 mb-2 inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-medium hover:bg-gray-50">
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                    {locale === 'ar' ? 'رفع صورة' : 'Upload image'}
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="sr-only" disabled={uploading} onChange={e => handleImageUpload(e.target.files?.[0])} />
+                  </label>
+                  <div className="mt-1 flex gap-2">
+                    <Input value={form.image_url || ''} onChange={e => updateField('image_url', e.target.value)} placeholder="https://..." />
+                    {form.image_url && <Button type="button" variant="outline" onClick={() => updateField('image_url', '')}>{locale === 'ar' ? 'إزالة' : 'Remove'}</Button>}
+                  </div>
+                </div>
+                <div className="md:col-span-2"><Label>{locale === 'ar' ? 'رابط الفيديو (اختياري)' : 'Video URL (optional)'}</Label><Input value={form.video_url || ''} onChange={e => updateField('video_url', e.target.value)} className="mt-1" placeholder="https://..." /></div>
               </div>
 
               <div><Label className="mb-2 block">{locale === 'ar' ? 'المحتوى (عربي)' : 'Content (Arabic)'}</Label><Textarea rows={4} value={form.content_ar || ''} onChange={e => updateField('content_ar', e.target.value)} /></div>

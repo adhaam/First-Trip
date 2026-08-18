@@ -17,7 +17,7 @@ export function getSchemaOrg(settings?: SiteSettings | null) {
     '@context': 'https://schema.org',
     '@type': 'TourismBusiness',
     '@id': `${SITE_URL}/#organization`,
-    name: 'WEEMAP',
+    name: settings?.organization_name || 'WEEMAP SINAI',
     alternateName: 'WEEMAP SINAI',
     description: {
       '@language': 'ar',
@@ -69,7 +69,6 @@ export function getProductSchema(accommodation: {
       '@type': 'Offer',
       price: accommodation.price,
       priceCurrency: 'EGP',
-      availability: 'https://schema.org/InStock',
     },
   }
 }

@@ -11,16 +11,23 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
-    // Validate type & size
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'File must be an image' }, { status: 400 })
+    const extensions: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/avif': 'avif',
     }
+    const ext = extensions[file.type]
+    if (!ext) return NextResponse.json({ error: 'Use a JPG, PNG, WebP, or AVIF image' }, { status: 400 })
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: 'Image must be under 5 MB' }, { status: 400 })
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const filename = `accommodations/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const requestedFolder = String(formData.get('folder') || 'accommodations')
+    const folder = ['accommodations', 'community', 'trips'].includes(requestedFolder)
+      ? requestedFolder
+      : 'accommodations'
+    const filename = `${folder}/${crypto.randomUUID()}.${ext}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const supabase = getSupabaseAdmin()

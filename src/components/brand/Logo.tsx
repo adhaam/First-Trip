@@ -29,9 +29,8 @@ const WORD: Record<LogoSize, string> = {
  *   WEEMAP   (orange)
  *   SINAI    (ink / light)
  *
- * See WEEMAP_ASSET_CHECKLIST.md — replacing the pin with the real mark
- * only touches this file. Deliberately does NOT use /logo.png (that file
- * is the old First Trip artwork and must not be referenced anywhere).
+ * See WEEMAP_ASSET_CHECKLIST.md — replacing the temporary pin with the
+ * production vector only touches this file.
  */
 export function Logo({
   size = 'md',

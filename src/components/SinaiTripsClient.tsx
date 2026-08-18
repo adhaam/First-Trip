@@ -48,9 +48,9 @@ export function SinaiTripsClient({
             key={cat.id}
             onClick={() => setFilter(cat.id)}
             className={cn(
-              'shrink-0 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+              'shrink-0 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
               filter === cat.id
-                ? 'bg-sea-900 text-sand-50'
+                ? 'bg-sun-500 text-white'
                 : 'border border-sand-300 bg-white text-sea-900/60 hover:text-sea-900',
             )}
           >
@@ -66,8 +66,8 @@ export function SinaiTripsClient({
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((trip, i) => (
-            <Reveal key={trip.id} delay={(i % 9) * 60} className="h-full">
-              <TripCard trip={trip} whatsapp={whatsapp} includesLabel={t('includes')} />
+            <Reveal key={trip.id} delay={(i % 9) * 60} className={cn('h-full', i === 0 && 'sm:col-span-2 lg:col-span-2')}>
+              <TripCard trip={trip} whatsapp={whatsapp} includesLabel={t('includes')} featured={i === 0} />
             </Reveal>
           ))}
         </div>

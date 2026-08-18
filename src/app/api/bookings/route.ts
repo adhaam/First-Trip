@@ -5,7 +5,7 @@ import { getTransferPricing, getAccommodationById } from '@/lib/data'
 import {
   quotePackage, quotePackageV2, quoteTransfer,
   buildPriceSnapshot, buildStaySnapshot,
-  nightsForDuration, isPackageDepartureDay, isPackageReturnDay,
+  nightsForDuration, isPackageDepartureDay, isPackageReturnDay, roomsForPeople,
 } from '@/lib/pricing'
 import type { TripPriceInput } from '@/lib/pricing'
 import type { MealPlan, PriceSnapshot } from '@/lib/types'
@@ -47,6 +47,25 @@ const bookingSchema = z.object({
   extra_trip_ids: z.array(z.string().uuid()).optional(),
   num_people: z.number().int().min(1).max(50),
   notes: z.string().max(500).optional(),
+}).superRefine((value, ctx) => {
+  const required = (path: keyof typeof value, message: string) => {
+    if (!value[path]) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message })
+  }
+  if (value.booking_type === 'package') {
+    required('accommodation_id', 'Accommodation is required')
+    required('governorate', 'Governorate is required')
+    required('trip_date', 'Departure date is required')
+    required('transfer_type', 'Transport mode is required')
+  }
+  if (value.booking_type === 'accommodation-only') {
+    required('accommodation_id', 'Accommodation is required')
+    required('trip_date', 'Check-in date is required')
+  }
+  if (value.booking_type === 'transfer-only') {
+    required('governorate', 'Governorate is required')
+    required('trip_date', 'Transfer date is required')
+    required('transfer_type', 'Transport mode is required')
+  }
 })
 
 type BookingInput = z.infer<typeof bookingSchema>
@@ -129,8 +148,9 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
       .select('package_included_trip_ids')
       .eq('id', 1)
       .single()
-    const includedIds: string[] = settings?.package_included_trip_ids || []
-    const extraIds = input.extra_trip_ids || []
+    const includedIds: string[] = Array.from(new Set(settings?.package_included_trip_ids || []))
+    const extraIds = Array.from(new Set(input.extra_trip_ids || []))
+      .filter((id) => !includedIds.includes(id))
     const tripIds = Array.from(new Set([...includedIds, ...extraIds]))
 
     let includedTrips: TripPriceInput[] = []
@@ -161,7 +181,7 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
       roomType,
       checkIn: input.trip_date,
       nights,
-      numRooms: 1,
+      numRooms: roomsForPeople(roomType, input.num_people),
       mealPlanPricePerNight,
       mealPlanKey: mealPlan?.key,
       includedTrips,
@@ -198,7 +218,12 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
 function validateDates(input: BookingInput): string | null {
   if (input.booking_type !== 'package' && input.booking_type !== 'transfer-only') return null
   if (input.transfer_type === 'hiace') return null
-  if (input.trip_date && !isPackageDepartureDay(input.trip_date)) {
+  const startsFromDahab =
+    input.booking_type === 'transfer-only' && input.transfer_direction === 'from_dahab'
+  if (input.trip_date && startsFromDahab && !isPackageReturnDay(input.trip_date)) {
+    return 'Shared bus returns are only available on Monday or Friday'
+  }
+  if (input.trip_date && !startsFromDahab && !isPackageDepartureDay(input.trip_date)) {
     return 'Package departures are only available on Sunday or Thursday'
   }
   if (input.return_date && !isPackageReturnDay(input.return_date)) {

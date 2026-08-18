@@ -11,6 +11,7 @@ const settingsSchema = z.object({
   email: z.string().optional(),
   facebook_url: z.string().optional(),
   instagram_url: z.string().optional(),
+  location: z.string().max(200).optional(),
   logo_url: z.string().optional(),
   refund_policy_ar: z.string().optional(),
   refund_policy_en: z.string().optional(),
@@ -24,6 +25,10 @@ const settingsSchema = z.object({
   hero_heading_en: z.string().max(160).optional(),
   hero_subheading_ar: z.string().max(240).optional(),
   hero_subheading_en: z.string().max(240).optional(),
+  primary_cta_label_ar: z.string().max(80).optional(),
+  primary_cta_label_en: z.string().max(80).optional(),
+  secondary_cta_label_ar: z.string().max(80).optional(),
+  secondary_cta_label_en: z.string().max(80).optional(),
   featured_accommodation_ids: z.array(z.string().uuid()).optional(),
   featured_trip_ids: z.array(z.string().uuid()).optional(),
   show_community: z.boolean().optional(),
@@ -32,6 +37,8 @@ const settingsSchema = z.object({
   seo_title: z.string().max(160).optional(),
   seo_description_ar: z.string().max(400).optional(),
   seo_description_en: z.string().max(400).optional(),
+  social_share_image: z.string().max(500).optional(),
+  organization_name: z.string().max(120).optional(),
 })
 
 export async function GET(req: NextRequest) {

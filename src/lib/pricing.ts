@@ -244,6 +244,12 @@ export function roomOccupancy(roomType: RoomType): number {
   return 2
 }
 
+/** Minimum number of rooms needed for the selected party and room type. */
+export function roomsForPeople(roomType: RoomType, numPeople: number): number {
+  const people = Math.max(1, Math.floor(numPeople) || 1)
+  return Math.ceil(people / roomOccupancy(roomType))
+}
+
 /**
  * The BASE nightly rate for a room type (no seasonal override).
  * Always the TOTAL room price — per-person shares are derived, never stored.
@@ -532,6 +538,7 @@ export function buildPriceSnapshot(
 ): PriceSnapshot {
   return {
     room_type: input.roomType,
+    num_rooms: quote.numRooms,
     nightly_room_rates: quote.nightly.map((n) => ({
       date: n.date,
       rate: n.rate,
@@ -572,17 +579,20 @@ export function buildStaySnapshot(
   mealPlanPricePerNight: number,
   numPeople: number,
   mealPlanKey?: string,
+  numRooms?: number,
 ): { total: number; snapshot: PriceSnapshot } {
   const n = Math.max(1, Math.floor(nights) || 1)
   const people = Math.max(1, Math.floor(numPeople) || 1)
+  const rooms = Math.max(1, Math.floor(numRooms ?? roomsForPeople(roomType, people)) || 1)
   const nightly = resolveNightlyRates(acc, roomType, checkIn, n)
-  const accSubtotal = accommodationSubtotal(nightly, 1)
+  const accSubtotal = accommodationSubtotal(nightly, rooms)
   const mealSubtotal = (Number(mealPlanPricePerNight) || 0) * n * people
   const total = accSubtotal + mealSubtotal
   return {
     total,
     snapshot: {
       room_type: roomType,
+      num_rooms: rooms,
       nightly_room_rates: nightly.map((x) => ({
         date: x.date, rate: x.rate, source: x.source,
         ...(x.seasonal_rate_name ? { seasonal_rate_name: x.seasonal_rate_name } : {}),
@@ -607,33 +617,41 @@ export function toTripPriceInput(trip: SinaiTrip): TripPriceInput {
 export interface StayQuoteInput {
   accommodation: RoomPriceInput
   roomType: RoomType
+  checkIn: Date | string
   mealPlanPricePerNight: number
   nights: number
   numPeople: number
+  numRooms?: number
 }
 
 export interface StayQuote {
-  roomPerPerson: number
-  perNightPerPerson: number
+  nightly: ResolvedNight[]
+  accommodationSubtotal: number
+  mealSubtotal: number
+  numRooms: number
   nights: number
   numPeople: number
   total: number
 }
 
-/** Stay-only: same room + meal-plan math, no transfer, no trips. */
+/** Stay-only quote using the same nightly, room-level math as package pricing. */
 export function quoteStay({
-  accommodation, roomType, mealPlanPricePerNight, nights, numPeople,
+  accommodation, roomType, checkIn, mealPlanPricePerNight, nights, numPeople, numRooms,
 }: StayQuoteInput): StayQuote {
-  const roomPerPerson = roomPerPersonPrice(accommodation, roomType)
-  const perNightPerPerson = roomPerPerson + (Number(mealPlanPricePerNight) || 0)
   const n = Math.max(1, Math.floor(nights) || 1)
   const people = Math.max(1, Math.floor(numPeople) || 1)
+  const rooms = Math.max(1, Math.floor(numRooms ?? roomsForPeople(roomType, people)) || 1)
+  const nightly = resolveNightlyRates(accommodation, roomType, checkIn, n)
+  const stayAccommodationSubtotal = accommodationSubtotal(nightly, rooms)
+  const mealSubtotal = (Number(mealPlanPricePerNight) || 0) * n * people
   return {
-    roomPerPerson,
-    perNightPerPerson,
+    nightly,
+    accommodationSubtotal: stayAccommodationSubtotal,
+    mealSubtotal,
+    numRooms: rooms,
     nights: n,
     numPeople: people,
-    total: perNightPerPerson * n * people,
+    total: stayAccommodationSubtotal + mealSubtotal,
   }
 }
 

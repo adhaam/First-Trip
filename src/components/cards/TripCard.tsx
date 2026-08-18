@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useLocale, useTranslations } from 'next-intl'
 import { Clock, ArrowUpRight, Check } from 'lucide-react'
-import { PLACEHOLDER_IMAGES, WHATSAPP_NUMBER } from '@/lib/constants'
+import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import type { SinaiTrip } from '@/lib/types'
@@ -13,12 +13,14 @@ export function TripCard({
   className,
   whatsapp,
   includesLabel,
+  featured = false,
 }: {
   trip: SinaiTrip
   className?: string
   whatsapp?: string | null
   /** Pass a label to show the first 3 "includes" items — omit on compact/home cards. */
   includesLabel?: string
+  featured?: boolean
 }) {
   const common = useTranslations('common')
   const sinai = useTranslations('sinai')
@@ -26,7 +28,7 @@ export function TripCard({
   const ar = locale === 'ar'
 
   const name = ar ? trip.name_ar : trip.name_en
-  const cover = trip.images?.[0] || PLACEHOLDER_IMAGES.desert1
+  const cover = trip.images?.[0] || '/media/heroposter.png'
   const duration = ar ? trip.duration : trip.duration_en || trip.duration
   const category = ar ? trip.category_ar : trip.category_en
   const digits = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
@@ -37,7 +39,7 @@ export function TripCard({
   return (
     <GlowCard className={cn('h-full', className)}>
       <article className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
-        <div className="relative aspect-[3/2] overflow-hidden">
+        <div className={cn('relative overflow-hidden', featured ? 'aspect-[16/8]' : 'aspect-[3/2]')}>
           <Image
             src={cover}
             alt={name}
@@ -54,7 +56,7 @@ export function TripCard({
           )}
 
           <div className="absolute inset-x-4 bottom-3 flex items-end justify-between gap-2">
-            <h3 className="font-display text-lg font-bold leading-snug text-white drop-shadow">
+            <h3 className={cn('font-display font-bold leading-snug text-white drop-shadow', featured ? 'text-2xl md:text-3xl' : 'text-lg')}>
               {name}
             </h3>
             {duration && (
@@ -96,7 +98,7 @@ export function TripCard({
               href={`https://wa.me/${digits}?text=${message}`}
               target="_blank"
               rel="noopener"
-              className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-sea-900 px-4 py-2 text-xs font-semibold text-sea-900 transition-colors hover:bg-sea-900 hover:text-sand-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-sun-500 px-4 py-2 text-xs font-semibold text-sun-600 transition-colors hover:bg-sun-500 hover:text-white"
             >
               {sinai('bookNow')}
               <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" />

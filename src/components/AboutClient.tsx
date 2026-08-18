@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import Image from 'next/image'
 import { Reveal } from '@/components/motion/Reveal'
 import { WaveDivider } from '@/components/brand/Section'
-import { PLACEHOLDER_IMAGES, TRUST_STATS } from '@/lib/constants'
+import { TRUST_STATS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { Compass, Eye, Target } from 'lucide-react'
 
@@ -13,9 +13,9 @@ import { Compass, Eye, Target } from 'lucide-react'
 // must be verified before publishing). These are what-we-do pillars instead.
 const timeline = [
   { year: '01', title_ar: 'بنرسم الطريق', title_en: 'We Map the Way', desc_ar: 'باقات كاملة من محافظتك لدهب — انتقالات، إقامة، ورحلات داخل سيناء في حجز واحد', desc_en: 'Full packages from your governorate to Dahab — transfers, stays, and Sinai trips in one booking' },
-  { year: '02', title_ar: 'أماكن مختارة', title_en: 'Places We Choose', desc_ar: 'كل كامب وشاليه وفندق في القائمة اتقعدنا فيه بنفسنا قبل ما نرشحه', desc_en: 'Every camp, chalet, and hotel on our list — we stayed there ourselves before recommending it' },
-  { year: '03', title_ar: 'كوميونيتي مش عملاء', title_en: 'Community, Not Customers', desc_ar: 'الرحلة بتخلص وإنت راجع بصحاب جداد — دي الفكرة من الأول', desc_en: 'You come back with new friends — that was always the point' },
-  { year: '04', title_ar: 'مع أهل سيناء', title_en: 'With Sinai Locals', desc_ar: 'شغالين مع أهل دهب وسيناء مش من غيرهم — الخير يرجع للبلد', desc_en: 'We work with Dahab and Sinai locals, not around them — value stays local' },
+  { year: '02', title_ar: 'إقامة واضحة', title_en: 'Clear Stay Choices', desc_ar: 'تفاصيل وصور وأسعار الغرف المتاحة في مكان واحد قبل ما تبعت طلبك', desc_en: 'Available stay details, photos, and room pricing in one place before you send a request' },
+  { year: '03', title_ar: 'رحلات حقيقية', title_en: 'Real Trip Listings', desc_ar: 'بنعرض بيانات الرحلات الموجودة فعلاً من غير ما نخترع تفاصيل ناقصة', desc_en: 'We publish the trip details that actually exist, without filling gaps with made-up facts' },
+  { year: '04', title_ar: 'عربي وإنجليزي', title_en: 'Arabic & English', desc_ar: 'نفس التجربة والمعلومات بشكل واضح بالعربي والإنجليزي', desc_en: 'The same coherent journey and information in Arabic and English' },
 ]
 
 
@@ -29,7 +29,7 @@ export function AboutClient() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
         <div className="absolute inset-0 opacity-20">
-          <Image src={PLACEHOLDER_IMAGES.camping} alt="" fill className="object-cover" />
+          <Image src="/media/heroposter.png" alt="" fill sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
         <div className="container-main relative z-10">

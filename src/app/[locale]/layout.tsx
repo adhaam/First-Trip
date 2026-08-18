@@ -9,7 +9,6 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat'
-import { NewsletterSignup } from '@/components/NewsletterSignup'
 import { getSchemaOrg } from '@/lib/schema-org'
 import { getSiteSettings } from '@/lib/data'
 import { SITE_URL } from '@/lib/seo'
@@ -37,6 +36,7 @@ const almarai = Almarai({
 
 const DEFAULT_TITLE = 'WEEMAP SINAI — We map Sinai. You live it.'
 const DEFAULT_DESC_AR = 'WEEMAP SINAI — باقات، إقامة، انتقالات، ورحلات سيناء. بنرسم لك الطريق لدهب وجنوب سيناء — إنت بس تعيشها.'
+const DEFAULT_DESC_EN = 'WEEMAP SINAI — packages, stays, transfers, and Sinai trips. We map the way; you live it.'
 
 // SEO fields are owner-editable from the dashboard (Site Settings → SEO);
 // anything left empty falls back to the WEEMAP defaults here.
@@ -48,7 +48,9 @@ export async function generateMetadata({ params }: {
   const title = settings?.seo_title || DEFAULT_TITLE
   const description =
     (locale === 'ar' ? settings?.seo_description_ar : settings?.seo_description_en) ||
-    DEFAULT_DESC_AR
+    (locale === 'ar' ? DEFAULT_DESC_AR : DEFAULT_DESC_EN)
+  const socialImage = settings?.social_share_image || '/media/heroposter.png'
+  const organizationName = settings?.organization_name || 'WEEMAP SINAI'
   return {
     metadataBase: new URL(SITE_URL),
     title: {
@@ -70,14 +72,14 @@ export async function generateMetadata({ params }: {
       locale: locale === 'ar' ? 'ar_EG' : 'en_US',
       // The other locale this same content is available in — og:locale:alternate.
       alternateLocale: locale === 'ar' ? 'en_US' : 'ar_EG',
-      siteName: 'WEEMAP SINAI',
-      images: [{ url: '/logo.png', width: 1200, height: 1200, alt: 'WEEMAP SINAI' }],
+      siteName: organizationName,
+      images: [{ url: socialImage, alt: organizationName }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: ['/logo.png'],
+      images: [socialImage],
     },
   }
 }
@@ -110,7 +112,6 @@ export default async function RootLayout({
             <div className="flex min-h-screen flex-col">
               <Header />
               <main className="flex-1">{children}</main>
-              {settings?.show_newsletter !== false && <NewsletterSignup />}
               <Footer settings={settings} />
               <WhatsAppFloat number={settings?.whatsapp_number} />
             </div>

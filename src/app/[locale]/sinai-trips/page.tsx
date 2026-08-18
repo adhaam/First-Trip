@@ -3,7 +3,6 @@ import { getTranslations } from 'next-intl/server'
 import Image from 'next/image'
 import { getSinaiTrips, getSiteSettings } from '@/lib/data'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
-import { PLACEHOLDER_IMAGES } from '@/lib/constants'
 import { WaveDivider } from '@/components/brand/Section'
 import { buildAlternates } from '@/lib/seo'
 
@@ -19,13 +18,14 @@ export async function generateMetadata({ params }: {
 export default async function SinaiTripsPage() {
   const t = await getTranslations('sinai')
   const [trips, settings] = await Promise.all([getSinaiTrips(), getSiteSettings()])
+  const heroImage = trips[0]?.images?.[0] || '/media/heroposter.png'
 
   return (
     <div className="bg-sand-50">
       {/* Hero */}
       <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
         <div className="absolute inset-0 opacity-25">
-          <Image src={PLACEHOLDER_IMAGES.desert1} alt="" fill className="object-cover" />
+          <Image src={heroImage} alt="" fill sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
         <div className="container-main relative z-10">

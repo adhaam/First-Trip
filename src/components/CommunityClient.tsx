@@ -1,143 +1,105 @@
 'use client'
 
-import { useState } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
+import { useMemo, useState } from 'react'
+import { useLocale } from 'next-intl'
 import { Reveal } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
-import { Pin, Calendar, BookOpen, Sparkles, BookHeart, Map, type LucideIcon } from 'lucide-react'
-import type { CommunityPost } from '@/lib/types'
+import { POST_CATEGORY_LABELS } from '@/lib/community'
+import { Pin, Calendar, BookOpen, Compass, Waves, Mountain, Landmark } from 'lucide-react'
+import type { CommunityPost, PostCategory } from '@/lib/types'
 
-const categoryIcons: Record<string, LucideIcon> = {
-  blog: BookOpen,
-  'hidden-gems': Sparkles,
-  stories: BookHeart,
-  'dahab-guide': Map,
+const icons: Partial<Record<PostCategory, typeof BookOpen>> = {
+  diving: Waves,
+  freediving: Waves,
+  watersports: Waves,
+  climbing: Mountain,
+  hiking: Mountain,
+  'advanced-adventure': Mountain,
+  history: Landmark,
+  culture: Landmark,
 }
 
 export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
-  const t = useTranslations('community')
   const locale = useLocale()
   const ar = locale === 'ar'
-  const [filter, setFilter] = useState<string>('all')
+  const [filter, setFilter] = useState<PostCategory | 'all'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
-
-  const categories = [
-    { id: 'all', key: 'all' as const, icon: BookOpen },
-    { id: 'blog', key: 'blog', icon: BookOpen },
-    { id: 'hidden-gems', key: 'hiddenGems', icon: Sparkles },
-    { id: 'stories', key: 'stories', icon: BookHeart },
-    { id: 'dahab-guide', key: 'dahabGuide', icon: Map },
-  ]
-
-  const filtered = filter === 'all' ? posts : posts.filter((p) => p.category === filter)
-
-  const sorted = [...filtered].sort((a, b) => {
-    if (a.is_pinned && !b.is_pinned) return -1
-    if (!a.is_pinned && b.is_pinned) return 1
-    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  })
+  const categories = useMemo(
+    () => Array.from(new Set(posts.map((post) => post.category))),
+    [posts],
+  )
+  const sorted = useMemo(() => posts
+    .filter((post) => filter === 'all' || post.category === filter)
+    .sort((a, b) => Number(b.is_pinned) - Number(a.is_pinned) || a.sort_order - b.sort_order || b.created_at.localeCompare(a.created_at)),
+  [posts, filter])
 
   return (
     <>
-      {/* Filter tabs */}
-      <div className="no-scrollbar mb-8 flex gap-2 overflow-x-auto pb-2">
-        {categories.map((cat) => {
-          const Icon = cat.icon
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setFilter(cat.id)}
-              className={cn(
-                'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                filter === cat.id
-                  ? 'bg-sea-900 text-sand-50'
-                  : 'border border-sand-300 bg-white text-sea-900/60 hover:text-sea-900',
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {cat.key === 'all' ? (ar ? 'الكل' : 'All') : t(`categories.${cat.key}` as 'blog')}
-            </button>
-          )
-        })}
+      <div className="no-scrollbar mb-10 flex gap-2 overflow-x-auto pb-2">
+        {(['all', ...categories] as const).map((category) => (
+          <button
+            key={category}
+            onClick={() => setFilter(category)}
+            className={cn(
+              'shrink-0 rounded-md border px-4 py-2 text-sm font-semibold transition-colors',
+              filter === category
+                ? 'border-sun-500 bg-sun-500 text-white'
+                : 'border-sand-300 bg-sand-50 text-sea-900/70 hover:border-sun-400 hover:text-sea-900',
+            )}
+          >
+            {category === 'all' ? (ar ? 'الكل' : 'All stories') : POST_CATEGORY_LABELS[category][ar ? 'ar' : 'en']}
+          </button>
+        ))}
       </div>
 
-      {/* Feed */}
-      <div className="space-y-5">
-        {sorted.map((post, i) => {
-          const Icon = categoryIcons[post.category]
-          const isExpanded = expandedId === post.id
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-12">
+        {sorted.map((post, index) => {
+          const Icon = icons[post.category] || Compass
+          const expanded = expandedId === post.id
+          const featured = index === 0 && filter === 'all'
+          const content = ar ? post.content_ar : post.content_en
+          const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+          const readingMinutes = Math.max(1, Math.ceil(wordCount / 200))
           return (
-            <Reveal key={post.id} delay={(i % 8) * 60}>
-              <article
-                className={cn(
-                  'overflow-hidden border-[1.5px] bg-white pin-card transition-shadow hover:shadow-sm',
-                  post.is_pinned ? 'border-sun-300' : 'border-sand-300',
-                )}
-              >
+            <Reveal key={post.id} delay={(index % 6) * 50} className={featured ? 'md:col-span-2 lg:col-span-8' : 'lg:col-span-4'}>
+              <article className={cn('group h-full overflow-hidden border bg-[#fffdf8]', post.is_pinned ? 'border-sun-400' : 'border-sand-300')}>
                 {post.image_url && (
-                  <div className="relative h-56 w-full overflow-hidden bg-sand-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- remote URLs, avoids Next/Image domain config churn for admin-entered links */}
-                    <img src={post.image_url} alt="" className="h-full w-full object-cover" />
+                  <div className={cn('overflow-hidden bg-sand-200', featured ? 'aspect-[16/8]' : 'aspect-[4/3]')}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- CMS URLs are not limited to one image host. */}
+                    <img src={post.image_url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
                   </div>
                 )}
-                <div className="p-6">
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    {post.is_pinned && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-sun-400 px-2.5 py-1 text-[0.7rem] font-semibold text-white">
-                        <Pin className="h-3 w-3" />
-                        {t('pinned')}
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1 rounded-full border border-sea-600/25 px-2.5 py-1 text-[0.7rem] font-semibold text-sea-600">
-                      <Icon className="h-3 w-3" />
-                      {t(
-                        `categories.${
-                          post.category === 'dahab-guide'
-                            ? 'dahabGuide'
-                            : post.category === 'hidden-gems'
-                              ? 'hiddenGems'
-                              : (post.category as 'blog' | 'stories')
-                        }`,
-                      )}
+                <div className={cn('p-6', featured && 'md:p-8')}>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-sea-900/50">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-sun-600">
+                      <Icon className="h-3.5 w-3.5" />
+                      {POST_CATEGORY_LABELS[post.category][ar ? 'ar' : 'en']}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-sea-900/40">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(post.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-US')}
-                    </span>
+                    {post.is_pinned && <span className="inline-flex items-center gap-1"><Pin className="h-3 w-3" />{ar ? 'مثبت' : 'Featured'}</span>}
+                    <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(post.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-GB')}</span>
+                    <span>{readingMinutes} {ar ? 'د قراءة' : 'min read'}</span>
                   </div>
-
-                  <h3 className="font-display text-xl font-bold text-sea-900">
+                  <h2 className={cn('mt-4 font-display font-bold leading-tight text-sea-900', featured ? 'text-3xl md:text-4xl' : 'text-2xl')}>
                     {ar ? post.title_ar : post.title_en}
-                  </h3>
-                  <p
-                    className={cn(
-                      'mt-2 leading-relaxed text-sea-900/65',
-                      !isExpanded && 'line-clamp-4',
-                    )}
-                  >
-                    {ar ? post.content_ar : post.content_en}
+                  </h2>
+                  <p className={cn('mt-4 whitespace-pre-line leading-relaxed text-sea-900/68', !expanded && 'line-clamp-4')}>
+                    {content}
                   </p>
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : post.id)}
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-sea-600 transition-colors hover:text-sun-500"
-                  >
-                    {isExpanded
-                      ? (ar ? 'عرض أقل ↑' : 'Show less ↑')
-                      : `${t('readMore')} →`}
-                  </button>
+                  {expanded && post.video_url && <video src={post.video_url} controls preload="metadata" className="mt-5 aspect-video w-full bg-black" />}
+                  {(wordCount > 45 || post.video_url) && (
+                    <button onClick={() => setExpandedId(expanded ? null : post.id)} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-sun-600 hover:text-sun-500">
+                      <BookOpen className="h-4 w-4" />
+                      {expanded ? (ar ? 'عرض أقل' : 'Show less') : (ar ? 'اقرأ القصة' : 'Read story')}
+                    </button>
+                  )}
                 </div>
               </article>
             </Reveal>
           )
         })}
-
-        {sorted.length === 0 && (
-          <div className="py-16 text-center text-sea-900/40">
-            {ar ? 'لا يوجد محتوى في هذه الفئة بعد' : 'No content in this category yet'}
-          </div>
-        )}
       </div>
+
+      {sorted.length === 0 && <div className="border border-sand-300 py-16 text-center text-sea-900/50">{ar ? 'لا يوجد محتوى في هذه الفئة بعد' : 'No published stories in this category yet.'}</div>}
     </>
   )
 }

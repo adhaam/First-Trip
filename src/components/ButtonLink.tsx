@@ -53,7 +53,7 @@ export function ButtonLink({
       target={target}
       rel={rel}
       className={cn(
-        'inline-flex items-center justify-center rounded-full font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 gap-1.5 whitespace-nowrap',
+        'inline-flex items-center justify-center rounded-md font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 gap-1.5 whitespace-nowrap',
         variants[variant],
         sizes[size],
         className

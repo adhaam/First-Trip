@@ -2,7 +2,8 @@
 // Use only in Server Components, Route Handlers, or Server Actions.
 // Uses the service-role client so it must never be imported into a 'use client' file.
 
-import { getSupabaseAdmin } from './supabase'
+import 'server-only'
+import { getSupabaseAdmin, isSupabaseConfigured } from './supabase'
 import type {
   Accommodation,
   AccommodationSeasonalRate,
@@ -18,6 +19,7 @@ import type {
 } from './types'
 
 export async function getAccommodations(): Promise<Accommodation[]> {
+  if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('accommodations')
@@ -33,6 +35,7 @@ export async function getAccommodations(): Promise<Accommodation[]> {
 }
 
 export async function getAccommodationById(id: string): Promise<Accommodation | null> {
+  if (!isSupabaseConfigured()) return null
   const supabase = getSupabaseAdmin()
   const [{ data, error }, rates] = await Promise.all([
     supabase.from('accommodations').select('*').eq('id', id).single(),
@@ -48,6 +51,7 @@ export async function getAccommodationById(id: string): Promise<Accommodation | 
 
 /** Active seasonal pricing periods for one accommodation, soonest first. */
 export async function getSeasonalRates(accommodationId: string): Promise<AccommodationSeasonalRate[]> {
+  if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('accommodation_seasonal_rates')
@@ -70,6 +74,7 @@ export async function getSeasonalRates(accommodationId: string): Promise<Accommo
 }
 
 export async function getSinaiTrips(): Promise<SinaiTrip[]> {
+  if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('sinai_trips')
@@ -85,6 +90,7 @@ export async function getSinaiTrips(): Promise<SinaiTrip[]> {
 }
 
 export async function getCommunityPosts(): Promise<CommunityPost[]> {
+  if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('community_posts')
@@ -101,6 +107,7 @@ export async function getCommunityPosts(): Promise<CommunityPost[]> {
 }
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {
+  if (!isSupabaseConfigured()) return null
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('site_settings')
@@ -116,6 +123,7 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
 }
 
 export async function getTripDates(): Promise<TripDate[]> {
+  if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('trip_dates')
@@ -156,6 +164,7 @@ export function getRelatedAccommodations(current: Accommodation, all: Accommodat
  * no price is ever hardcoded in the UI.
  */
 export async function getTransferPricing(): Promise<TransferPricing> {
+  if (!isSupabaseConfigured()) return { settings: [], governorates: [] }
   const supabase = getSupabaseAdmin()
 
   const [settingsRes, govRes] = await Promise.all([
@@ -192,6 +201,7 @@ function normalizeTransferGovernorate(row: RawRow): TransferGovernoratePrice {
 }
 
 export async function getTestimonials(): Promise<Testimonial[]> {
+  if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('testimonials')
@@ -204,10 +214,14 @@ export async function getTestimonials(): Promise<Testimonial[]> {
     console.error('getTestimonials error:', error)
     return []
   }
-  return (data ?? []) as Testimonial[]
+  const legacy = /first\s*-?\s*trip|firsttrip/i
+  return ((data ?? []) as Testimonial[]).filter((item) =>
+    !legacy.test(`${item.name} ${item.text_ar} ${item.text_en} ${item.trip_ar} ${item.trip_en}`),
+  )
 }
 
 export async function getGovernoratePricing(): Promise<GovernoratePricing[]> {
+  if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('governorate_pricing')
