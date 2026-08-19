@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, X, Search, Upload, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SinaiTrip } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -37,6 +37,45 @@ export function SinaiTripManager() {
   const [form, setForm] = useState<Partial<SinaiTrip>>({})
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    setUploading(true)
+    setUploadError('')
+    try {
+      const current = ((form.images as string[]) || []).slice()
+      for (const file of Array.from(files)) {
+        const body = new FormData()
+        body.append('file', file)
+        body.append('folder', 'trips')
+        const res = await fetch('/api/admin/upload-image', { method: 'POST', body })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error || 'Upload failed')
+        current.push(data.url)
+      }
+      updateField('images', current)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeImage = (index: number) => {
+    const current = ((form.images as string[]) || []).slice()
+    current.splice(index, 1)
+    updateField('images', current)
+  }
+
+  const moveImage = (index: number, dir: 'left' | 'right') => {
+    const current = ((form.images as string[]) || []).slice()
+    const target = dir === 'left' ? index - 1 : index + 1
+    if (target < 0 || target >= current.length) return
+    ;[current[index], current[target]] = [current[target], current[index]]
+    updateField('images', current)
+  }
 
   const load = async () => {
     setLoading(true)
@@ -222,7 +261,44 @@ export function SinaiTripManager() {
                       : 'Used inside the package total when this trip is one of the two included trips.'}
                   </p>
                 </div>
-                <div><Label>{locale === 'ar' ? 'رابط الصورة' : 'Image URL'}</Label><Input value={(form.images || [])[0] || ''} onChange={e => updateField('images', [e.target.value])} className="mt-1" placeholder="https://..." /></div>
+                <div className="md:col-span-2">
+                  <Label className="mb-2 block">{locale === 'ar' ? 'صور الرحلة' : 'Trip Images'}</Label>
+                  {/* Upload button */}
+                  <label className={cn(
+                    'inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-dashed border-gray-300 px-3 text-sm font-medium hover:bg-gray-50 transition-colors',
+                    uploading && 'opacity-60 pointer-events-none'
+                  )}>
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                    {locale === 'ar' ? 'رفع صور' : 'Upload images'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      multiple
+                      className="sr-only"
+                      disabled={uploading}
+                      onChange={e => handleImageUpload(e.target.files)}
+                    />
+                  </label>
+                  {uploadError && <p className="mt-1 text-xs text-red-500">{uploadError}</p>}
+                  {/* Image preview grid */}
+                  {((form.images as string[]) || []).length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {((form.images as string[]) || []).map((url, i) => (
+                        <div key={i} className="relative group aspect-square rounded overflow-hidden border border-gray-200 bg-gray-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity">
+                            <button type="button" onClick={() => moveImage(i, 'left')} disabled={i === 0} className="rounded bg-white/80 p-0.5 disabled:opacity-30"><ChevronLeft className="h-3 w-3" /></button>
+                            <button type="button" onClick={() => removeImage(i)} className="rounded bg-red-500 p-0.5 text-white"><X className="h-3 w-3" /></button>
+                            <button type="button" onClick={() => moveImage(i, 'right')} disabled={i === ((form.images as string[]) || []).length - 1} className="rounded bg-white/80 p-0.5 disabled:opacity-30"><ChevronRight className="h-3 w-3" /></button>
+                          </div>
+                          {i === 0 && <span className="absolute top-1 left-1 rounded bg-brand-blue px-1 py-0.5 text-[10px] text-white">Cover</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-1 text-[11px] text-gray-400">{locale === 'ar' ? 'الصورة الأولى هي صورة الغلاف. JPG/PNG/WebP/AVIF — بحد أقصى 5 ميجابايت للصورة.' : 'First image is cover. JPG/PNG/WebP/AVIF — max 5 MB each.'}</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -16,6 +16,7 @@ import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, Ch
 import { Accommodation, MealPlan, MealPlanKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { SeasonalRatesEditor } from './SeasonalRatesEditor'
+import { RoomVariantsEditor } from './RoomVariantsEditor'
 
 const TYPES = [
   { value: 'hotel', label_ar: '🏨 فندق', label_en: '🏨 Hotel' },
@@ -684,7 +685,10 @@ export function AccommodationManager() {
 
               {/* Seasonal pricing periods — only when editing (needs a saved id) */}
               {editing?.id ? (
-                <SeasonalRatesEditor accommodationId={editing.id} locale={locale} />
+                <>
+                  <SeasonalRatesEditor accommodationId={editing.id} locale={locale} />
+                  <RoomVariantsEditor accommodationId={editing.id} locale={locale} />
+                </>
               ) : (
                 <p className="rounded-lg border border-dashed p-3 text-xs text-gray-400">
                   {locale === 'ar'

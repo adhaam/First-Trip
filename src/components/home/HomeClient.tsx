@@ -83,8 +83,28 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   return (
     <section className="relative isolate flex min-h-svh items-center overflow-hidden bg-sea-900">
       <div className="absolute inset-0 -z-10">
-        <Image src={posterSrc} alt={ar ? 'طريق صحراوي في سيناء ليلاً' : 'A Sinai desert road at night'} fill priority sizes="100vw" className="hidden object-cover motion-reduce:block" />
-        <video key={videoSrc} autoPlay muted loop playsInline poster={posterSrc} preload="metadata" aria-hidden className="h-full w-full object-cover motion-reduce:hidden">
+        {/* Static poster image — always visible initially and as fallback */}
+        <Image
+          src={posterSrc}
+          alt={ar ? 'طريق صحراوي في سيناء ليلاً' : 'A Sinai desert road at night'}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+
+        {/* Video: autoplay with fallback to poster; reduced-motion shows poster only */}
+        <video
+          key={videoSrc}
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster={posterSrc}
+          preload="auto"
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover motion-reduce:hidden"
+        >
           <source src={videoSrc} type="video/mp4" />
         </video>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,8 +24,9 @@ import type {
 } from '@/lib/types'
 import {
   Send, CheckCircle2, MessageCircle, Loader2, AlertCircle,
-  Package, Bed, Bus, Calendar, Info, BedDouble, BedSingle, UtensilsCrossed, Plus, X, Mountain,
+  Package, Bed, Bus, Calendar, Info, BedDouble, BedSingle, UtensilsCrossed, Plus, X, Mountain, Users,
 } from 'lucide-react'
+import { RoomAllocator, type RoomAllocation, ROOM_OCCUPANCY } from '@/components/RoomAllocator'
 import { cn } from '@/lib/utils'
 
 // ─── The one form to rule them all ───
@@ -103,6 +104,18 @@ export function BookingForm({
   const [serverError, setServerError] = useState('')
   const [extraTripIds, setExtraTripIds] = useState<string[]>([])
   const [addingTrip, setAddingTrip] = useState(false)
+  // Room allocation — used when party needs multiple room types
+  const [roomAllocations, setRoomAllocations] = useState<RoomAllocation[]>([])
+  const [useAllocator, setUseAllocator] = useState(false)
+
+  const handleAllocationsChange = useCallback((allocs: RoomAllocation[]) => {
+    setRoomAllocations(allocs)
+  }, [])
+
+  const totalAllocated = roomAllocations.reduce(
+    (sum, a) => sum + ROOM_OCCUPANCY[a.type] * a.count,
+    0,
+  )
 
   const activeMealPlans = useMemo(
     () => (accommodation.meal_plans || []).filter((m) => m.is_active),
@@ -119,8 +132,8 @@ export function BookingForm({
       num_people: '2',
       duration: '4',
       nights: '2',
-      package_transfer_type: 'hiace',
-      transfer_type: 'hiace',
+      package_transfer_type: 'package_bus',
+      transfer_type: 'package_bus',
       transfer_direction: 'round_trip',
       room_type: 'double',
       meal_plan_key: activeMealPlans[0]?.key || '',
@@ -140,6 +153,7 @@ export function BookingForm({
   const transferDirection = (watch('transfer_direction') ?? 'round_trip') as TransferDirection
   const numPeople = Math.max(1, parseInt(watch('num_people') || '1') || 1)
   const roomType = (watch('room_type') ?? 'double') as 'double' | 'single' | 'triple'
+  const allocationComplete = useAllocator ? totalAllocated === numPeople : true
   const mealPlanKey = watch('meal_plan_key') || ''
 
   const selectedMealPlan = useMemo(
@@ -336,7 +350,8 @@ export function BookingForm({
           duration: duration === '5' ? 5 : 4,
           transfer_type: hasRoomPricing ? packageTransferType : ('package_bus' as const),
           transfer_direction: 'round_trip' as const,
-          room_type: hasRoomPricing ? roomType : undefined,
+          room_type: hasRoomPricing && !useAllocator ? roomType : undefined,
+          room_allocations: hasRoomPricing && useAllocator && roomAllocations.length > 0 ? roomAllocations : undefined,
           meal_plan_key: hasRoomPricing ? (mealPlanKey || undefined) : undefined,
           extra_trip_ids: hasRoomPricing && extraTripIds.length ? extraTripIds : undefined,
           num_people: numPeople,
@@ -352,7 +367,8 @@ export function BookingForm({
           accommodation_id: accommodation.id,
           trip_date: data.check_in_date || undefined,
           nights,
-          room_type: hasRoomPricing ? roomType : undefined,
+          room_type: hasRoomPricing && !useAllocator ? roomType : undefined,
+          room_allocations: hasRoomPricing && useAllocator && roomAllocations.length > 0 ? roomAllocations : undefined,
           meal_plan_key: hasRoomPricing ? (mealPlanKey || undefined) : undefined,
           num_people: numPeople,
           notes: data.notes || undefined,
@@ -584,7 +600,6 @@ export function BookingForm({
                     {packageGovs.map((g) => (
                       <SelectItem key={g.id} value={g.governorate_code}>
                         {ar ? g.name_ar : g.name_en}
-                        {g.price_surcharge > 0 ? ` (+${g.price_surcharge})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -614,33 +629,61 @@ export function BookingForm({
                   </div>
                 </div>
 
-                {/* Room type */}
-                <div>
-                  <Label className="mb-2 block">{ar ? 'نوع الغرفة' : 'Room type'}</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <RoomTypeCard
-                      icon={BedSingle}
-                      active={roomType === 'single'}
-                      title={ar ? 'سينجل' : 'Single'}
-                      desc={ar ? 'غرفة لوحدك' : 'A room to yourself'}
-                      onClick={() => setValue('room_type', 'single')}
-                    />
-                    <RoomTypeCard
-                      icon={BedDouble}
-                      active={roomType === 'double'}
-                      title={ar ? 'دبل' : 'Double'}
-                      desc={ar ? 'غرفة لفردين' : 'Sleeps up to 2'}
-                      onClick={() => setValue('room_type', 'double')}
-                    />
-                    <RoomTypeCard
-                      icon={BedDouble}
-                      active={roomType === 'triple'}
-                      title={ar ? 'تريبل' : 'Triple'}
-                      desc={ar ? 'غرفة لـ 3 أفراد' : 'Sleeps up to 3'}
-                      onClick={() => setValue('room_type', 'triple')}
-                    />
+                {/* Room type / allocation */}
+                {hasRoomPricing && (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label>{ar ? 'نوع الغرفة' : 'Room type'}</Label>
+                      {numPeople > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUseAllocator(!useAllocator)
+                            if (!useAllocator) setRoomAllocations([])
+                          }}
+                          className="flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline"
+                        >
+                          <Users className="h-3.5 w-3.5" />
+                          {useAllocator
+                            ? (ar ? 'رجوع للاختيار البسيط' : 'Use simple selection')
+                            : (ar ? 'وزّع على أكثر من نوع غرفة' : 'Distribute across room types')}
+                        </button>
+                      )}
+                    </div>
+
+                    {useAllocator ? (
+                      <RoomAllocator
+                        numPeople={numPeople}
+                        allocations={roomAllocations}
+                        onChange={handleAllocationsChange}
+                      />
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        <RoomTypeCard
+                          icon={BedSingle}
+                          active={roomType === 'single'}
+                          title={ar ? 'سينجل' : 'Single'}
+                          desc={ar ? 'غرفة لوحدك' : 'A room to yourself'}
+                          onClick={() => setValue('room_type', 'single')}
+                        />
+                        <RoomTypeCard
+                          icon={BedDouble}
+                          active={roomType === 'double'}
+                          title={ar ? 'دبل' : 'Double'}
+                          desc={ar ? 'غرفة لفردين' : 'Sleeps up to 2'}
+                          onClick={() => setValue('room_type', 'double')}
+                        />
+                        <RoomTypeCard
+                          icon={BedDouble}
+                          active={roomType === 'triple'}
+                          title={ar ? 'تريبل' : 'Triple'}
+                          desc={ar ? 'غرفة لـ 3 أفراد' : 'Sleeps up to 3'}
+                          onClick={() => setValue('room_type', 'triple')}
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
 
                 {/* Meal plan */}
                 {activeMealPlans.length > 0 && (
@@ -795,30 +838,56 @@ export function BookingForm({
             {hasRoomPricing && (
               <>
                 <div>
-                  <Label className="mb-2 block">{ar ? 'نوع الغرفة' : 'Room type'}</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <RoomTypeCard
-                      icon={BedSingle}
-                      active={roomType === 'single'}
-                      title={ar ? 'سينجل' : 'Single'}
-                      desc={ar ? 'غرفة لوحدك' : 'A room to yourself'}
-                      onClick={() => setValue('room_type', 'single')}
-                    />
-                    <RoomTypeCard
-                      icon={BedDouble}
-                      active={roomType === 'double'}
-                      title={ar ? 'دبل' : 'Double'}
-                      desc={ar ? 'غرفة لفردين' : 'Sleeps up to 2'}
-                      onClick={() => setValue('room_type', 'double')}
-                    />
-                    <RoomTypeCard
-                      icon={BedDouble}
-                      active={roomType === 'triple'}
-                      title={ar ? 'تريبل' : 'Triple'}
-                      desc={ar ? 'غرفة لـ 3 أفراد' : 'Sleeps up to 3'}
-                      onClick={() => setValue('room_type', 'triple')}
-                    />
+                  <div className="mb-2 flex items-center justify-between">
+                    <Label>{ar ? 'نوع الغرفة' : 'Room type'}</Label>
+                    {numPeople > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUseAllocator(!useAllocator)
+                          if (!useAllocator) setRoomAllocations([])
+                        }}
+                        className="flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        {useAllocator
+                          ? (ar ? 'رجوع للاختيار البسيط' : 'Use simple selection')
+                          : (ar ? 'وزّع على أكثر من نوع غرفة' : 'Distribute across room types')}
+                      </button>
+                    )}
                   </div>
+
+                  {useAllocator ? (
+                    <RoomAllocator
+                      numPeople={numPeople}
+                      allocations={roomAllocations}
+                      onChange={handleAllocationsChange}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      <RoomTypeCard
+                        icon={BedSingle}
+                        active={roomType === 'single'}
+                        title={ar ? 'سينجل' : 'Single'}
+                        desc={ar ? 'غرفة لوحدك' : 'A room to yourself'}
+                        onClick={() => setValue('room_type', 'single')}
+                      />
+                      <RoomTypeCard
+                        icon={BedDouble}
+                        active={roomType === 'double'}
+                        title={ar ? 'دبل' : 'Double'}
+                        desc={ar ? 'غرفة لفردين' : 'Sleeps up to 2'}
+                        onClick={() => setValue('room_type', 'double')}
+                      />
+                      <RoomTypeCard
+                        icon={BedDouble}
+                        active={roomType === 'triple'}
+                        title={ar ? 'تريبل' : 'Triple'}
+                        desc={ar ? 'غرفة لـ 3 أفراد' : 'Sleeps up to 3'}
+                        onClick={() => setValue('room_type', 'triple')}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {activeMealPlans.length > 0 && (
@@ -862,7 +931,6 @@ export function BookingForm({
                   {transferGovs.map((g) => (
                     <SelectItem key={g.id} value={g.governorate_code}>
                       {ar ? g.name_ar : g.name_en}
-                      {g.price_surcharge > 0 ? ` (+${g.price_surcharge})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1046,8 +1114,9 @@ export function BookingForm({
         <div className="space-y-2.5 pt-1">
           <Button
             type="submit"
-            disabled={submitting}
-            className="h-12 w-full rounded-full bg-gradient-to-r from-sun-500 to-sun-400 text-base font-semibold text-white shadow-sm transition-all hover:from-sun-600 hover:to-sun-500 hover:shadow-md"
+            disabled={submitting || !allocationComplete}
+            title={!allocationComplete ? (ar ? 'وزّع كل الضيوف أولاً' : 'Allocate all guests before submitting') : undefined}
+            className="h-12 w-full rounded-full bg-gradient-to-r from-sun-500 to-sun-400 text-base font-semibold text-white shadow-sm transition-all hover:from-sun-600 hover:to-sun-500 hover:shadow-md disabled:opacity-60"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {t('submit')}

@@ -6,6 +6,7 @@ import {
   quotePackage, quotePackageV2, quoteTransfer,
   buildPriceSnapshot, buildStaySnapshot,
   nightsForDuration, isPackageDepartureDay, isPackageReturnDay, roomsForPeople,
+  baseNightlyRoomRate, roomOccupancy,
 } from '@/lib/pricing'
 import type { TripPriceInput } from '@/lib/pricing'
 import type { MealPlan, PriceSnapshot } from '@/lib/types'
@@ -43,6 +44,11 @@ const bookingSchema = z.object({
   transfer_type: z.enum(['package_bus', 'hiace']).optional(),
   transfer_direction: z.enum(['to_dahab', 'from_dahab', 'round_trip']).optional(),
   room_type: z.enum(['double', 'single', 'triple']).optional(),
+  // Optional multi-room allocation (e.g. 1 double + 1 single for 3 people)
+  room_allocations: z.array(z.object({
+    type: z.enum(['single', 'double', 'triple']),
+    count: z.number().int().min(1).max(20),
+  })).optional(),
   meal_plan_key: z.string().optional(),
   extra_trip_ids: z.array(z.string().uuid()).optional(),
   num_people: z.number().int().min(1).max(50),
@@ -121,6 +127,31 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
   // ─── accommodation-only (stay-only) ───
   if (input.booking_type === 'accommodation-only') {
     if (hasRoomPricing && input.trip_date) {
+      // Multi-room allocation: sum each room group's cost
+      if (input.room_allocations && input.room_allocations.length > 0) {
+        const nights = input.nights ?? 1
+        let roomTotal = 0
+        for (const alloc of input.room_allocations) {
+          const ratePerRoom = baseNightlyRoomRate(acc, alloc.type)
+          roomTotal += ratePerRoom * alloc.count * nights
+        }
+        const mealTotal = mealPlanPricePerNight * input.num_people * nights
+        const total = roomTotal + mealTotal
+        return {
+          total_price: total,
+          price_snapshot: {
+            room_type_used: 'mixed' as const,
+            room_allocations: input.room_allocations,
+            num_nights: nights,
+            meal_plan_key: mealPlan?.key,
+            meal_plan_subtotal: mealTotal,
+            accommodation_subtotal: roomTotal,
+            num_people: input.num_people,
+            total,
+            computed_at: new Date().toISOString(),
+          } as unknown as import('@/lib/types').PriceSnapshot,
+        }
+      }
       const { total, snapshot } = buildStaySnapshot(
         acc,
         input.room_type ?? 'double',
@@ -173,6 +204,57 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
     const transferType = input.transfer_type ?? 'hiace'
     const direction = input.transfer_direction ?? 'round_trip'
     const nights = nightsForDuration(input.duration === 5 ? 5 : 4)
+
+    // If room_allocations provided, compute mixed-room pricing
+    if (input.room_allocations && input.room_allocations.length > 0) {
+      // Accommodation cost: sum each allocation group
+      let roomTotal = 0
+      for (const alloc of input.room_allocations) {
+        const ratePerRoom = baseNightlyRoomRate(acc, alloc.type)
+        roomTotal += ratePerRoom * alloc.count * nights
+      }
+      const mealTotal = mealPlanPricePerNight * input.num_people * nights
+      // Use dominant room type (largest occupancy × count) for transfer pricing
+      const dominantAlloc = input.room_allocations.reduce((a, b) =>
+        roomOccupancy(a.type) * a.count >= roomOccupancy(b.type) * b.count ? a : b
+      )
+      const dominantType = dominantAlloc.type
+      const transferQuote = quoteTransfer({
+        pricing,
+        type: transferType,
+        governorateCode: input.governorate,
+        direction,
+        numPeople: input.num_people,
+      })
+      // Trip costs
+      let tripsTotal = 0
+      if (tripIds.length > 0) {
+        for (const t of includedTrips) {
+          tripsTotal += (t.package_price ?? t.price) * input.num_people
+        }
+        for (const t of extraTrips) {
+          tripsTotal += (t.package_price ?? t.price) * input.num_people
+        }
+      }
+      const total = roomTotal + mealTotal + transferQuote.total + tripsTotal
+      return {
+        total_price: total,
+        price_snapshot: {
+          room_type_used: dominantType,
+          room_allocations: input.room_allocations,
+          num_nights: nights,
+          meal_plan_key: mealPlan?.key,
+          meal_plan_subtotal: mealTotal,
+          accommodation_subtotal: roomTotal,
+          transfer_rate_used: transferQuote.perPerson,
+          transfer_subtotal: transferQuote.total,
+          num_people: input.num_people,
+          total,
+          computed_at: new Date().toISOString(),
+        } as unknown as import('@/lib/types').PriceSnapshot,
+      }
+    }
+
     const roomType = input.room_type ?? 'double'
 
     const quoteInput = {
@@ -263,7 +345,7 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseAdmin()
     const { total_price, price_snapshot } = await priceBooking(validated.data)
 
-    const { customer_email, ...rest } = validated.data
+    const { customer_email, room_allocations: _allocs, ...rest } = validated.data
 
     const { data, error } = await supabase
       .from('bookings')
@@ -271,7 +353,10 @@ export async function POST(req: NextRequest) {
         ...rest,
         customer_email: customer_email || null,
         total_price,
-        price_snapshot,
+        // Store room_allocations in the price_snapshot so it's auditable
+        price_snapshot: price_snapshot
+          ? { ...price_snapshot, room_allocations: _allocs ?? undefined }
+          : price_snapshot,
         status: 'new',
         payment_status: 'unpaid',
         amount_paid: 0,
