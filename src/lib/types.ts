@@ -24,6 +24,27 @@ export type PostCategory =
   | 'blog'
 export type Governorate = 'cairo' | 'alexandria' | 'zagazig' | 'mansoura'
 
+/**
+ * Additive server-side context proposed for Ask WEEMAP qualification.
+ * It is intentionally separate from pricing internals and remains optional
+ * until migration 010 is reviewed and applied to production.
+ */
+export interface AiQualificationContext {
+  durationDays?: 4 | 5
+  nights?: 3 | 4
+  partySize?: number
+  travelStartDate?: string
+  travelPeriodText?: string
+  budgetEgp?: number
+  accommodationPreference?: string
+  selectedAccommodationId?: string
+  selectedAccommodationName?: string
+  lastQuoteTotal?: number
+  lastQuotePerPerson?: number
+  buyingIntent?: boolean
+  handoffReady?: boolean
+}
+
 // ─── Transfers ───
 // 'package_bus' = the bus that runs as part of a package (fixed Sun/Thu out, Mon/Fri back)
 // 'hiace'       = standalone transfer booking, any day, independent of any package
