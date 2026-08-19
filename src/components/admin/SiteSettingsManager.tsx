@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader2, Save, CheckCircle2, Mountain, Home, Search as SearchIcon, AlertTriangle } from 'lucide-react'
+import { Loader2, Save, CheckCircle2, Mountain, Home, Search as SearchIcon, AlertTriangle, Upload, X } from 'lucide-react'
 import { Accommodation, SiteSettings, SinaiTrip } from '@/lib/types'
 
 export function SiteSettingsManager() {
@@ -19,6 +19,8 @@ export function SiteSettingsManager() {
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [uploadingExplore, setUploadingExplore] = useState(false)
+  const [exploreUploadError, setExploreUploadError] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -81,6 +83,28 @@ export function SiteSettingsManager() {
       setTimeout(() => setSaved(false), 3000)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleExploreUpload = async (file: File) => {
+    setUploadingExplore(true)
+    setExploreUploadError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', 'homepage')
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body: formData })
+      if (res.status === 401) {
+        window.location.href = locale === 'en' ? '/en/admin' : '/admin'
+        return
+      }
+      const data = await res.json()
+      if (!res.ok || !data.url) throw new Error(data.error)
+      updateField('explore_media_url', data.url)
+    } catch {
+      setExploreUploadError(locale === 'ar' ? 'تعذر رفع الصورة. حاول مرة أخرى.' : 'Unable to upload the image. Please try again.')
+    } finally {
+      setUploadingExplore(false)
     }
   }
 
@@ -174,6 +198,60 @@ export function SiteSettingsManager() {
             <div><Label>{locale === 'ar' ? 'زر الحجز (إنجليزي)' : 'Primary CTA (English)'}</Label><Input dir="ltr" value={settings.primary_cta_label_en || ''} onChange={e => updateField('primary_cta_label_en', e.target.value)} className="mt-1" placeholder="PLAN YOUR TRIP" /></div>
             <div><Label>{locale === 'ar' ? 'زر الاستكشاف (عربي)' : 'Secondary CTA (Arabic)'}</Label><Input value={settings.secondary_cta_label_ar || ''} onChange={e => updateField('secondary_cta_label_ar', e.target.value)} className="mt-1" /></div>
             <div><Label>{locale === 'ar' ? 'زر الاستكشاف (إنجليزي)' : 'Secondary CTA (English)'}</Label><Input dir="ltr" value={settings.secondary_cta_label_en || ''} onChange={e => updateField('secondary_cta_label_en', e.target.value)} className="mt-1" placeholder="EXPLORE SINAI" /></div>
+          </div>
+
+          <div className="space-y-4 border-t border-gray-200 pt-5">
+            <div>
+              <Label className="font-semibold">{locale === 'ar' ? 'صورة قسم «وكل اللي بينهم»' : '“Everything between” section image'}</Label>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                {locale === 'ar'
+                  ? 'ارفع صورة أفقية واضحة أو الصق رابطاً من مساحة التخزين الحالية. اتركها فارغة لاستخدام صورة رحلة مميزة كبديل.'
+                  : 'Upload a clear landscape image or paste a URL from the current storage. Leave it empty to fall back to a featured trip image.'}
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Input
+                  dir="ltr"
+                  value={settings.explore_media_url || ''}
+                  onChange={e => updateField('explore_media_url', e.target.value)}
+                  placeholder="/media/... or https://..."
+                  className="min-h-10 flex-1"
+                />
+                <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-brand-blue px-4 text-sm font-medium text-white transition-colors hover:bg-brand-blue-dark focus-within:ring-2 focus-within:ring-brand-blue/40">
+                  {uploadingExplore ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {locale === 'ar' ? 'رفع صورة' : 'Upload image'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    className="sr-only"
+                    disabled={uploadingExplore}
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (file) void handleExploreUpload(file)
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
+                {settings.explore_media_url && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-10 px-3"
+                    onClick={() => updateField('explore_media_url', '')}
+                  >
+                    <X className="h-4 w-4" />
+                    {locale === 'ar' ? 'مسح' : 'Clear'}
+                  </Button>
+                )}
+              </div>
+              {exploreUploadError && <p className="mt-2 text-xs text-red-600" role="alert">{exploreUploadError}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div><Label>{locale === 'ar' ? 'وصف الصورة (عربي)' : 'Image alt text (Arabic)'}</Label><Input value={settings.explore_media_alt_ar || ''} onChange={e => updateField('explore_media_alt_ar', e.target.value)} className="mt-1" /></div>
+              <div><Label>{locale === 'ar' ? 'وصف الصورة (إنجليزي)' : 'Image alt text (English)'}</Label><Input dir="ltr" value={settings.explore_media_alt_en || ''} onChange={e => updateField('explore_media_alt_en', e.target.value)} className="mt-1" /></div>
+              <div><Label>{locale === 'ar' ? 'النص المختصر (عربي)' : 'Short teaser (Arabic)'}</Label><Textarea rows={3} maxLength={220} value={settings.explore_copy_ar || ''} onChange={e => updateField('explore_copy_ar', e.target.value)} className="mt-1" /></div>
+              <div><Label>{locale === 'ar' ? 'النص المختصر (إنجليزي)' : 'Short teaser (English)'}</Label><Textarea dir="ltr" rows={3} maxLength={220} value={settings.explore_copy_en || ''} onChange={e => updateField('explore_copy_en', e.target.value)} className="mt-1" /></div>
+            </div>
           </div>
 
           <div className="space-y-2 pt-2">

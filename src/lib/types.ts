@@ -274,6 +274,11 @@ export interface SiteSettings {
   primary_cta_label_en?: string
   secondary_cta_label_ar?: string
   secondary_cta_label_en?: string
+  explore_media_url?: string
+  explore_media_alt_ar?: string
+  explore_media_alt_en?: string
+  explore_copy_ar?: string
+  explore_copy_en?: string
   featured_accommodation_ids?: string[]
   featured_trip_ids?: string[]
   show_community?: boolean

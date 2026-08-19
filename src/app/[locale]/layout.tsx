@@ -9,6 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat'
+import { WeemapAI } from '@/components/ai/WeemapAI'
 import { getSchemaOrg } from '@/lib/schema-org'
 import { getSiteSettings } from '@/lib/data'
 import { SITE_URL } from '@/lib/seo'
@@ -95,6 +96,10 @@ export default async function RootLayout({
   const messages = await getMessages()
   const settings = await getSiteSettings()
   const dir = locale === 'ar' ? 'rtl' : 'ltr'
+  const aiEnabled = process.env.NEXT_PUBLIC_WEEMAP_AI_ENABLED === 'true'
+  const chatAvailable = aiEnabled
+    && Boolean(process.env.WEEMAP_N8N_CHAT_WEBHOOK_URL?.trim())
+    && Boolean(process.env.WEEMAP_N8N_CHAT_SECRET?.trim())
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
@@ -113,7 +118,14 @@ export default async function RootLayout({
               <Header />
               <main className="flex-1">{children}</main>
               <Footer settings={settings} />
-              <WhatsAppFloat number={settings?.whatsapp_number} />
+              {aiEnabled ? (
+                <WeemapAI
+                  whatsappNumber={settings?.whatsapp_number}
+                  chatAvailable={chatAvailable}
+                />
+              ) : (
+                <WhatsAppFloat number={settings?.whatsapp_number} />
+              )}
             </div>
           </TooltipProvider>
         </NextIntlClientProvider>

@@ -42,7 +42,7 @@ export function HomeClient({ accommodations, trips, posts, settings }: Props) {
       <Services />
       <Trips items={featuredTrips} />
       <Accommodations items={featuredAccs} />
-      <ExploreSinai trip={featuredTrips[0]} />
+      <ExploreSinai trip={featuredTrips[0]} settings={settings} />
       <WeemapPicks accommodation={featuredAccs[0]} trip={featuredTrips[1] || featuredTrips[0]} />
       <HowItWorks />
       <TrustSection />
@@ -342,25 +342,29 @@ function Trips({ items }: { items: SinaiTrip[] }) {
 
 /* ─────────────────────────── WHY US ─────────────────────────── */
 
-function ExploreSinai({ trip }: { trip?: SinaiTrip }) {
+function ExploreSinai({ trip, settings }: { trip?: SinaiTrip; settings: SiteSettings | null }) {
+  const t = useTranslations('home')
   const locale = useLocale()
   const ar = locale === 'ar'
-  const image = trip?.images?.[0] || '/media/heroposter.png'
+  const image = settings?.explore_media_url || trip?.images?.[0] || '/media/heroposter.png'
+  const alt = (ar ? settings?.explore_media_alt_ar : settings?.explore_media_alt_en) || t('exploreMediaAlt')
+  const copy = (ar ? settings?.explore_copy_ar : settings?.explore_copy_en) || t('exploreCopy')
   return (
-    <section className="relative isolate min-h-[34rem] overflow-hidden bg-[#171713] text-white md:min-h-[42rem]">
-      <Image src={image} alt="" fill sizes="100vw" className="-z-20 object-cover" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 via-black/55 to-black/15 rtl:bg-gradient-to-l" />
-      <div className="container-main flex min-h-[34rem] items-end py-16 md:min-h-[42rem] md:items-center md:py-24">
-        <Reveal className="max-w-xl">
-          <span className="eyebrow text-sun-300">{ar ? 'استكشف سينا' : 'Explore Sinai'}</span>
-          <h2 className="mt-5 text-4xl font-extrabold leading-[1.04] sm:text-5xl md:text-7xl">
-            {ar ? 'البحر. الجبل. والطريق بينهم.' : 'Sea. Mountain. Everything between.'}
+    <section className="relative isolate min-h-[32rem] overflow-hidden bg-sea-900 text-white md:min-h-[40rem]">
+      <Image src={image} alt={alt} fill sizes="100vw" className="-z-20 object-cover object-center" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/75 via-black/35 to-black/5 rtl:bg-gradient-to-l" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+      <div className="container-main flex min-h-[32rem] items-end py-14 md:min-h-[40rem] md:items-center md:py-24">
+        <Reveal className="max-w-2xl">
+          <span className="eyebrow text-sun-300">{t('exploreEyebrow')}</span>
+          <h2 className="mt-5 max-w-xl text-4xl font-extrabold leading-[1.04] sm:text-5xl md:text-7xl">
+            {t('exploreTitle')}
           </h2>
-          <p className="mt-6 max-w-lg text-base leading-relaxed text-white/75 md:text-lg">
-            {trip ? (ar ? trip.description_ar : trip.description_en) : (ar ? 'شوف رحلات سينا المتاحة واختر اليوم اللي يناسبك.' : 'Browse the available Sinai trips and choose the day that fits your journey.')}
+          <p className="mt-6 line-clamp-4 max-w-[36rem] text-base leading-relaxed text-white/85 sm:line-clamp-3 sm:text-lg">
+            {copy}
           </p>
           <ButtonLink href="/sinai-trips" variant="sun" size="lg" className="mt-8">
-            {ar ? 'شوف رحلات سينا' : 'Explore Sinai trips'}
+            {t('exploreCta')}
             <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
           </ButtonLink>
         </Reveal>
