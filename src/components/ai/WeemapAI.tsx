@@ -144,7 +144,7 @@ export function WeemapAI({
     const stored = window.localStorage.getItem(SESSION_KEY)
     const nextSessionId = stored && UUID_PATTERN.test(stored) ? stored : crypto.randomUUID()
     if (stored !== nextSessionId) window.localStorage.setItem(SESSION_KEY, nextSessionId)
-    const ready = window.localStorage.getItem(LEAD_KEY) === nextSessionId
+    const ready = chatAvailable && window.localStorage.getItem(LEAD_KEY) === nextSessionId
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the anonymous browser session after mount
     setSessionId(nextSessionId)
@@ -153,7 +153,7 @@ export function WeemapAI({
       setMessages([{ id: crypto.randomUUID(), role: 'assistant', content: t('welcomeGeneric') }])
     }
     setInitialized(true)
-  }, [t])
+  }, [chatAvailable, t])
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ block: 'nearest' })
@@ -171,6 +171,7 @@ export function WeemapAI({
 
   const submitLead = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!chatAvailable) return
     const errors = validateLead(lead, t)
     setLeadErrors(errors)
     setLeadError('')
@@ -316,7 +317,7 @@ export function WeemapAI({
                 </div>
               )}
 
-              <form className="mt-6 space-y-4" onSubmit={submitLead} noValidate>
+              {chatAvailable && <form className="mt-6 space-y-4" onSubmit={submitLead} noValidate>
                 <div>
                   <Label htmlFor="weemap-ai-name">{t('nameLabel')} <span aria-hidden className="text-sun-600">*</span></Label>
                   <Input
@@ -382,7 +383,7 @@ export function WeemapAI({
                   </Link>
                   {t('privacyAfter')}
                 </p>
-              </form>
+              </form>}
 
               <div className="mt-5 border-t border-sea-900/10 pt-5">
                 <HumanHandoff number={whatsappNumber} label={t('humanWhatsApp')} />

@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
-
-const phoneSchema = z.string().trim().transform(value => value.replace(/[\s().-]/g, '')).refine(
-  value => /^\+?[0-9]{7,15}$/.test(value),
-  'Invalid phone number',
-)
-
-const leadSchema = z.object({
-  sessionId: z.string().uuid(),
-  name: z.string().trim().min(2).max(120).transform(value => value.replace(/\s+/g, ' ')),
-  whatsapp: phoneSchema,
-  email: z.union([z.literal(''), z.string().trim().email().max(254)]).optional(),
-  locale: z.enum(['ar', 'en']),
-  initialPageUrl: z.string().trim().min(1).max(2048),
-})
+import { aiLeadSchema, isAiFeatureEnabled, sameOriginPath } from '@/lib/ai-contract'
 
 const bucket = new Map<string, { count: number; resetAt: number }>()
 const LIMIT = 8
@@ -32,23 +18,13 @@ function allowRequest(ip: string) {
   return true
 }
 
-function sameOriginPath(value: string, origin: string) {
-  try {
-    const url = new URL(value, origin)
-    if (url.origin !== origin) return null
-    return `${url.pathname}${url.search}`.slice(0, 2048)
-  } catch {
-    return null
-  }
-}
-
 function isSameOriginRequest(req: NextRequest) {
   const origin = req.headers.get('origin')
   return !origin || origin === req.nextUrl.origin
 }
 
 export async function POST(req: NextRequest) {
-  if (process.env.NEXT_PUBLIC_WEEMAP_AI_ENABLED !== 'true') {
+  if (!isAiFeatureEnabled(process.env.NEXT_PUBLIC_WEEMAP_AI_ENABLED)) {
     return NextResponse.json({ error: { code: 'AI_DISABLED' } }, { status: 503 })
   }
   if (!isSameOriginRequest(req)) {
@@ -62,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: { code: 'RATE_LIMITED' } }, { status: 429 })
   }
 
-  const parsed = leadSchema.safeParse(await req.json().catch(() => null))
+  const parsed = aiLeadSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
     return NextResponse.json({ error: { code: 'INVALID_LEAD' } }, { status: 400 })
   }

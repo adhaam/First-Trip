@@ -38,7 +38,7 @@ export async function getAccommodationById(id: string): Promise<Accommodation | 
   if (!isSupabaseConfigured()) return null
   const supabase = getSupabaseAdmin()
   const [{ data, error }, rates] = await Promise.all([
-    supabase.from('accommodations').select('*').eq('id', id).single(),
+    supabase.from('accommodations').select('*').eq('id', id).eq('is_active', true).maybeSingle(),
     getSeasonalRates(id),
   ])
 
@@ -46,6 +46,7 @@ export async function getAccommodationById(id: string): Promise<Accommodation | 
     console.error('getAccommodationById error:', error)
     return null
   }
+  if (!data) return null
   return { ...(data as Accommodation), seasonal_rates: rates }
 }
 

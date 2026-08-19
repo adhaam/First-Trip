@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/lib/pricing.test.ts src/lib/trips.test.ts src/lib/ai-contract.test.ts",
+    "test:pricing": "tsx --test src/lib/pricing.test.ts",
+    "test:trips": "tsx --test src/lib/trips.test.ts",
+    "test:ai": "tsx --test src/lib/ai-contract.test.ts",
+    "check:translations": "tsx scripts/check-translations.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -1,43 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
-
-const pageTypeSchema = z.enum([
-  'home',
-  'trips',
-  'trip',
-  'stays',
-  'accommodation',
-  'community',
-  'article',
-  'other',
-])
-
-const requestSchema = z.object({
-  sessionId: z.string().uuid(),
-  message: z.string().trim().min(1).max(1000),
-  locale: z.enum(['ar', 'en']),
-  page: z.object({
-    url: z.string().trim().min(1).max(2048),
-    type: pageTypeSchema,
-    entityId: z.string().trim().regex(/^[A-Za-z0-9_-]{1,200}$/).optional(),
-  }),
-})
-
-const actionSchema = z.object({
-  type: z.enum(['view_trip', 'view_stay', 'open_whatsapp']),
-  label: z.string().min(1).max(80),
-  href: z.string().min(1).max(2048).refine(
-    value => (value.startsWith('/') && !value.startsWith('//')) || value.startsWith('https://wa.me/'),
-    'Invalid action URL',
-  ),
-})
-
-const upstreamResponseSchema = z.object({
-  message: z.string().trim().min(1).max(4000),
-  sessionId: z.string().uuid(),
-  actions: z.array(actionSchema).max(4).optional().default([]),
-})
+import {
+  aiChatRequestSchema,
+  isAiFeatureEnabled,
+  isValidAiWebhookUrl,
+  parseAiUpstreamResponse,
+  sameOriginPath,
+} from '@/lib/ai-contract'
 
 const bucket = new Map<string, { count: number; resetAt: number }>()
 const LIMIT = 20
@@ -55,39 +24,20 @@ function allowRequest(key: string) {
   return true
 }
 
-function sameOriginPath(value: string, origin: string) {
-  try {
-    const url = new URL(value, origin)
-    if (url.origin !== origin) return null
-    return `${url.pathname}${url.search}`.slice(0, 2048)
-  } catch {
-    return null
-  }
-}
-
-function validWebhookUrl(value: string) {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:' || (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))
-  } catch {
-    return false
-  }
-}
-
 function isSameOriginRequest(req: NextRequest) {
   const origin = req.headers.get('origin')
   return !origin || origin === req.nextUrl.origin
 }
 
 export async function POST(req: NextRequest) {
-  if (process.env.NEXT_PUBLIC_WEEMAP_AI_ENABLED !== 'true') {
+  if (!isAiFeatureEnabled(process.env.NEXT_PUBLIC_WEEMAP_AI_ENABLED)) {
     return NextResponse.json({ error: { code: 'AI_DISABLED' } }, { status: 503 })
   }
   if (!isSameOriginRequest(req)) {
     return NextResponse.json({ error: { code: 'FORBIDDEN' } }, { status: 403 })
   }
 
-  const parsed = requestSchema.safeParse(await req.json().catch(() => null))
+  const parsed = aiChatRequestSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
     return NextResponse.json({ error: { code: 'INVALID_REQUEST' } }, { status: 400 })
   }
@@ -122,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     const webhookUrl = process.env.WEEMAP_N8N_CHAT_WEBHOOK_URL?.trim() || ''
     const webhookSecret = process.env.WEEMAP_N8N_CHAT_SECRET?.trim() || ''
-    if (!webhookUrl || !webhookSecret || !validWebhookUrl(webhookUrl)) {
+    if (!webhookUrl || !webhookSecret || !isValidAiWebhookUrl(webhookUrl)) {
       return NextResponse.json({ error: { code: 'AI_UNAVAILABLE' } }, { status: 503 })
     }
 
@@ -147,13 +97,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: { code: 'AI_UNAVAILABLE' } }, { status: 503 })
     }
 
-    const response = upstreamResponseSchema.safeParse(await upstream.json().catch(() => null))
-    if (!response.success || response.data.sessionId !== parsed.data.sessionId) {
+    const response = parseAiUpstreamResponse(
+      await upstream.json().catch(() => null),
+      parsed.data.sessionId,
+    )
+    if (!response) {
       console.error('Ask WEEMAP upstream returned an invalid contract')
       return NextResponse.json({ error: { code: 'AI_UNAVAILABLE' } }, { status: 503 })
     }
 
-    return NextResponse.json(response.data)
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Ask WEEMAP chat API unavailable:', error instanceof Error ? error.name : 'UnknownError')
     return NextResponse.json({ error: { code: 'AI_UNAVAILABLE' } }, { status: 503 })

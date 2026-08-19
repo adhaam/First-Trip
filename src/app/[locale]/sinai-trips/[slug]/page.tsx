@@ -64,9 +64,11 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
   const includes = ((ar ? trip.includes_ar : trip.includes_en) || []).filter(Boolean)
   const images = (trip.images || []).filter(Boolean)
   const cover = images[0] || '/media/heroposter.png'
-  const related = trips
-    .filter((item) => item.id !== trip.id && (!trip.category_en || item.category_en === trip.category_en))
-    .slice(0, 3)
+  const otherTrips = trips.filter((item) => item.id !== trip.id)
+  const related = [
+    ...otherTrips.filter((item) => trip.category_en && item.category_en === trip.category_en),
+    ...otherTrips.filter((item) => !trip.category_en || item.category_en !== trip.category_en),
+  ].slice(0, 3)
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
   const message = encodeURIComponent(
     ar ? `أريد معرفة تفاصيل رحلة ${name}` : `I'd like to know more about ${name}`,
