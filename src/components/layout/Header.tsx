@@ -7,8 +7,9 @@ import { Link } from '@/i18n/navigation'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Logo } from '@/components/brand/Logo'
 import { NAV_ITEMS, NAV_LABEL_KEYS } from '@/lib/constants'
-import { Menu, Globe, ArrowUpRight } from 'lucide-react'
+import { Menu, Globe, ArrowUpRight, ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useCart } from '@/components/commerce/CartProvider'
 
 export function Header() {
   const t = useTranslations('nav')
@@ -16,6 +17,7 @@ export function Header() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const cart = useCart()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 16)
@@ -94,6 +96,23 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={cart.open}
+            aria-label={locale === 'ar' ? 'سلة WEEMAP' : 'WEEMAP cart'}
+            className={cn(
+              'relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors',
+              transparent ? 'text-white hover:bg-white/10' : 'text-sea-900 hover:bg-sand-200',
+            )}
+          >
+            <ShoppingBag className="h-5 w-5" />
+            {cart.hydrated && cart.count > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sun-500 px-1 text-[10px] font-bold text-white">
+                {cart.count > 9 ? '9+' : cart.count}
+              </span>
+            )}
+          </button>
+
           <Link
             href={cleanPath}
             locale={otherLocale}

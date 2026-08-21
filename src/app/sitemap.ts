@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { getAccommodations, getSinaiTrips } from '@/lib/data'
+import { getAccommodations, getSinaiTrips, getCommerceProducts } from '@/lib/data'
 import { getPathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { SITE_URL } from '@/lib/seo'
@@ -76,6 +76,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: trip.created_at ? new Date(trip.created_at) : new Date(),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
+        alternates: localizedAlternates(path),
+      })
+    }
+  }
+
+  // Real commerce product pages — same pattern as accommodations/trips above.
+  const [merchProducts, rentalProducts] = await Promise.all([
+    getCommerceProducts('sale').catch(() => []),
+    getCommerceProducts('rental').catch(() => []),
+  ])
+  for (const locale of routing.locales) {
+    for (const product of merchProducts) {
+      const path = `/merch/${product.slug}`
+      entries.push({
+        url: localizedUrl(path, locale),
+        changeFrequency: 'weekly' as const,
+        priority: 0.6,
+        alternates: localizedAlternates(path),
+      })
+    }
+    for (const product of rentalProducts) {
+      const path = `/rent/${product.slug}`
+      entries.push({
+        url: localizedUrl(path, locale),
+        changeFrequency: 'weekly' as const,
+        priority: 0.6,
         alternates: localizedAlternates(path),
       })
     }

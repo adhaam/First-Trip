@@ -64,6 +64,7 @@ const emptyAccommodation: Partial<Accommodation> = {
   images: [],
   latitude: 28.5092,
   longitude: 34.5185,
+  sort_order: 0,
 }
 
 export function AccommodationManager() {
@@ -219,6 +220,7 @@ export function AccommodationManager() {
         price_single_room: form.price_single_room || 0,
         price_triple_room: form.price_triple_room || 0,
         meal_plans: (form.meal_plans as MealPlan[]) || [],
+        sort_order: form.sort_order ?? 0,
         is_active: form.is_active ?? true,
       }
       const res = editing
@@ -786,6 +788,21 @@ export function AccommodationManager() {
               <div>
                 <Label className="mb-2 block">{locale === 'ar' ? 'الوصف' : 'Description'}</Label>
                 <Textarea rows={3} value={form.description_en || ''} onChange={e => updateField('description_en', e.target.value)} />
+              </div>
+
+              {/* Display Order */}
+              <div className="flex items-center gap-6">
+                <div className="w-36">
+                  <Label className="mb-1 block text-xs">{locale === 'ar' ? 'ترتيب العرض' : 'Display Order'}</Label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.sort_order ?? 0}
+                    onChange={e => updateField('sort_order', parseInt(e.target.value) || 0)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">{locale === 'ar' ? '0 = الأول' : '0 = shown first'}</p>
+                </div>
               </div>
 
               {/* Actions */}

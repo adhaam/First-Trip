@@ -187,7 +187,7 @@ export const MOCK_SINAI_TRIPS: SinaiTrip[] = [
     price: 450,
     includes_ar: ['انتقالات من وإلى الفندق', 'معدات السنوركل', 'غداء بدوي', 'مرشد سياحي'],
     includes_en: ['Hotel Transfers', 'Snorkeling Gear', 'Bedouin Lunch', 'Tour Guide'],
-    is_active: true, created_at: new Date().toISOString(),
+    sort_order: 0, is_active: true, created_at: new Date().toISOString(),
   },
   {
     id: 't2', name_ar: 'جبل موسى وسانت كاترين', name_en: 'Mount Sinai & St. Catherine',
@@ -199,7 +199,7 @@ export const MOCK_SINAI_TRIPS: SinaiTrip[] = [
     price: 650,
     includes_ar: ['انتقالات بباص حديث', 'دليل بدوي مرخص', 'تذاكر دخول المحمية', 'مشروب دافئ'],
     includes_en: ['Modern Bus Transfer', 'Licensed Bedouin Guide', 'Reserve Entry Tickets', 'Hot Drink'],
-    is_active: true, created_at: new Date().toISOString(),
+    sort_order: 0, is_active: true, created_at: new Date().toISOString(),
   },
   {
     id: 't3', name_ar: 'سفاري وادي قني والوشواشي', name_en: 'Wadi Qnai & Washwashi Safari',
@@ -211,7 +211,7 @@ export const MOCK_SINAI_TRIPS: SinaiTrip[] = [
     price: 500,
     includes_ar: ['سيارات جيب 4x4', 'دليل خبير', 'مياه ومشروبات', 'غداء بدوي'],
     includes_en: ['4x4 Jeep Transportation', 'Expert Guide', 'Water & Drinks', 'Bedouin Lunch'],
-    is_active: true, created_at: new Date().toISOString(),
+    sort_order: 0, is_active: true, created_at: new Date().toISOString(),
   },
 ]
 

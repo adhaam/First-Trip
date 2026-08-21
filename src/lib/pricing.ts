@@ -335,6 +335,21 @@ export function accommodationSubtotal(nightly: ResolvedNight[], numRooms = 1): n
   return nightly.reduce((sum, n) => sum + n.rate, 0) * Math.max(1, numRooms)
 }
 
+/**
+ * The extra cost of a room upgrade for a given stay.
+ * extra_price_per_night is a FIXED supplement per ROOM per night (not per person).
+ * Multiply by numRooms and nights to get the total upgrade add-on.
+ * Returns 0 when extraPerNight is 0, undefined, or NaN.
+ */
+export function upgradeSubtotal(
+  extraPerNight: number,
+  numRooms: number,
+  nights: number,
+): number {
+  const extra = Number(extraPerNight) || 0
+  return extra * Math.max(1, numRooms) * Math.max(0, nights)
+}
+
 // ─── Trip pricing (public vs package cost) ───
 
 export interface TripPriceInput {

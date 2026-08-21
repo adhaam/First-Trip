@@ -21,6 +21,10 @@ export type RoomType = 'single' | 'double' | 'triple'
 export interface RoomAllocation {
   type: RoomType
   count: number
+  /** Optional upgrade supplement selected for this room block. */
+  upgrade_id?: string
+  upgrade_extra_per_night?: number
+  upgrade_name?: string
 }
 
 /** Authoritative occupancy — must match pricing.ts roomOccupancy() */

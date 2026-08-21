@@ -24,6 +24,7 @@ const emptyTrip: Partial<SinaiTrip> = {
   price: 0,
   package_price: null,
   includes_ar: [], includes_en: [],
+  sort_order: 0,
   is_active: true,
 }
 
@@ -331,10 +332,23 @@ export function SinaiTripManager() {
               <div><Label className="mb-2 block">{locale === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}</Label><Textarea rows={3} value={form.description_ar || ''} onChange={e => updateField('description_ar', e.target.value)} /></div>
               <div><Label className="mb-2 block">{locale === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}</Label><Textarea rows={3} value={form.description_en || ''} onChange={e => updateField('description_en', e.target.value)} /></div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.is_active ?? true} onChange={e => updateField('is_active', e.target.checked)} className="h-4 w-4" />
-                <span className={cn('text-sm', 'text-gray-700')}>{locale === 'ar' ? 'نشط (يظهر للعملاء)' : 'Active (visible to customers)'}</span>
-              </label>
+              <div className="flex items-center gap-4">
+                <div className="w-32">
+                  <Label className="mb-1 block text-xs">{locale === 'ar' ? 'ترتيب العرض' : 'Display Order'}</Label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.sort_order ?? 0}
+                    onChange={e => updateField('sort_order', parseInt(e.target.value) || 0)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">{locale === 'ar' ? '0 = الأول، كلما زاد = متأخر' : '0 = first, higher = later'}</p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.is_active ?? true} onChange={e => updateField('is_active', e.target.checked)} className="h-4 w-4" />
+                  <span className={cn('text-sm', 'text-gray-700')}>{locale === 'ar' ? 'نشط (يظهر للعملاء)' : 'Active (visible to customers)'}</span>
+                </label>
+              </div>
 
               <div className="flex gap-3 justify-end pt-2 border-t">
                 <Button variant="outline" onClick={() => { setShowForm(false); setEditing(null) }}>{locale === 'ar' ? 'إلغاء' : 'Cancel'}</Button>

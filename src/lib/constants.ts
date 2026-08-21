@@ -11,6 +11,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: '🏠' },
   { label_ar: 'احجز دهب', label_en: 'Book Dahab', href: '/book-dahab', icon: '📅' },
   { label_ar: 'رحلات سيناء', label_en: 'Sinai Trips', href: '/sinai-trips', icon: '🏜️' },
+  { label_ar: 'المتجر', label_en: 'Merch', href: '/merch', icon: '🛍️' },
+  { label_ar: 'الإيجارات', label_en: 'Rental', href: '/rent', icon: '🚲' },
   { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: '👥' },
   { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: '🤝' },
   { label_ar: 'عن الشركة', label_en: 'About Us', href: '/about', icon: '📖' },

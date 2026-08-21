@@ -16,7 +16,7 @@ import { WHATSAPP_NUMBER } from '@/lib/constants'
 import {
   PACKAGE_DEPARTURE_DAYS, PACKAGE_RETURN_DAYS,
   governoratesFor, quotePackageV2, quoteStay, quoteTransfer,
-  nightsForDuration, upcomingDatesFor, formatEGP, roomsForPeople,
+  nightsForDuration, upcomingDatesFor, formatEGP, roomsForPeople, upgradeSubtotal,
 } from '@/lib/pricing'
 import type {
   Accommodation, MealPlan, SinaiTrip, TransferDirection, TransferGovernoratePrice,
@@ -24,7 +24,7 @@ import type {
 } from '@/lib/types'
 import {
   Send, CheckCircle2, MessageCircle, Loader2, AlertCircle,
-  Package, Bed, Bus, Calendar, Info, BedDouble, BedSingle, UtensilsCrossed, Plus, X, Mountain, Users,
+  Package, Bed, Bus, Calendar, Info, BedDouble, BedSingle, UtensilsCrossed, Plus, X, Mountain, Users, Sparkles,
 } from 'lucide-react'
 import { RoomAllocator, type RoomAllocation, ROOM_OCCUPANCY } from '@/components/RoomAllocator'
 import { cn } from '@/lib/utils'
@@ -107,10 +107,24 @@ export function BookingForm({
   // Room allocation — used when party needs multiple room types
   const [roomAllocations, setRoomAllocations] = useState<RoomAllocation[]>([])
   const [useAllocator, setUseAllocator] = useState(false)
+  // Selected room upgrade (client submits only the ID — server derives price)
+  const [upgradeId, setUpgradeId] = useState<string>('')
 
   const handleAllocationsChange = useCallback((allocs: RoomAllocation[]) => {
     setRoomAllocations(allocs)
   }, [])
+
+  // Active room upgrades for this accommodation (empty = no upgrades available)
+  const activeUpgrades = useMemo(
+    () => (accommodation.room_upgrades ?? []).filter((u) => u.is_active),
+    [accommodation.room_upgrades],
+  )
+
+  // Resolved upgrade object for display (price is trusted from server-loaded data)
+  const selectedUpgrade = useMemo(
+    () => activeUpgrades.find((u) => u.id === upgradeId) ?? null,
+    [activeUpgrades, upgradeId],
+  )
 
   const totalAllocated = roomAllocations.reduce(
     (sum, a) => sum + ROOM_OCCUPANCY[a.type] * a.count,
@@ -175,6 +189,7 @@ export function BookingForm({
     [sinaiTrips, extraTripIds],
   )
   const numRooms = roomsForPeople(roomType, numPeople)
+  const packageNights = nightsForDuration(duration === '5' ? 5 : 4)
 
   // ─── governorate options ───
   // Picked first, before the bus/hiace choice — so we show the union of
@@ -251,7 +266,7 @@ export function BookingForm({
         roomType,
         checkIn: packageDepartureDate || packageDepartureDates[0],
         mealPlanPricePerNight,
-        nights: nightsForDuration(duration === '5' ? 5 : 4),
+        nights: packageNights,
         numRooms,
         includedTrips,
         extraTrips: selectedExtraTrips,
@@ -280,7 +295,7 @@ export function BookingForm({
     }
   }, [
     mode, hasRoomPricing, accommodation, pricing, roomType, mealPlanPricePerNight, duration,
-    includedTrips, selectedExtraTrips, packageTransferType, packageGov, packageDirection, numPeople,
+    packageNights, includedTrips, selectedExtraTrips, packageTransferType, packageGov, packageDirection, numPeople,
     numRooms, packageDepartureDate, packageDepartureDates,
   ])
 
@@ -317,12 +332,28 @@ export function BookingForm({
     }
   }, [mode, hasRoomPricing, accommodation, roomType, mealPlanPricePerNight, nights, numPeople, numRooms, stayCheckIn])
 
+  const upgradeTotal = useMemo(() => {
+    if (!selectedUpgrade || mode === 'transfer-only') return 0
+    if (mode === 'package') {
+      return upgradeSubtotal(
+        selectedUpgrade.extra_price_per_night,
+        packageQuote?.numRooms ?? numRooms,
+        packageNights,
+      )
+    }
+    return upgradeSubtotal(
+      selectedUpgrade.extra_price_per_night,
+      stayQuote?.numRooms ?? numRooms,
+      nights,
+    )
+  }, [selectedUpgrade, mode, packageQuote, stayQuote, numRooms, packageNights, nights])
+
   const total =
-    mode === 'package'
+    (mode === 'package'
       ? packageQuote?.total ?? 0
       : mode === 'transfer-only'
       ? transferQuote?.total ?? 0
-      : stayQuote?.total ?? 0
+      : stayQuote?.total ?? 0) + upgradeTotal
 
   const formatDate = (iso?: string) => {
     if (!iso) return ''
@@ -353,6 +384,7 @@ export function BookingForm({
           room_type: hasRoomPricing && !useAllocator ? roomType : undefined,
           room_allocations: hasRoomPricing && useAllocator && roomAllocations.length > 0 ? roomAllocations : undefined,
           meal_plan_key: hasRoomPricing ? (mealPlanKey || undefined) : undefined,
+          upgrade_id: hasRoomPricing && upgradeId ? upgradeId : undefined,
           extra_trip_ids: hasRoomPricing && extraTripIds.length ? extraTripIds : undefined,
           num_people: numPeople,
           notes: data.notes || undefined,
@@ -370,6 +402,7 @@ export function BookingForm({
           room_type: hasRoomPricing && !useAllocator ? roomType : undefined,
           room_allocations: hasRoomPricing && useAllocator && roomAllocations.length > 0 ? roomAllocations : undefined,
           meal_plan_key: hasRoomPricing ? (mealPlanKey || undefined) : undefined,
+          upgrade_id: hasRoomPricing && upgradeId ? upgradeId : undefined,
           num_people: numPeople,
           notes: data.notes || undefined,
         }
@@ -458,88 +491,13 @@ export function BookingForm({
     )
   }
 
+  // Desktop: form left, sticky price summary right (360 px)
+  // Mobile:  form first, summary below — price is NEVER above the form
   return (
-    <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
-      {/* ─── running total ─── */}
-      <div className="border-b border-sea-100 bg-gradient-to-br from-sea-50 to-sun-50 p-6">
-        <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sea-900/50">
-          {t('priceBreakdown')}
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start">
 
-        <div className="mt-3 space-y-1.5 text-sm">
-          {mode === 'package' && packageQuote && (
-            <>
-              <Line
-                label={`${t('accommodationLine')} · ${packageQuote.numRooms} ${packageQuote.numRooms === 1 ? (ar ? 'غرفة' : 'room') : (ar ? 'غرف' : 'rooms')}`}
-                value={`${formatEGP(packageQuote.accommodationSubtotal, locale)} ${common('egp')}`}
-              />
-              {packageQuote.mealSubtotal > 0 && (
-                <Line
-                  label={selectedMealPlan ? (ar ? selectedMealPlan.label_ar : selectedMealPlan.label_en) : ''}
-                  value={`${formatEGP(packageQuote.mealSubtotal, locale)} ${common('egp')}`}
-                />
-              )}
-              {includedTrips.length > 0 && (
-                <Line
-                  label={ar ? 'رحلات مضمّنة' : 'Included trips'}
-                  value={`${formatEGP(packageQuote.includedTripsSubtotal, locale)} ${common('egp')}`}
-                />
-              )}
-              <Line
-                label={t('transferLine')}
-                value={
-                  packageQuote.transfer.isPriced
-                    ? `${formatEGP(packageQuote.transferSubtotal, locale)} ${common('egp')}`
-                    : '—'
-                }
-              />
-              {packageQuote.extraTripsSubtotal > 0 && (
-                <Line
-                  label={ar ? 'رحلات إضافية' : 'Extra trips'}
-                  value={`${formatEGP(packageQuote.extraTripsSubtotal, locale)} ${common('egp')}`}
-                />
-              )}
-            </>
-          )}
-          {mode === 'stay-only' && stayQuote && (
-            <Line
-              label={`${t('accommodationLine')} · ${nights} ${
-                nights === 1 ? common('night') : common('nights')
-              }`}
-              value={`${formatEGP(stayQuote.total, locale)} ${common('egp')}`}
-            />
-          )}
-          {mode === 'transfer-only' && transferQuote && (
-            <Line
-              label={`${transferType === 'package_bus'
-                ? (ar ? 'باص جماعي' : 'Shared bus')
-                : (ar ? 'هايس خاص' : 'Private Hiace')} · ${
-                transferDirection === 'round_trip' ? t('roundTrip') : t('oneWay')
-              }`}
-              value={
-                transferQuote.isPriced
-                  ? `${formatEGP(transferQuote.perPerson, locale)} ${common('egp')}`
-                  : '—'
-              }
-            />
-          )}
-        </div>
-
-        <div className="mt-4 flex items-end justify-between gap-3 border-t border-sea-200/60 pt-4">
-          <div className="text-xs text-sea-900/55">
-            {t('totalFor')} {numPeople} {numPeople === 1 ? common('person') : common('people')}
-          </div>
-          <div className="font-display text-3xl font-bold text-sea-900">
-            {formatEGP(total, locale)}{' '}
-            <span className="text-base font-semibold text-sea-900/70">{common('egp')}</span>
-          </div>
-        </div>
-
-        <p className="mt-2 text-[0.7rem] leading-relaxed text-sea-900/45">
-          {ar ? '* السعر النهائي بيتأكد معاك قبل أي دفع.' : '* Final price confirmed before any payment.'}
-        </p>
-      </div>
-
+      {/* ─── LEFT: booking form card ─── */}
+      <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
         {/* ─── mode selector ─── */}
         <div>
@@ -700,6 +658,33 @@ export function BookingForm({
                           ar={ar}
                           active={mealPlanKey === plan.key}
                           onClick={() => setValue('meal_plan_key', plan.key)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Room upgrade */}
+                {activeUpgrades.length > 0 && (
+                  <div>
+                    <Label className="mb-2 flex items-center gap-1.5">
+                      <Sparkles className="h-4 w-4 text-sea-500" />
+                      {ar ? 'ترقية الغرفة' : 'Room upgrade'}
+                    </Label>
+                    <div className="grid gap-2">
+                      <UpgradeCard
+                        selected={upgradeId === ''}
+                        label={ar ? 'بدون ترقية' : 'No upgrade'}
+                        extra={null}
+                        onClick={() => setUpgradeId('')}
+                      />
+                      {activeUpgrades.map((u) => (
+                        <UpgradeCard
+                          key={u.id}
+                          selected={upgradeId === u.id}
+                          label={ar ? u.name_ar : u.name_en}
+                          extra={`+${formatEGP(u.extra_price_per_night, locale)} ${common('egp')} / ${ar ? 'ليلة/غرفة' : 'night per room'}`}
+                          onClick={() => setUpgradeId(u.id)}
                         />
                       ))}
                     </div>
@@ -904,6 +889,33 @@ export function BookingForm({
                           ar={ar}
                           active={mealPlanKey === plan.key}
                           onClick={() => setValue('meal_plan_key', plan.key)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Room upgrade */}
+                {activeUpgrades.length > 0 && (
+                  <div>
+                    <Label className="mb-2 flex items-center gap-1.5">
+                      <Sparkles className="h-4 w-4 text-sea-500" />
+                      {ar ? 'ترقية الغرفة' : 'Room upgrade'}
+                    </Label>
+                    <div className="grid gap-2">
+                      <UpgradeCard
+                        selected={upgradeId === ''}
+                        label={ar ? 'بدون ترقية' : 'No upgrade'}
+                        extra={null}
+                        onClick={() => setUpgradeId('')}
+                      />
+                      {activeUpgrades.map((u) => (
+                        <UpgradeCard
+                          key={u.id}
+                          selected={upgradeId === u.id}
+                          label={ar ? u.name_ar : u.name_en}
+                          extra={`+${formatEGP(u.extra_price_per_night, locale)} ${common('egp')} / ${ar ? 'ليلة/غرفة' : 'night per room'}`}
+                          onClick={() => setUpgradeId(u.id)}
                         />
                       ))}
                     </div>
@@ -1132,6 +1144,106 @@ export function BookingForm({
           </a>
         </div>
       </form>
+      </div>
+
+      {/* ─── RIGHT: sticky price summary — Desktop sticks, Mobile appears below ─── */}
+      <div className="mt-6 lg:mt-0 lg:sticky lg:top-6">
+        <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
+          <div className="bg-gradient-to-br from-sea-50 to-sun-50 p-6">
+            <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sea-900/50">
+              {t('priceBreakdown')}
+            </div>
+
+            <div className="mt-3 space-y-1.5 text-sm">
+              {mode === 'package' && packageQuote && (
+                <>
+                  <Line
+                    label={`${t('accommodationLine')} · ${packageQuote.numRooms} ${packageQuote.numRooms === 1 ? (ar ? 'غرفة' : 'room') : (ar ? 'غرف' : 'rooms')}`}
+                    value={`${formatEGP(packageQuote.accommodationSubtotal, locale)} ${common('egp')}`}
+                  />
+                  {packageQuote.mealSubtotal > 0 && (
+                    <Line
+                      label={selectedMealPlan ? (ar ? selectedMealPlan.label_ar : selectedMealPlan.label_en) : ''}
+                      value={`${formatEGP(packageQuote.mealSubtotal, locale)} ${common('egp')}`}
+                    />
+                  )}
+                  {includedTrips.length > 0 && (
+                    <Line
+                      label={ar ? 'رحلات مضمّنة' : 'Included trips'}
+                      value={`${formatEGP(packageQuote.includedTripsSubtotal, locale)} ${common('egp')}`}
+                    />
+                  )}
+                  <Line
+                    label={t('transferLine')}
+                    value={
+                      packageQuote.transfer.isPriced
+                        ? `${formatEGP(packageQuote.transferSubtotal, locale)} ${common('egp')}`
+                        : '—'
+                    }
+                  />
+                  {packageQuote.extraTripsSubtotal > 0 && (
+                    <Line
+                      label={ar ? 'رحلات إضافية' : 'Extra trips'}
+                      value={`${formatEGP(packageQuote.extraTripsSubtotal, locale)} ${common('egp')}`}
+                    />
+                  )}
+                  {selectedUpgrade && upgradeTotal > 0 && (
+                    <Line
+                      label={ar ? `ترقية · ${selectedUpgrade.name_ar}` : `Upgrade · ${selectedUpgrade.name_en}`}
+                      value={`${formatEGP(upgradeTotal, locale)} ${common('egp')}`}
+                    />
+                  )}
+                </>
+              )}
+              {mode === 'stay-only' && stayQuote && (
+                <>
+                  <Line
+                    label={`${t('accommodationLine')} · ${nights} ${
+                      nights === 1 ? common('night') : common('nights')
+                    }`}
+                    value={`${formatEGP(stayQuote.total, locale)} ${common('egp')}`}
+                  />
+                  {selectedUpgrade && upgradeTotal > 0 && (
+                    <Line
+                      label={ar ? `ترقية · ${selectedUpgrade.name_ar}` : `Upgrade · ${selectedUpgrade.name_en}`}
+                      value={`${formatEGP(upgradeTotal, locale)} ${common('egp')}`}
+                    />
+                  )}
+                </>
+              )}
+              {mode === 'transfer-only' && transferQuote && (
+                <Line
+                  label={`${transferType === 'package_bus'
+                    ? (ar ? 'باص جماعي' : 'Shared bus')
+                    : (ar ? 'هايس خاص' : 'Private Hiace')} · ${
+                    transferDirection === 'round_trip' ? t('roundTrip') : t('oneWay')
+                  }`}
+                  value={
+                    transferQuote.isPriced
+                      ? `${formatEGP(transferQuote.perPerson, locale)} ${common('egp')}`
+                      : '—'
+                  }
+                />
+              )}
+            </div>
+
+            <div className="mt-4 flex items-end justify-between gap-3 border-t border-sea-200/60 pt-4">
+              <div className="text-xs text-sea-900/55">
+                {t('totalFor')} {numPeople} {numPeople === 1 ? common('person') : common('people')}
+              </div>
+              <div className="font-display text-3xl font-bold text-sea-900">
+                {formatEGP(total, locale)}{' '}
+                <span className="text-base font-semibold text-sea-900/70">{common('egp')}</span>
+              </div>
+            </div>
+
+            <p className="mt-2 text-[0.7rem] leading-relaxed text-sea-900/45">
+              {ar ? '* السعر النهائي بيتأكد معاك قبل أي دفع.' : '* Final price confirmed before any payment.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   )
 }
@@ -1229,6 +1341,31 @@ function MealPlanCard({
       <span className="shrink-0 text-xs font-semibold text-sea-600">
         {plan.price_per_person_per_night > 0 ? `+${plan.price_per_person_per_night.toLocaleString()}` : (ar ? 'مجاني' : 'Free')}
       </span>
+    </button>
+  )
+}
+
+function UpgradeCard({
+  selected, label, extra, onClick,
+}: {
+  selected: boolean
+  label: string
+  extra: string | null
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center justify-between gap-3 rounded-2xl border-[1.5px] px-4 py-2.5 text-start transition-colors',
+        selected ? 'border-sun-500 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
+      )}
+    >
+      <span className="text-sm font-medium text-sea-900">{label}</span>
+      {extra && (
+        <span className="shrink-0 text-xs font-semibold text-sun-600">{extra}</span>
+      )}
     </button>
   )
 }

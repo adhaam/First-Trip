@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
 import { getTransferPricing, getAccommodationById } from '@/lib/data'
 import {
   quotePackage, quotePackageV2, quoteTransfer,
   buildPriceSnapshot, buildStaySnapshot,
   nightsForDuration, isPackageDepartureDay, isPackageReturnDay, roomsForPeople,
-  baseNightlyRoomRate, roomOccupancy,
+  baseNightlyRoomRate, upgradeSubtotal,
 } from '@/lib/pricing'
 import type { TripPriceInput } from '@/lib/pricing'
-import type { MealPlan, PriceSnapshot } from '@/lib/types'
+import type { MealPlan, PriceSnapshot, RoomUpgrade } from '@/lib/types'
 
 // Rate limiting (simple in-memory store — for production use Upstash Redis)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -44,10 +45,15 @@ const bookingSchema = z.object({
   transfer_type: z.enum(['package_bus', 'hiace']).optional(),
   transfer_direction: z.enum(['to_dahab', 'from_dahab', 'round_trip']).optional(),
   room_type: z.enum(['double', 'single', 'triple']).optional(),
+  // Optional upgrade ID — server validates and derives extra_price_per_night.
+  // Clients MUST NOT send extra_price_per_night; it is ignored if present.
+  upgrade_id: z.string().uuid().optional(),
   // Optional multi-room allocation (e.g. 1 double + 1 single for 3 people)
   room_allocations: z.array(z.object({
     type: z.enum(['single', 'double', 'triple']),
     count: z.number().int().min(1).max(20),
+    // Per-allocation upgrade — server validates, client only sends the ID
+    upgrade_id: z.string().uuid().optional(),
   })).optional(),
   meal_plan_key: z.string().optional(),
   extra_trip_ids: z.array(z.string().uuid()).optional(),
@@ -79,6 +85,28 @@ type BookingInput = z.infer<typeof bookingSchema>
 interface PricingResult {
   total_price: number | null
   price_snapshot: PriceSnapshot | null
+}
+
+/**
+ * Resolve a room upgrade from the accommodation's server-fetched upgrade list.
+ * Returns null when:
+ *   - No upgrade_id was provided (fine — no upgrade selected)
+ *   - The ID doesn't exist in the DB (fake ID from client — silently ignored)
+ *   - The upgrade belongs to a different accommodation (cross-hotel inject — rejected)
+ *   - The upgrade is inactive (rejected)
+ * Only returns the DB-trusted RoomUpgrade record — extra_price_per_night is
+ * NEVER taken from client input.
+ */
+function resolveUpgrade(
+  upgradeId: string | undefined,
+  accommodationId: string,
+  upgrades: RoomUpgrade[],
+): RoomUpgrade | null {
+  if (!upgradeId) return null
+  const found = upgrades.find(
+    (u) => u.id === upgradeId && u.accommodation_id === accommodationId && u.is_active,
+  )
+  return found ?? null
 }
 
 /**
@@ -124,44 +152,81 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
   const mealPlan = mealPlans.find((m) => m.key === input.meal_plan_key && m.is_active)
   const mealPlanPricePerNight = mealPlan?.price_per_person_per_night || 0
 
+  // Upgrades — fetched alongside acc by getAccommodationById (migration-safe: [] if table missing)
+  const accUpgrades: RoomUpgrade[] = acc.room_upgrades ?? []
+
   // ─── accommodation-only (stay-only) ───
   if (input.booking_type === 'accommodation-only') {
     if (hasRoomPricing && input.trip_date) {
-      // Multi-room allocation: sum each room group's cost
+      // Multi-room allocation: sum each room group's cost, with per-allocation upgrades
       if (input.room_allocations && input.room_allocations.length > 0) {
         const nights = input.nights ?? 1
         let roomTotal = 0
+        const snapshotAllocations: import('@/lib/types').RoomAllocationSnapshot[] = []
         for (const alloc of input.room_allocations) {
-          const ratePerRoom = baseNightlyRoomRate(acc, alloc.type)
-          roomTotal += ratePerRoom * alloc.count * nights
+          const baseRate = baseNightlyRoomRate(acc, alloc.type)
+          const upgrade = resolveUpgrade(alloc.upgrade_id, input.accommodation_id!, accUpgrades)
+          const extra = upgrade ? upgrade.extra_price_per_night : 0
+          const finalRate = baseRate + extra
+          roomTotal += finalRate * alloc.count * nights
+          snapshotAllocations.push({
+            room_type: alloc.type,
+            quantity: alloc.count,
+            base_nightly_rate: baseRate,
+            ...(upgrade ? {
+              upgrade_id: upgrade.id,
+              upgrade_name: upgrade.name_en,
+              upgrade_extra_per_night: upgrade.extra_price_per_night,
+            } : {}),
+            final_nightly_rate: finalRate,
+          })
         }
         const mealTotal = mealPlanPricePerNight * input.num_people * nights
         const total = roomTotal + mealTotal
         return {
           total_price: total,
           price_snapshot: {
-            room_type_used: 'mixed' as const,
-            room_allocations: input.room_allocations,
-            num_nights: nights,
+            room_allocations: snapshotAllocations,
+            nights,
             meal_plan_key: mealPlan?.key,
-            meal_plan_subtotal: mealTotal,
+            meal_plan_price_per_person_per_night: mealPlanPricePerNight,
+            meal_subtotal: mealTotal,
             accommodation_subtotal: roomTotal,
             num_people: input.num_people,
             total,
             computed_at: new Date().toISOString(),
-          } as unknown as import('@/lib/types').PriceSnapshot,
+          } as unknown as PriceSnapshot,
         }
       }
-      const { total, snapshot } = buildStaySnapshot(
-        acc,
-        input.room_type ?? 'double',
-        input.trip_date,
-        input.nights ?? 1,
-        mealPlanPricePerNight,
-        input.num_people,
-        mealPlan?.key,
+      // Single room type — apply upgrade to all rooms if selected
+      const roomType = input.room_type ?? 'double'
+      const upgrade = resolveUpgrade(input.upgrade_id, input.accommodation_id!, accUpgrades)
+      const upgradeExtra = upgrade ? upgrade.extra_price_per_night : 0
+      const nights = input.nights ?? 1
+      const numRooms = roomsForPeople(roomType, input.num_people)
+      const { total: baseTotal, snapshot } = buildStaySnapshot(
+        acc, roomType, input.trip_date, nights, mealPlanPricePerNight, input.num_people, mealPlan?.key, numRooms,
       )
-      return { total_price: total, price_snapshot: snapshot }
+      const upgradeTotal = upgradeSubtotal(upgradeExtra, numRooms, nights)
+      const total = baseTotal + upgradeTotal
+      return {
+        total_price: total,
+        price_snapshot: {
+          ...snapshot,
+          total,
+          ...(upgrade ? {
+            room_allocations: [{
+              room_type: roomType,
+              quantity: numRooms,
+              base_nightly_rate: baseNightlyRoomRate(acc, roomType),
+              upgrade_id: upgrade.id,
+              upgrade_name: upgrade.name_en,
+              upgrade_extra_per_night: upgrade.extra_price_per_night,
+              final_nightly_rate: baseNightlyRoomRate(acc, roomType) + upgrade.extra_price_per_night,
+            }],
+          } : {}),
+        } as PriceSnapshot,
+      }
     }
     // legacy fallback — no room pricing configured for this property yet
     const total = Number(acc.price_per_night) * (input.nights ?? 1) * input.num_people
@@ -205,57 +270,60 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
     const direction = input.transfer_direction ?? 'round_trip'
     const nights = nightsForDuration(input.duration === 5 ? 5 : 4)
 
-    // If room_allocations provided, compute mixed-room pricing
+    // If room_allocations provided, compute mixed-room pricing with per-allocation upgrades
     if (input.room_allocations && input.room_allocations.length > 0) {
-      // Accommodation cost: sum each allocation group
       let roomTotal = 0
+      const snapshotAllocations: import('@/lib/types').RoomAllocationSnapshot[] = []
       for (const alloc of input.room_allocations) {
-        const ratePerRoom = baseNightlyRoomRate(acc, alloc.type)
-        roomTotal += ratePerRoom * alloc.count * nights
+        const baseRate = baseNightlyRoomRate(acc, alloc.type)
+        const upgrade = resolveUpgrade(alloc.upgrade_id, input.accommodation_id!, accUpgrades)
+        const extra = upgrade ? upgrade.extra_price_per_night : 0
+        const finalRate = baseRate + extra
+        roomTotal += finalRate * alloc.count * nights
+        snapshotAllocations.push({
+          room_type: alloc.type,
+          quantity: alloc.count,
+          base_nightly_rate: baseRate,
+          ...(upgrade ? {
+            upgrade_id: upgrade.id,
+            upgrade_name: upgrade.name_en,
+            upgrade_extra_per_night: upgrade.extra_price_per_night,
+          } : {}),
+          final_nightly_rate: finalRate,
+        })
       }
       const mealTotal = mealPlanPricePerNight * input.num_people * nights
-      // Use dominant room type (largest occupancy × count) for transfer pricing
-      const dominantAlloc = input.room_allocations.reduce((a, b) =>
-        roomOccupancy(a.type) * a.count >= roomOccupancy(b.type) * b.count ? a : b
-      )
-      const dominantType = dominantAlloc.type
       const transferQuote = quoteTransfer({
-        pricing,
-        type: transferType,
-        governorateCode: input.governorate,
-        direction,
-        numPeople: input.num_people,
+        pricing, type: transferType, governorateCode: input.governorate, direction, numPeople: input.num_people,
       })
-      // Trip costs
       let tripsTotal = 0
-      if (tripIds.length > 0) {
-        for (const t of includedTrips) {
-          tripsTotal += (t.package_price ?? t.price) * input.num_people
-        }
-        for (const t of extraTrips) {
-          tripsTotal += (t.package_price ?? t.price) * input.num_people
-        }
-      }
+      for (const t of includedTrips) tripsTotal += (t.package_price ?? t.price) * input.num_people
+      for (const t of extraTrips) tripsTotal += (t.package_price ?? t.price) * input.num_people
       const total = roomTotal + mealTotal + transferQuote.total + tripsTotal
       return {
         total_price: total,
         price_snapshot: {
-          room_type_used: dominantType,
-          room_allocations: input.room_allocations,
-          num_nights: nights,
+          room_allocations: snapshotAllocations,
+          nights,
           meal_plan_key: mealPlan?.key,
-          meal_plan_subtotal: mealTotal,
+          meal_plan_price_per_person_per_night: mealPlanPricePerNight,
+          meal_subtotal: mealTotal,
           accommodation_subtotal: roomTotal,
           transfer_rate_used: transferQuote.perPerson,
           transfer_subtotal: transferQuote.total,
+          included_trips: includedTrips.map((t) => ({ trip_id: t.id, name_en: t.name_en, package_cost: t.package_price ?? t.price })),
+          extra_trips: extraTrips.map((t) => ({ trip_id: t.id, name_en: t.name_en, price: t.price })),
           num_people: input.num_people,
           total,
           computed_at: new Date().toISOString(),
-        } as unknown as import('@/lib/types').PriceSnapshot,
+        } as unknown as PriceSnapshot,
       }
     }
 
     const roomType = input.room_type ?? 'double'
+    const numRooms = roomsForPeople(roomType, input.num_people)
+    const upgrade = resolveUpgrade(input.upgrade_id, input.accommodation_id!, accUpgrades)
+    const upgradeExtra = upgrade ? upgrade.extra_price_per_night : 0
 
     const quoteInput = {
       pricing,
@@ -263,7 +331,7 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
       roomType,
       checkIn: input.trip_date,
       nights,
-      numRooms: roomsForPeople(roomType, input.num_people),
+      numRooms,
       mealPlanPricePerNight,
       mealPlanKey: mealPlan?.key,
       includedTrips,
@@ -274,8 +342,25 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
       numPeople: input.num_people,
     }
     const quote = quotePackageV2(quoteInput)
-    const snapshot = buildPriceSnapshot(quoteInput, quote)
-    return { total_price: quote.total, price_snapshot: snapshot }
+    const upgradeTotal = upgradeSubtotal(upgradeExtra, numRooms, nights)
+    const totalWithUpgrade = quote.total + upgradeTotal
+    const baseSnapshot = buildPriceSnapshot(quoteInput, quote)
+    const snapshot: PriceSnapshot = {
+      ...baseSnapshot,
+      total: totalWithUpgrade,
+      ...(upgrade ? {
+        room_allocations: [{
+          room_type: roomType,
+          quantity: numRooms,
+          base_nightly_rate: baseNightlyRoomRate(acc, roomType),
+          upgrade_id: upgrade.id,
+          upgrade_name: upgrade.name_en,
+          upgrade_extra_per_night: upgrade.extra_price_per_night,
+          final_nightly_rate: baseNightlyRoomRate(acc, roomType) + upgrade.extra_price_per_night,
+        }],
+      } : {}),
+    }
+    return { total_price: totalWithUpgrade, price_snapshot: snapshot }
   }
 
   // legacy fallback — flat price_4day/price_5day, bus transfer only, no room
@@ -345,18 +430,29 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseAdmin()
     const { total_price, price_snapshot } = await priceBooking(validated.data)
 
-    const { customer_email, room_allocations: _allocs, ...rest } = validated.data
+    // Resolve the canonical customer BEFORE creating the booking so it can
+    // be linked via customer_id from the start (unified customer identity —
+    // phone is the matching key, the UUID is the relational FK).
+    const customer = await findOrCreateCustomerByPhone({
+      phone: validated.data.customer_phone,
+      name: validated.data.customer_name,
+      email: validated.data.customer_email || null,
+    })
+
+    // Strip fields that don't exist as top-level booking columns
+    // (upgrade_id and room_allocations go into price_snapshot only)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { customer_email, room_allocations: _allocs, upgrade_id: _upgradeId, ...rest } = validated.data
 
     const { data, error } = await supabase
       .from('bookings')
       .insert({
         ...rest,
+        customer_id: customer.id,
         customer_email: customer_email || null,
         total_price,
-        // Store room_allocations in the price_snapshot so it's auditable
-        price_snapshot: price_snapshot
-          ? { ...price_snapshot, room_allocations: _allocs ?? undefined }
-          : price_snapshot,
+        // price_snapshot already contains room_allocations (with upgrade details) from priceBooking
+        price_snapshot,
         status: 'new',
         payment_status: 'unpaid',
         amount_paid: 0,
@@ -370,14 +466,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 })
     }
 
-    await supabase.from('customers').upsert(
-      {
-        name: validated.data.customer_name,
-        phone: validated.data.customer_phone,
-        email: customer_email || null,
-      },
-      { onConflict: 'phone', ignoreDuplicates: false },
-    )
+    await recordCustomerActivity(customer.id)
 
     return NextResponse.json({ success: true, booking: data }, { status: 201 })
   } catch (err) {

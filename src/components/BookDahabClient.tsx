@@ -17,9 +17,30 @@ export function BookDahabClient({ accommodations }: { accommodations: Accommodat
 
   const filtered = accommodations.filter((a) => filterType === 'all' || a.type === filterType)
 
+  /**
+   * The card displays Math.min(single, double, triple) falling back to
+   * price_per_night. Sort must use the same value so "Price ↑" is not
+   * contradicted by what the customer reads on the card.
+   * Zero/missing prices sort last.
+   */
+  function startingRate(a: Accommodation): number {
+    const rates = [a.price_single_room, a.price_double_room, a.price_triple_room]
+      .map(Number)
+      .filter((p) => p > 0)
+    return rates.length ? Math.min(...rates) : (Number(a.price_per_night) || 0)
+  }
+
   const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'price-asc') return a.price_per_night - b.price_per_night
-    if (sortBy === 'price-desc') return b.price_per_night - a.price_per_night
+    if (sortBy === 'price-asc' || sortBy === 'price-desc') {
+      const pa = startingRate(a)
+      const pb = startingRate(b)
+      // Zero / missing → always last regardless of sort direction
+      if (pa === 0 && pb === 0) return 0
+      if (pa === 0) return 1
+      if (pb === 0) return -1
+      return sortBy === 'price-asc' ? pa - pb : pb - pa
+    }
+    // Default: preserve server order (sort_order ASC from getAccommodations)
     return 0
   })
 

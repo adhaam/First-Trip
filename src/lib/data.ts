@@ -7,6 +7,7 @@ import { getSupabaseAdmin, isSupabaseConfigured } from './supabase'
 import type {
   Accommodation,
   AccommodationSeasonalRate,
+  RoomUpgrade,
   SinaiTrip,
   CommunityPost,
   SiteSettings,
@@ -17,17 +18,30 @@ import type {
   TransferPricing,
   TransferSettings,
 } from './types'
+import type { CommerceCategory, CommerceCollection, CommerceProduct, CommerceProductType, DeliveryZone } from './commerce-types'
 
 export async function getAccommodations(): Promise<Accommodation[]> {
   if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
+  // sort_order added in migration 012; created_at is the deterministic tie-breaker
   const { data, error } = await supabase
     .from('accommodations')
     .select('*')
     .eq('is_active', true)
-    .order('price_per_night', { ascending: true })
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
 
   if (error) {
+    // Migration 012 not yet applied — sort_order column missing (42703).
+    // Fall back to created_at ordering so the page still loads.
+    if (error.code === '42703' || error.message?.toLowerCase().includes('sort_order')) {
+      const { data: fallback } = await supabase
+        .from('accommodations')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+      return (fallback ?? []) as Accommodation[]
+    }
     console.error('getAccommodations error:', error)
     return []
   }
@@ -37,9 +51,10 @@ export async function getAccommodations(): Promise<Accommodation[]> {
 export async function getAccommodationById(id: string): Promise<Accommodation | null> {
   if (!isSupabaseConfigured()) return null
   const supabase = getSupabaseAdmin()
-  const [{ data, error }, rates] = await Promise.all([
+  const [{ data, error }, rates, upgrades] = await Promise.all([
     supabase.from('accommodations').select('*').eq('id', id).eq('is_active', true).maybeSingle(),
     getSeasonalRates(id),
+    getRoomUpgrades(id),
   ])
 
   if (error) {
@@ -47,7 +62,37 @@ export async function getAccommodationById(id: string): Promise<Accommodation | 
     return null
   }
   if (!data) return null
-  return { ...(data as Accommodation), seasonal_rates: rates }
+  return { ...(data as Accommodation), seasonal_rates: rates, room_upgrades: upgrades }
+}
+
+/**
+ * Active room upgrade tiers for one accommodation, sorted for display.
+ * Returns [] gracefully when migration 011 (accommodation_room_upgrades) has not
+ * been applied yet — the booking form treats empty upgrades as "no upgrades".
+ */
+export async function getRoomUpgrades(accommodationId: string): Promise<RoomUpgrade[]> {
+  if (!isSupabaseConfigured()) return []
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('accommodation_room_upgrades')
+    .select('*')
+    .eq('accommodation_id', accommodationId)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    // Migration 011 not applied yet — return empty gracefully
+    if (error.code === '42P01' || error.message?.toLowerCase().includes('does not exist')) {
+      return []
+    }
+    console.error('getRoomUpgrades error:', error)
+    return []
+  }
+  return (data ?? []).map((r) => ({
+    ...(r as RoomUpgrade),
+    extra_price_per_night: Number(r.extra_price_per_night ?? 0),
+  }))
 }
 
 /** Active seasonal pricing periods for one accommodation, soonest first. */
@@ -77,13 +122,25 @@ export async function getSeasonalRates(accommodationId: string): Promise<Accommo
 export async function getSinaiTrips(): Promise<SinaiTrip[]> {
   if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
+  // sort_order added in migration 012; created_at is the deterministic tie-breaker
   const { data, error } = await supabase
     .from('sinai_trips')
     .select('*')
     .eq('is_active', true)
-    .order('price', { ascending: true })
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
 
   if (error) {
+    // Migration 012 not yet applied — sort_order column missing (42703).
+    // Fall back to created_at ordering so the page still loads.
+    if (error.code === '42703' || error.message?.toLowerCase().includes('sort_order')) {
+      const { data: fallback } = await supabase
+        .from('sinai_trips')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+      return (fallback ?? []) as SinaiTrip[]
+    }
     console.error('getSinaiTrips error:', error)
     return []
   }
@@ -251,4 +308,106 @@ export async function getGovernoratePricing(): Promise<GovernoratePricing[]> {
     return []
   }
   return (data ?? []) as GovernoratePricing[]
+}
+
+// ─── Commerce (Merch + Rental) — see src/lib/commerce-types.ts ───
+
+export async function getCommerceCategories(): Promise<CommerceCategory[]> {
+  if (!isSupabaseConfigured()) return []
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('commerce_categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order')
+  if (error) {
+    console.error('getCommerceCategories error:', error)
+    return []
+  }
+  return (data ?? []) as CommerceCategory[]
+}
+
+export async function getCommerceProducts(productType: CommerceProductType): Promise<CommerceProduct[]> {
+  if (!isSupabaseConfigured()) return []
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('commerce_products')
+    .select('*, commerce_categories(name_ar, name_en, slug), commerce_product_variants(*), rental_pricing_tiers(*)')
+    .eq('is_active', true)
+    .eq('product_type', productType)
+    .is('archived_at', null)
+    .order('sort_order')
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.error('getCommerceProducts error:', error)
+    return []
+  }
+  return (data ?? []) as unknown as CommerceProduct[]
+}
+
+export async function getCommerceCollections(productIds?: Set<string>): Promise<(CommerceCollection & { product_ids: string[] })[]> {
+  if (!isSupabaseConfigured()) return []
+  const supabase = getSupabaseAdmin()
+  const { data: collections, error } = await supabase
+    .from('commerce_collections')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order')
+  if (error || !collections?.length) return []
+
+  const { data: links } = await supabase
+    .from('commerce_product_collections')
+    .select('collection_id, product_id')
+    .in('collection_id', collections.map((c) => c.id))
+
+  const byCollection = new Map<string, string[]>()
+  for (const l of links || []) {
+    if (productIds && !productIds.has(l.product_id)) continue
+    const list = byCollection.get(l.collection_id) || []
+    list.push(l.product_id)
+    byCollection.set(l.collection_id, list)
+  }
+  return collections.map((c) => ({ ...c, product_ids: byCollection.get(c.id) || [] }))
+}
+
+export async function getCommerceProductBySlug(slug: string): Promise<CommerceProduct | null> {
+  if (!isSupabaseConfigured()) return null
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('commerce_products')
+    .select(`
+      *,
+      commerce_categories(name_ar, name_en, slug),
+      commerce_product_variants(*),
+      rental_pricing_tiers(*),
+      commerce_product_options(*, commerce_product_option_values(*)),
+      commerce_product_collections(collection_id)
+    `)
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .is('archived_at', null)
+    .maybeSingle()
+  if (error || !data) return null
+  const variants = (data.commerce_product_variants || []).filter((v: { is_active: boolean }) => v.is_active)
+  const totalInventory = variants.length
+    ? variants.reduce((sum: number, v: { inventory_quantity: number }) => sum + Number(v.inventory_quantity), 0)
+    : 0
+  return {
+    ...data,
+    commerce_product_variants: variants,
+    rental_pricing_tiers: (data.rental_pricing_tiers || []).filter((t: { is_active: boolean }) => t.is_active),
+    collection_ids: (data.commerce_product_collections || []).map((c: { collection_id: string }) => c.collection_id),
+    total_inventory: totalInventory,
+  } as unknown as CommerceProduct
+}
+
+export async function getDeliveryZones(): Promise<DeliveryZone[]> {
+  if (!isSupabaseConfigured()) return []
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase.from('delivery_zones').select('*').eq('is_active', true).order('sort_order')
+  if (error) {
+    console.error('getDeliveryZones error:', error)
+    return []
+  }
+  return (data ?? []) as DeliveryZone[]
 }

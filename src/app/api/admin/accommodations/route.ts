@@ -35,6 +35,7 @@ const accommodationSchema = z.object({
   price_single_room: z.number().min(0).optional().default(0),
   price_triple_room: z.number().min(0).optional().default(0),
   meal_plans: z.array(mealPlanSchema).optional().default([]),
+  sort_order: z.number().int().min(0).optional().default(0),
   is_active: z.boolean().optional().default(true),
 })
 

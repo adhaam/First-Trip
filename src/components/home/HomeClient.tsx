@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { ButtonLink } from '@/components/ButtonLink'
@@ -74,6 +75,19 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   const videoSrc = '/media/herovideo.mp4'
   const posterSrc = '/media/heroposter.png'
 
+  /**
+   * Mobile hero fix: the video element starts opacity-0 so the poster is
+   * always visible. We reveal the video only when it is ACTUALLY playing —
+   * which prevents the black frame that appears on iOS/Android when the
+   * browser loads the video element but hasn't started rendering frames yet.
+   *
+   * Using both `onCanPlay` (fires early on desktop) and `onPlay` (fires when
+   * the browser starts frame-delivery) for widest compatibility.
+   * `prefers-reduced-motion` keeps the video hidden entirely.
+   */
+  const [videoReady, setVideoReady] = useState(false)
+  const revealVideo = () => setVideoReady(true)
+
   // Owner-editable hero copy (Site Settings → Homepage). Empty = default.
   const headingAr = settings?.hero_heading_ar || 'إحنا بنرسم لك سيناء'
   const headingEn = settings?.hero_heading_en || 'We map Sinai.'
@@ -83,7 +97,8 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   return (
     <section className="relative isolate flex min-h-svh items-center overflow-hidden bg-sea-900">
       <div className="absolute inset-0 -z-10">
-        {/* Static poster image — always visible initially and as fallback */}
+        {/* Poster — ALWAYS rendered, NEVER removed. It is the background
+            fallback for when autoplay fails or prefers-reduced-motion is on. */}
         <Image
           src={posterSrc}
           alt={ar ? 'طريق صحراوي في سيناء ليلاً' : 'A Sinai desert road at night'}
@@ -93,17 +108,24 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           className="object-cover"
         />
 
-        {/* Video: autoplay with fallback to poster; reduced-motion shows poster only */}
+        {/* Video: starts completely invisible (opacity-0). Fades in only
+            when the browser confirms it is actually delivering frames.
+            The poster image above acts as the persistent fallback layer. */}
         <video
           key={videoSrc}
           autoPlay
           muted
           loop
           playsInline
-          poster={posterSrc}
           preload="auto"
           aria-hidden
-          className="absolute inset-0 h-full w-full object-cover motion-reduce:hidden"
+          onCanPlay={revealVideo}
+          onPlay={revealVideo}
+          className={cn(
+            'absolute inset-0 h-full w-full object-cover motion-reduce:hidden',
+            'transition-opacity duration-700',
+            videoReady ? 'opacity-100' : 'opacity-0',
+          )}
         >
           <source src={videoSrc} type="video/mp4" />
         </video>

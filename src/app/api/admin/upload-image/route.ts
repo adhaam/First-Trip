@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const requestedFolder = String(formData.get('folder') || 'accommodations')
-    const folder = ['accommodations', 'community', 'trips', 'homepage'].includes(requestedFolder)
+    const folder = ['accommodations', 'community', 'trips', 'homepage', 'commerce'].includes(requestedFolder)
       ? requestedFolder
       : 'accommodations'
     const filename = `${folder}/${crypto.randomUUID()}.${ext}`

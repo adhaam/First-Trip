@@ -13,6 +13,8 @@ import { WeemapAI } from '@/components/ai/WeemapAI'
 import { getSchemaOrg } from '@/lib/schema-org'
 import { getSiteSettings } from '@/lib/data'
 import { SITE_URL } from '@/lib/seo'
+import { CartProvider } from '@/components/commerce/CartProvider'
+import { CartDrawer } from '@/components/commerce/CartDrawer'
 import '../globals.css'
 
 // ─── Typeface pairing ───
@@ -114,19 +116,22 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages} locale={locale}>
           <TooltipProvider>
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer settings={settings} />
-              {aiEnabled ? (
-                <WeemapAI
-                  whatsappNumber={settings?.whatsapp_number}
-                  chatAvailable={chatAvailable}
-                />
-              ) : (
-                <WhatsAppFloat number={settings?.whatsapp_number} />
-              )}
-            </div>
+            <CartProvider>
+              <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer settings={settings} />
+                {aiEnabled ? (
+                  <WeemapAI
+                    whatsappNumber={settings?.whatsapp_number}
+                    chatAvailable={chatAvailable}
+                  />
+                ) : (
+                  <WhatsAppFloat number={settings?.whatsapp_number} />
+                )}
+                <CartDrawer />
+              </div>
+            </CartProvider>
           </TooltipProvider>
         </NextIntlClientProvider>
       </body>

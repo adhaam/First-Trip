@@ -83,6 +83,24 @@ export interface TransferPricing {
   governorates: TransferGovernoratePrice[]
 }
 
+/**
+ * A room upgrade tier for an accommodation (e.g. Sea View, Deluxe).
+ * extra_price_per_night is a fixed supplement per ROOM per night added on top of
+ * the base single/double/triple room price. Added in migration 011.
+ */
+export interface RoomUpgrade {
+  id: string
+  accommodation_id: string
+  name_ar: string
+  name_en: string
+  /** Fixed EGP supplement per room per night on top of base room rate. 0 = Standard/No extra. */
+  extra_price_per_night: number
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at?: string
+}
+
 /** A meal plan option an accommodation offers, e.g. room-only or all-inclusive. */
 export type MealPlanKey = 'room_only' | 'breakfast' | 'half_board' | 'all_inclusive'
 
@@ -125,6 +143,14 @@ export interface Accommodation {
   meal_plans: MealPlan[]
   /** Date-range overrides on top of the base price_* columns — see lib/pricing.ts. */
   seasonal_rates?: AccommodationSeasonalRate[]
+  /**
+   * Optional room upgrade tiers (Sea View, Deluxe, etc.). Fetched alongside the
+   * accommodation for the booking form. Added in migration 011.
+   * Empty or undefined = no upgrades; simple hotels remain unchanged.
+   */
+  room_upgrades?: RoomUpgrade[]
+  /** Admin-controlled display order. Lower = shown first. Added in migration 012. */
+  sort_order: number
   is_active: boolean
   created_at: string
   updated_at?: string
@@ -175,6 +201,8 @@ export interface SinaiTrip {
   package_price?: number | null
   includes_ar: string[]
   includes_en: string[]
+  /** Admin-controlled display order. Lower = shown first. Added in migration 012. */
+  sort_order: number
   is_active: boolean
   created_at: string
 }
@@ -230,12 +258,31 @@ export interface Booking {
  * A later change to hotel/trip/transfer prices must NEVER retroactively change
  * a past booking — this snapshot is what the admin bookings detail view reads.
  */
+/** Per-allocation snapshot for multi-room bookings with optional upgrade. */
+export interface RoomAllocationSnapshot {
+  room_type: 'double' | 'single' | 'triple'
+  quantity: number
+  base_nightly_rate: number
+  /** undefined = no upgrade selected */
+  upgrade_id?: string
+  upgrade_name?: string
+  /** 0 or undefined when no upgrade */
+  upgrade_extra_per_night?: number
+  /** base_nightly_rate + upgrade_extra_per_night */
+  final_nightly_rate: number
+}
+
 export interface PriceSnapshot {
   room_type?: 'double' | 'single' | 'triple'
   /** Number of rooms charged for this party at booking time. */
   num_rooms?: number
   /** Nightly room rate actually charged, one entry per night of the stay. */
   nightly_room_rates?: { date: string; rate: number; source: 'seasonal' | 'base'; seasonal_rate_name?: string }[]
+  /**
+   * Per-allocation breakdown when multiple room types were selected,
+   * including any upgrade supplement. Added in migration 011.
+   */
+  room_allocations?: RoomAllocationSnapshot[]
   nights?: number
   accommodation_subtotal?: number
   transfer_rate_used?: number

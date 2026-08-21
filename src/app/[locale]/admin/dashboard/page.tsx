@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard, Building2, Mountain, CalendarDays,
   ClipboardList, Users, MessageSquareText, Settings,
-  Bus, Quote, LogOut, Menu, X, Mail
+  Bus, Quote, LogOut, Menu, X, Mail, ShoppingBag, MapPinned
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/brand/Logo'
@@ -22,14 +22,18 @@ import { TripDatesManager } from '@/components/admin/TripDatesManager'
 import { TransferPricingManager } from '@/components/admin/TransferPricingManager'
 import { TestimonialsManager } from '@/components/admin/TestimonialsManager'
 import { NewsletterManager } from '@/components/admin/NewsletterManager'
+import { TripBookingsManager } from '@/components/admin/TripBookingsManager'
+import { CommerceManager } from '@/components/admin/CommerceManager'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
   { icon: Building2, key: 'accommodations', label_ar: 'أماكن الإقامة', label_en: 'Accommodations' },
   { icon: Mountain, key: 'sinai-trips', label_ar: 'الرحلات الداخلية', label_en: 'Sinai Trips' },
+  { icon: MapPinned, key: 'trip-bookings', label_ar: 'طلبات رحلات سيناء', label_en: 'Sinai Trip Bookings' },
   { icon: Bus, key: 'transfers', label_ar: 'النقل', label_en: 'Transfers' },
   { icon: CalendarDays, key: 'dates', label_ar: 'التواريخ', label_en: 'Dates' },
   { icon: ClipboardList, key: 'bookings', label_ar: 'الحجوزات', label_en: 'Bookings' },
+  { icon: ShoppingBag, key: 'commerce', label_ar: 'المتجر والإيجارات', label_en: 'Commerce' },
   { icon: Users, key: 'customers', label_ar: 'العملاء', label_en: 'Customers' },
   { icon: Mail, key: 'newsletter', label_ar: 'النشرة البريدية', label_en: 'Newsletter' },
   { icon: MessageSquareText, key: 'community', label_ar: 'المجتمع', label_en: 'Community' },
@@ -158,9 +162,11 @@ export default function AdminDashboardPage() {
           {active === 'dashboard' && <DashboardHome />}
           {active === 'accommodations' && <AccommodationManager />}
           {active === 'sinai-trips' && <SinaiTripManager />}
+          {active === 'trip-bookings' && <TripBookingsManager />}
           {active === 'transfers' && <TransferPricingManager />}
           {active === 'dates' && <TripDatesManager />}
           {active === 'bookings' && <BookingsManager />}
+          {active === 'commerce' && <CommerceManager />}
           {active === 'customers' && <CustomersManager />}
           {active === 'newsletter' && <NewsletterManager />}
           {active === 'community' && <CommunityPostManager />}
