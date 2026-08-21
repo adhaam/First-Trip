@@ -10,6 +10,7 @@ import { NAV_ITEMS, NAV_LABEL_KEYS } from '@/lib/constants'
 import { Menu, Globe, ArrowUpRight, ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCart } from '@/components/commerce/CartProvider'
+import { GlobalSearch } from '@/components/layout/GlobalSearch'
 
 export function Header() {
   const t = useTranslations('nav')
@@ -96,6 +97,8 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-1.5">
+          <GlobalSearch transparent={transparent} />
+
           <button
             type="button"
             onClick={cart.open}

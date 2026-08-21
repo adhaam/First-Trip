@@ -18,6 +18,7 @@ const tripUpdateSchema = z.object({
   package_price: z.number().min(0).nullable().optional(),
   includes_ar: z.array(z.string()).optional(),
   includes_en: z.array(z.string()).optional(),
+  sort_order: z.number().int().min(0).optional(),
   is_active: z.boolean().optional(),
 })
 

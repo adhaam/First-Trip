@@ -268,6 +268,32 @@ export function AccommodationManager() {
     setAccommodations(prev => prev.filter(a => a.id !== id))
   }
 
+  const moveOrder = async (id: string, dir: 'up' | 'down') => {
+    const sorted = [...accommodations].sort((a, b) =>
+      a.sort_order !== b.sort_order ? a.sort_order - b.sort_order : a.created_at.localeCompare(b.created_at)
+    )
+    const idx = sorted.findIndex(a => a.id === id)
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= sorted.length) return
+    const current = sorted[idx]
+    const target = sorted[targetIdx]
+    const newCurrentOrder = target.sort_order
+    const newTargetOrder = current.sort_order === target.sort_order
+      ? current.sort_order + (dir === 'up' ? -1 : 1)
+      : current.sort_order
+    await Promise.all([
+      fetch(`/api/admin/accommodations/${current.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sort_order: newCurrentOrder }),
+      }),
+      fetch(`/api/admin/accommodations/${target.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sort_order: newTargetOrder }),
+      }),
+    ])
+    await loadAccommodations()
+  }
+
   const updateField = (field: string, value: string | number | string[] | MealPlan[]) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }
@@ -360,6 +386,7 @@ export function AccommodationManager() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">{locale === 'ar' ? 'الترتيب' : 'Order'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'الاسم' : 'Name'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'النوع' : 'Type'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'التقييم' : 'Rating'}</TableHead>
@@ -372,7 +399,7 @@ export function AccommodationManager() {
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                  <TableCell colSpan={8} className="text-center text-gray-400 py-8">
                     <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
                     {locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
                   </TableCell>
@@ -380,11 +407,18 @@ export function AccommodationManager() {
               )}
               {!loading && loadError && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-red-500 py-8">{loadError}</TableCell>
+                  <TableCell colSpan={8} className="text-center text-red-500 py-8">{loadError}</TableCell>
                 </TableRow>
               )}
-              {!loading && !loadError && filtered.map(acc => (
+              {!loading && !loadError && filtered.map((acc, idx, arr) => (
                 <TableRow key={acc.id}>
+                  <TableCell>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveOrder(acc.id, 'up')} aria-label={locale === 'ar' ? 'تحريك لأعلى' : 'Move up'}><ChevronUp className="h-3.5 w-3.5" /></Button>
+                      <span className="text-[11px] text-gray-400">{acc.sort_order}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === arr.length - 1} onClick={() => moveOrder(acc.id, 'down')} aria-label={locale === 'ar' ? 'تحريك لأسفل' : 'Move down'}><ChevronDown className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </TableCell>
                   <TableCell className="font-medium">{locale === 'ar' ? acc.name_ar : acc.name_en}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn(
@@ -414,7 +448,7 @@ export function AccommodationManager() {
               ))}
               {!loading && !loadError && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                  <TableCell colSpan={8} className="text-center text-gray-400 py-8">
                     {locale === 'ar' ? 'لا توجد أماكن إقامة' : 'No accommodations found'}
                   </TableCell>
                 </TableRow>

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/pricing.test.ts src/lib/trips.test.ts src/lib/ai-contract.test.ts src/lib/room-upgrades.test.ts src/lib/customer.test.ts src/lib/rental-pricing.test.ts src/lib/cart.test.ts",
+    "test": "tsx --test src/lib/pricing.test.ts src/lib/trips.test.ts src/lib/ai-contract.test.ts src/lib/room-upgrades.test.ts src/lib/customer.test.ts src/lib/rental-pricing.test.ts src/lib/cart.test.ts src/lib/search.test.ts",
     "test:upgrades": "tsx --test src/lib/room-upgrades.test.ts",
     "test:pricing": "tsx --test src/lib/pricing.test.ts",
     "test:trips": "tsx --test src/lib/trips.test.ts",

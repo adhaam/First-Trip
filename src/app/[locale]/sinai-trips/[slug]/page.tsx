@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import { ArrowLeft, ArrowUpRight, Check, Clock, Layers3, MessageCircle } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { TripCard } from '@/components/cards/TripCard'
+import { TripBookingForm } from '@/components/sinai-trips/TripBookingForm'
 import { getSinaiTripById, getSinaiTrips, getSiteSettings } from '@/lib/data'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
@@ -166,22 +167,32 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
                   )}
                 </dl>
               )}
-              <p className="mt-6 text-sm leading-6 text-sea-900/62">{t('detailsConfirmed')}</p>
-              <a
-                href={`https://wa.me/${whatsapp}?text=${message}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-sun-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-sun-600"
-              >
-                <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                {t('askWhatsApp')}
-                <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
-              </a>
               {Number.isFinite(Number(trip.price)) && Number(trip.price) > 0 && (
-                <p className="mt-4 text-center text-sm font-semibold text-sea-900">
-                  {Number(trip.price).toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')} {common('egp')}
+                <p className="mt-4 text-sm font-semibold text-sea-900">
+                  {ar ? 'من' : 'From'} {Number(trip.price).toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')} {common('egp')} / {ar ? 'شخص' : 'person'}
                 </p>
               )}
+              <div className="mt-6 border-t border-sand-200 pt-6">
+                <TripBookingForm
+                  tripId={trip.id}
+                  tripNameAr={trip.name_ar || ''}
+                  tripNameEn={trip.name_en || ''}
+                  whatsappNumber={settings?.whatsapp_number || WHATSAPP_NUMBER}
+                />
+              </div>
+              <div className="mt-4 border-t border-sand-200 pt-4">
+                <p className="mb-3 text-xs text-sea-900/50">{ar ? 'أو تواصل معنا مباشرة:' : 'Or reach us directly:'}</p>
+                <a
+                  href={`https://wa.me/${whatsapp}?text=${message}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-sand-300 px-4 text-sm font-medium text-sea-900 transition-colors hover:bg-sand-100"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  {t('askWhatsApp')}
+                  <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+                </a>
+              </div>
             </aside>
           </div>
         </section>

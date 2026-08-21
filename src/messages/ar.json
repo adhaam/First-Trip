@@ -294,7 +294,25 @@
     "askWhatsApp": "اسأل على واتساب",
     "detailsConfirmed": "يتم تأكيد التوافر وتفاصيل التشغيل النهائية عند إرسال الطلب.",
     "notFoundTitle": "الرحلة غير موجودة",
-    "notFoundText": "هذه الرحلة غير متاحة أو تم تغيير رابطها."
+    "notFoundText": "هذه الرحلة غير متاحة أو تم تغيير رابطها.",
+    "bookForm": "طلب هذه الرحلة",
+    "bookFormHint": "أرسل طلبك وسيتواصل معك WEEMAP لتأكيد التوافر عبر واتساب.",
+    "bookName": "اسمك",
+    "bookPhone": "واتساب / رقم الهاتف",
+    "bookDate": "التاريخ المفضل",
+    "bookDateOptional": "التاريخ المفضل (اختياري)",
+    "bookPeople": "عدد الأشخاص",
+    "bookNotes": "ملاحظات",
+    "bookNotesPlaceholder": "أسئلة، تفضيلات، طلبات خاصة…",
+    "bookSubmit": "إرسال الطلب",
+    "bookSubmitting": "جاري الإرسال…",
+    "bookSuccess": "تم استلام طلبك",
+    "bookSuccessText": "سيتواصل معك WEEMAP لتأكيد التفاصيل والتوافر عبر واتساب.",
+    "bookWhatsApp": "فتح واتساب",
+    "bookError": "حدث خطأ، يرجى المحاولة مرة أخرى.",
+    "bookNameRequired": "يرجى إدخال اسمك.",
+    "bookPhoneRequired": "يرجى إدخال رقم هاتفك.",
+    "bookPeopleMin": "يجب أن يكون عدد الأشخاص واحداً على الأقل."
   },
   "states": {
     "pageNotFound": "الصفحة غير موجودة",
@@ -425,5 +443,21 @@
     "days": "أيام",
     "person": "فرد",
     "people": "أفراد"
+  },
+  "search": {
+    "placeholder": "ابحث في WEEMAP…",
+    "label": "بحث",
+    "close": "إغلاق البحث",
+    "loading": "جاري البحث…",
+    "empty": "لا نتائج لـ \"{query}\"",
+    "emptyHint": "جرب كلمة مختلفة أو تحقق من التهجئة.",
+    "error": "فشل البحث. حاول مرة أخرى.",
+    "groupAccommodations": "أماكن الإقامة",
+    "groupTrips": "رحلات سيناء",
+    "groupMerch": "الميرش",
+    "groupRentals": "معدات الإيجار",
+    "from": "من",
+    "viewAll": "عرض كل النتائج",
+    "prompt": "ابحث عن إقامة أو رحلة أو معدات…"
   }
 }

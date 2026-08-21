@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import { SinaiTrip } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -154,6 +154,34 @@ export function SinaiTripManager() {
     setTrips(prev => prev.filter(t => t.id !== id))
   }
 
+  const moveOrder = async (id: string, dir: 'up' | 'down') => {
+    // Work on the unfiltered, sorted list to find the real adjacent item
+    const sorted = [...trips].sort((a, b) =>
+      a.sort_order !== b.sort_order ? a.sort_order - b.sort_order : a.created_at.localeCompare(b.created_at)
+    )
+    const idx = sorted.findIndex(t => t.id === id)
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= sorted.length) return
+    const current = sorted[idx]
+    const target = sorted[targetIdx]
+    // Assign swapped sort_order values
+    const newCurrentOrder = target.sort_order
+    const newTargetOrder = current.sort_order === target.sort_order
+      ? current.sort_order + (dir === 'up' ? -1 : 1)
+      : current.sort_order
+    await Promise.all([
+      fetch(`/api/admin/sinai-trips/${current.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sort_order: newCurrentOrder }),
+      }),
+      fetch(`/api/admin/sinai-trips/${target.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sort_order: newTargetOrder }),
+      }),
+    ])
+    await load()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -172,6 +200,7 @@ export function SinaiTripManager() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">{locale === 'ar' ? 'الترتيب' : 'Order'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'الاسم' : 'Name'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'الفئة' : 'Category'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'المدة' : 'Duration'}</TableHead>
@@ -182,15 +211,22 @@ export function SinaiTripManager() {
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />{locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
                 </TableCell></TableRow>
               )}
               {!loading && loadError && (
-                <TableRow><TableCell colSpan={6} className="text-center text-red-500 py-8">{loadError}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-red-500 py-8">{loadError}</TableCell></TableRow>
               )}
-              {!loading && !loadError && filtered.map(t => (
+              {!loading && !loadError && filtered.map((t, idx, arr) => (
                 <TableRow key={t.id}>
+                  <TableCell>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveOrder(t.id, 'up')} aria-label={locale === 'ar' ? 'تحريك لأعلى' : 'Move up'}><ChevronUp className="h-3.5 w-3.5" /></Button>
+                      <span className="text-[11px] text-gray-400">{t.sort_order}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === arr.length - 1} onClick={() => moveOrder(t.id, 'down')} aria-label={locale === 'ar' ? 'تحريك لأسفل' : 'Move down'}><ChevronDown className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </TableCell>
                   <TableCell className="font-medium">{locale === 'ar' ? t.name_ar : t.name_en}</TableCell>
                   <TableCell>{locale === 'ar' ? t.category_ar : t.category_en}</TableCell>
                   <TableCell>{locale === 'ar' ? t.duration : t.duration_en}</TableCell>
@@ -216,9 +252,10 @@ export function SinaiTripManager() {
                 </TableRow>
               ))}
               {!loading && !loadError && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
                   {locale === 'ar' ? 'لا توجد رحلات' : 'No trips found'}
                 </TableCell></TableRow>
+
               )}
             </TableBody>
           </Table>

@@ -294,7 +294,25 @@
     "askWhatsApp": "Ask on WhatsApp",
     "detailsConfirmed": "Availability and final operating details are confirmed when you make a request.",
     "notFoundTitle": "Trip not found",
-    "notFoundText": "This trip is unavailable or its link has changed."
+    "notFoundText": "This trip is unavailable or its link has changed.",
+    "bookForm": "Request this trip",
+    "bookFormHint": "Send a request and WEEMAP will confirm availability with you on WhatsApp.",
+    "bookName": "Your name",
+    "bookPhone": "WhatsApp / phone",
+    "bookDate": "Preferred date",
+    "bookDateOptional": "Preferred date (optional)",
+    "bookPeople": "Number of people",
+    "bookNotes": "Notes",
+    "bookNotesPlaceholder": "Questions, preferences, special requests…",
+    "bookSubmit": "Send request",
+    "bookSubmitting": "Sending…",
+    "bookSuccess": "Request received",
+    "bookSuccessText": "WEEMAP will confirm the details and availability with you on WhatsApp.",
+    "bookWhatsApp": "Open WhatsApp",
+    "bookError": "Something went wrong. Please try again.",
+    "bookNameRequired": "Please enter your name.",
+    "bookPhoneRequired": "Please enter your phone number.",
+    "bookPeopleMin": "At least 1 person required."
   },
   "states": {
     "pageNotFound": "Page not found",
@@ -425,5 +443,21 @@
     "days": "days",
     "person": "person",
     "people": "people"
+  },
+  "search": {
+    "placeholder": "Search WEEMAP…",
+    "label": "Search",
+    "close": "Close search",
+    "loading": "Searching…",
+    "empty": "No results for \"{query}\"",
+    "emptyHint": "Try a different word or check the spelling.",
+    "error": "Search failed. Try again.",
+    "groupAccommodations": "Stays",
+    "groupTrips": "Sinai Trips",
+    "groupMerch": "Merch",
+    "groupRentals": "Rental Gear",
+    "from": "From",
+    "viewAll": "View all results",
+    "prompt": "Search stays, trips, gear…"
   }
 }
