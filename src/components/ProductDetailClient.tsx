@@ -178,7 +178,7 @@ export function ProductDetailClient({
 
       {/* ─── Body ─── */}
       <div className="container-main py-10 md:py-14">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-12">
+        <div className="grid gap-10 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] lg:gap-12">
           {/* main column */}
           <div className="space-y-12">
             {/* what's included — the actual sales pitch */}
