@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useLocale } from 'next-intl'
+import { Reorder, useDragControls } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,9 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, BedDouble, BedSingle, UtensilsCrossed } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, BedDouble, BedSingle, UtensilsCrossed, GripVertical, Check } from 'lucide-react'
 import { Accommodation, MealPlan, MealPlanKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { AMENITIES_LIBRARY } from '@/lib/amenities'
 import { SeasonalRatesEditor } from './SeasonalRatesEditor'
 import { RoomVariantsEditor } from './RoomVariantsEditor'
 
@@ -177,6 +179,10 @@ export function AccommodationManager() {
     const matchesType = filterType === 'all' || a.type === filterType
     return matchesSearch && matchesType
   })
+  // Drag-reordering only makes sense against the full, unfiltered list —
+  // otherwise a drag inside a filtered subset can't map cleanly to a global
+  // sort_order without clobbering hidden rows.
+  const canReorder = !search && filterType === 'all'
 
   const handleEdit = (acc: Accommodation) => {
     setEditing(acc)
@@ -268,30 +274,24 @@ export function AccommodationManager() {
     setAccommodations(prev => prev.filter(a => a.id !== id))
   }
 
-  const moveOrder = async (id: string, dir: 'up' | 'down') => {
-    const sorted = [...accommodations].sort((a, b) =>
-      a.sort_order !== b.sort_order ? a.sort_order - b.sort_order : a.created_at.localeCompare(b.created_at)
-    )
-    const idx = sorted.findIndex(a => a.id === id)
-    const targetIdx = dir === 'up' ? idx - 1 : idx + 1
-    if (targetIdx < 0 || targetIdx >= sorted.length) return
-    const current = sorted[idx]
-    const target = sorted[targetIdx]
-    const newCurrentOrder = target.sort_order
-    const newTargetOrder = current.sort_order === target.sort_order
-      ? current.sort_order + (dir === 'up' ? -1 : 1)
-      : current.sort_order
-    await Promise.all([
-      fetch(`/api/admin/accommodations/${current.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sort_order: newCurrentOrder }),
-      }),
-      fetch(`/api/admin/accommodations/${target.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sort_order: newTargetOrder }),
-      }),
-    ])
-    await loadAccommodations()
+  // Drag-and-drop reorder: update local state immediately (no flash / full
+  // reload) and persist the new sort_order values for changed rows only.
+  const handleReorder = (newOrder: Accommodation[]) => {
+    const reindexed = newOrder.map((a, idx) => ({ ...a, sort_order: idx }))
+    setAccommodations(reindexed)
+    const changed = reindexed.filter((a, idx) => accommodations.find(x => x.id === a.id)?.sort_order !== idx)
+    Promise.all(
+      changed.map(a =>
+        fetch(`/api/admin/accommodations/${a.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sort_order: a.sort_order }),
+        }),
+      ),
+    ).catch(() => {
+      // Best-effort: if persisting failed, reload to resync with the server.
+      loadAccommodations()
+    })
   }
 
   const updateField = (field: string, value: string | number | string[] | MealPlan[]) => {
@@ -333,19 +333,28 @@ export function AccommodationManager() {
     setMapUrlInput('')
   }
 
-  const addAmenity = (lang: 'ar' | 'en') => {
-    const key = lang === 'ar' ? 'amenities_ar' : 'amenities_en'
-    const current = (form[key] as string[]) || []
-    const input = document.getElementById(`amenity-${lang}-input`) as HTMLInputElement
-    if (input?.value?.trim()) {
-      updateField(key, [...current, input.value.trim()])
-      input.value = ''
-    }
+  // Removes a custom (non-library) amenity by value from both arrays — custom
+  // entries are added identically to amenities_ar/amenities_en, so they stay
+  // in sync without needing a translation.
+  const removeCustomAmenity = (value: string) => {
+    updateField('amenities_ar', ((form.amenities_ar as string[]) || []).filter(x => x !== value))
+    updateField('amenities_en', ((form.amenities_en as string[]) || []).filter(x => x !== value))
   }
 
-  const removeAmenity = (lang: 'ar' | 'en', index: number) => {
-    const key = lang === 'ar' ? 'amenities_ar' : 'amenities_en'
-    updateField(key, ((form[key] as string[]) || []).filter((_, i) => i !== index))
+  // Toggle one amenity from the shared library on/off — keeps amenities_ar
+  // and amenities_en in sync so the site shows the right icon+label in
+  // both languages, instead of admins typing each one by hand per hotel.
+  const toggleLibraryAmenity = (ar: string, en: string) => {
+    const currentAr = (form.amenities_ar as string[]) || []
+    const currentEn = (form.amenities_en as string[]) || []
+    const active = currentEn.includes(en) || currentAr.includes(ar)
+    if (active) {
+      updateField('amenities_ar', currentAr.filter(x => x !== ar))
+      updateField('amenities_en', currentEn.filter(x => x !== en))
+    } else {
+      updateField('amenities_ar', [...currentAr, ar])
+      updateField('amenities_en', [...currentEn, en])
+    }
   }
 
   return (
@@ -381,12 +390,21 @@ export function AccommodationManager() {
       </div>
 
       {/* Table */}
+      {canReorder ? (
+        <p className="text-xs text-gray-500">
+          {locale === 'ar' ? '🖐️ اسحب من ⣿ عشان تغيّر ترتيب العرض — بيتحفظ فورًا.' : '🖐️ Drag by ⣿ to change display order — saved instantly.'}
+        </p>
+      ) : (
+        <p className="text-xs text-amber-600">
+          {locale === 'ar' ? 'امسح البحث والفلتر عشان تقدر تسحب وتظبط الترتيب.' : 'Clear the search and filter to drag-reorder.'}
+        </p>
+      )}
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">{locale === 'ar' ? 'الترتيب' : 'Order'}</TableHead>
+                <TableHead className="w-10" />
                 <TableHead>{locale === 'ar' ? 'الاسم' : 'Name'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'النوع' : 'Type'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'التقييم' : 'Rating'}</TableHead>
@@ -396,64 +414,42 @@ export function AccommodationManager() {
                 <TableHead className="text-right">{locale === 'ar' ? 'إجراءات' : 'Actions'}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {loading && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-400 py-8">
-                    <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
-                    {locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
-                  </TableCell>
-                </TableRow>
-              )}
-              {!loading && loadError && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-red-500 py-8">{loadError}</TableCell>
-                </TableRow>
-              )}
-              {!loading && !loadError && filtered.map((acc, idx, arr) => (
-                <TableRow key={acc.id}>
-                  <TableCell>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveOrder(acc.id, 'up')} aria-label={locale === 'ar' ? 'تحريك لأعلى' : 'Move up'}><ChevronUp className="h-3.5 w-3.5" /></Button>
-                      <span className="text-[11px] text-gray-400">{acc.sort_order}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === arr.length - 1} onClick={() => moveOrder(acc.id, 'down')} aria-label={locale === 'ar' ? 'تحريك لأسفل' : 'Move down'}><ChevronDown className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{locale === 'ar' ? acc.name_ar : acc.name_en}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn(
-                      'border-brand-blue/30 text-brand-blue',
-                      acc.type === 'chalet' && 'border-green-500/30 text-green-600',
-                      acc.type === 'camp' && 'border-orange-500/30 text-orange-600'
-                    )}>
-                      {acc.type === 'hotel' ? '🏨' : acc.type === 'chalet' ? '🏖️' : '🏕️'}
-                      {' '}{TYPES.find(t => t.value === acc.type)?.[locale === 'ar' ? 'label_ar' : 'label_en']?.replace(/[🏨🏖️🏕️] /, '')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>⭐ {acc.rating}</TableCell>
-                  <TableCell>{acc.price_per_night?.toLocaleString()} ج.م</TableCell>
-                  <TableCell>{acc.price_4day?.toLocaleString()} ج.م</TableCell>
-                  <TableCell>{acc.price_5day?.toLocaleString()} ج.م</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(acc)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)} className="text-red-500 hover:text-red-700">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!loading && !loadError && filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-400 py-8">
-                    {locale === 'ar' ? 'لا توجد أماكن إقامة' : 'No accommodations found'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+            {loading || loadError || filtered.length === 0 ? (
+              <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-gray-400 py-8">
+                      <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+                      {locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading && loadError && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-red-500 py-8">{loadError}</TableCell>
+                  </TableRow>
+                )}
+                {!loading && !loadError && filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-gray-400 py-8">
+                      {locale === 'ar' ? 'لا توجد أماكن إقامة' : 'No accommodations found'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            ) : canReorder ? (
+              <Reorder.Group as="tbody" axis="y" values={filtered} onReorder={handleReorder} className="[&_tr:last-child]:border-0">
+                {filtered.map(acc => (
+                  <AccommodationRow key={acc.id} acc={acc} locale={locale} onEdit={handleEdit} onDelete={handleDelete} draggable />
+                ))}
+              </Reorder.Group>
+            ) : (
+              <TableBody>
+                {filtered.map(acc => (
+                  <AccommodationRow key={acc.id} acc={acc} locale={locale} onEdit={handleEdit} onDelete={handleDelete} draggable={false} />
+                ))}
+              </TableBody>
+            )}
           </Table>
         </CardContent>
       </Card>
@@ -799,22 +795,72 @@ export function AccommodationManager() {
                 </div>
               </div>
 
-              {/* Amenities */}
+              {/* Amenities — pick from the library instead of typing each one */}
               <div>
-                <Label className="mb-2 block">{locale === 'ar' ? 'الخدمات' : 'Amenities'}</Label>
-                <div className="flex gap-2 mb-2">
-                  <Input id="amenity-en-input" placeholder={locale === 'ar' ? 'أضف خدمة...' : 'Add amenity...'} className="flex-1" />
-                  <Button type="button" size="sm" variant="outline" onClick={() => addAmenity('en')}>+</Button>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {((form.amenities_en as string[]) || []).map((a, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1">
-                      {a}
-                      <button type="button" onClick={() => removeAmenity('en', i)} className="ml-1 hover:text-red-600">
-                        <X className="h-3 w-3" />
+                <Label className="mb-1 block">{locale === 'ar' ? 'الخدمات' : 'Amenities'}</Label>
+                <p className="mb-2 text-xs text-gray-500">
+                  {locale === 'ar'
+                    ? 'دوس على أي خدمة عشان تضيفها للفندق ده — بتظهر بأيقونتها على الموقع تلقائيًا.'
+                    : 'Tap any amenity to add it to this property — it shows up with its icon on the site automatically.'}
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {AMENITIES_LIBRARY.map(def => {
+                    const currentEn = (form.amenities_en as string[]) || []
+                    const currentAr = (form.amenities_ar as string[]) || []
+                    const active = currentEn.includes(def.en) || currentAr.includes(def.ar)
+                    const Icon = def.icon
+                    return (
+                      <button
+                        key={def.en}
+                        type="button"
+                        onClick={() => toggleLibraryAmenity(def.ar, def.en)}
+                        className={cn(
+                          'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                          active
+                            ? 'border-brand-blue bg-brand-blue/10 font-medium text-brand-blue'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50',
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="flex-1">{locale === 'ar' ? def.ar : def.en}</span>
+                        {active && <Check className="h-3.5 w-3.5 shrink-0" />}
                       </button>
-                    </Badge>
-                  ))}
+                    )
+                  })}
+                </div>
+
+                {/* Custom amenities not in the library above */}
+                <div className="mt-3">
+                  <div className="flex gap-2 mb-2">
+                    <Input id="amenity-en-input" placeholder={locale === 'ar' ? 'خدمة تانية مش في القايمة فوق...' : 'Another amenity not listed above...'} className="flex-1" />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const input = document.getElementById('amenity-en-input') as HTMLInputElement
+                        const value = input?.value?.trim()
+                        if (!value) return
+                        updateField('amenities_en', [...((form.amenities_en as string[]) || []), value])
+                        updateField('amenities_ar', [...((form.amenities_ar as string[]) || []), value])
+                        input.value = ''
+                      }}
+                    >
+                      +
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {((form.amenities_en as string[]) || [])
+                      .filter(a => !AMENITIES_LIBRARY.some(def => def.en === a))
+                      .map(a => (
+                        <Badge key={a} variant="secondary" className="gap-1">
+                          {a}
+                          <button type="button" onClick={() => removeCustomAmenity(a)} className="ml-1 hover:text-red-600">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                  </div>
                 </div>
               </div>
 
@@ -854,5 +900,85 @@ export function AccommodationManager() {
         </div>
       )}
     </div>
+  )
+}
+
+// Extracted so the row can carry its own drag controls — only the grip
+// handle starts a drag (dragListener={false}), so clicking Edit/Delete or
+// selecting text in the row never accidentally triggers a reorder.
+function AccommodationRow({
+  acc,
+  locale,
+  onEdit,
+  onDelete,
+  draggable,
+}: {
+  acc: Accommodation
+  locale: string
+  onEdit: (acc: Accommodation) => void
+  onDelete: (id: string) => void
+  draggable: boolean
+}) {
+  const controls = useDragControls()
+  const row = (
+    <>
+      <TableCell className="w-10">
+        {draggable ? (
+          <button
+            type="button"
+            onPointerDown={e => controls.start(e)}
+            className="flex h-8 w-8 cursor-grab items-center justify-center text-gray-400 hover:text-gray-600 active:cursor-grabbing"
+            aria-label={locale === 'ar' ? 'اسحب لتغيير الترتيب' : 'Drag to reorder'}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        ) : (
+          <span className="flex h-8 w-8 items-center justify-center text-gray-200">
+            <GripVertical className="h-4 w-4" />
+          </span>
+        )}
+      </TableCell>
+      <TableCell className="font-medium">{locale === 'ar' ? acc.name_ar : acc.name_en}</TableCell>
+      <TableCell>
+        <Badge variant="outline" className={cn(
+          'border-brand-blue/30 text-brand-blue',
+          acc.type === 'chalet' && 'border-green-500/30 text-green-600',
+          acc.type === 'camp' && 'border-orange-500/30 text-orange-600'
+        )}>
+          {acc.type === 'hotel' ? '🏨' : acc.type === 'chalet' ? '🏖️' : '🏕️'}
+          {' '}{TYPES.find(t => t.value === acc.type)?.[locale === 'ar' ? 'label_ar' : 'label_en']?.replace(/[🏨🏖️🏕️] /, '')}
+        </Badge>
+      </TableCell>
+      <TableCell>⭐ {acc.rating}</TableCell>
+      <TableCell>{acc.price_per_night?.toLocaleString()} ج.م</TableCell>
+      <TableCell>{acc.price_4day?.toLocaleString()} ج.م</TableCell>
+      <TableCell>{acc.price_5day?.toLocaleString()} ج.م</TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="icon" onClick={() => onEdit(acc)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => onDelete(acc.id)} className="text-red-500 hover:text-red-700">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </>
+  )
+
+  if (!draggable) {
+    return <TableRow>{row}</TableRow>
+  }
+
+  return (
+    <Reorder.Item
+      as="tr"
+      value={acc}
+      dragListener={false}
+      dragControls={controls}
+      className="border-b transition-colors hover:bg-muted/50 bg-card"
+    >
+      {row}
+    </Reorder.Item>
   )
 }

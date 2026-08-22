@@ -9,33 +9,16 @@ import { MapPreview } from '@/components/MapPreview'
 import { Reveal } from '@/components/motion/Reveal'
 import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
 import { formatEGP } from '@/lib/pricing'
+import { buildAmenityIconMap } from '@/lib/amenities'
 import {
   Star, MapPin, Check, ChevronLeft, ChevronRight, ArrowLeft,
-  Wifi, Utensils, Waves, Thermometer, TreePine, ShieldCheck,
-  BusFront, Mountain, MessageCircle,
+  ShieldCheck, BusFront, Mountain, MessageCircle,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Accommodation, TransferPricing, SinaiTrip } from '@/lib/types'
 
-const amenityIcons: Record<string, LucideIcon> = {
-  'حمام سباحة': Waves, 'Swimming Pool': Waves,
-  'واي فاي مجاني': Wifi, 'Free WiFi': Wifi,
-  'إفطار مجاني': Utensils, 'Free Breakfast': Utensils,
-  'إطلالة على البحر': Waves, 'Sea View': Waves,
-  'تكييف': Thermometer, 'Air Conditioning': Thermometer,
-  'مطبخ مجهز': Utensils, 'Equipped Kitchen': Utensils,
-  'حديقة خاصة': TreePine, 'Private Garden': TreePine,
-  'مباشرة على البحر': Waves, 'Beachfront': Waves,
-  'شواية باربيكيو': Utensils, 'BBQ Grill': Utensils,
-  'جلسة بدوية': TreePine, 'Bedouin Seating': TreePine,
-  'شاي بدوي مجاني': TreePine, 'Free Bedouin Tea': TreePine,
-  'حمام سباحة دافء': Waves, 'Heated Pool': Waves,
-  'مركز غوص خاص': Waves, 'Private Dive Center': Waves,
-  'شاطئ خاص': Waves, 'Private Beach': Waves,
-  'جيم وسبا': Thermometer, 'Gym & Spa': Thermometer,
-  'بوفيه مفتوح': Utensils, 'Open Buffet': Utensils,
-}
+const amenityIcons = buildAmenityIconMap()
 
 export function ProductDetailClient({
   accommodation,

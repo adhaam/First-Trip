@@ -28,7 +28,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const supabase = getSupabaseAdmin()
-  const { data, error } = await supabase.from('sinai_trips').select('*').order('created_at', { ascending: false })
+  const { data, error } = await supabase
+    .from('sinai_trips')
+    .select('*')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
   if (error) {
     console.error('GET sinai_trips error:', error)
     return NextResponse.json({ error: 'Failed to load trips' }, { status: 500 })

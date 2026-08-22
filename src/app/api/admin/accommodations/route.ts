@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('accommodations')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
 
   if (error) {
     console.error('GET accommodations error:', error)

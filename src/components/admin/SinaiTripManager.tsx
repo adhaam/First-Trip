@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useLocale } from 'next-intl'
+import { Reorder, useDragControls } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
 import { SinaiTrip } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -106,6 +107,8 @@ export function SinaiTripManager() {
   const filtered = trips.filter(t =>
     !search || t.name_ar.includes(search) || t.name_en.toLowerCase().includes(search.toLowerCase())
   )
+  // Drag-reordering only makes sense against the full, unfiltered list.
+  const canReorder = !search
 
   const handleEdit = (t: SinaiTrip) => { setEditing(t); setForm({ ...t }); setShowForm(true) }
   const handleAdd = () => { setEditing(null); setForm({ ...emptyTrip }); setShowForm(true) }
@@ -154,32 +157,23 @@ export function SinaiTripManager() {
     setTrips(prev => prev.filter(t => t.id !== id))
   }
 
-  const moveOrder = async (id: string, dir: 'up' | 'down') => {
-    // Work on the unfiltered, sorted list to find the real adjacent item
-    const sorted = [...trips].sort((a, b) =>
-      a.sort_order !== b.sort_order ? a.sort_order - b.sort_order : a.created_at.localeCompare(b.created_at)
-    )
-    const idx = sorted.findIndex(t => t.id === id)
-    const targetIdx = dir === 'up' ? idx - 1 : idx + 1
-    if (targetIdx < 0 || targetIdx >= sorted.length) return
-    const current = sorted[idx]
-    const target = sorted[targetIdx]
-    // Assign swapped sort_order values
-    const newCurrentOrder = target.sort_order
-    const newTargetOrder = current.sort_order === target.sort_order
-      ? current.sort_order + (dir === 'up' ? -1 : 1)
-      : current.sort_order
-    await Promise.all([
-      fetch(`/api/admin/sinai-trips/${current.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sort_order: newCurrentOrder }),
-      }),
-      fetch(`/api/admin/sinai-trips/${target.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sort_order: newTargetOrder }),
-      }),
-    ])
-    await load()
+  // Drag-and-drop reorder: update local state immediately (no flash / full
+  // reload) and persist the new sort_order values for changed rows only.
+  const handleReorder = (newOrder: SinaiTrip[]) => {
+    const reindexed = newOrder.map((t, idx) => ({ ...t, sort_order: idx }))
+    setTrips(reindexed)
+    const changed = reindexed.filter((t, idx) => trips.find(x => x.id === t.id)?.sort_order !== idx)
+    Promise.all(
+      changed.map(t =>
+        fetch(`/api/admin/sinai-trips/${t.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sort_order: t.sort_order }),
+        }),
+      ),
+    ).catch(() => {
+      load()
+    })
   }
 
   return (
@@ -195,12 +189,21 @@ export function SinaiTripManager() {
         </Button>
       </div>
 
+      {canReorder ? (
+        <p className="text-xs text-gray-500">
+          {locale === 'ar' ? '🖐️ اسحب من ⣿ عشان تغيّر ترتيب العرض — بيتحفظ فورًا.' : '🖐️ Drag by ⣿ to change display order — saved instantly.'}
+        </p>
+      ) : (
+        <p className="text-xs text-amber-600">
+          {locale === 'ar' ? 'امسح البحث عشان تقدر تسحب وتظبط الترتيب.' : 'Clear the search to drag-reorder.'}
+        </p>
+      )}
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">{locale === 'ar' ? 'الترتيب' : 'Order'}</TableHead>
+                <TableHead className="w-10" />
                 <TableHead>{locale === 'ar' ? 'الاسم' : 'Name'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'الفئة' : 'Category'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'المدة' : 'Duration'}</TableHead>
@@ -209,55 +212,35 @@ export function SinaiTripManager() {
                 <TableHead className="text-right">{locale === 'ar' ? 'إجراءات' : 'Actions'}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {loading && (
-                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
-                  <Loader2 className="h-5 w-5 animate-spin inline mr-2" />{locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
-                </TableCell></TableRow>
-              )}
-              {!loading && loadError && (
-                <TableRow><TableCell colSpan={7} className="text-center text-red-500 py-8">{loadError}</TableCell></TableRow>
-              )}
-              {!loading && !loadError && filtered.map((t, idx, arr) => (
-                <TableRow key={t.id}>
-                  <TableCell>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === 0} onClick={() => moveOrder(t.id, 'up')} aria-label={locale === 'ar' ? 'تحريك لأعلى' : 'Move up'}><ChevronUp className="h-3.5 w-3.5" /></Button>
-                      <span className="text-[11px] text-gray-400">{t.sort_order}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === arr.length - 1} onClick={() => moveOrder(t.id, 'down')} aria-label={locale === 'ar' ? 'تحريك لأسفل' : 'Move down'}><ChevronDown className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{locale === 'ar' ? t.name_ar : t.name_en}</TableCell>
-                  <TableCell>{locale === 'ar' ? t.category_ar : t.category_en}</TableCell>
-                  <TableCell>{locale === 'ar' ? t.duration : t.duration_en}</TableCell>
-                  <TableCell>
-                    <div>{t.price?.toLocaleString()} ج.م</div>
-                    <div className={cn('text-[11px]', t.package_price == null ? 'text-amber-600' : 'text-gray-400')}>
-                      {t.package_price != null
-                        ? `${locale === 'ar' ? 'باكدج: ' : 'Pkg: '}${Number(t.package_price).toLocaleString()}`
-                        : (locale === 'ar' ? 'سعر الباكدج غير مضبوط' : 'Package cost not set')}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={t.is_active ? 'default' : 'outline'} className={t.is_active ? 'bg-green-100 text-green-700' : ''}>
-                      {t.is_active ? (locale === 'ar' ? 'نشط' : 'Active') : (locale === 'ar' ? 'متوقف' : 'Inactive')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(t.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!loading && !loadError && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
-                  {locale === 'ar' ? 'لا توجد رحلات' : 'No trips found'}
-                </TableCell></TableRow>
-
-              )}
-            </TableBody>
+            {loading || loadError || filtered.length === 0 ? (
+              <TableBody>
+                {loading && (
+                  <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                    <Loader2 className="h-5 w-5 animate-spin inline mr-2" />{locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+                  </TableCell></TableRow>
+                )}
+                {!loading && loadError && (
+                  <TableRow><TableCell colSpan={7} className="text-center text-red-500 py-8">{loadError}</TableCell></TableRow>
+                )}
+                {!loading && !loadError && filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                    {locale === 'ar' ? 'لا توجد رحلات' : 'No trips found'}
+                  </TableCell></TableRow>
+                )}
+              </TableBody>
+            ) : canReorder ? (
+              <Reorder.Group as="tbody" axis="y" values={filtered} onReorder={handleReorder} className="[&_tr:last-child]:border-0">
+                {filtered.map(t => (
+                  <TripRow key={t.id} t={t} locale={locale} onEdit={handleEdit} onDelete={handleDelete} draggable />
+                ))}
+              </Reorder.Group>
+            ) : (
+              <TableBody>
+                {filtered.map(t => (
+                  <TripRow key={t.id} t={t} locale={locale} onEdit={handleEdit} onDelete={handleDelete} draggable={false} />
+                ))}
+              </TableBody>
+            )}
           </Table>
         </CardContent>
       </Card>
@@ -399,5 +382,82 @@ export function SinaiTripManager() {
         </div>
       )}
     </div>
+  )
+}
+
+// Extracted so the row can carry its own drag controls — only the grip
+// handle starts a drag (dragListener={false}), so clicking Edit/Delete never
+// accidentally triggers a reorder.
+function TripRow({
+  t,
+  locale,
+  onEdit,
+  onDelete,
+  draggable,
+}: {
+  t: SinaiTrip
+  locale: string
+  onEdit: (t: SinaiTrip) => void
+  onDelete: (id: string) => void
+  draggable: boolean
+}) {
+  const controls = useDragControls()
+  const row = (
+    <>
+      <TableCell className="w-10">
+        {draggable ? (
+          <button
+            type="button"
+            onPointerDown={e => controls.start(e)}
+            className="flex h-8 w-8 cursor-grab items-center justify-center text-gray-400 hover:text-gray-600 active:cursor-grabbing"
+            aria-label={locale === 'ar' ? 'اسحب لتغيير الترتيب' : 'Drag to reorder'}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        ) : (
+          <span className="flex h-8 w-8 items-center justify-center text-gray-200">
+            <GripVertical className="h-4 w-4" />
+          </span>
+        )}
+      </TableCell>
+      <TableCell className="font-medium">{locale === 'ar' ? t.name_ar : t.name_en}</TableCell>
+      <TableCell>{locale === 'ar' ? t.category_ar : t.category_en}</TableCell>
+      <TableCell>{locale === 'ar' ? t.duration : t.duration_en}</TableCell>
+      <TableCell>
+        <div>{t.price?.toLocaleString()} ج.م</div>
+        <div className={cn('text-[11px]', t.package_price == null ? 'text-amber-600' : 'text-gray-400')}>
+          {t.package_price != null
+            ? `${locale === 'ar' ? 'باكدج: ' : 'Pkg: '}${Number(t.package_price).toLocaleString()}`
+            : (locale === 'ar' ? 'سعر الباكدج غير مضبوط' : 'Package cost not set')}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant={t.is_active ? 'default' : 'outline'} className={t.is_active ? 'bg-green-100 text-green-700' : ''}>
+          {t.is_active ? (locale === 'ar' ? 'نشط' : 'Active') : (locale === 'ar' ? 'متوقف' : 'Inactive')}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="icon" onClick={() => onEdit(t)}><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => onDelete(t.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </TableCell>
+    </>
+  )
+
+  if (!draggable) {
+    return <TableRow>{row}</TableRow>
+  }
+
+  return (
+    <Reorder.Item
+      as="tr"
+      value={t}
+      dragListener={false}
+      dragControls={controls}
+      className="border-b transition-colors hover:bg-muted/50 bg-card"
+    >
+      {row}
+    </Reorder.Item>
   )
 }
