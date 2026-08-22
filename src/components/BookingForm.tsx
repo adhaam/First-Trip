@@ -491,12 +491,15 @@ export function BookingForm({
     )
   }
 
-  // Desktop: form left, sticky price summary right (360 px)
-  // Mobile:  form first, summary below — price is NEVER above the form
+  // Always a single vertical stack: form card, then the price summary below
+  // it. This component now lives inside a fixed-width sidebar column on
+  // desktop (see ProductDetailClient), so it must never try to split itself
+  // into its own side-by-side columns — that's what caused the earlier
+  // squeeze bug when the sidebar wasn't wide enough for both.
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start">
+    <div className="flex flex-col gap-6">
 
-      {/* ─── LEFT: booking form card ─── */}
+      {/* ─── booking form card ─── */}
       <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
         {/* ─── mode selector ─── */}
@@ -1146,8 +1149,8 @@ export function BookingForm({
       </form>
       </div>
 
-      {/* ─── RIGHT: sticky price summary — Desktop sticks, Mobile appears below ─── */}
-      <div className="mt-6 lg:mt-0 lg:sticky lg:top-6">
+      {/* ─── price summary — always below the form fields ─── */}
+      <div>
         <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
           <div className="bg-gradient-to-br from-sea-50 to-sun-50 p-6">
             <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sea-900/50">

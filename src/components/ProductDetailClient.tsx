@@ -159,104 +159,119 @@ export function ProductDetailClient({
         )}
       </section>
 
-      {/* ─── Body ─── */}
-      <div className="container-main space-y-10 py-10 md:py-14">
-        {/* what's included + price summary, side by side up top */}
-        <div className="grid gap-10 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] lg:gap-12">
-          <Reveal>
-            <div className="grid gap-px overflow-hidden border-[1.5px] border-sand-300 bg-sand-300 pin-card sm:grid-cols-3">
-              <IncludedTile
-                icon={BusFront}
-                title={ar ? 'اختيارات انتقال' : 'Transfer choices'}
-                desc={ar ? 'باص أو هايس حسب الإعدادات المتاحة' : 'Bus or Hiace when configured and available'}
-              />
-              <IncludedTile
-                icon={Mountain}
-                title={ar ? 'رحلات الباكدج' : 'Package trips'}
-                desc={ar ? 'الرحلات المضمّنة بتظهر في ملخص السعر' : 'Included trips appear in the price summary'}
-              />
-              <IncludedTile
-                icon={ShieldCheck}
-                title={ar ? 'تأكيد قبل الدفع' : 'Confirm before payment'}
-                desc={ar ? 'السعر النهائي بيتأكد معاك أولاً' : 'Your final total is confirmed with you first'}
-              />
-            </div>
-          </Reveal>
+      {/* ─── Body ───
+          Desktop (md+): two real columns — left keeps About/Amenities/Map in
+          their natural order, right is a sticky sidebar with the price card
+          + booking form, spanning that whole left-column height.
+          Mobile: a single stack, reordered so price+form land between
+          Amenities and the Map (not first, not last) — done with `order`,
+          which `md:order-none` cancels once the two-column grid takes over. */}
+      <div className="container-main py-10 md:py-14">
+        <div className="grid gap-10 md:grid-cols-[1fr_340px] md:grid-rows-[auto_auto_auto] lg:grid-cols-[1fr_380px] lg:gap-12">
+          {/* row 1, left: what's included */}
+          <div className="order-1 md:order-none md:col-start-1 md:row-start-1">
+            <Reveal>
+              <div className="grid gap-px overflow-hidden border-[1.5px] border-sand-300 bg-sand-300 pin-card sm:grid-cols-3">
+                <IncludedTile
+                  icon={BusFront}
+                  title={ar ? 'اختيارات انتقال' : 'Transfer choices'}
+                  desc={ar ? 'باص أو هايس حسب الإعدادات المتاحة' : 'Bus or Hiace when configured and available'}
+                />
+                <IncludedTile
+                  icon={Mountain}
+                  title={ar ? 'رحلات الباكدج' : 'Package trips'}
+                  desc={ar ? 'الرحلات المضمّنة بتظهر في ملخص السعر' : 'Included trips appear in the price summary'}
+                />
+                <IncludedTile
+                  icon={ShieldCheck}
+                  title={ar ? 'تأكيد قبل الدفع' : 'Confirm before payment'}
+                  desc={ar ? 'السعر النهائي بيتأكد معاك أولاً' : 'Your final total is confirmed with you first'}
+                />
+              </div>
+            </Reveal>
+          </div>
 
-          <div className="overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
-            <div className="space-y-2.5 p-6">
-              {hasRoomPricing ? (
-                <>
-                  {Number(accommodation.price_single_room) > 0 && <PriceRow label={ar ? 'غرفة سينجل' : 'Single room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_single_room), locale)} currency={common('egp')} />}
-                  {Number(accommodation.price_double_room) > 0 && <PriceRow label={ar ? 'غرفة دبل' : 'Double room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_double_room), locale)} currency={common('egp')} highlight />}
-                  {Number(accommodation.price_triple_room) > 0 && <PriceRow label={ar ? 'غرفة تريبل' : 'Triple room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_triple_room), locale)} currency={common('egp')} />}
-                </>
-              ) : (
-                <PriceRow label={ar ? 'إقامة فقط' : 'Stay only'} sub={`${t('perNight')} · ${t('perPerson')}`} value={formatEGP(Number(accommodation.price_per_night), locale)} currency={common('egp')} />
-              )}
-            </div>
+          {/* row 2, left: description + amenities */}
+          <div className="order-2 md:order-none md:col-start-1 md:row-start-2 mt-10 space-y-12 md:mt-0">
+            {description && (
+              <Reveal>
+                <h2 className="font-display text-xl font-bold text-sea-900">{t('aboutTrip')}</h2>
+                <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-loose text-sea-900/70">
+                  {description}
+                </p>
+              </Reveal>
+            )}
 
-            <div className="border-t border-sand-300 bg-sand-100 px-6 py-4">
-              <p className="text-xs leading-relaxed text-sea-900/55">
-                {accommodation.seasonal_rates?.length
-                  ? (ar ? 'الفترات الموسمية بتتحسب ليلة بليلة في نموذج الحجز.' : 'Seasonal periods are calculated night by night in the booking form.')
-                  : (ar ? 'اختار التواريخ والتفاصيل تحت علشان تشوف الملخص الكامل.' : 'Choose dates and details below to see the full calculated summary.')}
-              </p>
+            {amenities.length > 0 && (
+              <Reveal>
+                <h2 className="font-display text-xl font-bold text-sea-900">{t('highlights')}</h2>
+                <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {amenities.map((amenity, i) => {
+                    const Icon = amenityIcons[amenity] || Check
+                    return (
+                      <li
+                        key={i}
+                        className="flex items-center gap-3 rounded-xl border border-sand-300 bg-card px-4 py-3"
+                      >
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sea-50 text-sea-600">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="text-sm font-medium text-sea-900/80">{amenity}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </Reveal>
+            )}
+          </div>
+
+          {/* right column: price card + booking form — sticky, spans the left column's height */}
+          <div className="order-3 md:order-none md:col-start-2 md:row-start-1 md:row-span-3 mt-10 md:mt-0">
+            <div className="space-y-5 md:sticky md:top-24">
+              <div className="overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
+                <div className="space-y-2.5 p-6">
+                  {hasRoomPricing ? (
+                    <>
+                      {Number(accommodation.price_single_room) > 0 && <PriceRow label={ar ? 'غرفة سينجل' : 'Single room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_single_room), locale)} currency={common('egp')} />}
+                      {Number(accommodation.price_double_room) > 0 && <PriceRow label={ar ? 'غرفة دبل' : 'Double room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_double_room), locale)} currency={common('egp')} highlight />}
+                      {Number(accommodation.price_triple_room) > 0 && <PriceRow label={ar ? 'غرفة تريبل' : 'Triple room'} sub={ar ? 'إجمالي الغرفة لكل ليلة' : 'Total room price per night'} value={formatEGP(Number(accommodation.price_triple_room), locale)} currency={common('egp')} />}
+                    </>
+                  ) : (
+                    <PriceRow label={ar ? 'إقامة فقط' : 'Stay only'} sub={`${t('perNight')} · ${t('perPerson')}`} value={formatEGP(Number(accommodation.price_per_night), locale)} currency={common('egp')} />
+                  )}
+                </div>
+
+                <div className="border-t border-sand-300 bg-sand-100 px-6 py-4">
+                  <p className="text-xs leading-relaxed text-sea-900/55">
+                    {accommodation.seasonal_rates?.length
+                      ? (ar ? 'الفترات الموسمية بتتحسب ليلة بليلة في نموذج الحجز.' : 'Seasonal periods are calculated night by night in the booking form.')
+                      : (ar ? 'اختار التواريخ والتفاصيل تحت علشان تشوف الملخص الكامل.' : 'Choose dates and details below to see the full calculated summary.')}
+                  </p>
+                </div>
+              </div>
+
+              <div id="booking-form">
+                <BookingForm
+                  accommodation={accommodation}
+                  pricing={pricing}
+                  whatsapp={whatsapp}
+                  sinaiTrips={sinaiTrips}
+                  includedTripIds={includedTripIds}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* booking form — right up top, full width, before About/Amenities/Map */}
-        <div id="booking-form">
-          <BookingForm
-            accommodation={accommodation}
-            pricing={pricing}
-            whatsapp={whatsapp}
-            sinaiTrips={sinaiTrips}
-            includedTripIds={includedTripIds}
-          />
-        </div>
-
-        {/* supporting info below the fold */}
-        <div className="max-w-3xl space-y-12">
-          {description && (
+          {/* row 3, left: map */}
+          <div className="order-4 md:order-none md:col-start-1 md:row-start-3 mt-10 md:mt-0">
             <Reveal>
-              <h2 className="font-display text-xl font-bold text-sea-900">{t('aboutTrip')}</h2>
-              <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-loose text-sea-900/70">
-                {description}
-              </p>
+              <MapPreview
+                latitude={accommodation.latitude}
+                longitude={accommodation.longitude}
+                label={location}
+              />
             </Reveal>
-          )}
-
-          {amenities.length > 0 && (
-            <Reveal>
-              <h2 className="font-display text-xl font-bold text-sea-900">{t('highlights')}</h2>
-              <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                {amenities.map((amenity, i) => {
-                  const Icon = amenityIcons[amenity] || Check
-                  return (
-                    <li
-                      key={i}
-                      className="flex items-center gap-3 rounded-xl border border-sand-300 bg-card px-4 py-3"
-                    >
-                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sea-50 text-sea-600">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="text-sm font-medium text-sea-900/80">{amenity}</span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </Reveal>
-          )}
-
-          <Reveal>
-            <MapPreview
-              latitude={accommodation.latitude}
-              longitude={accommodation.longitude}
-              label={location}
-            />
-          </Reveal>
+          </div>
         </div>
       </div>
 
