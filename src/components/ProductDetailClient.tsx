@@ -244,7 +244,7 @@ export function ProductDetailClient({
 
           {/* sidebar */}
           <div className="lg:relative">
-            <div className="space-y-5 lg:sticky lg:top-24">
+            <div className="lg:sticky lg:top-24">
               {/* price card */}
               <div className="overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
                 <div className="space-y-2.5 p-6">
@@ -267,19 +267,19 @@ export function ProductDetailClient({
                   </p>
                 </div>
               </div>
-
-              {/* booking form */}
-              <div id="booking-form">
-                <BookingForm
-                  accommodation={accommodation}
-                  pricing={pricing}
-                  whatsapp={whatsapp}
-                  sinaiTrips={sinaiTrips}
-                  includedTripIds={includedTripIds}
-                />
-              </div>
             </div>
           </div>
+        </div>
+
+        {/* booking form — full-width below the grid so the internal 2-col layout has room */}
+        <div id="booking-form" className="mt-10">
+          <BookingForm
+            accommodation={accommodation}
+            pricing={pricing}
+            whatsapp={whatsapp}
+            sinaiTrips={sinaiTrips}
+            includedTripIds={includedTripIds}
+          />
         </div>
       </div>
 

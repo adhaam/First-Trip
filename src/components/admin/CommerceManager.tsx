@@ -43,15 +43,25 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
   const api = useAdminFetch()
   const [form, setForm] = useState({ slug: '', name_ar: '', name_en: '', applies_to: 'both' as const })
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const create = async () => {
-    if (!form.slug || !form.name_ar || !form.name_en) return
+    setFormError('')
+    if (!form.slug || !form.name_ar || !form.name_en) {
+      setFormError(ar ? 'يرجى ملء جميع الحقول المطلوبة (المعرف، الاسم بالعربي، الاسم بالإنجليزي)' : 'Please fill in all required fields (slug, Arabic name, English name)')
+      return
+    }
+    if (!/^[a-z0-9-]+$/.test(form.slug)) {
+      setFormError(ar ? 'المعرف (slug) يجب أن يحتوي فقط على أحرف صغيرة وأرقام وشرطة (-) بدون مسافات' : 'Slug must contain only lowercase letters, numbers, and hyphens (-) — no spaces')
+      return
+    }
     setSaving(true)
     try {
       await api('/api/admin/commerce/categories', { method: 'POST', body: JSON.stringify(form) })
       setForm({ slug: '', name_ar: '', name_en: '', applies_to: 'both' })
+      setFormError('')
       onReload()
-    } catch (e) { alert((e as Error).message) } finally { setSaving(false) }
+    } catch (e) { setFormError((e as Error).message) } finally { setSaving(false) }
   }
 
   const toggleActive = async (c: Category) => {
@@ -63,9 +73,9 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
     <div className="space-y-4">
       <Card>
         <CardContent className="p-4 grid gap-3 sm:grid-cols-5">
-          <Input placeholder={ar ? 'المعرف (slug)' : 'Slug'} value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} />
-          <Input placeholder={ar ? 'الاسم بالعربي' : 'Name (Arabic)'} value={form.name_ar} onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))} />
-          <Input placeholder={ar ? 'الاسم بالإنجليزي' : 'Name (English)'} value={form.name_en} onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
+          <Input placeholder={ar ? 'المعرف (slug) — أحرف صغيرة وأرقام وشرطة فقط' : 'Slug — lowercase, numbers, hyphens only'} value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} />
+          <Input placeholder={ar ? 'الاسم بالعربي *' : 'Name (Arabic) *'} value={form.name_ar} onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))} />
+          <Input placeholder={ar ? 'الاسم بالإنجليزي *' : 'Name (English) *'} value={form.name_en} onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
           <Select value={form.applies_to} onValueChange={(v) => v && setForm((f) => ({ ...f, applies_to: v as typeof f.applies_to }))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -75,6 +85,7 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
             </SelectContent>
           </Select>
           <Button onClick={create} disabled={saving}><Plus className="h-4 w-4 mr-1" />{ar ? 'إضافة تصنيف' : 'Add category'}</Button>
+          {formError && <p className="sm:col-span-5 text-xs text-red-600 font-medium">{formError}</p>}
         </CardContent>
       </Card>
       <Card>
@@ -542,15 +553,25 @@ function CollectionsTab({ items, loading, onReload }: { items: Collection[]; loa
   const api = useAdminFetch()
   const [form, setForm] = useState({ slug: '', name_ar: '', name_en: '' })
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const create = async () => {
-    if (!form.slug || !form.name_ar || !form.name_en) return
+    setFormError('')
+    if (!form.slug || !form.name_ar || !form.name_en) {
+      setFormError(ar ? 'يرجى ملء جميع الحقول المطلوبة (المعرف، الاسم بالعربي، الاسم بالإنجليزي)' : 'Please fill in all required fields (slug, Arabic name, English name)')
+      return
+    }
+    if (!/^[a-z0-9-]+$/.test(form.slug)) {
+      setFormError(ar ? 'المعرف (slug) يجب أن يحتوي فقط على أحرف صغيرة وأرقام وشرطة (-) بدون مسافات' : 'Slug must contain only lowercase letters, numbers, and hyphens (-) — no spaces')
+      return
+    }
     setSaving(true)
     try {
       await api('/api/admin/commerce/collections', { method: 'POST', body: JSON.stringify(form) })
       setForm({ slug: '', name_ar: '', name_en: '' })
+      setFormError('')
       onReload()
-    } catch (e) { alert((e as Error).message) } finally { setSaving(false) }
+    } catch (e) { setFormError((e as Error).message) } finally { setSaving(false) }
   }
   const toggleActive = async (c: Collection) => {
     await api(`/api/admin/commerce/collections/${c.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !c.is_active }) })
@@ -562,10 +583,11 @@ function CollectionsTab({ items, loading, onReload }: { items: Collection[]; loa
       <p className="text-xs text-gray-500">{ar ? 'مجموعات مختارة (مش تصنيفات) — منتج ممكن يكون في أكتر من مجموعة. عيّن المنتجات من داخل محرر المنتج.' : 'Curated groupings (not categories) — a product can belong to several. Assign products from within the product editor.'}</p>
       <Card>
         <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
-          <Input placeholder={ar ? 'المعرف (slug)' : 'Slug'} value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} />
-          <Input placeholder={ar ? 'الاسم بالعربي' : 'Name (Arabic)'} value={form.name_ar} onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))} />
-          <Input placeholder={ar ? 'الاسم بالإنجليزي' : 'Name (English)'} value={form.name_en} onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
+          <Input placeholder={ar ? 'المعرف (slug) — أحرف صغيرة وأرقام وشرطة فقط' : 'Slug — lowercase, numbers, hyphens only'} value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} />
+          <Input placeholder={ar ? 'الاسم بالعربي *' : 'Name (Arabic) *'} value={form.name_ar} onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))} />
+          <Input placeholder={ar ? 'الاسم بالإنجليزي *' : 'Name (English) *'} value={form.name_en} onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
           <Button onClick={create} disabled={saving}><Plus className="h-4 w-4 mr-1" />{ar ? 'إضافة مجموعة' : 'Add collection'}</Button>
+          {formError && <p className="sm:col-span-4 text-xs text-red-600 font-medium">{formError}</p>}
         </CardContent>
       </Card>
       <Card>
