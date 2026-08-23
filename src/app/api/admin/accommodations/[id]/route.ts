@@ -20,7 +20,7 @@ const accommodationUpdateSchema = z.object({
   description_en: z.string().optional(),
   images: z.array(z.string()).optional(),
   image_url: z.string().optional(),
-  rating: z.number().min(0).max(5).optional(),
+  rating: z.number().min(1).max(5).optional(),
   location: z.string().optional(),
   location_ar: z.string().optional(),
   location_en: z.string().optional(),

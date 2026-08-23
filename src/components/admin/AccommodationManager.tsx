@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, BedDouble, BedSingle, UtensilsCrossed, GripVertical, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPin, Upload, X, Search, Loader2, ChevronUp, ChevronDown, ExternalLink, Link2, BedDouble, BedSingle, UtensilsCrossed, GripVertical, Check, Download, AlertTriangle } from 'lucide-react'
 import { Accommodation, MealPlan, MealPlanKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { AMENITIES_LIBRARY } from '@/lib/amenities'
@@ -55,7 +55,7 @@ const emptyAccommodation: Partial<Accommodation> = {
   price_single_room: 0,
   price_triple_room: 0,
   meal_plans: [],
-  rating: 0,
+  rating: 4,
   location_ar: '',
   location_en: '',
   amenities_ar: [],
@@ -83,6 +83,15 @@ export function AccommodationManager() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Import from URL (southsinaihotels.com) — server-side extraction feeds
+  // the same Add/Edit form below, so the admin previews and edits every
+  // field before anything is saved to Supabase.
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState('')
+  const [importedFrom, setImportedFrom] = useState<string | null>(null)
 
   const mealPlanFor = (key: MealPlanKey): MealPlan | undefined =>
     ((form.meal_plans as MealPlan[]) || []).find(m => m.key === key)
@@ -186,6 +195,7 @@ export function AccommodationManager() {
 
   const handleEdit = (acc: Accommodation) => {
     setEditing(acc)
+    setImportedFrom(null)
     const images = acc.images && acc.images.length > 0
       ? acc.images
       : acc.image_url ? [acc.image_url] : []
@@ -195,8 +205,42 @@ export function AccommodationManager() {
 
   const handleAdd = () => {
     setEditing(null)
+    setImportedFrom(null)
     setForm({ ...emptyAccommodation })
     setShowForm(true)
+  }
+
+  const handleImportExtract = async () => {
+    const url = importUrl.trim()
+    if (!url) return
+    setImporting(true)
+    setImportError('')
+    try {
+      const res = await fetch('/api/admin/accommodations/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      if (res.status === 401) {
+        window.location.href = locale === 'en' ? '/en/admin' : '/admin'
+        return
+      }
+      const data = await res.json()
+      if (!res.ok) {
+        setImportError(data.error || (locale === 'ar' ? 'فشل الاستخراج' : 'Extraction failed'))
+        return
+      }
+      setEditing(null)
+      setForm({ ...emptyAccommodation, ...data.extracted })
+      setImportedFrom(data.source_url || url)
+      setShowImportDialog(false)
+      setImportUrl('')
+      setShowForm(true)
+    } catch {
+      setImportError(locale === 'ar' ? 'فشل الاستخراج' : 'Extraction failed')
+    } finally {
+      setImporting(false)
+    }
   }
 
   const handleSave = async () => {
@@ -212,7 +256,7 @@ export function AccommodationManager() {
         description_en: form.description_en || '',
         image_url: (form.images as string[])?.[0] || form.image_url || '',
         images: (form.images as string[]) || [],
-        rating: form.rating || 0,
+        rating: form.rating || 4,
         location_ar: form.location_ar || '',
         location_en: form.location_en || '',
         latitude: form.latitude ?? 28.5092,
@@ -254,6 +298,7 @@ export function AccommodationManager() {
       setShowForm(false)
       setEditing(null)
       setForm({})
+      setImportedFrom(null)
     } finally {
       setSaving(false)
     }
@@ -383,11 +428,66 @@ export function AccommodationManager() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleAdd} className="bg-brand-blue hover:bg-brand-blue-dark">
-          <Plus className="h-4 w-4 mr-2" />
-          {locale === 'ar' ? 'إضافة مكان إقامة' : 'Add Accommodation'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => { setImportError(''); setImportUrl(''); setShowImportDialog(true) }}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {locale === 'ar' ? 'استيراد من رابط' : 'Import from URL'}
+          </Button>
+          <Button onClick={handleAdd} className="bg-brand-blue hover:bg-brand-blue-dark">
+            <Plus className="h-4 w-4 mr-2" />
+            {locale === 'ar' ? 'إضافة مكان إقامة' : 'Add Accommodation'}
+          </Button>
+        </div>
       </div>
+
+      {/* Import from URL dialog */}
+      {showImportDialog && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Download className="h-5 w-5 text-brand-blue" />
+                  {locale === 'ar' ? 'استيراد مكان إقامة من رابط' : 'Import Accommodation from URL'}
+                </h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowImportDialog(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                {locale === 'ar'
+                  ? 'الصق رابط صفحة فندق/شاليه من southsinaihotels.com. هنجيب الاسم، الوصف، الموقع، والخدمات فقط — من غير صور أو أسعار — وهتقدر تراجع وتعدل كل حاجة قبل الحفظ.'
+                  : 'Paste a hotel/chalet page link from southsinaihotels.com. We\'ll pull the name, description, location, and amenities only — no images or prices — and you\'ll review/edit everything before saving.'}
+              </p>
+              <div>
+                <Label className="text-xs">{locale === 'ar' ? 'الرابط' : 'URL'}</Label>
+                <Input
+                  value={importUrl}
+                  onChange={e => setImportUrl(e.target.value)}
+                  placeholder="https://example.southsinaihotels.com/en/"
+                  dir="ltr"
+                  className="mt-1"
+                  onKeyDown={e => { if (e.key === 'Enter' && !importing) handleImportExtract() }}
+                />
+                {importError && <p className="text-xs text-red-500 mt-1">{importError}</p>}
+              </div>
+              <div className="flex gap-3 justify-end pt-2 border-t">
+                <Button variant="outline" onClick={() => setShowImportDialog(false)}>
+                  {locale === 'ar' ? 'إلغاء' : 'Cancel'}
+                </Button>
+                <Button onClick={handleImportExtract} disabled={importing || !importUrl.trim()} className="bg-brand-blue hover:bg-brand-blue-dark gap-2">
+                  {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {locale === 'ar' ? 'استخراج البيانات' : 'Extract Data'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Table */}
       {canReorder ? (
@@ -465,11 +565,27 @@ export function AccommodationManager() {
                     ? (locale === 'ar' ? 'تعديل مكان الإقامة' : 'Edit Accommodation')
                     : (locale === 'ar' ? 'إضافة مكان إقامة جديد' : 'Add New Accommodation')}
                 </h2>
-                <Button variant="ghost" size="icon" onClick={() => { setShowForm(false); setEditing(null) }}>
+                <Button variant="ghost" size="icon" onClick={() => { setShowForm(false); setEditing(null); setImportedFrom(null) }}>
                   <X className="h-5 w-5" />
                 </Button>
               </div>
 
+              {importedFrom && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">
+                      {locale === 'ar' ? 'تم استيراد البيانات دي — راجعها كويس قبل الحفظ' : 'Data imported — review carefully before saving'}
+                    </p>
+                    <p className="mt-0.5 break-all opacity-80">{importedFrom}</p>
+                    <p className="mt-0.5 opacity-80">
+                      {locale === 'ar'
+                        ? 'الأسعار والصور محدش بيتسحب — دخلها يدويًا. والاسم بالعربي والوصف محتاجين مراجعة/ترجمة.'
+                        : 'Prices and images were never pulled — add them manually. Arabic name/description still need your review or translation.'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -501,7 +617,7 @@ export function AccommodationManager() {
                 </div>
                 <div>
                   <Label>⭐ {locale === 'ar' ? 'التقييم' : 'Rating'}</Label>
-                  <Input type="number" min={0} max={5} step={0.1} value={form.rating || 0} onChange={e => updateField('rating', parseFloat(e.target.value))} className="mt-1" />
+                  <Input type="number" min={1} max={5} step={0.1} value={form.rating || 4} onChange={e => updateField('rating', parseFloat(e.target.value))} className="mt-1" />
                 </div>
                 <div>
                   <Label>{locale === 'ar' ? 'الموقع' : 'Location'}</Label>
@@ -887,12 +1003,14 @@ export function AccommodationManager() {
 
               {/* Actions */}
               <div className="flex gap-3 justify-end pt-2 border-t">
-                <Button variant="outline" onClick={() => { setShowForm(false); setEditing(null) }}>
+                <Button variant="outline" onClick={() => { setShowForm(false); setEditing(null); setImportedFrom(null) }}>
                   {locale === 'ar' ? 'إلغاء' : 'Cancel'}
                 </Button>
                 <Button onClick={handleSave} disabled={saving} className="bg-brand-blue hover:bg-brand-blue-dark">
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-                  {locale === 'ar' ? 'حفظ' : 'Save'}
+                  {importedFrom
+                    ? (locale === 'ar' ? 'تأكيد الاستيراد' : 'Confirm Import')
+                    : (locale === 'ar' ? 'حفظ' : 'Save')}
                 </Button>
               </div>
             </CardContent>
