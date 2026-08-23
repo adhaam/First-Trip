@@ -81,6 +81,89 @@ export function PolicyClient({ settings }: { settings: SiteSettings | null }) {
           )}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-sand-300 bg-white">
+        <div className="container-main py-12 md:py-16">
+          <div className="mx-auto max-w-5xl">
+            <div className="grid gap-8 md:grid-cols-3">
+              {/* About */}
+              <div>
+                <h3 className="font-display text-lg font-bold text-sea-900 mb-4">
+                  {ar ? 'عن ويمابس' : 'About WEEMAP'}
+                </h3>
+                <p className="text-sm text-sea-900/70 leading-relaxed">
+                  {ar
+                    ? 'نساعد في التخطيط للرحلات والإقامة في سيناء بطريقة احترافية وسهلة.'
+                    : 'We help plan trips and accommodations in Sinai professionally and easily.'}
+                </p>
+              </div>
+
+              {/* Quick Links */}
+              <div>
+                <h3 className="font-display text-lg font-bold text-sea-900 mb-4">
+                  {ar ? 'روابط سريعة' : 'Quick Links'}
+                </h3>
+                <ul className="space-y-2 text-sm">
+                  <li><a href="/" className="text-sea-600 hover:text-sea-900 transition-colors">{ar ? 'الرئيسية' : 'Home'}</a></li>
+                  <li><a href={ar ? '/ar/book-dahab' : '/en/book-dahab'} className="text-sea-600 hover:text-sea-900 transition-colors">{ar ? 'حجز بدايتك' : 'Book Now'}</a></li>
+                  <li><a href={ar ? '/ar/sinai-trips' : '/en/sinai-trips'} className="text-sea-600 hover:text-sea-900 transition-colors">{ar ? 'الرحلات' : 'Trips'}</a></li>
+                  <li><a href={ar ? '/ar/community' : '/en/community'} className="text-sea-600 hover:text-sea-900 transition-colors">{ar ? 'المجتمع' : 'Community'}</a></li>
+                </ul>
+              </div>
+
+              {/* Social & Attribution */}
+              <div>
+                <h3 className="font-display text-lg font-bold text-sea-900 mb-4">
+                  {ar ? 'تابعنا' : 'Follow Us'}
+                </h3>
+                <div className="space-y-3">
+                  <p className="text-sm text-sea-900/70">
+                    {ar ? 'تابعنا على الإنستجرام للآخبار والصور اليومية.' : 'Follow us on Instagram for news and daily photos.'}
+                  </p>
+                  <a
+                    href="https://www.instagram.com/adham_abduullaah/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex px-4 py-2 bg-sun-500 hover:bg-sun-600 text-white rounded-lg transition-colors font-medium text-sm"
+                  >
+                    {ar ? 'Instagram' : 'Instagram'} ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Copyright & Development */}
+            <div className="mt-12 pt-8 border-t border-sand-300">
+              <div className="text-center text-sm text-sea-900/60 space-y-2">
+                <p>
+                  {ar ? '© 2026 ويمابس سيناء. جميع الحقوق محفوظة.' : '© 2026 WEEMAP SINAI. All rights reserved.'}
+                </p>
+                <p>
+                  {ar ? 'هذا الموقع تم تطويره بواسطة ' : 'This website was developed by '}
+                  <a
+                    href="https://www.instagram.com/adham_abduullaah/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sun-600 hover:text-sun-700 underline transition-colors"
+                  >
+                    {ar ? 'أدهم عبد الله' : 'Adham Abduullaah'}
+                  </a>
+                  {ar ? ' — هل تريد موقع مشابه؟ ' : ' — Want a similar website? '}
+                  <a
+                    href="https://www.instagram.com/adham_abduullaah/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sun-600 hover:text-sun-700 underline transition-colors"
+                  >
+                    {ar ? 'تواصل معنا' : 'Get in touch'}
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -47,7 +47,19 @@ export async function GET(req: NextRequest) {
   if (productType === 'sale' || productType === 'rental') query = query.eq('product_type', productType)
   const { data, error } = await query
   if (error) return NextResponse.json({ error: 'Failed to load products' }, { status: 500 })
-  return NextResponse.json({ products: data })
+
+  // Fetch total inventory for rental products
+  const productsWithInventory = await Promise.all((data || []).map(async (p) => {
+    if (p.product_type !== 'rental') return p
+    const { data: variants } = await supabase
+      .from('commerce_product_variants')
+      .select('inventory_quantity')
+      .eq('product_id', p.id)
+    const total = (variants || []).reduce((sum, v) => sum + Number(v.inventory_quantity || 0), 0)
+    return { ...p, total_inventory: total }
+  }))
+
+  return NextResponse.json({ products: productsWithInventory })
 }
 
 export async function POST(req: NextRequest) {

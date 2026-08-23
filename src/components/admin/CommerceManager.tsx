@@ -123,6 +123,7 @@ interface Product {
   id: string; slug: string; name_ar: string; name_en: string
   product_type: 'sale' | 'rental'; base_price: number; is_active: boolean; is_featured: boolean
   commerce_categories: { name_ar: string; name_en: string } | null
+  total_inventory?: number
 }
 
 function ProductsTab({ categories, collections }: { categories: Category[]; collections: { id: string; name_ar: string; name_en: string }[] }) {
@@ -169,16 +170,18 @@ function ProductsTab({ categories, collections }: { categories: Category[]; coll
               <TableHead>{ar ? 'النوع' : 'Type'}</TableHead>
               <TableHead>{ar ? 'التصنيف' : 'Category'}</TableHead>
               <TableHead>{ar ? 'السعر' : 'Price'}</TableHead>
+              <TableHead>{ar ? 'المتاح (إيجار)' : 'Available (rental)'}</TableHead>
               <TableHead>{ar ? 'مفعّل' : 'Active'}</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {loading && <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
+              {loading && <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
               {!loading && items.map((p) => (
                 <TableRow key={p.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setEditingId(p.id)}>
                   <TableCell className="font-medium">{ar ? p.name_ar : p.name_en} {p.is_featured && <span className="ms-1 text-xs text-sun-600">★</span>}</TableCell>
                   <TableCell>{p.product_type === 'sale' ? (ar ? 'بيع' : 'Sale') : (ar ? 'إيجار' : 'Rental')}</TableCell>
                   <TableCell>{p.commerce_categories ? (ar ? p.commerce_categories.name_ar : p.commerce_categories.name_en) : '—'}</TableCell>
                   <TableCell>{p.base_price}</TableCell>
+                  <TableCell>{p.product_type === 'rental' ? (p.total_inventory ?? '—') : '—'}</TableCell>
                   <TableCell>
                     <Badge className={p.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}>
                       {p.is_active ? (ar ? 'نشط' : 'Active') : (ar ? 'غير نشط' : 'Inactive')}
@@ -186,7 +189,7 @@ function ProductsTab({ categories, collections }: { categories: Category[]; coll
                   </TableCell>
                 </TableRow>
               ))}
-              {!loading && items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">{ar ? 'لا توجد منتجات بعد' : 'No products yet'}</TableCell></TableRow>}
+              {!loading && items.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">{ar ? 'لا توجد منتجات بعد' : 'No products yet'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

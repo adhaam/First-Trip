@@ -15,10 +15,11 @@ import {
 import {
   Loader2, Search, ChevronDown, ChevronUp, SlidersHorizontal, Plus, X,
   Download, RotateCcw, Phone, Mail, MapPin, Users, Calendar, Banknote,
-  Package, Bed, Bus, PhoneCall,
+  Package, Bed, Bus, PhoneCall, FileText,
 } from 'lucide-react'
 import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { InvoiceViewer } from './InvoiceViewer'
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
   new: 'bg-purple-100 text-purple-700',
@@ -131,6 +132,11 @@ export function BookingsManager() {
   const [manual, setManual] = useState(emptyManual)
   const [savingManual, setSavingManual] = useState(false)
   const [manualError, setManualError] = useState('')
+
+  // ─── invoice viewer ───
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const [invoiceBookingId, setInvoiceBookingId] = useState<string | null>(null)
+  const [invoiceBookingNumber, setInvoiceBookingNumber] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -670,7 +676,20 @@ export function BookingsManager() {
                                 }}
                               />
                             </div>
-                            <div className="col-span-2 md:col-span-4 flex justify-end pt-2 border-t">
+                            <div className="col-span-2 md:col-span-4 flex justify-end gap-2 pt-2 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setInvoiceBookingId(b.id)
+                                  setInvoiceBookingNumber(`BK-${b.id.slice(0, 8).toUpperCase()}`)
+                                  setInvoiceOpen(true)
+                                }}
+                                className="gap-1.5"
+                              >
+                                <FileText className="h-4 w-4" />
+                                {ar ? 'فاتورة' : 'Invoice'}
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -887,6 +906,17 @@ export function BookingsManager() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Invoice Viewer */}
+      {invoiceBookingId && (
+        <InvoiceViewer
+          bookingId={invoiceBookingId}
+          bookingNumber={invoiceBookingNumber}
+          locale={locale as 'ar' | 'en'}
+          open={invoiceOpen}
+          onOpenChange={setInvoiceOpen}
+        />
       )}
     </div>
   )

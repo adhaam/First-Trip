@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import {
-  LayoutDashboard, Building2, Mountain, CalendarDays,
+  LayoutDashboard, Building2, Mountain,
   ClipboardList, Users, MessageSquareText, Settings,
   Bus, Quote, LogOut, Menu, X, Mail, ShoppingBag, MapPinned
 } from 'lucide-react'
@@ -18,7 +18,6 @@ import { SiteSettingsManager } from '@/components/admin/SiteSettingsManager'
 import { BookingsManager } from '@/components/admin/BookingsManager'
 import { CustomersManager } from '@/components/admin/CustomersManager'
 import { DashboardHome } from '@/components/admin/DashboardHome'
-import { TripDatesManager } from '@/components/admin/TripDatesManager'
 import { TransferPricingManager } from '@/components/admin/TransferPricingManager'
 import { TestimonialsManager } from '@/components/admin/TestimonialsManager'
 import { NewsletterManager } from '@/components/admin/NewsletterManager'
@@ -31,7 +30,6 @@ const sidebarItems = [
   { icon: Mountain, key: 'sinai-trips', label_ar: 'الرحلات الداخلية', label_en: 'Sinai Trips' },
   { icon: MapPinned, key: 'trip-bookings', label_ar: 'طلبات رحلات سيناء', label_en: 'Sinai Trip Bookings' },
   { icon: Bus, key: 'transfers', label_ar: 'النقل', label_en: 'Transfers' },
-  { icon: CalendarDays, key: 'dates', label_ar: 'التواريخ', label_en: 'Dates' },
   { icon: ClipboardList, key: 'bookings', label_ar: 'الحجوزات', label_en: 'Bookings' },
   { icon: ShoppingBag, key: 'commerce', label_ar: 'المتجر والإيجارات', label_en: 'Commerce' },
   { icon: Users, key: 'customers', label_ar: 'العملاء', label_en: 'Customers' },
@@ -164,7 +162,6 @@ export default function AdminDashboardPage() {
           {active === 'sinai-trips' && <SinaiTripManager />}
           {active === 'trip-bookings' && <TripBookingsManager />}
           {active === 'transfers' && <TransferPricingManager />}
-          {active === 'dates' && <TripDatesManager />}
           {active === 'bookings' && <BookingsManager />}
           {active === 'commerce' && <CommerceManager />}
           {active === 'customers' && <CustomersManager />}
