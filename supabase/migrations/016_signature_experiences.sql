@@ -145,6 +145,10 @@ LEFT JOIN (
   GROUP BY experience_date_id
 ) b ON b.experience_date_id = d.id;
 
+-- Views default to SECURITY DEFINER in Postgres, which would let the anon role
+-- read aggregated spot counts past RLS. This view must run as the caller.
+ALTER VIEW public.experience_date_availability SET (security_invoker = true);
+
 -- ─── updated_at triggers (function hardened in migration 009) ───
 DROP TRIGGER IF EXISTS update_experiences_updated_at ON public.experiences;
 CREATE TRIGGER update_experiences_updated_at BEFORE UPDATE ON public.experiences

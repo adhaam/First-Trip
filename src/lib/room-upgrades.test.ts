@@ -254,31 +254,35 @@ test('D4. Price-descending sort: most-expensive first, missing-price last', () =
   assert.deepEqual(minRates, [3000, 2400, 1000, Infinity])
 })
 
-// ─── E. Price summary is NOT above the form (structural check) ─────────────
+// ─── E. Price card + booking form live in the sticky right column ─────────
+//
+// Commit 31e714d moved this layout out of BookingForm.tsx and into
+// ProductDetailClient.tsx ("restore desktop sidebar"), so these assertions
+// follow the markup to where it actually lives now.
 
-test('E1. Price summary renders AFTER </form> in BookingForm.tsx (not above the form)', () => {
+test('E1. Price card and booking form share the sticky right column', () => {
   const src = readFileSync(
-    join(__dirname, '../components/BookingForm.tsx'),
+    join(__dirname, '../components/ProductDetailClient.tsx'),
     'utf-8',
   )
-  const formCloseIdx = src.lastIndexOf('</form>')
-  const summaryIdx = src.indexOf('lg:sticky lg:top-6')
+  const stickyIdx = src.indexOf('md:sticky md:top-24')
+  const formIdx = src.indexOf('<BookingForm')
 
-  assert.ok(formCloseIdx > -1, '</form> not found in BookingForm.tsx')
-  assert.ok(summaryIdx > -1, 'lg:sticky lg:top-6 not found — price summary right column missing')
+  assert.ok(stickyIdx > -1, 'md:sticky md:top-24 not found — desktop sidebar missing')
+  assert.ok(formIdx > -1, '<BookingForm not rendered by ProductDetailClient.tsx')
   assert.ok(
-    summaryIdx > formCloseIdx,
-    `Price summary sticky column (at index ${summaryIdx}) must appear AFTER </form> (at index ${formCloseIdx})`,
+    formIdx > stickyIdx,
+    `BookingForm (at index ${formIdx}) must render inside the sticky column (opened at index ${stickyIdx})`,
   )
 })
 
-test('E2. BookingForm.tsx uses two-column grid layout', () => {
+test('E2. ProductDetailClient.tsx uses a two-column grid layout', () => {
   const src = readFileSync(
-    join(__dirname, '../components/BookingForm.tsx'),
+    join(__dirname, '../components/ProductDetailClient.tsx'),
     'utf-8',
   )
   assert.ok(
-    src.includes('lg:grid-cols-[1fr_360px]'),
-    'Two-column grid layout not found in BookingForm.tsx',
+    src.includes('md:grid-cols-[1fr_340px]') && src.includes('lg:grid-cols-[1fr_380px]'),
+    'Two-column grid layout not found in ProductDetailClient.tsx',
   )
 })

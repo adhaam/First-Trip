@@ -25,7 +25,7 @@ It creates:
 | `experiences` | The experience itself — bilingual copy, itinerary, media, price, status. |
 | `experience_dates` | Scheduled departures for one experience: date range, capacity, open/cancelled. |
 | `experience_bookings` | Public booking requests, linked to a date and to `customers`. |
-| `experience_date_availability` (view) | Convenience view returning `spots_taken` / `spots_remaining`. |
+| `experience_date_availability` (view) | Convenience view returning `spots_taken` / `spots_remaining`. Runs `security_invoker` so it respects the caller's RLS. |
 
 > **Why not `trip_dates` and `bookings`?** Both names were already taken in this
 > schema and mean something else (`trip_dates` is the Sunday/Thursday Dahab
