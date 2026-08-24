@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard, Building2, Mountain,
   ClipboardList, Users, MessageSquareText, Settings,
-  Bus, Quote, LogOut, Menu, X, Mail, ShoppingBag, MapPinned
+  Bus, Quote, LogOut, Menu, X, Mail, ShoppingBag, MapPinned, Compass
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/brand/Logo'
@@ -23,11 +23,13 @@ import { TestimonialsManager } from '@/components/admin/TestimonialsManager'
 import { NewsletterManager } from '@/components/admin/NewsletterManager'
 import { TripBookingsManager } from '@/components/admin/TripBookingsManager'
 import { CommerceManager } from '@/components/admin/CommerceManager'
+import { ExperiencesManager } from '@/components/admin/ExperiencesManager'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
   { icon: Building2, key: 'accommodations', label_ar: 'أماكن الإقامة', label_en: 'Accommodations' },
   { icon: Mountain, key: 'sinai-trips', label_ar: 'الرحلات الداخلية', label_en: 'Sinai Trips' },
+  { icon: Compass, key: 'experiences', label_ar: 'التجارب المميزة', label_en: 'Signature Experiences' },
   { icon: MapPinned, key: 'trip-bookings', label_ar: 'طلبات رحلات سيناء', label_en: 'Sinai Trip Bookings' },
   { icon: Bus, key: 'transfers', label_ar: 'النقل', label_en: 'Transfers' },
   { icon: ClipboardList, key: 'bookings', label_ar: 'الحجوزات', label_en: 'Bookings' },
@@ -160,6 +162,7 @@ export default function AdminDashboardPage() {
           {active === 'dashboard' && <DashboardHome />}
           {active === 'accommodations' && <AccommodationManager />}
           {active === 'sinai-trips' && <SinaiTripManager />}
+          {active === 'experiences' && <ExperiencesManager />}
           {active === 'trip-bookings' && <TripBookingsManager />}
           {active === 'transfers' && <TransferPricingManager />}
           {active === 'bookings' && <BookingsManager />}

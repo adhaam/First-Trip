@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { getAccommodations, getSinaiTrips, getCommerceProducts } from '@/lib/data'
+import { getPublishedExperiences } from '@/lib/experiences-data'
 import { getPathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { SITE_URL } from '@/lib/seo'
@@ -14,6 +15,7 @@ const STATIC_PAGES: { path: string; priority: number; changeFrequency: 'daily' |
   { path: '/', priority: 1, changeFrequency: 'daily' },
   { path: '/book-dahab', priority: 0.9, changeFrequency: 'weekly' },
   { path: '/sinai-trips', priority: 0.7, changeFrequency: 'weekly' },
+  { path: '/experiences', priority: 0.8, changeFrequency: 'weekly' },
   { path: '/community', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/partner', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/about', priority: 0.7, changeFrequency: 'weekly' },
@@ -74,6 +76,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       entries.push({
         url: localizedUrl(path, locale),
         lastModified: trip.created_at ? new Date(trip.created_at) : new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+        alternates: localizedAlternates(path),
+      })
+    }
+  }
+
+  // Published Signature Experiences — drafts are excluded by the data layer.
+  const experiences = await getPublishedExperiences().catch(() => [])
+  for (const locale of routing.locales) {
+    for (const experience of experiences) {
+      const path = `/experiences/${experience.slug}`
+      entries.push({
+        url: localizedUrl(path, locale),
+        lastModified: experience.updated_at
+          ? new Date(experience.updated_at)
+          : new Date(experience.created_at),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
         alternates: localizedAlternates(path),
