@@ -15,6 +15,9 @@ type TripBookingStatus = 'new' | 'contacted' | 'confirmed' | 'completed' | 'canc
 
 interface SinaiTrip { id: string; name_ar: string; name_en: string }
 
+type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded'
+type PaymentChannel = 'instapay' | 'vodafonecash' | 'cash' | 'bank_transfer' | 'other'
+
 interface TripBooking {
   id: string
   customer_name: string
@@ -24,6 +27,12 @@ interface TripBooking {
   quoted_price: number | null
   final_price: number | null
   status: TripBookingStatus
+  payment_status: PaymentStatus | null
+  amount_paid: number | null
+  payment_channel: PaymentChannel | null
+  payment_received_by: string | null
+  discount_value: number | null
+  discount_type: 'amount' | 'percentage' | null
   created_at: string
   sinai_trips: { name_ar: string; name_en: string } | null
 }
@@ -43,7 +52,7 @@ const STATUS_LABELS_EN: Record<TripBookingStatus, string> = {
   new: 'New', contacted: 'Contacted', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
 }
 
-const EMPTY_FORM = { customer_name: '', customer_phone: '', trip_id: '', preferred_date: '', num_people: 1, quoted_price: '' }
+const EMPTY_FORM = { customer_name: '', customer_phone: '', trip_id: '', preferred_date: '', num_people: 1, quoted_price: '', payment_status: 'unpaid' as PaymentStatus, amount_paid: '', payment_channel: '' as string, payment_received_by: '', discount_value: '', discount_type: '' as string }
 
 export function TripBookingsManager() {
   const locale = useLocale()
@@ -113,6 +122,12 @@ export function TripBookingsManager() {
           preferred_date: form.preferred_date || null,
           num_people: form.num_people,
           quoted_price: form.quoted_price ? Number(form.quoted_price) : null,
+          payment_status: form.payment_status,
+          amount_paid: form.amount_paid ? Number(form.amount_paid) : null,
+          payment_channel: form.payment_channel || null,
+          payment_received_by: form.payment_received_by || null,
+          discount_value: form.discount_value ? Number(form.discount_value) : null,
+          discount_type: form.discount_type || null,
         }),
       })
       const data = await res.json()
@@ -206,6 +221,55 @@ export function TripBookingsManager() {
                   onChange={(e) => setForm((f) => ({ ...f, quoted_price: e.target.value }))}
                 />
               </div>
+              <div>
+                <Label className="mb-1 block text-xs">{ar ? 'حالة الدفع' : 'Payment status'}</Label>
+                <Select value={form.payment_status} onValueChange={(v) => setForm((f) => ({ ...f, payment_status: v as PaymentStatus }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unpaid">{ar ? 'غير مدفوع' : 'Unpaid'}</SelectItem>
+                    <SelectItem value="partial">{ar ? 'جزئي' : 'Partial'}</SelectItem>
+                    <SelectItem value="paid">{ar ? 'مدفوع' : 'Paid'}</SelectItem>
+                    <SelectItem value="refunded">{ar ? 'مسترد' : 'Refunded'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="mb-1 block text-xs">{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
+                <Input type="number" min={0} placeholder={ar ? 'اختياري' : 'Optional'} value={form.amount_paid} onChange={(e) => setForm((f) => ({ ...f, amount_paid: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="mb-1 block text-xs">{ar ? 'طريقة الدفع' : 'Payment channel'}</Label>
+                <Select value={form.payment_channel || '_none'} onValueChange={(v) => setForm((f) => ({ ...f, payment_channel: v === '_none' ? '' : (v ?? '') }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">{ar ? 'غير محدد' : 'Not set'}</SelectItem>
+                    <SelectItem value="instapay">InstaPay</SelectItem>
+                    <SelectItem value="vodafonecash">Vodafone Cash</SelectItem>
+                    <SelectItem value="cash">{ar ? 'كاش' : 'Cash'}</SelectItem>
+                    <SelectItem value="bank_transfer">{ar ? 'تحويل بنكي' : 'Bank transfer'}</SelectItem>
+                    <SelectItem value="other">{ar ? 'أخرى' : 'Other'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="mb-1 block text-xs">{ar ? 'استلمها مين' : 'Received by'}</Label>
+                <Input placeholder={ar ? 'موظف / فندق / ناقل' : 'Employee / hotel / provider'} value={form.payment_received_by} onChange={(e) => setForm((f) => ({ ...f, payment_received_by: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="mb-1 block text-xs">{ar ? 'خصم' : 'Discount'}</Label>
+                <Input type="number" min={0} placeholder={ar ? 'بدون' : 'None'} value={form.discount_value} onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="mb-1 block text-xs">{ar ? 'نوع الخصم' : 'Discount type'}</Label>
+                <Select value={form.discount_type || '_none'} onValueChange={(v) => setForm((f) => ({ ...f, discount_type: v === '_none' ? '' : (v ?? '') }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">{ar ? 'بدون' : 'None'}</SelectItem>
+                    <SelectItem value="amount">{ar ? 'مبلغ' : 'Amount'}</SelectItem>
+                    <SelectItem value="percentage">{ar ? 'نسبة %' : 'Percentage %'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {formError && <p className="text-xs text-red-600 font-medium">{formError}</p>}
             <div className="flex gap-2">
@@ -232,17 +296,18 @@ export function TripBookingsManager() {
                 <TableHead>{ar ? 'التاريخ المفضل' : 'Preferred date'}</TableHead>
                 <TableHead>{ar ? 'عدد الأشخاص' : 'People'}</TableHead>
                 <TableHead>{ar ? 'السعر' : 'Price'}</TableHead>
+                <TableHead>{ar ? 'الدفع' : 'Payment'}</TableHead>
                 <TableHead>{ar ? 'الحالة' : 'Status'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />{ar ? 'جاري التحميل...' : 'Loading...'}
                 </TableCell></TableRow>
               )}
               {!loading && error && (
-                <TableRow><TableCell colSpan={7} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
               )}
               {!loading && !error && bookings.map((b) => (
                 <TableRow key={b.id}>
@@ -252,6 +317,10 @@ export function TripBookingsManager() {
                   <TableCell>{b.preferred_date || '—'}</TableCell>
                   <TableCell>{b.num_people}</TableCell>
                   <TableCell>{b.final_price ?? b.quoted_price ?? '—'} {ar ? 'ج.م' : 'EGP'}</TableCell>
+                  <TableCell className="text-xs">
+                    <span className={cn('inline-block rounded px-1.5 py-0.5', b.payment_status === 'paid' ? 'bg-green-100 text-green-700' : b.payment_status === 'partial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600')}>{b.payment_status || 'unpaid'}</span>
+                    {b.payment_channel && <span className="block text-gray-400 mt-0.5">{b.payment_channel}{b.payment_received_by ? ` → ${b.payment_received_by}` : ''}</span>}
+                  </TableCell>
                   <TableCell>
                     <Select value={b.status} onValueChange={(v) => v && updateStatus(b.id, v as TripBookingStatus)}>
                       <SelectTrigger className={cn('w-[120px] h-8 text-xs border-0', STATUS_STYLES[b.status])}>
@@ -267,7 +336,7 @@ export function TripBookingsManager() {
                 </TableRow>
               ))}
               {!loading && !error && bookings.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

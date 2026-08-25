@@ -20,6 +20,9 @@ const tripSchema = z.object({
   includes_ar: z.array(z.string()).optional().default([]),
   includes_en: z.array(z.string()).optional().default([]),
   sort_order: z.number().int().min(0).optional().default(0),
+  discount_value: z.number().min(0).nullable().optional().default(null),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional().default(null),
+  discount_label: z.string().optional().default(''),
   is_active: z.boolean().optional().default(true),
 })
 

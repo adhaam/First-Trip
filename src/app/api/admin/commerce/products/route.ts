@@ -30,6 +30,9 @@ const productSchema = z.object({
   seo_title: z.string().max(200).optional(),
   seo_description_ar: z.string().max(400).optional(),
   seo_description_en: z.string().max(400).optional(),
+  discount_value: z.number().min(0).nullable().optional().default(null),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional().default(null),
+  discount_label: z.string().max(100).optional().default(''),
 })
 
 export async function GET(req: NextRequest) {

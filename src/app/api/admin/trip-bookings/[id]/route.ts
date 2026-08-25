@@ -8,6 +8,13 @@ const updateSchema = z.object({
   final_price: z.number().min(0).nullable().optional(),
   internal_notes: z.string().max(2000).optional(),
   preferred_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
+  amount_paid: z.number().min(0).nullable().optional(),
+  payment_channel: z.enum(['instapay', 'vodafonecash', 'cash', 'bank_transfer', 'other']).nullable().optional(),
+  payment_received_by: z.string().max(200).optional(),
+  payment_notes: z.string().max(1000).optional(),
+  discount_value: z.number().min(0).nullable().optional(),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

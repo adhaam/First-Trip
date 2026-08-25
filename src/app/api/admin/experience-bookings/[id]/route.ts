@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { experienceBookingStatusSchema } from '@/lib/experiences-schema'
+import { experienceBookingUpdateSchema } from '@/lib/experiences-schema'
 import { getDateAvailability } from '@/lib/experiences-data'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   const { id } = await params
   const body = await req.json().catch(() => null)
-  const validated = experienceBookingStatusSchema.safeParse(body)
+  const validated = experienceBookingUpdateSchema.safeParse(body)
   if (!validated.success) {
     return NextResponse.json({ error: 'Invalid status', details: validated.error.flatten() }, { status: 400 })
   }
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Re-opening a cancelled booking claims spots again — only allow it if the
   // date still has room for them.
-  if (booking.status === 'cancelled' && validated.data.status !== 'cancelled') {
+  if (validated.data.status && booking.status === 'cancelled' && validated.data.status !== 'cancelled') {
     const availability = await getDateAvailability(String(booking.experience_date_id))
     if (availability && availability.spots_remaining < Number(booking.spots_requested)) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { data, error } = await supabase
     .from('experience_bookings')
-    .update({ status: validated.data.status })
+    .update(validated.data)
     .eq('id', id)
     .select()
     .single()

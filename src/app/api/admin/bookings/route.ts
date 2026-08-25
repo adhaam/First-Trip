@@ -52,6 +52,14 @@ const manualBookingSchema = z.object({
   // Manual payment tracking — no gateway, just the owner's own records.
   payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
   amount_paid: z.number().min(0).optional(),
+  // Payment tracking
+  payment_channel: z.enum(['instapay', 'vodafonecash', 'cash', 'bank_transfer', 'other']).optional(),
+  payment_received_by: z.string().max(200).optional(),
+  payment_date: z.string().optional(),
+  payment_notes: z.string().max(1000).optional(),
+  // Booking-level discount
+  discount_value: z.number().min(0).nullable().optional(),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional(),
   // Where this booking actually came from (manual entry can be any channel).
   source: z.enum(['manual', 'whatsapp', 'instagram', 'facebook', 'referral', 'other']).optional().default('manual'),
 })

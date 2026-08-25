@@ -20,6 +20,12 @@ interface BookingRow {
   quoted_price: number | null
   currency: string
   status: ExperienceBookingStatus
+  payment_status: string | null
+  amount_paid: number | null
+  payment_channel: string | null
+  payment_received_by: string | null
+  discount_value: number | null
+  discount_type: string | null
   created_at: string
   experiences?: { title_ar: string; title_en: string; slug: string } | null
   experience_dates?: { start_date: string; end_date: string; total_spots: number } | null
@@ -150,20 +156,21 @@ export function ExperienceBookingsTable({ experienceId, dateId, onStatusChanged 
               <TableHead>Notes</TableHead>
               <TableHead>Trip date</TableHead>
               <TableHead>Booked on</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-gray-500">
+                <TableCell colSpan={9} className="py-10 text-center text-gray-500">
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                 </TableCell>
               </TableRow>
             )}
             {!loading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-gray-500">No bookings yet.</TableCell>
+                <TableCell colSpan={9} className="py-10 text-center text-gray-500">No bookings yet.</TableCell>
               </TableRow>
             )}
             {!loading && filtered.map((b) => (
@@ -181,6 +188,10 @@ export function ExperienceBookingsTable({ experienceId, dateId, onStatusChanged 
                   {b.experience_dates ? `${b.experience_dates.start_date} → ${b.experience_dates.end_date}` : '—'}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">{new Date(b.created_at).toLocaleDateString('en-GB')}</TableCell>
+                <TableCell className="text-xs">
+                  <span className={`inline-block rounded px-1.5 py-0.5 ${b.payment_status === 'paid' ? 'bg-green-100 text-green-700' : b.payment_status === 'partial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{b.payment_status || 'unpaid'}</span>
+                  {b.payment_channel && <span className="block text-gray-400 mt-0.5">{b.payment_channel}{b.payment_received_by ? ` → ${b.payment_received_by}` : ''}</span>}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {busyId === b.id && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}

@@ -46,6 +46,9 @@ export const experienceCreateSchema = z.object({
   currency: z.enum(EXPERIENCE_CURRENCIES).default('EGP'),
   status: z.enum(EXPERIENCE_STATUSES).default('draft'),
   sort_order: z.number().int().min(0).max(9999).default(0),
+  discount_value: z.number().min(0).nullable().optional().default(null),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional().default(null),
+  discount_label: z.string().max(100).optional().default(''),
 })
 
 export const experienceUpdateSchema = experienceCreateSchema.partial()
@@ -83,6 +86,17 @@ export const experienceCategorySchema = z.object({
 
 export const experienceBookingStatusSchema = z.object({
   status: z.enum(EXPERIENCE_BOOKING_STATUSES),
+})
+
+export const experienceBookingUpdateSchema = z.object({
+  status: z.enum(EXPERIENCE_BOOKING_STATUSES).optional(),
+  payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded'] as const).optional(),
+  amount_paid: z.number().min(0).nullable().optional(),
+  payment_channel: z.enum(['instapay', 'vodafonecash', 'cash', 'bank_transfer', 'other'] as const).nullable().optional(),
+  payment_received_by: z.string().max(200).optional(),
+  payment_notes: z.string().max(1000).optional(),
+  discount_value: z.number().min(0).nullable().optional(),
+  discount_type: z.enum(['amount', 'percentage'] as const).nullable().optional(),
 })
 
 /** Public booking request — mirrors the fields on the customer-facing form. */

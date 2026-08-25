@@ -34,6 +34,7 @@ interface ProductFull {
   rental_requirements: string[]; pickup_instructions_ar: string; pickup_instructions_en: string
   is_active: boolean; is_featured: boolean; sort_order: number; category_id: string | null
   seo_title?: string; seo_description_ar?: string; seo_description_en?: string
+  discount_value?: number | null; discount_type?: 'amount' | 'percentage' | null; discount_label?: string
 }
 
 const REQUIREMENT_OPTIONS = ['id_required', 'license_required', 'deposit_required']
@@ -45,6 +46,7 @@ function emptyProduct(type: 'sale' | 'rental'): ProductFull {
     requires_delivery: true, pickup_enabled: true, delivery_enabled: true, deposit_amount: 0,
     rental_requirements: [], pickup_instructions_ar: '', pickup_instructions_en: '', is_active: true,
     is_featured: false, sort_order: 0, category_id: null, seo_title: '', seo_description_ar: '', seo_description_en: '',
+    discount_value: null, discount_type: null, discount_label: '',
   }
 }
 
@@ -302,6 +304,15 @@ export function ProductEditor({ api, productId, categories, collections, onClose
               <div><Label className="text-xs">{ar ? 'السعر قبل الخصم' : 'Compare-at price'}</Label><Input type="number" value={product.compare_at_price ?? ''} onChange={(e) => set('compare_at_price', e.target.value ? Number(e.target.value) : null)} /></div>
             )}
             <div><Label className="text-xs">{ar ? 'الترتيب' : 'Sort order'}</Label><Input type="number" value={product.sort_order} onChange={(e) => set('sort_order', Number(e.target.value))} /></div>
+            <div><Label className="text-xs">{ar ? 'قيمة الخصم' : 'Discount'}</Label><Input type="number" value={product.discount_value ?? ''} placeholder={ar ? 'بدون' : 'None'} onChange={(e) => set('discount_value', e.target.value === '' ? null : Number(e.target.value))} /></div>
+            <div>
+              <Label className="text-xs">{ar ? 'نوع الخصم' : 'Disc. type'}</Label>
+              <select value={product.discount_type || ''} onChange={(e) => set('discount_type', (e.target.value || null) as 'amount' | 'percentage' | null)} className="w-full rounded-md border border-gray-300 px-2 py-[7px] text-sm">
+                <option value="">{ar ? 'بدون' : 'None'}</option>
+                <option value="amount">{ar ? 'مبلغ' : 'Amount'}</option>
+                <option value="percentage">%</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-6">

@@ -100,6 +100,10 @@ const emptyManual = {
   source: 'manual',
   payment_status: 'unpaid',
   amount_paid: undefined as number | undefined,
+  discount_value: undefined as number | undefined,
+  discount_type: '' as '' | 'amount' | 'percentage',
+  payment_channel: '' as '' | 'instapay' | 'vodafonecash' | 'cash' | 'bank_transfer' | 'other',
+  payment_received_by: '',
 }
 
 export function BookingsManager() {
@@ -318,6 +322,12 @@ export function BookingsManager() {
       payload.source = manual.source
       payload.payment_status = manual.payment_status
       if (manual.amount_paid) payload.amount_paid = Number(manual.amount_paid)
+      if (manual.payment_channel) payload.payment_channel = manual.payment_channel
+      if (manual.payment_received_by) payload.payment_received_by = manual.payment_received_by
+      if (manual.discount_value) {
+        payload.discount_value = Number(manual.discount_value)
+        payload.discount_type = manual.discount_type || 'amount'
+      }
 
       const res = await fetch('/api/admin/bookings', {
         method: 'POST',
@@ -884,6 +894,39 @@ export function BookingsManager() {
                 <div>
                   <Label>{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
                   <Input type="number" min={0} value={manual.amount_paid ?? ''} onChange={e => setManual(m => ({ ...m, amount_paid: e.target.value ? Number(e.target.value) : undefined }))} className="mt-1" />
+                </div>
+                <div>
+                  <Label>{ar ? 'طريقة الدفع' : 'Payment channel'}</Label>
+                  <Select value={manual.payment_channel || '_none'} onValueChange={v => setManual(m => ({ ...m, payment_channel: v === '_none' ? '' : v as typeof m.payment_channel }))}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">{ar ? 'غير محدد' : 'Not set'}</SelectItem>
+                      <SelectItem value="instapay">InstaPay</SelectItem>
+                      <SelectItem value="vodafonecash">Vodafone Cash</SelectItem>
+                      <SelectItem value="cash">{ar ? 'كاش' : 'Cash'}</SelectItem>
+                      <SelectItem value="bank_transfer">{ar ? 'تحويل بنكي' : 'Bank transfer'}</SelectItem>
+                      <SelectItem value="other">{ar ? 'أخرى' : 'Other'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{ar ? 'استلمها مين' : 'Received by'}</Label>
+                  <Input value={manual.payment_received_by} placeholder={ar ? 'اسم الموظف / الفندق / الناقل' : 'Employee / hotel / provider'} onChange={e => setManual(m => ({ ...m, payment_received_by: e.target.value }))} className="mt-1" />
+                </div>
+                <div>
+                  <Label>{ar ? 'قيمة الخصم' : 'Discount'}</Label>
+                  <Input type="number" min={0} value={manual.discount_value ?? ''} placeholder={ar ? 'بدون' : 'None'} onChange={e => setManual(m => ({ ...m, discount_value: e.target.value ? Number(e.target.value) : undefined }))} className="mt-1" />
+                </div>
+                <div>
+                  <Label>{ar ? 'نوع الخصم' : 'Discount type'}</Label>
+                  <Select value={manual.discount_type || '_none'} onValueChange={v => setManual(m => ({ ...m, discount_type: v === '_none' ? '' : v as typeof m.discount_type }))}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">{ar ? 'بدون' : 'None'}</SelectItem>
+                      <SelectItem value="amount">{ar ? 'مبلغ ثابت' : 'Amount'}</SelectItem>
+                      <SelectItem value="percentage">{ar ? 'نسبة %' : 'Percentage %'}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

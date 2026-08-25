@@ -28,6 +28,12 @@ const createSchema = z.object({
   num_people: z.number().int().min(1).default(1),
   quoted_price: z.number().optional().nullable(),
   notes: z.string().optional().nullable(),
+  payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
+  amount_paid: z.number().min(0).optional().nullable(),
+  payment_channel: z.enum(['instapay', 'vodafonecash', 'cash', 'bank_transfer', 'other']).optional().nullable(),
+  payment_received_by: z.string().max(200).optional().nullable(),
+  discount_value: z.number().min(0).optional().nullable(),
+  discount_type: z.enum(['amount', 'percentage']).optional().nullable(),
 })
 
 export async function POST(req: NextRequest) {
@@ -50,6 +56,12 @@ export async function POST(req: NextRequest) {
       num_people: parsed.data.num_people,
       quoted_price: parsed.data.quoted_price || null,
       notes: parsed.data.notes || null,
+      payment_status: parsed.data.payment_status || 'unpaid',
+      amount_paid: parsed.data.amount_paid || null,
+      payment_channel: parsed.data.payment_channel || null,
+      payment_received_by: parsed.data.payment_received_by || null,
+      discount_value: parsed.data.discount_value || null,
+      discount_type: parsed.data.discount_type || null,
       status: 'new',
       context: 'standalone',
       source: 'admin',

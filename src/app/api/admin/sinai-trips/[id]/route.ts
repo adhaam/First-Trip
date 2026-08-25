@@ -19,6 +19,9 @@ const tripUpdateSchema = z.object({
   includes_ar: z.array(z.string()).optional(),
   includes_en: z.array(z.string()).optional(),
   sort_order: z.number().int().min(0).optional(),
+  discount_value: z.number().min(0).nullable().optional(),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional(),
+  discount_label: z.string().optional(),
   is_active: z.boolean().optional(),
 })
 

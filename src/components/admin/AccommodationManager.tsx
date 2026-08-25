@@ -67,6 +67,9 @@ const emptyAccommodation: Partial<Accommodation> = {
   latitude: 28.5092,
   longitude: 34.5185,
   sort_order: 0,
+  discount_value: null,
+  discount_type: null,
+  discount_label: '',
 }
 
 export function AccommodationManager() {
@@ -339,7 +342,7 @@ export function AccommodationManager() {
     })
   }
 
-  const updateField = (field: string, value: string | number | string[] | MealPlan[]) => {
+  const updateField = (field: string, value: string | number | string[] | MealPlan[] | null) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
@@ -827,6 +830,46 @@ export function AccommodationManager() {
                           : `Suggest: ${Math.round(Number(form.price_double_room) * 1.5).toLocaleString()} (double × 1.5)`}
                       </button>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Discount ── */}
+              <div>
+                <Label className="font-bold text-gray-900 mb-1 block">
+                  {locale === 'ar' ? 'الخصم' : 'Discount'}
+                </Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">{locale === 'ar' ? 'قيمة الخصم' : 'Discount value'}</Label>
+                    <Input
+                      type="number" min={0}
+                      value={form.discount_value ?? ''}
+                      placeholder={locale === 'ar' ? 'بدون خصم' : 'No discount'}
+                      onChange={e => updateField('discount_value', e.target.value === '' ? null : (Number(e.target.value) || 0))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{locale === 'ar' ? 'نوع الخصم' : 'Discount type'}</Label>
+                    <select
+                      value={form.discount_type || ''}
+                      onChange={e => updateField('discount_type', e.target.value || null)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-2 py-[7px] text-sm"
+                    >
+                      <option value="">{locale === 'ar' ? 'بدون' : 'None'}</option>
+                      <option value="amount">{locale === 'ar' ? 'مبلغ ثابت (ج.م)' : 'Amount (EGP)'}</option>
+                      <option value="percentage">{locale === 'ar' ? 'نسبة %' : 'Percentage %'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">{locale === 'ar' ? 'ملصق الخصم' : 'Discount label'}</Label>
+                    <Input
+                      value={form.discount_label || ''}
+                      placeholder={locale === 'ar' ? 'مثال: عرض الصيف' : 'e.g. Summer Sale'}
+                      onChange={e => updateField('discount_label', e.target.value)}
+                      className="mt-1"
+                    />
                   </div>
                 </div>
               </div>

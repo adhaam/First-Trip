@@ -36,6 +36,9 @@ const accommodationUpdateSchema = z.object({
   price_triple_room: z.number().min(0).optional(),
   meal_plans: z.array(mealPlanSchema).optional(),
   sort_order: z.number().int().min(0).optional(),
+  discount_value: z.number().min(0).nullable().optional(),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional(),
+  discount_label: z.string().optional(),
   is_active: z.boolean().optional(),
 })
 

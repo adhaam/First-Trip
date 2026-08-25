@@ -14,9 +14,13 @@ export interface InvoiceData {
     unitPrice: number
   }>
   subtotal: number
+  discountAmount?: number
+  discountLabel?: string
   deliveryFee?: number
   depositAmount?: number
   totalAmount: number
+  paymentChannel?: string
+  paymentReceivedBy?: string
   notes?: string
   locale: 'ar' | 'en'
   settings: SiteSettings | null
@@ -362,6 +366,12 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         <span>${isAr ? 'الإجمالي الفرعي' : 'Subtotal'}:</span>
         <span>${data.subtotal.toFixed(2)} EGP</span>
       </div>
+      ${data.discountAmount ? `
+      <div class="summary-row delivery">
+        <span>${isAr ? 'خصم' : 'Discount'} ${data.discountLabel ? `(${data.discountLabel})` : ''}:</span>
+        <span style="color:#dc2626">-${data.discountAmount.toFixed(2)} EGP</span>
+      </div>
+      ` : ''}
       ${data.deliveryFee ? `
       <div class="summary-row delivery">
         <span>${isAr ? 'رسوم التوصيل' : 'Delivery Fee'}:</span>
@@ -370,7 +380,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       ` : ''}
       ${data.type === 'confirmation' && data.depositAmount ? `
       <div class="summary-row deposit">
-        <span>${isAr ? 'المبلغ المتفق عليه (مقدم)' : 'Agreed Amount (Deposit)'}:</span>
+        <span>${isAr ? 'المبلغ المدفوع' : 'Amount Paid'}:</span>
         <span>${data.depositAmount.toFixed(2)} EGP</span>
       </div>
       ` : ''}
@@ -379,6 +389,13 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         <span>${data.totalAmount.toFixed(2)} EGP</span>
       </div>
     </div>
+
+    ${data.paymentChannel ? `
+    <div class="notes-section" style="border-left-color: #22c55e;">
+      <h4>${isAr ? 'طريقة الدفع' : 'Payment Method'}</h4>
+      <p>${data.paymentChannel}${data.paymentReceivedBy ? ` — ${isAr ? 'استلمها' : 'Received by'}: ${data.paymentReceivedBy}` : ''}</p>
+    </div>
+    ` : ''}
 
     ${data.notes ? `
     <div class="notes-section">

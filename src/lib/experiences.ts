@@ -69,6 +69,9 @@ export interface Experience {
   currency: ExperienceCurrency
   status: ExperienceStatus
   sort_order: number
+  discount_value?: number | null
+  discount_type?: 'amount' | 'percentage' | null
+  discount_label?: string
   created_at: string
   updated_at?: string
 }

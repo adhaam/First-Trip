@@ -11,6 +11,7 @@
 
 import type {
   AccommodationSeasonalRate,
+  DiscountType,
   PriceSnapshot,
   SinaiTrip,
   TransferDirection,
@@ -668,6 +669,59 @@ export function quoteStay({
     numPeople: people,
     total: stayAccommodationSubtotal + mealSubtotal,
   }
+}
+
+// ─── Discount helpers ───
+
+export interface DiscountResult {
+  /** Original price before discount. */
+  original: number
+  /** Price after discount. */
+  final: number
+  /** The EGP amount deducted. */
+  saved: number
+  /** Whether a discount is actually applied. */
+  hasDiscount: boolean
+}
+
+/**
+ * Apply a discount to a price. Returns the original, final, and saved amounts.
+ * If discount_value is null/undefined/0, returns original price unchanged.
+ */
+export function applyDiscount(
+  price: number,
+  discountValue: number | null | undefined,
+  discountType: DiscountType | string | null | undefined,
+): DiscountResult {
+  const original = Number(price) || 0
+  const dv = Number(discountValue) || 0
+  if (!dv || !discountType) {
+    return { original, final: original, saved: 0, hasDiscount: false }
+  }
+  let saved: number
+  if (discountType === 'percentage') {
+    saved = Math.round(original * Math.min(dv, 100) / 100)
+  } else {
+    saved = Math.min(dv, original)
+  }
+  return {
+    original,
+    final: Math.max(0, original - saved),
+    saved,
+    hasDiscount: saved > 0,
+  }
+}
+
+/**
+ * Compute the discount amount for a booking total.
+ * Used in manual booking and invoice generation.
+ */
+export function computeBookingDiscount(
+  subtotal: number,
+  discountValue: number | null | undefined,
+  discountType: DiscountType | string | null | undefined,
+): number {
+  return applyDiscount(subtotal, discountValue, discountType).saved
 }
 
 // ─── Formatting ───

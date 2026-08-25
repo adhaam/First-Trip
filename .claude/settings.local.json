@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat /tmp/dev.log | head -30)",
+      "Bash(cat > *)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(npm run *)"
+    ]
+  }
+}

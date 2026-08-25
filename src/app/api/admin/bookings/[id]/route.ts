@@ -18,6 +18,12 @@ const updateSchema = z.object({
   // (computed in the UI — never stored, so it can't drift).
   payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
   amount_paid: z.number().min(0).optional(),
+  payment_channel: z.enum(['instapay', 'vodafonecash', 'cash', 'bank_transfer', 'other']).nullable().optional(),
+  payment_received_by: z.string().max(200).optional(),
+  payment_date: z.string().optional(),
+  payment_notes: z.string().max(1000).optional(),
+  discount_value: z.number().min(0).nullable().optional(),
+  discount_type: z.enum(['amount', 'percentage']).nullable().optional(),
   source: z.enum(['website', 'manual', 'whatsapp', 'instagram', 'facebook', 'referral', 'other']).optional(),
 })
 

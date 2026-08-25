@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
 import { SinaiTrip } from '@/lib/types'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
 const emptyTrip: Partial<SinaiTrip> = {
@@ -26,6 +27,9 @@ const emptyTrip: Partial<SinaiTrip> = {
   package_price: null,
   includes_ar: [], includes_en: [],
   sort_order: 0,
+  discount_value: null,
+  discount_type: null,
+  discount_label: '',
   is_active: true,
 }
 
@@ -282,6 +286,29 @@ export function SinaiTripManager() {
                       : 'Used inside the package total when this trip is one of the two included trips.'}
                   </p>
                 </div>
+                {/* ── Discount fields ── */}
+                <div>
+                  <Label>{locale === 'ar' ? 'قيمة الخصم' : 'Discount value'}</Label>
+                  <Input
+                    type="number" min={0}
+                    value={form.discount_value ?? ''}
+                    placeholder={locale === 'ar' ? 'فاضي = بدون خصم' : 'Empty = no discount'}
+                    onChange={e => updateField('discount_value', e.target.value === '' ? null : (Number(e.target.value) || 0))}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>{locale === 'ar' ? 'نوع الخصم' : 'Discount type'}</Label>
+                  <Select value={form.discount_type || '_none'} onValueChange={v => updateField('discount_type', v === '_none' ? null : v)}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">{locale === 'ar' ? 'بدون خصم' : 'No discount'}</SelectItem>
+                      <SelectItem value="amount">{locale === 'ar' ? 'مبلغ ثابت (ج.م)' : 'Fixed amount (EGP)'}</SelectItem>
+                      <SelectItem value="percentage">{locale === 'ar' ? 'نسبة مئوية %' : 'Percentage %'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="md:col-span-2">
                   <Label className="mb-2 block">{locale === 'ar' ? 'صور الرحلة' : 'Trip Images'}</Label>
                   {/* Upload button */}

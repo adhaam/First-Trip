@@ -30,6 +30,7 @@ export const EMPTY_EXPERIENCE: ExperienceDraft = {
   itinerary: [], hero_image: '', gallery: [],
   duration_ar: '', duration_en: '',
   price: 0, currency: 'EGP', status: 'draft', sort_order: 0,
+  discount_value: null, discount_type: null, discount_label: '',
 }
 
 interface ExperienceEditorProps {
@@ -127,6 +128,24 @@ export function ExperienceEditor({
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {EXPERIENCE_CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Discount value" hint="Leave empty for no discount">
+            <Input
+              type="number" min={0}
+              value={value.discount_value ?? ''}
+              placeholder="No discount"
+              onChange={(e) => set('discount_value' as keyof Experience, e.target.value === '' ? null : (Number(e.target.value) || 0) as never)}
+            />
+          </Field>
+          <Field label="Discount type">
+            <Select value={value.discount_type || '_none'} onValueChange={(v) => set('discount_type' as keyof Experience, (v === '_none' ? null : v) as never)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">No discount</SelectItem>
+                <SelectItem value="amount">Fixed amount (EGP)</SelectItem>
+                <SelectItem value="percentage">Percentage %</SelectItem>
               </SelectContent>
             </Select>
           </Field>

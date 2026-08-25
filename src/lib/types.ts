@@ -4,6 +4,8 @@ export type AccommodationType = 'hotel' | 'chalet' | 'camp'
 export type BookingType = 'package' | 'accommodation-only' | 'transfer-only'
 export type BookingStatus = 'new' | 'pending' | 'confirmed' | 'cancelled' | 'completed'
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded'
+export type PaymentChannel = 'instapay' | 'vodafonecash' | 'cash' | 'bank_transfer' | 'other'
+export type DiscountType = 'amount' | 'percentage'
 export type BookingSource =
   | 'website' | 'manual' | 'whatsapp' | 'instagram' | 'facebook' | 'referral' | 'other'
 export type TripDuration = 4 | 5
@@ -151,6 +153,10 @@ export interface Accommodation {
   room_upgrades?: RoomUpgrade[]
   /** Admin-controlled display order. Lower = shown first. Added in migration 012. */
   sort_order: number
+  /** Discount applied to base room prices. NULL = no discount. */
+  discount_value?: number | null
+  discount_type?: DiscountType | null
+  discount_label?: string
   is_active: boolean
   created_at: string
   updated_at?: string
@@ -203,6 +209,10 @@ export interface SinaiTrip {
   includes_en: string[]
   /** Admin-controlled display order. Lower = shown first. Added in migration 012. */
   sort_order: number
+  /** Discount applied to public price. NULL = no discount. */
+  discount_value?: number | null
+  discount_type?: DiscountType | null
+  discount_label?: string
   is_active: boolean
   created_at: string
 }
@@ -245,6 +255,15 @@ export interface Booking {
   /** Manual payment tracking — no payment gateway involved. */
   payment_status?: PaymentStatus
   amount_paid?: number
+  /** Booking-level discount applied on top of / instead of entity-level discount. */
+  discount_value?: number | null
+  discount_type?: DiscountType | null
+  /** How the customer paid — InstaPay, VodafoneCash, cash, etc. */
+  payment_channel?: PaymentChannel | null
+  /** Who received the payment — employee name, hotel name, transfer provider. */
+  payment_received_by?: string | null
+  payment_date?: string | null
+  payment_notes?: string
   /** Frozen breakdown of every rate used at booking time — see lib/pricing.ts buildPriceSnapshot(). */
   price_snapshot?: PriceSnapshot | null
   /** Which channel this booking came in through. */

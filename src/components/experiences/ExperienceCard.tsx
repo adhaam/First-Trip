@@ -96,7 +96,7 @@ export function ExperienceCard({ experience, categories, whatsappNumber }: Exper
           {next && (
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 shrink-0 text-sea-500" aria-hidden="true" />
-              <dt className="sr-only">{t('spotsLeft', { count: next.spots_remaining })}</dt>
+              <dt className="sr-only">{t('spotsRemainingLabel')}</dt>
               <dd className={next.spots_remaining > 0 && next.spots_remaining <= 4 ? 'font-semibold text-sun-600' : ''}>
                 {next.spots_remaining > 0 ? t('spotsLeft', { count: next.spots_remaining }) : t('soldOut')}
               </dd>
