@@ -26,6 +26,7 @@ const orderSchema = z.object({
   delivery_zone_id: z.string().uuid().optional(),
   delivery_address: z.string().max(300).optional(),
   notes: z.string().max(500).optional(),
+  promo_code: z.string().max(40).optional(),
   items: z.array(z.object({
     product_id: z.string().uuid(),
     variant_id: z.string().uuid().optional(),
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
       deliveryZoneId: validated.data.delivery_zone_id || null,
       deliveryAddress: validated.data.delivery_address || null,
       notes: validated.data.notes,
+      promoCode: validated.data.promo_code || null,
       source: 'website',
       items: validated.data.items.map((i) => ({
         productId: i.product_id,

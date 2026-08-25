@@ -14,7 +14,7 @@ import { applyDiscount } from '@/lib/pricing'
 
 type TripBookingStatus = 'new' | 'contacted' | 'confirmed' | 'completed' | 'cancelled'
 
-interface SinaiTrip { id: string; name_ar: string; name_en: string }
+interface SinaiTrip { id: string; name_ar: string; name_en: string; price: number }
 
 type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded'
 type PaymentChannel = 'instapay' | 'vodafonecash' | 'cash' | 'bank_transfer' | 'other'
@@ -34,6 +34,7 @@ interface TripBooking {
   payment_received_by: string | null
   discount_value: number | null
   discount_type: 'amount' | 'percentage' | null
+  promo_code: string | null
   created_at: string
   sinai_trips: { name_ar: string; name_en: string } | null
 }
@@ -67,6 +68,10 @@ export function TripBookingsManager() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Tracks whether the admin hand-typed the quoted price — once they do, we
+  // stop overwriting it when trip/people change so we never clobber a
+  // deliberate manual quote.
+  const [priceTouched, setPriceTouched] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -96,6 +101,18 @@ export function TripBookingsManager() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [load])
+
+  // Auto-calculate the quoted price from the selected trip's price × number
+  // of people, so the agent starts from the right number and only needs to
+  // layer a discount on top instead of typing the total by hand.
+  useEffect(() => {
+    if (priceTouched) return
+    const trip = trips.find((t) => t.id === form.trip_id)
+    if (!trip || !Number.isFinite(Number(trip.price))) return
+    const computed = Number(trip.price) * Math.max(1, Number(form.num_people) || 1)
+    setForm((f) => (f.quoted_price === String(computed) ? f : { ...f, quoted_price: String(computed) }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.trip_id, form.num_people, trips, priceTouched])
 
   const patchBooking = async (id: string, patch: Record<string, unknown>) => {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)))
@@ -145,6 +162,7 @@ export function TripBookingsManager() {
       if (!res.ok) throw new Error(data.error || 'Failed')
       setBookings((prev) => [data.tripBooking, ...prev])
       setForm(EMPTY_FORM)
+      setPriceTouched(false)
       setShowForm(false)
     } catch (e) {
       setFormError((e as Error).message)
@@ -159,6 +177,7 @@ export function TripBookingsManager() {
         <div>
           <h2 className="text-xl font-bold text-gray-900">{ar ? 'طلبات رحلات سيناء' : 'Sinai Trip Bookings'}</h2>
           <p className="text-sm text-gray-500">{ar ? 'الأشخاص اللي طلبوا/حجزوا رحلة — بمعزل عن إدارة الرحلات نفسها' : 'Requests/bookings for trips — separate from managing the trips themselves'}</p>
+          <p className="mt-0.5 text-xs text-brand-blue">{ar ? '👆 اضغط على أي صف لتعديل الدفع وتتبعه وإضافة خصم' : '👆 Click any row to edit and track payment, or add a discount'}</p>
         </div>
         <Button
           onClick={() => setShowForm((v) => !v)}
@@ -223,13 +242,18 @@ export function TripBookingsManager() {
                 />
               </div>
               <div>
-                <Label className="mb-1 block text-xs">{ar ? 'السعر المقترح (ج.م)' : 'Quoted price (EGP)'}</Label>
+                <Label className="mb-1 block text-xs">
+                  {ar ? 'السعر المقترح (ج.م)' : 'Quoted price (EGP)'}
+                  {!priceTouched && form.trip_id && (
+                    <span className="ml-1 font-normal text-emerald-600">{ar ? '(محسوب تلقائيًا)' : '(auto-calculated)'}</span>
+                  )}
+                </Label>
                 <Input
                   type="number"
                   min={0}
-                  placeholder={ar ? 'اختياري' : 'Optional'}
+                  placeholder={ar ? 'اختر رحلة أولاً' : 'Select a trip first'}
                   value={form.quoted_price}
-                  onChange={(e) => setForm((f) => ({ ...f, quoted_price: e.target.value }))}
+                  onChange={(e) => { setPriceTouched(true); setForm((f) => ({ ...f, quoted_price: e.target.value })) }}
                 />
               </div>
               <div>
@@ -288,7 +312,7 @@ export function TripBookingsManager() {
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
                 {ar ? 'حفظ الحجز' : 'Save booking'}
               </Button>
-              <Button variant="outline" onClick={() => { setShowForm(false); setFormError('') }}>
+              <Button variant="outline" onClick={() => { setShowForm(false); setFormError(''); setForm(EMPTY_FORM); setPriceTouched(false) }}>
                 {ar ? 'إلغاء' : 'Cancel'}
               </Button>
             </div>
@@ -354,6 +378,18 @@ export function TripBookingsManager() {
                   <TableRow>
                     <TableCell colSpan={9} className="bg-gray-50 p-4">
                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <Label className="text-xs text-gray-500">{ar ? 'السعر النهائي' : 'Final price'}</Label>
+                          <Input
+                            type="number" min={0} dir="ltr" className="mt-1 h-8"
+                            placeholder={String(b.quoted_price ?? 0)}
+                            defaultValue={b.final_price ?? ''}
+                            onBlur={e => {
+                              const v = e.target.value === '' ? null : Number(e.target.value)
+                              if (v !== (b.final_price ?? null)) patchBooking(b.id, { final_price: v })
+                            }}
+                          />
+                        </div>
                         <div>
                           <Label className="text-xs text-gray-500">{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
                           <Input
@@ -423,6 +459,12 @@ export function TripBookingsManager() {
                             </SelectContent>
                           </Select>
                         </div>
+                        {b.promo_code && (
+                          <div className="text-sm self-end pb-2">
+                            <span className="text-xs text-gray-500">{ar ? 'كود الخصم: ' : 'Promo code: '}</span>
+                            <span className="inline-flex items-center gap-1 rounded bg-sea-50 px-1.5 py-0.5 font-mono text-xs font-semibold text-sea-700" dir="ltr">{b.promo_code}</span>
+                          </div>
+                        )}
                         {!!b.discount_value && b.discount_type && (
                           <div className="text-sm self-end pb-2">
                             <span className="text-xs text-gray-500">{ar ? 'بعد الخصم: ' : 'After discount: '}</span>

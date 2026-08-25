@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { getTripRouteSlug } from './trips'
+import { getAccommodationRouteSlug } from './accommodations'
 
 // ── Trip booking: customer + trip association ──────────────────────────────
 
@@ -52,11 +53,12 @@ test('sinai trip sort_order: same stable logic as accommodations', () => {
 
 // ── Search result URL construction ────────────────────────────────────────
 
-test('search: accommodation URL uses /book-dahab/[id]', () => {
-  const id = 'aaaabbbb-cccc-dddd-eeee-ffffaaaabbbb'
-  const url = `/book-dahab/${id}`
-  assert.ok(url.startsWith('/book-dahab/'))
-  assert.ok(url.includes(id))
+test('search: accommodation URL uses /book-dahab/[slug]', () => {
+  const acc = { id: 'aaaabbbb-cccc-dddd-eeee-ffffaaaabbbb', name_en: 'Blue Beach Hotel' }
+  const slug = getAccommodationRouteSlug(acc)
+  const url = `/book-dahab/${slug}`
+  assert.ok(url.startsWith('/book-dahab/blue-beach-hotel-'), 'url starts with readable name')
+  assert.ok(url.endsWith(acc.id), 'url ends with authoritative uuid')
 })
 
 test('search: sinai trip URL uses /sinai-trips/[slug]', () => {

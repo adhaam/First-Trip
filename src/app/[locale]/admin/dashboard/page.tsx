@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard, Building2, Mountain,
   ClipboardList, Users, MessageSquareText, Settings,
-  Bus, Quote, LogOut, Menu, X, Mail, ShoppingBag, MapPinned, Compass
+  Bus, Quote, LogOut, Menu, X, Mail, ShoppingBag, MapPinned, Compass, Tag
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/brand/Logo'
@@ -24,6 +24,7 @@ import { NewsletterManager } from '@/components/admin/NewsletterManager'
 import { TripBookingsManager } from '@/components/admin/TripBookingsManager'
 import { CommerceManager } from '@/components/admin/CommerceManager'
 import { ExperiencesManager } from '@/components/admin/ExperiencesManager'
+import { PromoCodesManager } from '@/components/admin/PromoCodesManager'
 
 const sidebarItems = [
   { icon: LayoutDashboard, key: 'dashboard', label_ar: 'لوحة التحكم', label_en: 'Dashboard' },
@@ -34,6 +35,7 @@ const sidebarItems = [
   { icon: Bus, key: 'transfers', label_ar: 'النقل', label_en: 'Transfers' },
   { icon: ClipboardList, key: 'bookings', label_ar: 'الحجوزات', label_en: 'Bookings' },
   { icon: ShoppingBag, key: 'commerce', label_ar: 'المتجر والإيجارات', label_en: 'Commerce' },
+  { icon: Tag, key: 'promo-codes', label_ar: 'أكواد الخصم', label_en: 'Promo Codes' },
   { icon: Users, key: 'customers', label_ar: 'العملاء', label_en: 'Customers' },
   { icon: Mail, key: 'newsletter', label_ar: 'النشرة البريدية', label_en: 'Newsletter' },
   { icon: MessageSquareText, key: 'community', label_ar: 'المجتمع', label_en: 'Community' },
@@ -167,6 +169,7 @@ export default function AdminDashboardPage() {
           {active === 'transfers' && <TransferPricingManager />}
           {active === 'bookings' && <BookingsManager />}
           {active === 'commerce' && <CommerceManager />}
+          {active === 'promo-codes' && <PromoCodesManager />}
           {active === 'customers' && <CustomersManager />}
           {active === 'newsletter' && <NewsletterManager />}
           {active === 'community' && <CommunityPostManager />}

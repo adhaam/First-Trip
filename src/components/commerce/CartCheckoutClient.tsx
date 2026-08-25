@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Minus, Plus, Trash2, ShoppingBag, KeyRound, MessageCircle, PartyPopper, MapPin, Truck } from 'lucide-react'
+import { Minus, Plus, Trash2, ShoppingBag, KeyRound, MessageCircle, PartyPopper, MapPin, Truck, Tag, Check, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCart } from './CartProvider'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
@@ -26,10 +26,56 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
   const [error, setError] = useState('')
   const [success, setSuccess] = useState<{ orderNumber: string; totalPrice: number } | null>(null)
 
+  const [promoInput, setPromoInput] = useState('')
+  const [promoChecking, setPromoChecking] = useState(false)
+  const [promoError, setPromoError] = useState('')
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; label: string; saved: number; final: number } | null>(null)
+
   const zone = deliveryZones.find((z) => z.id === cart.deliveryZoneId)
   const deliveryFee = cart.fulfillmentMethod === 'delivery' ? (zone?.fee_type === 'fixed' ? Number(zone.fixed_fee) : 0) : 0
-  const total = cart.subtotal + deliveryFee
+  const preDiscountTotal = cart.subtotal + deliveryFee
+  const total = appliedPromo ? appliedPromo.final : preDiscountTotal
   const number = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
+
+  // A cart can mix rentals and merch — a code must cover every section
+  // present, so a "rent only" code can't silently discount a merch line.
+  const cartSections = Array.from(new Set(cart.items.map((i) => (i.kind === 'rental' ? 'rent' : 'merch'))))
+
+  const applyPromoCode = async () => {
+    const code = promoInput.trim()
+    if (!code) return
+    setPromoChecking(true)
+    setPromoError('')
+    try {
+      const res = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, sections: cartSections, amount: preDiscountTotal }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!data.valid) {
+        setPromoError(ar ? 'الكود غير صالح أو منتهي' : 'This code is invalid or no longer available')
+        setAppliedPromo(null)
+        return
+      }
+      setAppliedPromo({
+        code: code.toUpperCase(),
+        label: data.label || code.toUpperCase(),
+        saved: data.preview?.saved || 0,
+        final: data.preview?.final ?? preDiscountTotal,
+      })
+    } catch {
+      setPromoError(ar ? 'تعذر التحقق من الكود' : 'Could not check this code')
+    } finally {
+      setPromoChecking(false)
+    }
+  }
+
+  const removePromoCode = () => {
+    setAppliedPromo(null)
+    setPromoInput('')
+    setPromoError('')
+  }
 
   const submit = async () => {
     setError('')
@@ -53,6 +99,7 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
           delivery_zone_id: cart.fulfillmentMethod === 'delivery' ? cart.deliveryZoneId || undefined : undefined,
           delivery_address: cart.fulfillmentMethod === 'delivery' ? address.trim() : undefined,
           notes: notes.trim() || undefined,
+          promo_code: appliedPromo?.code || undefined,
           items: cart.items.map((item) => ({
             product_id: item.productId,
             variant_id: item.variantId || undefined,
@@ -209,6 +256,45 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
           <textarea aria-label={commerce('notes')} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={commerce('notesPlaceholder')} rows={2} className="w-full rounded-lg border border-sand-300 px-3 py-2 text-sm focus:border-sea-500 focus:outline-none" />
         </div>
 
+        {/* Promo code */}
+        <div className="mt-4 border-t border-sand-200 pt-4">
+          {appliedPromo ? (
+            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
+              <span className="flex items-center gap-1.5 font-medium text-emerald-800">
+                <Check className="h-4 w-4" /> {appliedPromo.label}
+              </span>
+              <button type="button" onClick={removePromoCode} className="text-emerald-700 hover:text-emerald-900" aria-label={ar ? 'إزالة الكود' : 'Remove code'}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sea-900/30" />
+                  <input
+                    aria-label={ar ? 'كود الخصم' : 'Promo code'}
+                    value={promoInput}
+                    onChange={(e) => { setPromoInput(e.target.value); setPromoError('') }}
+                    placeholder={ar ? 'كود الخصم' : 'Promo code'}
+                    dir="ltr"
+                    className="h-10 w-full rounded-lg border border-sand-300 pl-9 pr-3 text-sm uppercase focus:border-sea-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={applyPromoCode}
+                  disabled={promoChecking || !promoInput.trim()}
+                  className="h-10 shrink-0 rounded-lg border border-sea-700 px-4 text-sm font-semibold text-sea-700 hover:bg-sea-50 disabled:opacity-50"
+                >
+                  {promoChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : (ar ? 'تطبيق' : 'Apply')}
+                </button>
+              </div>
+              {promoError && <p className="mt-1.5 text-xs font-medium text-red-600">{promoError}</p>}
+            </div>
+          )}
+        </div>
+
         {/* Totals */}
         <div className="mt-4 space-y-1.5 border-t border-sand-200 pt-4 text-sm">
           <div className="flex justify-between text-sea-900/60"><span>{commerce('subtotal')}</span><span className="tabular-nums text-sea-900">{cart.subtotal.toLocaleString()} {common('egp')}</span></div>
@@ -216,6 +302,12 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
             <span>{commerce('deliveryFee')}</span>
             <span className="tabular-nums text-sea-900">{cart.fulfillmentMethod === 'pickup' ? '—' : zone?.fee_type === 'quote' ? commerce('deliveryFeeConfirm') : `${deliveryFee.toLocaleString()} ${common('egp')}`}</span>
           </div>
+          {appliedPromo && appliedPromo.saved > 0 && (
+            <div className="flex justify-between text-emerald-700">
+              <span>{ar ? 'خصم' : 'Discount'} ({appliedPromo.code})</span>
+              <span className="tabular-nums">-{appliedPromo.saved.toLocaleString()} {common('egp')}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{commerce('total')}</span><span className="tabular-nums">{total.toLocaleString()} {common('egp')}</span></div>
         </div>
 

@@ -4,6 +4,7 @@ import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/custo
 import { quoteRental, resolveDeliveryFee, sumSubtotals, type RentalPricingTier } from '@/lib/rental-pricing'
 import { getTotalInventory } from '@/lib/rental-availability'
 import { applyDiscount } from '@/lib/pricing'
+import { validatePromoCodeForSections, incrementPromoCodeUsage, type PromoSection } from '@/lib/promo-codes'
 
 /**
  * Reusable order creation service — the single place that turns a
@@ -34,6 +35,8 @@ export interface CreateOrderInput {
   notes?: string
   source?: string
   items: OrderItemInput[]
+  /** Customer-entered promo code (public checkout). Re-validated server-side. */
+  promoCode?: string | null
   // ─── Admin/manual-order-only fields — never sent by the public checkout ───
   status?: string
   discountValue?: number | null
@@ -229,8 +232,31 @@ export async function createCommerceOrder(
   }
   const deliveryFee = resolveDeliveryFee({ fulfillmentMethod: input.fulfillmentMethod, zone })
   const preDiscountTotal = subtotal + deliveryFee
-  const totalPrice = input.discountValue && input.discountType
-    ? applyDiscount(preDiscountTotal, input.discountValue, input.discountType).final
+
+  // ── Resolve promo code (public checkout) — re-validated here, never
+  // trusted from the client. An admin-set discountValue/discountType
+  // (manual order) always wins if both are somehow present. ──
+  let promoDiscountValue: number | null = null
+  let promoDiscountType: 'amount' | 'percentage' | null = null
+  let appliedPromoId: string | null = null
+  if (!input.discountValue && input.promoCode) {
+    const sections: PromoSection[] = Array.from(
+      new Set(pricedItems.map((i) => (i.itemType === 'rental' ? 'rent' : 'merch') as PromoSection)),
+    )
+    const result = await validatePromoCodeForSections(input.promoCode, sections)
+    if (!result.valid) {
+      await restockAll()
+      return { success: false, error: `Promo code error: ${result.reason.replace(/_/g, ' ')}` }
+    }
+    promoDiscountValue = result.promo.discount_value
+    promoDiscountType = result.promo.discount_type
+    appliedPromoId = result.promo.id
+  }
+
+  const effectiveDiscountValue = input.discountValue ?? promoDiscountValue
+  const effectiveDiscountType = input.discountType ?? promoDiscountType
+  const totalPrice = effectiveDiscountValue && effectiveDiscountType
+    ? applyDiscount(preDiscountTotal, effectiveDiscountValue, effectiveDiscountType).final
     : preDiscountTotal
 
   // ── Resolve canonical customer ──
@@ -252,8 +278,10 @@ export async function createCommerceOrder(
       subtotal,
       delivery_fee: deliveryFee,
       total_price: totalPrice,
-      discount_value: input.discountValue ?? null,
-      discount_type: input.discountType ?? null,
+      discount_value: effectiveDiscountValue ?? null,
+      discount_type: effectiveDiscountType ?? null,
+      promo_code_id: appliedPromoId,
+      promo_code: appliedPromoId ? input.promoCode!.trim().toUpperCase() : null,
       notes: input.notes || '',
       source: input.source || 'website',
       status: input.status || 'new',
@@ -306,6 +334,7 @@ export async function createCommerceOrder(
   }
 
   await recordCustomerActivity(customer.id)
+  if (appliedPromoId) await incrementPromoCodeUsage(appliedPromoId)
 
   return {
     success: true,

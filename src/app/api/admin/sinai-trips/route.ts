@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { looksLikeRawId, NOT_RAW_ID_MESSAGE } from '@/lib/validation'
 
 const tripSchema = z.object({
-  name_ar: z.string().min(1),
-  name_en: z.string().min(1),
+  name_ar: z.string().min(1).refine((v) => !looksLikeRawId(v), NOT_RAW_ID_MESSAGE),
+  name_en: z.string().min(1).refine((v) => !looksLikeRawId(v), NOT_RAW_ID_MESSAGE),
   description_ar: z.string().optional().default(''),
   description_en: z.string().optional().default(''),
   category_ar: z.string().optional().default(''),
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const validated = tripSchema.safeParse(body)
   if (!validated.success) {
-    return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
+    return NextResponse.json({ error: validated.error.issues[0]?.message || 'Invalid data', details: validated.error.flatten() }, { status: 400 })
   }
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase.from('sinai_trips').insert(validated.data).select().single()

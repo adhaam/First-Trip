@@ -17,6 +17,7 @@ interface FormState {
   preferred_date: string
   num_people: number
   notes: string
+  promo_code: string
 }
 
 export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber }: TripBookingFormProps) {
@@ -30,6 +31,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
     preferred_date: '',
     num_people: 1,
     notes: '',
+    promo_code: '',
   })
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -60,6 +62,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
         preferred_date: form.preferred_date || undefined,
         num_people: form.num_people,
         notes: form.notes.trim() || undefined,
+        promo_code: form.promo_code.trim() || undefined,
       }
       const res = await fetch('/api/trip-bookings', {
         method: 'POST',
@@ -178,6 +181,21 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
             className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="trip-book-promo" className="mb-1 block text-xs font-medium text-sea-900">
+          {ar ? 'كود الخصم (اختياري)' : 'Promo code (optional)'}
+        </label>
+        <input
+          id="trip-book-promo"
+          type="text"
+          dir="ltr"
+          value={form.promo_code}
+          onChange={(e) => setForm((p) => ({ ...p, promo_code: e.target.value }))}
+          className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm uppercase text-sea-900 placeholder:text-sea-900/40 placeholder:normal-case focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
+          placeholder={ar ? 'إن وجد' : 'If you have one'}
+        />
       </div>
 
       <div>

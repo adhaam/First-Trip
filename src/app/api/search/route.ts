@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { getTripRouteSlug } from '@/lib/trips'
+import { getAccommodationRouteSlug } from '@/lib/accommodations'
 
 export type SearchResultType = 'accommodation' | 'trip' | 'merch' | 'rental'
 
@@ -82,7 +83,7 @@ export async function GET(req: NextRequest) {
           description_ar: acc.description_ar?.slice(0, 100) || undefined,
           description_en: acc.description_en?.slice(0, 100) || undefined,
           image,
-          url: `/book-dahab/${acc.id}`,
+          url: `/book-dahab/${getAccommodationRouteSlug({ id: acc.id, name_en: acc.name_en || '' })}`,
           category_ar: acc.type === 'hotel' ? 'فندق' : acc.type === 'chalet' ? 'شاليه' : 'كامب',
           category_en: acc.type === 'hotel' ? 'Hotel' : acc.type === 'chalet' ? 'Chalet' : 'Camp',
           price: acc.price_per_night || undefined,

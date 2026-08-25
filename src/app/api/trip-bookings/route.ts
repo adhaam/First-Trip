@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
+import { validatePromoCodeForSections, incrementPromoCodeUsage } from '@/lib/promo-codes'
 
 // Simple in-memory rate limit, consistent with /api/bookings.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -31,6 +32,7 @@ const tripBookingSchema = z.object({
   children: z.number().int().min(0).max(50).optional(),
   selected_options: z.record(z.string(), z.unknown()).optional().default({}),
   notes: z.string().max(500).optional(),
+  promo_code: z.string().max(40).optional(),
 })
 
 /**
@@ -68,6 +70,21 @@ export async function POST(req: NextRequest) {
     // Quoted price is always server-derived — never trusted from the client.
     const quotedPrice = Number(trip.price) * validated.data.num_people
 
+    // Promo code (optional) — re-validated here, same as commerce checkout.
+    let discountValue: number | null = null
+    let discountType: 'amount' | 'percentage' | null = null
+    let appliedPromoId: string | null = null
+    if (validated.data.promo_code) {
+      const result = await validatePromoCodeForSections(validated.data.promo_code, ['sinai_trips'])
+      if (result.valid) {
+        discountValue = result.promo.discount_value
+        discountType = result.promo.discount_type
+        appliedPromoId = result.promo.id
+      }
+      // An invalid/expired code on a lead-gen form doesn't block submission —
+      // it's just silently not applied, so a stale code never loses WEEMAP a lead.
+    }
+
     const customer = await findOrCreateCustomerByPhone({
       phone: validated.data.customer_phone,
       name: validated.data.customer_name,
@@ -88,6 +105,10 @@ export async function POST(req: NextRequest) {
         selected_options: validated.data.selected_options || {},
         context: 'standalone',
         quoted_price: quotedPrice,
+        discount_value: discountValue,
+        discount_type: discountType,
+        promo_code_id: appliedPromoId,
+        promo_code: appliedPromoId ? validated.data.promo_code!.trim().toUpperCase() : null,
         notes: validated.data.notes || '',
         source: 'website',
         status: 'new',
@@ -101,6 +122,7 @@ export async function POST(req: NextRequest) {
     }
 
     await recordCustomerActivity(customer.id)
+    if (appliedPromoId) await incrementPromoCodeUsage(appliedPromoId)
 
     return NextResponse.json({ success: true, tripBooking: data }, { status: 201 })
   } catch (err) {

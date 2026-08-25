@@ -8,6 +8,7 @@ import { ACCOMMODATION_TAGS } from '@/lib/constants'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { applyDiscount } from '@/lib/pricing'
+import { getAccommodationRouteSlug } from '@/lib/accommodations'
 import type { Accommodation } from '@/lib/types'
 
 export function AccommodationCard({
@@ -41,7 +42,7 @@ export function AccommodationCard({
   return (
     <GlowCard className={cn('h-full', className)}>
       <Link
-        href={`/book-dahab/${acc.id}`}
+        href={`/book-dahab/${getAccommodationRouteSlug(acc)}`}
         aria-label={`${t('viewDetails')}: ${name}`}
         className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card transition-colors hover:border-sea-900/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea-500"
       >

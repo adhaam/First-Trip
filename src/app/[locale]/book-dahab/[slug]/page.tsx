@@ -5,15 +5,17 @@ import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getProductSchema } from '@/lib/schema-org'
+import { getAccommodationIdFromRouteSlug, getAccommodationRouteSlug } from '@/lib/accommodations'
 
 export const revalidate = 60
 
 export async function generateMetadata({ params }: {
-  params: Promise<{ id: string; locale: string }>
+  params: Promise<{ slug: string; locale: string }>
 }): Promise<Metadata> {
-  const { id, locale } = await params
-  const acc = await getAccommodationById(id).catch(() => null)
-  const alternates = buildAlternates(`/book-dahab/${id}`, locale)
+  const { slug, locale } = await params
+  const id = getAccommodationIdFromRouteSlug(slug)
+  const acc = id ? await getAccommodationById(id).catch(() => null) : null
+  const alternates = buildAlternates(`/book-dahab/${acc ? getAccommodationRouteSlug(acc) : slug}`, locale)
   if (!acc) return { alternates }
   const name = locale === 'ar' ? acc.name_ar || acc.name_en : acc.name_en || acc.name_ar
   return {
@@ -23,8 +25,10 @@ export async function generateMetadata({ params }: {
   }
 }
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
-  const { id, locale } = await params
+export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string; locale: string }> }) {
+  const { slug, locale } = await params
+  const id = getAccommodationIdFromRouteSlug(slug)
+  if (!id) notFound()
   const accommodation = await getAccommodationById(id)
 
   if (!accommodation) {

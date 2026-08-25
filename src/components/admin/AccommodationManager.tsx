@@ -275,6 +275,9 @@ export function AccommodationManager() {
         meal_plans: (form.meal_plans as MealPlan[]) || [],
         sort_order: form.sort_order ?? 0,
         is_active: form.is_active ?? true,
+        discount_value: form.discount_value ?? null,
+        discount_type: form.discount_type ?? null,
+        discount_label: form.discount_label || '',
       }
       const res = editing
         ? await fetch(`/api/admin/accommodations/${editing.id}`, {
