@@ -7,6 +7,7 @@ import { Clock, ArrowUpRight, Check } from 'lucide-react'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { getTripRouteSlug } from '@/lib/trips'
+import { applyDiscount } from '@/lib/pricing'
 import type { SinaiTrip } from '@/lib/types'
 
 export function TripCard({
@@ -31,6 +32,7 @@ export function TripCard({
   const category = ar ? trip.category_ar : trip.category_en
   const href = `/sinai-trips/${getTripRouteSlug(trip)}`
   const detail = useTranslations('tripDetail')
+  const discount = applyDiscount(Number(trip.price), trip.discount_value, trip.discount_type)
 
   return (
     <GlowCard className={cn('h-full', className)}>
@@ -87,9 +89,21 @@ export function TripCard({
           )}
 
           <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-            <div className="font-display text-lg font-bold text-sea-900">
-              {Number(trip.price).toLocaleString()}{' '}
-              <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+            <div className="flex items-baseline gap-2">
+              {discount.hasDiscount && (
+                <span className="text-sm font-medium text-sea-900/40 line-through">
+                  {discount.original.toLocaleString()}
+                </span>
+              )}
+              <div className="font-display text-lg font-bold text-sea-900">
+                {discount.final.toLocaleString()}{' '}
+                <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+              </div>
+              {discount.hasDiscount && (
+                <span className="rounded-full bg-red-500 px-2 py-0.5 text-[0.65rem] font-bold text-white">
+                  {trip.discount_type === 'percentage' ? `-${trip.discount_value}%` : (ar ? 'خصم' : 'SALE')}
+                </span>
+              )}
             </div>
             <span
               className="inline-flex items-center gap-1.5 rounded-md border border-sun-500 px-4 py-2 text-xs font-semibold text-sun-600 transition-colors hover:bg-sun-500 hover:text-white"

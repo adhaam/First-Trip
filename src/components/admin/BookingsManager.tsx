@@ -18,6 +18,7 @@ import {
   Package, Bed, Bus, PhoneCall, FileText,
 } from 'lucide-react'
 import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection } from '@/lib/types'
+import { applyDiscount } from '@/lib/pricing'
 import { cn } from '@/lib/utils'
 import { InvoiceViewer } from './InvoiceViewer'
 
@@ -136,6 +137,46 @@ export function BookingsManager() {
   const [manual, setManual] = useState(emptyManual)
   const [savingManual, setSavingManual] = useState(false)
   const [manualError, setManualError] = useState('')
+  const [quoting, setQuoting] = useState(false)
+  const [quoteError, setQuoteError] = useState('')
+
+  const finalTotalAfterDiscount = useMemo(() => {
+    return applyDiscount(Number(manual.total_price) || 0, manual.discount_value, manual.discount_type).final
+  }, [manual.total_price, manual.discount_value, manual.discount_type])
+
+  const runQuote = async () => {
+    setQuoteError('')
+    setQuoting(true)
+    try {
+      const res = await fetch('/api/admin/bookings/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_type: manual.booking_type,
+          accommodation_id: manual.accommodation_id || undefined,
+          governorate: manual.governorate || undefined,
+          trip_date: manual.trip_date || undefined,
+          duration: manual.booking_type === 'package' ? manual.duration : undefined,
+          nights: manual.booking_type === 'accommodation-only' ? manual.nights : undefined,
+          transfer_type: manual.booking_type !== 'accommodation-only' ? manual.transfer_type : undefined,
+          transfer_direction: manual.booking_type !== 'accommodation-only' ? manual.transfer_direction : undefined,
+          room_type: manual.room_type || undefined,
+          num_people: manual.num_people,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || (ar ? 'فشل الحساب' : 'Failed to calculate'))
+      if (data.total_price == null) {
+        setQuoteError(ar ? 'لا يمكن الحساب — تأكد من اختيار الإقامة/التاريخ' : 'Cannot calculate — check accommodation/date selection')
+        return
+      }
+      setManual(m => ({ ...m, total_price: Math.round(Number(data.total_price) * 100) / 100 }))
+    } catch (e) {
+      setQuoteError((e as Error).message)
+    } finally {
+      setQuoting(false)
+    }
+  }
 
   // ─── invoice viewer ───
   const [invoiceOpen, setInvoiceOpen] = useState(false)
@@ -631,6 +672,99 @@ export function BookingsManager() {
                                     {((Number(b.total_price) || 0) - (Number(b.amount_paid) || 0)).toLocaleString()} ج.م
                                   </span>
                                 </div>
+                                <div>
+                                  <Label className="text-xs text-gray-500">{ar ? 'طريقة الدفع' : 'Payment channel'}</Label>
+                                  <Select
+                                    value={b.payment_channel || '_none'}
+                                    onValueChange={(v) => patchBooking(b.id, { payment_channel: v === '_none' ? null : v })}
+                                    disabled={updatingId === b.id}
+                                  >
+                                    <SelectTrigger className="mt-1 h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="_none">{ar ? 'غير محدد' : 'Not set'}</SelectItem>
+                                      <SelectItem value="instapay">InstaPay</SelectItem>
+                                      <SelectItem value="vodafonecash">Vodafone Cash</SelectItem>
+                                      <SelectItem value="cash">{ar ? 'كاش' : 'Cash'}</SelectItem>
+                                      <SelectItem value="bank_transfer">{ar ? 'تحويل بنكي' : 'Bank transfer'}</SelectItem>
+                                      <SelectItem value="other">{ar ? 'أخرى' : 'Other'}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-gray-500">{ar ? 'استلمها مين' : 'Received by'}</Label>
+                                  <Input
+                                    dir={ar ? 'rtl' : 'ltr'}
+                                    placeholder={ar ? 'موظف / فندق / ناقل' : 'Employee / hotel / provider'}
+                                    className="mt-1 h-8 w-[180px] text-xs"
+                                    defaultValue={b.payment_received_by || ''}
+                                    onBlur={e => {
+                                      if (e.target.value !== (b.payment_received_by || '')) patchBooking(b.id, { payment_received_by: e.target.value })
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-gray-500">{ar ? 'تاريخ الدفع' : 'Payment date'}</Label>
+                                  <Input
+                                    type="date"
+                                    className="mt-1 h-8 w-[140px] text-xs"
+                                    defaultValue={b.payment_date ? b.payment_date.slice(0, 10) : ''}
+                                    onBlur={e => {
+                                      const v = e.target.value || null
+                                      if (v !== (b.payment_date ? b.payment_date.slice(0, 10) : null)) patchBooking(b.id, { payment_date: v })
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              {(b.payment_channel || b.payment_received_by) && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                  {ar ? 'آخر تسجيل: ' : 'Last recorded: '}
+                                  {b.payment_channel && <strong className="text-gray-700">{b.payment_channel}</strong>}
+                                  {b.payment_received_by && <> — {ar ? 'استلمها' : 'received by'} <strong className="text-gray-700">{b.payment_received_by}</strong></>}
+                                  {b.payment_date && <> · {fmtDate(b.payment_date)}</>}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* ─── Discount (editable for any existing booking, not just at creation) ─── */}
+                            <div className="col-span-2 md:col-span-4 rounded-lg border bg-white p-4">
+                              <div className="mb-3 text-xs font-semibold text-gray-500">{ar ? 'الخصم' : 'Discount'}</div>
+                              <div className="flex flex-wrap items-end gap-4">
+                                <div>
+                                  <Label className="text-xs text-gray-500">{ar ? 'القيمة' : 'Value'}</Label>
+                                  <Input
+                                    type="number" min={0} dir="ltr"
+                                    placeholder={ar ? 'بدون' : 'None'}
+                                    className="mt-1 h-8 w-[110px]"
+                                    defaultValue={b.discount_value ?? ''}
+                                    onBlur={e => {
+                                      const v = e.target.value === '' ? null : Number(e.target.value)
+                                      if (v !== (b.discount_value ?? null)) patchBooking(b.id, { discount_value: v })
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-gray-500">{ar ? 'النوع' : 'Type'}</Label>
+                                  <Select
+                                    value={b.discount_type || '_none'}
+                                    onValueChange={(v) => patchBooking(b.id, { discount_type: v === '_none' ? null : v })}
+                                    disabled={updatingId === b.id}
+                                  >
+                                    <SelectTrigger className="mt-1 h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="_none">{ar ? 'بدون' : 'None'}</SelectItem>
+                                      <SelectItem value="amount">{ar ? 'مبلغ ثابت' : 'Amount'}</SelectItem>
+                                      <SelectItem value="percentage">{ar ? 'نسبة %' : 'Percentage %'}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                {!!b.discount_value && b.discount_type && (
+                                  <div className="text-sm">
+                                    <span className="text-xs text-gray-500">{ar ? 'بعد الخصم: ' : 'After discount: '}</span>
+                                    <span className="font-semibold text-green-700">
+                                      {applyDiscount(Number(b.total_price) || 0, b.discount_value, b.discount_type).final.toLocaleString()} ج.م
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -855,8 +989,21 @@ export function BookingsManager() {
                   </div>
                 )}
                 <div>
-                  <Label>{ar ? 'السعر الإجمالي (اختياري)' : 'Total price (optional)'}</Label>
-                  <Input type="number" min={0} value={manual.total_price ?? ''} onChange={e => setManual(m => ({ ...m, total_price: e.target.value ? Number(e.target.value) : undefined }))} className="mt-1" />
+                  <Label>{ar ? 'السعر الإجمالي' : 'Total price'}</Label>
+                  <div className="mt-1 flex gap-2">
+                    <Input type="number" min={0} value={manual.total_price ?? ''} onChange={e => setManual(m => ({ ...m, total_price: e.target.value ? Number(e.target.value) : undefined }))} />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={quoting || (manual.booking_type !== 'transfer-only' && !manual.accommodation_id)}
+                      onClick={runQuote}
+                      className="shrink-0 whitespace-nowrap"
+                    >
+                      {quoting ? <Loader2 className="h-4 w-4 animate-spin" /> : (ar ? 'احسب تلقائيًا' : 'Auto-calculate')}
+                    </Button>
+                  </div>
+                  {quoteError && <p className="mt-1 text-xs text-red-600">{quoteError}</p>}
+                  <p className="mt-1 text-xs text-gray-400">{ar ? 'يحسب السعر الحقيقي من نفس محرك التسعير المستخدم في الموقع، ويظل قابلاً للتعديل يدويًا' : 'Calculated from the same pricing engine as the live site — still editable by hand'}</p>
                 </div>
                 <div>
                   <Label>{ar ? 'الحالة' : 'Status'}</Label>
@@ -928,6 +1075,13 @@ export function BookingsManager() {
                     </SelectContent>
                   </Select>
                 </div>
+                {!!manual.total_price && !!manual.discount_value && manual.discount_type && (
+                  <div className="sm:col-span-2 lg:col-span-3 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
+                    {ar ? 'الإجمالي بعد الخصم: ' : 'Total after discount: '}
+                    <strong>{finalTotalAfterDiscount.toLocaleString()} {ar ? 'ج.م' : 'EGP'}</strong>
+                    <span className="text-green-600"> ({ar ? 'كان' : 'was'} {Number(manual.total_price).toLocaleString()})</span>
+                  </div>
+                )}
               </div>
 
               <div>

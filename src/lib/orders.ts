@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
 import { quoteRental, resolveDeliveryFee, sumSubtotals, type RentalPricingTier } from '@/lib/rental-pricing'
 import { getTotalInventory } from '@/lib/rental-availability'
+import { applyDiscount } from '@/lib/pricing'
 
 /**
  * Reusable order creation service — the single place that turns a
@@ -33,6 +34,14 @@ export interface CreateOrderInput {
   notes?: string
   source?: string
   items: OrderItemInput[]
+  // ─── Admin/manual-order-only fields — never sent by the public checkout ───
+  status?: string
+  discountValue?: number | null
+  discountType?: 'amount' | 'percentage' | null
+  paymentStatus?: string
+  amountPaid?: number
+  paymentChannel?: string | null
+  paymentReceivedBy?: string | null
 }
 
 export interface CreateOrderResult {
@@ -219,7 +228,10 @@ export async function createCommerceOrder(
     zone = zoneRow
   }
   const deliveryFee = resolveDeliveryFee({ fulfillmentMethod: input.fulfillmentMethod, zone })
-  const totalPrice = subtotal + deliveryFee
+  const preDiscountTotal = subtotal + deliveryFee
+  const totalPrice = input.discountValue && input.discountType
+    ? applyDiscount(preDiscountTotal, input.discountValue, input.discountType).final
+    : preDiscountTotal
 
   // ── Resolve canonical customer ──
   const customer = await findOrCreateCustomerByPhone({
@@ -240,9 +252,15 @@ export async function createCommerceOrder(
       subtotal,
       delivery_fee: deliveryFee,
       total_price: totalPrice,
+      discount_value: input.discountValue ?? null,
+      discount_type: input.discountType ?? null,
       notes: input.notes || '',
       source: input.source || 'website',
-      status: 'new',
+      status: input.status || 'new',
+      payment_status: input.paymentStatus || 'unpaid',
+      amount_paid: input.amountPaid || 0,
+      payment_channel: input.paymentChannel ?? null,
+      payment_received_by: input.paymentReceivedBy ?? null,
     })
     .select('id, order_number')
     .single()

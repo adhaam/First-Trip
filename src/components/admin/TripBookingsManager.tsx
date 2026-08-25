@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Plus, ChevronUp } from 'lucide-react'
+import { Loader2, Plus, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { applyDiscount } from '@/lib/pricing'
 
 type TripBookingStatus = 'new' | 'contacted' | 'confirmed' | 'completed' | 'cancelled'
 
@@ -65,6 +66,7 @@ export function TripBookingsManager() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -94,6 +96,15 @@ export function TripBookingsManager() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [load])
+
+  const patchBooking = async (id: string, patch: Record<string, unknown>) => {
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)))
+    await fetch(`/api/admin/trip-bookings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+  }
 
   const updateStatus = async (id: string, status: TripBookingStatus) => {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)))
@@ -298,19 +309,23 @@ export function TripBookingsManager() {
                 <TableHead>{ar ? 'السعر' : 'Price'}</TableHead>
                 <TableHead>{ar ? 'الدفع' : 'Payment'}</TableHead>
                 <TableHead>{ar ? 'الحالة' : 'Status'}</TableHead>
+                <TableHead className="w-8" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">
+                <TableRow><TableCell colSpan={9} className="text-center text-gray-400 py-8">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />{ar ? 'جاري التحميل...' : 'Loading...'}
                 </TableCell></TableRow>
               )}
               {!loading && error && (
-                <TableRow><TableCell colSpan={8} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
               )}
-              {!loading && !error && bookings.map((b) => (
-                <TableRow key={b.id}>
+              {!loading && !error && bookings.map((b) => {
+                const isOpen = expandedId === b.id
+                return (
+                <Fragment key={b.id}>
+                <TableRow className="cursor-pointer" onClick={() => setExpandedId(isOpen ? null : b.id)}>
                   <TableCell className="font-medium">{b.customer_name}</TableCell>
                   <TableCell dir="ltr">{b.customer_phone}</TableCell>
                   <TableCell>{ar ? b.sinai_trips?.name_ar : b.sinai_trips?.name_en}</TableCell>
@@ -321,7 +336,7 @@ export function TripBookingsManager() {
                     <span className={cn('inline-block rounded px-1.5 py-0.5', b.payment_status === 'paid' ? 'bg-green-100 text-green-700' : b.payment_status === 'partial' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600')}>{b.payment_status || 'unpaid'}</span>
                     {b.payment_channel && <span className="block text-gray-400 mt-0.5">{b.payment_channel}{b.payment_received_by ? ` → ${b.payment_received_by}` : ''}</span>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Select value={b.status} onValueChange={(v) => v && updateStatus(b.id, v as TripBookingStatus)}>
                       <SelectTrigger className={cn('w-[120px] h-8 text-xs border-0', STATUS_STYLES[b.status])}>
                         <SelectValue />
@@ -333,10 +348,98 @@ export function TripBookingsManager() {
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  <TableCell>{isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}</TableCell>
                 </TableRow>
-              ))}
+                {isOpen && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="bg-gray-50 p-4">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <Label className="text-xs text-gray-500">{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
+                          <Input
+                            type="number" min={0} dir="ltr" className="mt-1 h-8"
+                            defaultValue={b.amount_paid ?? 0}
+                            onBlur={e => {
+                              const v = Number(e.target.value) || 0
+                              if (v !== Number(b.amount_paid || 0)) patchBooking(b.id, { amount_paid: v })
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">{ar ? 'حالة الدفع' : 'Payment status'}</Label>
+                          <Select value={b.payment_status || 'unpaid'} onValueChange={(v) => v && patchBooking(b.id, { payment_status: v })}>
+                            <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unpaid">{ar ? 'غير مدفوع' : 'Unpaid'}</SelectItem>
+                              <SelectItem value="partial">{ar ? 'جزئي' : 'Partial'}</SelectItem>
+                              <SelectItem value="paid">{ar ? 'مدفوع' : 'Paid'}</SelectItem>
+                              <SelectItem value="refunded">{ar ? 'مسترد' : 'Refunded'}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">{ar ? 'طريقة الدفع' : 'Payment channel'}</Label>
+                          <Select value={b.payment_channel || '_none'} onValueChange={(v) => patchBooking(b.id, { payment_channel: v === '_none' ? null : v })}>
+                            <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">{ar ? 'غير محدد' : 'Not set'}</SelectItem>
+                              <SelectItem value="instapay">InstaPay</SelectItem>
+                              <SelectItem value="vodafonecash">Vodafone Cash</SelectItem>
+                              <SelectItem value="cash">{ar ? 'كاش' : 'Cash'}</SelectItem>
+                              <SelectItem value="bank_transfer">{ar ? 'تحويل بنكي' : 'Bank transfer'}</SelectItem>
+                              <SelectItem value="other">{ar ? 'أخرى' : 'Other'}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">{ar ? 'استلمها مين' : 'Received by'}</Label>
+                          <Input
+                            placeholder={ar ? 'موظف / فندق / ناقل' : 'Employee / hotel / provider'}
+                            className="mt-1 h-8 text-xs"
+                            defaultValue={b.payment_received_by || ''}
+                            onBlur={e => { if (e.target.value !== (b.payment_received_by || '')) patchBooking(b.id, { payment_received_by: e.target.value }) }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">{ar ? 'قيمة الخصم' : 'Discount value'}</Label>
+                          <Input
+                            type="number" min={0} dir="ltr" className="mt-1 h-8"
+                            placeholder={ar ? 'بدون' : 'None'}
+                            defaultValue={b.discount_value ?? ''}
+                            onBlur={e => {
+                              const v = e.target.value === '' ? null : Number(e.target.value)
+                              if (v !== (b.discount_value ?? null)) patchBooking(b.id, { discount_value: v })
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">{ar ? 'نوع الخصم' : 'Discount type'}</Label>
+                          <Select value={b.discount_type || '_none'} onValueChange={(v) => patchBooking(b.id, { discount_type: v === '_none' ? null : v })}>
+                            <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">{ar ? 'بدون' : 'None'}</SelectItem>
+                              <SelectItem value="amount">{ar ? 'مبلغ ثابت' : 'Amount'}</SelectItem>
+                              <SelectItem value="percentage">{ar ? 'نسبة %' : 'Percentage %'}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {!!b.discount_value && b.discount_type && (
+                          <div className="text-sm self-end pb-2">
+                            <span className="text-xs text-gray-500">{ar ? 'بعد الخصم: ' : 'After discount: '}</span>
+                            <span className="font-semibold text-green-700">
+                              {applyDiscount(Number(b.final_price ?? b.quoted_price) || 0, b.discount_value, b.discount_type).final.toLocaleString()} {ar ? 'ج.م' : 'EGP'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                </Fragment>
+                )
+              })}
               {!loading && !error && bookings.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

@@ -192,6 +192,7 @@ export function ExperiencesManager() {
           experienceId={bookingsFilter.experienceId}
           dateId={bookingsFilter.dateId}
           onStatusChanged={load}
+          experiences={experiences}
         />
       ) : (
         <div className="space-y-4">
@@ -259,7 +260,7 @@ export function ExperiencesManager() {
                     />
                     <div>
                       <h4 className="mb-3 text-sm font-semibold text-gray-700">Bookings for this experience</h4>
-                      <ExperienceBookingsTable experienceId={experience.id} onStatusChanged={load} />
+                      <ExperienceBookingsTable experienceId={experience.id} onStatusChanged={load} experiences={[experience]} />
                     </div>
                   </div>
                 )}

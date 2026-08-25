@@ -56,6 +56,9 @@ const settingsSchema = z.object({
   seo_description_en: z.string().max(400).optional(),
   social_share_image: z.string().max(500).optional(),
   organization_name: z.string().max(120).optional(),
+  // Shown to the customer on invoices as "how to pay / confirm your booking"
+  payment_instructions_ar: z.string().max(2000).optional(),
+  payment_instructions_en: z.string().max(2000).optional(),
 })
 
 export async function GET(req: NextRequest) {

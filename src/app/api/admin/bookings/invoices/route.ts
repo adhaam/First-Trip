@@ -114,8 +114,8 @@ export async function POST(req: NextRequest) {
       ? (booking.discount_type === 'percentage' ? `${booking.discount_value}%` : `${booking.discount_value} EGP`)
       : undefined,
     deliveryFee: undefined,
-    depositAmount: validated.data.type === 'confirmation' ? (booking.amount_paid || finalTotal * 0.5) : undefined,
     totalAmount: finalTotal,
+    amountPaid: booking.amount_paid || 0,
     paymentChannel: booking.payment_channel || undefined,
     paymentReceivedBy: booking.payment_received_by || undefined,
     notes: booking.notes || undefined,

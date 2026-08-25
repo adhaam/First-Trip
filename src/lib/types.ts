@@ -376,6 +376,9 @@ export interface SiteSettings {
   seo_description_en?: string
   social_share_image?: string
   organization_name?: string
+  /** Shown to the customer on invoices — bank/InstaPay/Vodafone Cash details, how to confirm. */
+  payment_instructions_ar?: string
+  payment_instructions_en?: string
 }
 
 /** General, structured website/business settings — the "Website" admin section. */

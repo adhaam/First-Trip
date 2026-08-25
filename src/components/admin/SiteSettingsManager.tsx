@@ -328,6 +328,15 @@ export function SiteSettingsManager() {
 
       <Card>
         <CardContent className="p-6 space-y-4">
+          <h3 className="font-bold text-gray-900">{locale === 'ar' ? 'تعليمات الدفع (تظهر للعميل في الفاتورة)' : 'Payment Instructions (shown to customer on invoices)'}</h3>
+          <p className="text-sm text-gray-500">{locale === 'ar' ? 'اكتب هنا أرقام الدفع (إنستاباي، فودافون كاش، تحويل بنكي...) وخطوات تأكيد الحجز. هيظهر في كل فاتورة تتبعت للعميل.' : 'Add payment numbers (InstaPay, Vodafone Cash, bank transfer...) and confirmation steps here. This appears on every invoice sent to a customer.'}</p>
+          <div><Label className="mb-2 block">{locale === 'ar' ? 'تعليمات الدفع (عربي)' : 'Payment Instructions (Arabic)'}</Label><Textarea rows={5} value={settings.payment_instructions_ar || ''} onChange={e => updateField('payment_instructions_ar', e.target.value)} placeholder={'مثال:\nإنستاباي: 01xxxxxxxxx\nفودافون كاش: 01xxxxxxxxx\nبعد التحويل ابعت صورة الإيصال على واتساب لتأكيد الحجز.'} /></div>
+          <div><Label className="mb-2 block">{locale === 'ar' ? 'تعليمات الدفع (إنجليزي)' : 'Payment Instructions (English)'}</Label><Textarea rows={5} value={settings.payment_instructions_en || ''} onChange={e => updateField('payment_instructions_en', e.target.value)} placeholder={'Example:\nInstaPay: 01xxxxxxxxx\nVodafone Cash: 01xxxxxxxxx\nAfter transferring, send the receipt on WhatsApp to confirm your booking.'} /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6 space-y-4">
           <h3 className="font-bold text-gray-900">{locale === 'ar' ? 'السياسات' : 'Policies'}</h3>
           <div><Label className="mb-2 block">{locale === 'ar' ? 'سياسة الاسترداد (عربي)' : 'Refund Policy (Arabic)'}</Label><Textarea rows={3} value={settings.refund_policy_ar || ''} onChange={e => updateField('refund_policy_ar', e.target.value)} /></div>
           <div><Label className="mb-2 block">{locale === 'ar' ? 'سياسة الاسترداد (إنجليزي)' : 'Refund Policy (English)'}</Label><Textarea rows={3} value={settings.refund_policy_en || ''} onChange={e => updateField('refund_policy_en', e.target.value)} /></div>

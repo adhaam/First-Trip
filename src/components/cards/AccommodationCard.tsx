@@ -7,6 +7,7 @@ import { Star, MapPin, ArrowUpRight } from 'lucide-react'
 import { ACCOMMODATION_TAGS } from '@/lib/constants'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
+import { applyDiscount } from '@/lib/pricing'
 import type { Accommodation } from '@/lib/types'
 
 export function AccommodationCard({
@@ -31,6 +32,7 @@ export function AccommodationCard({
   const startingRoomRate = configuredRoomRates.length
     ? Math.min(...configuredRoomRates)
     : Number(acc.price_per_night) || 0
+  const discount = applyDiscount(startingRoomRate, acc.discount_value, acc.discount_type)
   const name = ar ? acc.name_ar : acc.name_en
   const location = ar
     ? acc.location_ar || acc.location
@@ -89,9 +91,21 @@ export function AccommodationCard({
               <div className="text-[0.7rem] uppercase tracking-wider text-sea-900/45">
                 {t('priceStartsFrom')}
               </div>
-              <div className="font-display text-xl font-bold text-sea-900">
-                {startingRoomRate.toLocaleString()}{' '}
-                <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+              <div className="flex items-baseline gap-2">
+                {discount.hasDiscount && (
+                  <span className="text-sm font-medium text-sea-900/40 line-through">
+                    {discount.original.toLocaleString()}
+                  </span>
+                )}
+                <div className="font-display text-xl font-bold text-sea-900">
+                  {discount.final.toLocaleString()}{' '}
+                  <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+                </div>
+                {discount.hasDiscount && (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[0.65rem] font-bold text-white">
+                    {acc.discount_type === 'percentage' ? `-${acc.discount_value}%` : (ar ? 'خصم' : 'SALE')}
+                  </span>
+                )}
               </div>
               <div className="text-[0.7rem] text-sea-900/45">
                 {t('perNight')} · {ar ? 'للغرفة' : 'per room'}

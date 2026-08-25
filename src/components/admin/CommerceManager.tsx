@@ -217,6 +217,9 @@ interface OrderDetail extends Order {
   commerce_order_items: OrderItem[]
   delivery_address: string; notes: string; internal_notes: string; subtotal: number; delivery_fee: number
   delivery_zones: { name_ar: string; name_en: string } | null
+  payment_status?: string | null; amount_paid?: number | null
+  payment_channel?: string | null; payment_received_by?: string | null
+  discount_value?: number | null; discount_type?: string | null
 }
 
 const ORDER_STATUSES: OrderStatus[] = ['new', 'contacted', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'completed', 'cancelled']
@@ -227,22 +230,100 @@ const ORDER_STATUS_LABELS_EN: Record<OrderStatus, string> = {
   new: 'New', contacted: 'Contacted', confirmed: 'Confirmed', preparing: 'Preparing', ready: 'Ready', out_for_delivery: 'Out for delivery', completed: 'Completed', cancelled: 'Cancelled',
 }
 
+const EMPTY_MANUAL_ORDER = {
+  customer_name: '',
+  customer_phone: '',
+  customer_email: '',
+  fulfillment_method: 'pickup' as 'pickup' | 'delivery',
+  delivery_address: '',
+  notes: '',
+  status: 'completed' as string,
+  payment_status: 'unpaid' as string,
+  amount_paid: '',
+  payment_channel: '' as string,
+  payment_received_by: '',
+  discount_value: '',
+  discount_type: '' as string,
+}
+type ManualOrderItem = { product_id: string; quantity: number; rental_duration_days: string; rental_start_date: string }
+
 function OrdersTab() {
   const locale = useLocale(); const ar = locale === 'ar'
   const api = useAdminFetch()
   const [items, setItems] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<OrderDetail | null>(null)
+  const [products, setProducts] = useState<Product[]>([])
+  const [showManual, setShowManual] = useState(false)
+  const [manual, setManual] = useState(EMPTY_MANUAL_ORDER)
+  const [manualItems, setManualItems] = useState<ManualOrderItem[]>([{ product_id: '', quantity: 1, rental_duration_days: '', rental_start_date: '' }])
+  const [manualSaving, setManualSaving] = useState(false)
+  const [manualError, setManualError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
-    try { setItems((await api('/api/admin/commerce/orders')).orders || []) } finally { setLoading(false) }
+    try {
+      const [ordersRes, productsRes] = await Promise.all([
+        api('/api/admin/commerce/orders'),
+        api('/api/admin/commerce/products'),
+      ])
+      setItems(ordersRes.orders || [])
+      setProducts(productsRes.products || [])
+    } finally { setLoading(false) }
   }, [api])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch
     load()
   }, [load])
+
+  const submitManualOrder = async () => {
+    setManualError('')
+    const validItems = manualItems.filter((i) => i.product_id)
+    if (!manual.customer_name.trim() || !manual.customer_phone.trim() || validItems.length === 0) {
+      setManualError(ar ? 'يرجى إدخال اسم العميل والهاتف واختيار منتج واحد على الأقل' : 'Enter customer name, phone, and at least one product')
+      return
+    }
+    setManualSaving(true)
+    try {
+      const payload = {
+        customer_name: manual.customer_name.trim(),
+        customer_phone: manual.customer_phone.trim(),
+        customer_email: manual.customer_email || undefined,
+        fulfillment_method: manual.fulfillment_method,
+        delivery_address: manual.fulfillment_method === 'delivery' ? manual.delivery_address : undefined,
+        notes: manual.notes || undefined,
+        status: manual.status,
+        payment_status: manual.payment_status,
+        amount_paid: manual.amount_paid ? Number(manual.amount_paid) : undefined,
+        payment_channel: manual.payment_channel || undefined,
+        payment_received_by: manual.payment_received_by || undefined,
+        discount_value: manual.discount_value ? Number(manual.discount_value) : undefined,
+        discount_type: manual.discount_type || undefined,
+        items: validItems.map((i) => ({
+          product_id: i.product_id,
+          quantity: i.quantity,
+          rental_duration_days: i.rental_duration_days ? Number(i.rental_duration_days) : undefined,
+          rental_start_date: i.rental_start_date || undefined,
+        })),
+      }
+      const res = await fetch('/api/admin/commerce/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || (ar ? 'فشل إنشاء الطلب' : 'Failed to create order'))
+      setManual(EMPTY_MANUAL_ORDER)
+      setManualItems([{ product_id: '', quantity: 1, rental_duration_days: '', rental_start_date: '' }])
+      setShowManual(false)
+      load()
+    } catch (e) {
+      setManualError((e as Error).message)
+    } finally {
+      setManualSaving(false)
+    }
+  }
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     // Cancelling restocks any decremented sale inventory — guard against an
@@ -260,6 +341,11 @@ function OrdersTab() {
     setDetail(data.order as OrderDetail)
   }
 
+  const patchOrder = async (id: string, patch: Record<string, unknown>) => {
+    setDetail((d) => (d && d.id === id ? { ...d, ...patch } : d))
+    await api(`/api/admin/commerce/orders/${id}`, { method: 'PATCH', body: JSON.stringify(patch) })
+  }
+
   // Prefer the normalized (E.164) phone for wa.me links — the raw `phone`
   // field may still be in local format (e.g. "010xxxxxxxx"), which produces
   // a broken WhatsApp link missing the country code.
@@ -267,6 +353,172 @@ function OrdersTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setShowManual((v) => !v)} className="bg-brand-blue hover:bg-brand-blue-dark text-white">
+          <Plus className="h-4 w-4 mr-1" />
+          {ar ? 'إضافة طلب يدوي' : 'Add manual order'}
+        </Button>
+      </div>
+
+      {showManual && (
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <p className="text-sm font-semibold text-gray-700">{ar ? 'طلب يدوي جديد (ميرش أو إيجار)' : 'New manual order (merch or rental)'}</p>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'اسم العميل *' : 'Customer name *'}</Label>
+                <Input value={manual.customer_name} onChange={(e) => setManual((m) => ({ ...m, customer_name: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'رقم الهاتف *' : 'Phone *'}</Label>
+                <Input dir="ltr" value={manual.customer_phone} onChange={(e) => setManual((m) => ({ ...m, customer_phone: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'الإيميل' : 'Email'}</Label>
+                <Input dir="ltr" value={manual.customer_email} onChange={(e) => setManual((m) => ({ ...m, customer_email: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'الاستلام' : 'Fulfillment'}</Label>
+                <Select value={manual.fulfillment_method} onValueChange={(v) => v && setManual((m) => ({ ...m, fulfillment_method: v as 'pickup' | 'delivery' }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pickup">{ar ? 'استلام' : 'Pickup'}</SelectItem>
+                    <SelectItem value="delivery">{ar ? 'توصيل' : 'Delivery'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {manual.fulfillment_method === 'delivery' && (
+                <div className="sm:col-span-2">
+                  <Label className="text-xs mb-1 block">{ar ? 'عنوان التوصيل' : 'Delivery address'}</Label>
+                  <Input value={manual.delivery_address} onChange={(e) => setManual((m) => ({ ...m, delivery_address: e.target.value }))} />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">{ar ? 'المنتجات' : 'Products'}</Label>
+              {manualItems.map((item, idx) => {
+                const product = products.find((p) => p.id === item.product_id)
+                return (
+                  <div key={idx} className="grid gap-2 sm:grid-cols-5 items-end rounded-md border p-2">
+                    <div className="sm:col-span-2">
+                      <Select value={item.product_id || 'none'} onValueChange={(v) => setManualItems((prev) => prev.map((it, i) => i === idx ? { ...it, product_id: v && v !== 'none' ? v : '' } : it))}>
+                        <SelectTrigger><SelectValue placeholder={ar ? 'اختر منتج' : 'Select product'} /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{ar ? 'اختر منتج' : 'Select product'}</SelectItem>
+                          {products.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{ar ? p.name_ar : p.name_en} {p.product_type === 'rental' ? (ar ? '(إيجار)' : '(rental)') : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Input type="number" min={1} placeholder={ar ? 'الكمية' : 'Qty'} value={item.quantity} onChange={(e) => setManualItems((prev) => prev.map((it, i) => i === idx ? { ...it, quantity: Number(e.target.value) || 1 } : it))} />
+                    </div>
+                    {product?.product_type === 'rental' && (
+                      <>
+                        <div>
+                          <Input type="number" min={1} placeholder={ar ? 'مدة الإيجار (أيام)' : 'Duration (days)'} value={item.rental_duration_days} onChange={(e) => setManualItems((prev) => prev.map((it, i) => i === idx ? { ...it, rental_duration_days: e.target.value } : it))} />
+                        </div>
+                        <div>
+                          <Input type="date" value={item.rental_start_date} onChange={(e) => setManualItems((prev) => prev.map((it, i) => i === idx ? { ...it, rental_start_date: e.target.value } : it))} />
+                        </div>
+                      </>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => setManualItems((prev) => prev.filter((_, i) => i !== idx))} disabled={manualItems.length === 1}>
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+                )
+              })}
+              <Button variant="outline" size="sm" onClick={() => setManualItems((prev) => [...prev, { product_id: '', quantity: 1, rental_duration_days: '', rental_start_date: '' }])}>
+                <Plus className="h-4 w-4 mr-1" />{ar ? 'إضافة منتج آخر' : 'Add another product'}
+              </Button>
+              <p className="text-xs text-gray-400">{ar ? 'السعر يُحسب تلقائيًا من نفس محرك تسعير الموقع (بما في ذلك المخزون والتوافر)' : 'Price is auto-calculated from the same engine as the live site (including stock & availability checks)'}</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'الحالة' : 'Status'}</Label>
+                <Select value={manual.status} onValueChange={(v) => v && setManual((m) => ({ ...m, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ORDER_STATUSES.filter((s) => ['new', 'confirmed', 'completed', 'cancelled'].includes(s)).map((s) => (
+                      <SelectItem key={s} value={s}>{ar ? ORDER_STATUS_LABELS_AR[s] : ORDER_STATUS_LABELS_EN[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'حالة الدفع' : 'Payment status'}</Label>
+                <Select value={manual.payment_status} onValueChange={(v) => v && setManual((m) => ({ ...m, payment_status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unpaid">{ar ? 'غير مدفوع' : 'Unpaid'}</SelectItem>
+                    <SelectItem value="partial">{ar ? 'جزئي' : 'Partial'}</SelectItem>
+                    <SelectItem value="paid">{ar ? 'مدفوع' : 'Paid'}</SelectItem>
+                    <SelectItem value="refunded">{ar ? 'مسترد' : 'Refunded'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
+                <Input type="number" min={0} value={manual.amount_paid} onChange={(e) => setManual((m) => ({ ...m, amount_paid: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'طريقة الدفع' : 'Payment channel'}</Label>
+                <Select value={manual.payment_channel || '_none'} onValueChange={(v) => setManual((m) => ({ ...m, payment_channel: v === '_none' ? '' : (v ?? '') }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">{ar ? 'غير محدد' : 'Not set'}</SelectItem>
+                    <SelectItem value="instapay">InstaPay</SelectItem>
+                    <SelectItem value="vodafonecash">Vodafone Cash</SelectItem>
+                    <SelectItem value="cash">{ar ? 'كاش' : 'Cash'}</SelectItem>
+                    <SelectItem value="bank_transfer">{ar ? 'تحويل بنكي' : 'Bank transfer'}</SelectItem>
+                    <SelectItem value="other">{ar ? 'أخرى' : 'Other'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'استلمها مين' : 'Received by'}</Label>
+                <Input value={manual.payment_received_by} placeholder={ar ? 'موظف / نقطة استلام' : 'Employee / pickup point'} onChange={(e) => setManual((m) => ({ ...m, payment_received_by: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'قيمة الخصم' : 'Discount value'}</Label>
+                <Input type="number" min={0} placeholder={ar ? 'بدون' : 'None'} value={manual.discount_value} onChange={(e) => setManual((m) => ({ ...m, discount_value: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">{ar ? 'نوع الخصم' : 'Discount type'}</Label>
+                <Select value={manual.discount_type || '_none'} onValueChange={(v) => setManual((m) => ({ ...m, discount_type: v === '_none' ? '' : (v ?? '') }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">{ar ? 'بدون' : 'None'}</SelectItem>
+                    <SelectItem value="amount">{ar ? 'مبلغ ثابت' : 'Amount'}</SelectItem>
+                    <SelectItem value="percentage">{ar ? 'نسبة %' : 'Percentage %'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Label className="text-xs mb-1 block">{ar ? 'ملاحظات' : 'Notes'}</Label>
+                <Input value={manual.notes} onChange={(e) => setManual((m) => ({ ...m, notes: e.target.value }))} />
+              </div>
+            </div>
+
+            {manualError && <p className="text-xs text-red-600 font-medium">{manualError}</p>}
+            <div className="flex gap-2">
+              <Button onClick={submitManualOrder} disabled={manualSaving} className="bg-brand-blue hover:bg-brand-blue-dark text-white">
+                {manualSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+                {ar ? 'حفظ الطلب' : 'Save order'}
+              </Button>
+              <Button variant="outline" onClick={() => { setShowManual(false); setManualError('') }}>
+                {ar ? 'إلغاء' : 'Cancel'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
@@ -332,6 +584,85 @@ function OrdersTab() {
             <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 font-bold text-gray-900">
               <span>{ar ? 'الإجمالي' : 'Total'}</span><span>{detail.total_price} {ar ? 'ج.م' : 'EGP'}</span>
             </div>
+
+            <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
+              <p className="text-xs font-semibold text-gray-500">{ar ? 'الدفع' : 'Payment'}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-gray-500">{ar ? 'حالة الدفع' : 'Payment status'}</Label>
+                  <Select value={detail.payment_status || 'unpaid'} onValueChange={(v) => v && patchOrder(detail.id, { payment_status: v })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unpaid">{ar ? 'غير مدفوع' : 'Unpaid'}</SelectItem>
+                      <SelectItem value="partial">{ar ? 'جزئي' : 'Partial'}</SelectItem>
+                      <SelectItem value="paid">{ar ? 'مدفوع' : 'Paid'}</SelectItem>
+                      <SelectItem value="refunded">{ar ? 'مسترد' : 'Refunded'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
+                  <Input
+                    type="number" min={0} dir="ltr" className="h-8 mt-1"
+                    defaultValue={detail.amount_paid ?? 0}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value) || 0
+                      if (v !== Number(detail.amount_paid || 0)) patchOrder(detail.id, { amount_paid: v })
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">{ar ? 'طريقة الدفع' : 'Payment channel'}</Label>
+                  <Select value={detail.payment_channel || '_none'} onValueChange={(v) => patchOrder(detail.id, { payment_channel: v === '_none' ? null : v })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">{ar ? 'غير محدد' : 'Not set'}</SelectItem>
+                      <SelectItem value="instapay">InstaPay</SelectItem>
+                      <SelectItem value="vodafonecash">Vodafone Cash</SelectItem>
+                      <SelectItem value="cash">{ar ? 'كاش' : 'Cash'}</SelectItem>
+                      <SelectItem value="bank_transfer">{ar ? 'تحويل بنكي' : 'Bank transfer'}</SelectItem>
+                      <SelectItem value="other">{ar ? 'أخرى' : 'Other'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">{ar ? 'استلمها مين' : 'Received by'}</Label>
+                  <Input
+                    className="h-8 text-xs mt-1"
+                    placeholder={ar ? 'موظف / نقطة استلام' : 'Employee / pickup point'}
+                    defaultValue={detail.payment_received_by || ''}
+                    onBlur={(e) => { if (e.target.value !== (detail.payment_received_by || '')) patchOrder(detail.id, { payment_received_by: e.target.value }) }}
+                  />
+                </div>
+              </div>
+              <p className="text-xs font-semibold text-gray-500 pt-1">{ar ? 'الخصم' : 'Discount'}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-gray-500">{ar ? 'القيمة' : 'Value'}</Label>
+                  <Input
+                    type="number" min={0} dir="ltr" className="h-8 mt-1"
+                    placeholder={ar ? 'بدون' : 'None'}
+                    defaultValue={detail.discount_value ?? ''}
+                    onBlur={(e) => {
+                      const v = e.target.value === '' ? null : Number(e.target.value)
+                      if (v !== (detail.discount_value ?? null)) patchOrder(detail.id, { discount_value: v })
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">{ar ? 'النوع' : 'Type'}</Label>
+                  <Select value={detail.discount_type || '_none'} onValueChange={(v) => patchOrder(detail.id, { discount_type: v === '_none' ? null : v })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">{ar ? 'بدون' : 'None'}</SelectItem>
+                      <SelectItem value="amount">{ar ? 'مبلغ ثابت' : 'Amount'}</SelectItem>
+                      <SelectItem value="percentage">{ar ? 'نسبة %' : 'Percentage %'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
             {number && (
               <a href={`https://wa.me/${number}`} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700">
                 <MessageCircle className="h-4 w-4" />{ar ? 'واتساب العميل' : 'WhatsApp customer'}
