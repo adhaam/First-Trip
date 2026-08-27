@@ -2,9 +2,12 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { ArrowLeft, ArrowUpRight, Check, Layers } from 'lucide-react'
+import { ArrowLeft, Clock, Layers } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
-import { getTripPackageBySlug } from '@/lib/trip-packages'
+import { getTripPackageBySlugForDetail } from '@/lib/trip-packages'
+import { getSiteSettings } from '@/lib/data'
+import { TripPackageBookingForm } from '@/components/sinai-trips/TripPackageBookingForm'
+import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 
 export const revalidate = 60
@@ -15,7 +18,7 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params
-  const pkg = await getTripPackageBySlug(slug)
+  const pkg = await getTripPackageBySlugForDetail(slug)
   if (!pkg) return {}
 
   const ar = locale === 'ar'
@@ -38,14 +41,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function TripPackageDetailPage({ params }: PageProps) {
   const { locale, slug } = await params
-  const pkg = await getTripPackageBySlug(slug)
+  const [pkg, settings] = await Promise.all([
+    getTripPackageBySlugForDetail(slug),
+    getSiteSettings(),
+  ])
   if (!pkg) notFound()
 
   const [t, common] = await Promise.all([
     getTranslations({ locale, namespace: 'sinai' }),
     getTranslations({ locale, namespace: 'common' }),
   ])
-  const nav = await getTranslations({ locale, namespace: 'nav' })
 
   const ar = locale === 'ar'
   const name = ar ? pkg.name_ar : pkg.name_en
@@ -54,8 +59,11 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
   const description = (ar ? pkg.description_ar : pkg.description_en) || ''
   const trips = pkg.trips || []
   const cover = pkg.image || trips[0]?.image || '/media/heroposter.png'
-  const total = pkg.totals?.packageTotal ?? 0
+  const totals = pkg.totals ?? { publicTotal: 0, packageTotal: 0, savings: 0, isValid: false }
   const canonicalPath = `/sinai-trips/packages/${pkg.slug}`
+  const whatsappNumber = settings?.whatsapp_number || WHATSAPP_NUMBER
+
+  const fmt = (n: number) => n.toLocaleString(ar ? 'ar-EG' : 'en-US')
 
   const schema = {
     '@context': 'https://schema.org',
@@ -89,7 +97,7 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
 
       <main>
         <section className="container-main py-12 md:py-18">
-          <div className="grid gap-10 lg:grid-cols-[1fr_20rem] lg:gap-16">
+          <div className="grid gap-10 lg:grid-cols-[1fr_22rem] lg:gap-16">
             <div className="space-y-12">
               {description && (
                 <section aria-labelledby="package-overview-heading">
@@ -105,36 +113,106 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                   <Layers className="h-5 w-5 text-sun-500" aria-hidden="true" />
                   {t('experiencesCount', { count: trips.length })}
                 </h2>
-                <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {trips.map((trip) => (
-                    <li key={trip.id} className="flex items-start gap-3 border-t border-sand-300 pt-3 text-sm leading-6 text-sea-900/72">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-sun-500" aria-hidden="true" />
-                      <span>{ar ? trip.name_ar : trip.name_en}</span>
-                    </li>
-                  ))}
-                </ul>
+
+                <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                  {trips.map((trip) => {
+                    const tripName = ar ? trip.name_ar : trip.name_en
+                    const tripDesc = ar
+                      ? (trip as unknown as { description_ar?: string }).description_ar
+                      : (trip as unknown as { description_en?: string }).description_en
+                    const duration = ar
+                      ? (trip as unknown as { duration?: string }).duration
+                      : (trip as unknown as { duration_en?: string }).duration_en
+                    const publicPrice = Number(trip.price) || 0
+                    const packagePrice = Number(trip.package_price) || 0
+
+                    return (
+                      <div key={trip.id} className="flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
+                        <div className="relative aspect-[16/10] overflow-hidden">
+                          <Image
+                            src={trip.image || '/media/heroposter.png'}
+                            alt={tripName}
+                            fill
+                            sizes="(max-width: 640px) 100vw, 45vw"
+                            className="object-cover"
+                          />
+                          {duration && (
+                            <span className="absolute start-3 top-3 inline-flex items-center gap-1 rounded-full bg-sea-900/70 px-2.5 py-1 text-[0.7rem] font-medium text-white backdrop-blur">
+                              <Clock className="h-3 w-3" aria-hidden="true" />
+                              {duration}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-1 flex-col p-5">
+                          <h3 className="font-display text-base font-semibold text-sea-900">{tripName}</h3>
+                          {tripDesc && (
+                            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-sea-900/60">{tripDesc}</p>
+                          )}
+                          <div className="mt-auto flex items-end justify-between gap-3 border-t border-sand-200 pt-4">
+                            <div>
+                              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-sea-900/45">
+                                {ar ? 'السعر العادي' : 'Regular price'}
+                              </p>
+                              <p className="text-sm font-medium text-sea-900/45 line-through">
+                                {fmt(publicPrice)} {common('egp')}
+                              </p>
+                            </div>
+                            <div className="text-end">
+                              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-sun-600">
+                                {ar ? 'داخل الباكدج' : 'In this package'}
+                              </p>
+                              <p className="font-display text-lg font-bold text-sea-900">
+                                {fmt(packagePrice)} <span className="text-xs font-semibold text-sea-900/60">{common('egp')}</span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </section>
             </div>
 
-            <aside className="h-fit border border-sand-300 bg-card p-6 lg:sticky lg:top-24">
-              <h2 className="font-display text-xl font-bold text-sea-900">{ar ? 'إجمالي الباكدج' : 'Package total'}</h2>
-              <p className="mt-3 font-display text-3xl font-extrabold text-sea-900">
-                {total.toLocaleString(ar ? 'ar-EG' : 'en-US')} <span className="text-base font-semibold text-sea-900/70">{common('egp')}</span>
-              </p>
-              <p className="mt-2 text-xs text-sea-900/50">
-                {ar ? `للـ ${trips.length} تجارب مع بعض` : `For all ${trips.length} experiences together`}
-              </p>
-              <div className="mt-6 border-t border-sand-200 pt-6">
-                <Link
-                  href="/book-dahab"
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-sun-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-sun-600"
-                >
-                  {nav('book')}
-                  <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
-                </Link>
+            <aside className="h-fit space-y-6 lg:sticky lg:top-24">
+              <div className="border border-sand-300 bg-card p-6">
+                <h2 className="font-display text-lg font-bold text-sea-900">
+                  {ar ? 'قيمة الباكدج' : 'Package value'}
+                </h2>
+                <dl className="mt-4 space-y-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-sea-900/60">{ar ? 'لو حجزتهم منفصلين' : 'Booked separately'}</dt>
+                    <dd className="font-medium text-sea-900/50 line-through">
+                      {fmt(totals.publicTotal)} {common('egp')}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-sea-900/70 font-medium">{ar ? 'سعر الباكدج' : 'Package price'}</dt>
+                    <dd className="font-display text-xl font-extrabold text-sea-900">
+                      {fmt(totals.packageTotal)} <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+                    </dd>
+                  </div>
+                  {totals.savings > 0 && (
+                    <div className="flex items-center justify-between rounded-md bg-sun-50 px-3 py-2">
+                      <dt className="font-semibold text-sun-700">{ar ? 'وفّرت' : 'You save'}</dt>
+                      <dd className="font-display text-base font-extrabold text-sun-700">
+                        {fmt(totals.savings)} {common('egp')}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
                 <p className="mt-3 text-xs text-sea-900/50">
-                  {ar ? 'اختار إقامتك في دهب وضيف الباكدج ده في نموذج الحجز.' : 'Pick your Dahab stay, then add this package in the booking form.'}
+                  {ar ? `للـ ${trips.length} تجارب مع بعض` : `For all ${trips.length} experiences together`}
                 </p>
+              </div>
+
+              <div className="border border-sand-300 bg-card p-6">
+                <TripPackageBookingForm
+                  packageId={pkg.id}
+                  packageNameAr={pkg.name_ar}
+                  packageNameEn={pkg.name_en}
+                  whatsappNumber={whatsappNumber}
+                />
               </div>
             </aside>
           </div>

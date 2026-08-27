@@ -7,6 +7,7 @@ import {
   getCommunityPosts,
   getSiteSettings,
 } from '@/lib/data'
+import { getTripPackages } from '@/lib/trip-packages'
 
 export async function generateMetadata({ params }: {
   params: Promise<{ locale: string }>
@@ -18,11 +19,12 @@ export async function generateMetadata({ params }: {
 // Server Component: everything the home page shows comes from Supabase and is
 // editable from the dashboard. The client half only handles interaction.
 export default async function HomePage() {
-  const [accommodations, trips, posts, settings] = await Promise.all([
+  const [accommodations, trips, posts, settings, packages] = await Promise.all([
     getAccommodations(),
     getSinaiTrips(),
     getCommunityPosts(),
     getSiteSettings(),
+    getTripPackages(),
   ])
 
   return (
@@ -31,6 +33,7 @@ export default async function HomePage() {
       trips={trips}
       posts={posts}
       settings={settings}
+      packages={packages}
     />
   )
 }

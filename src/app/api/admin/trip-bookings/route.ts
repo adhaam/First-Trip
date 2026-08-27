@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('trip_bookings')
-    .select('*, sinai_trips(name_ar, name_en)')
+    .select('*, sinai_trips(name_ar, name_en), trip_packages(name_ar, name_en)')
     .order('created_at', { ascending: false })
     .limit(300)
   if (error) {

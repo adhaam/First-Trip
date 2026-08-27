@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
 import { verifyTurnstile } from '@/lib/turnstile'
+import { getTripPackagesForPricing } from '@/lib/trip-packages'
 
 // Simple in-memory rate limit, consistent with /api/bookings.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -22,7 +23,8 @@ function rateLimit(ip: string): boolean {
 }
 
 const tripBookingSchema = z.object({
-  trip_id: z.string().uuid(),
+  trip_id: z.string().uuid().optional(),
+  trip_package_id: z.string().uuid().optional(),
   customer_name: z.string().min(3).max(100),
   customer_phone: z.string().min(10).max(20),
   customer_email: z.string().email().optional().or(z.literal('')),
@@ -34,6 +36,8 @@ const tripBookingSchema = z.object({
   notes: z.string().max(500).optional(),
   website: z.string().max(200).optional(),
   turnstile_token: z.string().optional(),
+}).refine((d) => Boolean(d.trip_id) !== Boolean(d.trip_package_id), {
+  message: 'Provide exactly one of trip_id or trip_package_id',
 })
 
 /**
@@ -71,17 +75,70 @@ export async function POST(req: NextRequest) {
 
     const supabase = getSupabaseAdmin()
 
-    const { data: trip } = await supabase
-      .from('sinai_trips')
-      .select('id, price, is_active')
-      .eq('id', validated.data.trip_id)
-      .maybeSingle()
-    if (!trip || !trip.is_active) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+    const insertBase = {
+      customer_name: validated.data.customer_name,
+      customer_phone: validated.data.customer_phone,
+      preferred_date: validated.data.preferred_date || null,
+      num_people: validated.data.num_people,
+      adults: validated.data.adults ?? null,
+      children: validated.data.children ?? null,
+      selected_options: validated.data.selected_options || {},
+      notes: validated.data.notes || '',
+      source: 'website',
+      status: 'new',
     }
 
-    // Quoted price is always server-derived — never trusted from the client.
-    const quotedPrice = Number(trip.price) * validated.data.num_people
+    let insertRow: Record<string, unknown>
+
+    if (validated.data.trip_package_id) {
+      // Package booking — server recomputes the authoritative total from
+      // trusted DB values and freezes it into package_snapshot at request
+      // time. Never trust a client-sent total.
+      const [pkg] = await getTripPackagesForPricing([validated.data.trip_package_id])
+      if (!pkg || !pkg.totals?.isValid) {
+        return NextResponse.json({ error: 'Package not found' }, { status: 404 })
+      }
+      const quotedPrice = pkg.totals.packageTotal * validated.data.num_people
+      insertRow = {
+        ...insertBase,
+        trip_id: null,
+        trip_package_id: pkg.id,
+        context: 'package',
+        quoted_price: quotedPrice,
+        package_snapshot: {
+          name_ar: pkg.name_ar,
+          name_en: pkg.name_en,
+          package_total: pkg.totals.packageTotal,
+          public_total: pkg.totals.publicTotal,
+          savings: pkg.totals.savings,
+          trips: (pkg.trips || []).map((t) => ({
+            id: t.id,
+            name_ar: t.name_ar,
+            name_en: t.name_en,
+            price: t.price,
+            package_price: t.package_price,
+          })),
+        },
+      }
+    } else {
+      const { data: trip } = await supabase
+        .from('sinai_trips')
+        .select('id, price, is_active')
+        .eq('id', validated.data.trip_id)
+        .maybeSingle()
+      if (!trip || !trip.is_active) {
+        return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+      }
+
+      // Quoted price is always server-derived — never trusted from the client.
+      const quotedPrice = Number(trip.price) * validated.data.num_people
+      insertRow = {
+        ...insertBase,
+        trip_id: validated.data.trip_id,
+        context: 'standalone',
+        quoted_price: quotedPrice,
+      }
+    }
 
     const customer = await findOrCreateCustomerByPhone({
       phone: validated.data.customer_phone,
@@ -91,22 +148,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('trip_bookings')
-      .insert({
-        customer_id: customer.id,
-        trip_id: validated.data.trip_id,
-        customer_name: validated.data.customer_name,
-        customer_phone: validated.data.customer_phone,
-        preferred_date: validated.data.preferred_date || null,
-        num_people: validated.data.num_people,
-        adults: validated.data.adults ?? null,
-        children: validated.data.children ?? null,
-        selected_options: validated.data.selected_options || {},
-        context: 'standalone',
-        quoted_price: quotedPrice,
-        notes: validated.data.notes || '',
-        source: 'website',
-        status: 'new',
-      })
+      .insert({ ...insertRow, customer_id: customer.id })
       .select()
       .single()
 

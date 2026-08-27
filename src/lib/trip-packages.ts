@@ -78,6 +78,32 @@ export async function getTripPackageBySlug(slug: string): Promise<TripPackage | 
   return pkg.totals?.isValid ? pkg : null
 }
 
+const PACKAGE_SELECT_WITH_TRIP_DETAIL =
+  '*, trip_package_items(sort_order, sinai_trips(id, name_ar, name_en, description_ar, description_en, duration, duration_en, images, price, package_price))'
+
+/**
+ * Package detail page ONLY — per-trip `price`/`package_price` are
+ * intentionally NOT stripped here, so the page can show the "regular price
+ * vs in this package" comparison called for in the product spec. Never
+ * reuse this for the package rail/cards (getTripPackages) or any other
+ * surface — those must keep showing only the aggregate total.
+ */
+export async function getTripPackageBySlugForDetail(slug: string): Promise<TripPackage | null> {
+  if (!isSupabaseConfigured()) return null
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('trip_packages')
+    .select(PACKAGE_SELECT_WITH_TRIP_DETAIL)
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (error || !data) return null
+  const pkg = mapItems(normalizeTripImage(data as unknown as TripPackageRow))
+  const totals = computePackageTotals(pkg.trips || [])
+  const withTotals = { ...pkg, totals }
+  return withTotals.totals?.isValid ? withTotals : null
+}
+
 /**
  * SERVER-SIDE / AUTHORITATIVE ONLY — real package_price included, never
  * stripped. For use by /api/bookings and /api/quote to independently

@@ -79,8 +79,8 @@ export function ExperienceCategoryManager() {
     <div className="space-y-4">
       <p className="text-sm text-gray-500">
         {ar
-          ? 'تصنيفات تجارب WEEMAP المميزة — قابلة للتعديل من غير أي تعديل في الكود.'
-          : 'WEEMAP Signature Experience categories — editable without code changes.'}
+          ? 'تصنيفات Signature Experiences — قابلة للتعديل من غير أي تعديل في الكود.'
+          : 'Signature Experiences categories — editable without code changes.'}
       </p>
       <Card>
         <CardContent className="p-4 grid gap-3 sm:grid-cols-2">

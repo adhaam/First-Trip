@@ -7,7 +7,7 @@
     "home": "الرئيسية",
     "book": "احجز دهب",
     "trips": "رحلات سيناء",
-    "signature": "WEEMAP SIGNATURE",
+    "signature": "Signature Experiences",
     "community": "الكوميونيتي",
     "partner": "شراكات",
     "about": "عننا",
@@ -486,9 +486,9 @@
   },
   "signature": {
     "eyebrow": "WEEMAP SIGNATURE",
-    "title": "تجارب WEEMAP المميزة",
+    "title": "Signature Experiences",
     "subtitle": "مش مجرد رحلة. تجربة سيناء متظبطة من أول لحظة لآخر ذكرى.",
-    "body": "بعض الرحلات تستاهل أكتر من مجرد حجز مكان ورحلة. تجارب WEEMAP المميزة بتجمع التفاصيل المهمة في تجربة واحدة مترتبة بعناية — من المكان والنشاط لحد الشركاء والتفاصيل اللي بتخلي الرحلة مختلفة فعلًا.",
+    "body": "بعض الرحلات تستاهل أكتر من مجرد حجز مكان ورحلة. Signature Experiences بتجمع التفاصيل المهمة في تجربة واحدة مترتبة بعناية — من المكان والنشاط لحد الشركاء والتفاصيل اللي بتخلي الرحلة مختلفة فعلًا.",
     "primaryCta": "اكتشف التجارب",
     "secondaryCta": "صمّم تجربتك",
     "requestCta": "اطلب التجربة",
@@ -517,6 +517,6 @@
     "duration": "المدة",
     "category": "التصنيف",
     "noExperiences": "لسه مفيش تجارب مميزة منشورة — تابعنا قريبًا.",
-    "backToSignature": "رجوع لتجارب WEEMAP المميزة"
+    "backToSignature": "رجوع لـ Signature Experiences"
   }
 }

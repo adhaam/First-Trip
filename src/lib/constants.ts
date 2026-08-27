@@ -11,7 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: '🏠' },
   { label_ar: 'احجز دهب', label_en: 'Book Dahab', href: '/book-dahab', icon: '📅' },
   { label_ar: 'رحلات سيناء', label_en: 'Sinai Trips', href: '/sinai-trips', icon: '🏜️' },
-  { label_ar: 'WEEMAP SIGNATURE', label_en: 'WEEMAP Signature', href: '/signature', icon: '✨' },
+  { label_ar: 'Signature Experiences', label_en: 'Signature Experiences', href: '/signature', icon: '✨' },
   { label_ar: 'المتجر', label_en: 'Merch', href: '/merch', icon: '🛍️' },
   { label_ar: 'الإيجارات', label_en: 'Rental', href: '/rent', icon: '🚲' },
   { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: '👥' },

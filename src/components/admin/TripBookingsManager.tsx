@@ -26,7 +26,10 @@ interface TripBooking {
   final_price: number | null
   status: TripBookingStatus
   created_at: string
+  context: string
+  trip_package_id: string | null
   sinai_trips: { name_ar: string; name_en: string } | null
+  trip_packages: { name_ar: string; name_en: string } | null
 }
 
 const STATUS_STYLES: Record<TripBookingStatus, string> = {
@@ -234,7 +237,7 @@ export function TripBookingsManager() {
               <TableRow>
                 <TableHead>{ar ? 'العميل' : 'Customer'}</TableHead>
                 <TableHead>{ar ? 'الهاتف' : 'Phone'}</TableHead>
-                <TableHead>{ar ? 'الرحلة' : 'Trip'}</TableHead>
+                <TableHead>{ar ? 'الرحلة / الباكدج' : 'Trip / Package'}</TableHead>
                 <TableHead>{ar ? 'التاريخ المفضل' : 'Preferred date'}</TableHead>
                 <TableHead>{ar ? 'عدد الأشخاص' : 'People'}</TableHead>
                 <TableHead>{ar ? 'السعر' : 'Price'}</TableHead>
@@ -255,7 +258,20 @@ export function TripBookingsManager() {
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.customer_name}</TableCell>
                   <TableCell dir="ltr">{b.customer_phone}</TableCell>
-                  <TableCell>{ar ? b.sinai_trips?.name_ar : b.sinai_trips?.name_en}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>
+                        {b.trip_package_id
+                          ? (ar ? b.trip_packages?.name_ar : b.trip_packages?.name_en)
+                          : (ar ? b.sinai_trips?.name_ar : b.sinai_trips?.name_en)}
+                      </span>
+                      {b.trip_package_id && (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-800">
+                          {ar ? 'باكدج' : 'Package'}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{b.preferred_date || '—'}</TableCell>
                   <TableCell>{b.num_people}</TableCell>
                   <TableCell>{b.final_price ?? b.quoted_price ?? '—'} {ar ? 'ج.م' : 'EGP'}</TableCell>

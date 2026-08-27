@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { ButtonLink } from '@/components/ButtonLink'
 import { Logo } from '@/components/brand/Logo'
@@ -10,13 +10,14 @@ import { SectionHeading, WaveDivider, TopoBackdrop } from '@/components/brand/Se
 import { Reveal, GlowCard } from '@/components/motion/Reveal'
 import { AccommodationCard } from '@/components/cards/AccommodationCard'
 import { TripCard } from '@/components/cards/TripCard'
+import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { NewsletterSignup } from '@/components/NewsletterSignup'
 import { TrustSection } from '@/components/TrustSection'
-import { SERVICES, WHATSAPP_NUMBER } from '@/lib/constants'
-import { ArrowUpRight, MessageCircle } from 'lucide-react'
+import { WHATSAPP_NUMBER } from '@/lib/constants'
+import { ArrowUpRight, MessageCircle, Building2, Mountain, Package, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type {
-  Accommodation, CommunityPost, SinaiTrip, SiteSettings,
+  Accommodation, CommunityPost, SinaiTrip, SiteSettings, TripPackage,
 } from '@/lib/types'
 
 interface Props {
@@ -24,9 +25,10 @@ interface Props {
   trips: SinaiTrip[]
   posts: CommunityPost[]
   settings: SiteSettings | null
+  packages: TripPackage[]
 }
 
-export function HomeClient({ accommodations, trips, posts, settings }: Props) {
+export function HomeClient({ accommodations, trips, posts, settings, packages }: Props) {
   // Owner-picked featured content (Site Settings → Homepage); empty = automatic
   const featuredAccIds = settings?.featured_accommodation_ids || []
   const featuredTripIds = settings?.featured_trip_ids || []
@@ -40,16 +42,13 @@ export function HomeClient({ accommodations, trips, posts, settings }: Props) {
   return (
     <div className="overflow-x-clip">
       <Hero settings={settings} />
-      <Services />
-      <Trips items={featuredTrips} />
-      <Accommodations items={featuredAccs} />
-      <ExploreSinai trip={featuredTrips[0]} settings={settings} />
-      <WeemapPicks accommodation={featuredAccs[0]} trip={featuredTrips[1] || featuredTrips[0]} />
-      <HowItWorks />
+      <PrimaryDiscovery />
+      <TripsAndPackages trips={featuredTrips} packages={packages} />
+      <Stays items={featuredAccs} />
+      <SignatureFeature />
+      <MoreFromWeemap />
       <TrustSection />
       {settings?.show_community !== false && <Community posts={posts} />}
-      {settings?.show_partners !== false && <Partners />}
-      <DahabGuide />
       {settings?.show_newsletter !== false && <NewsletterSignup />}
       <FinalCta settings={settings} />
     </div>
@@ -75,20 +74,10 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   const videoSrc = '/media/herovideo.mp4'
   const posterSrc = '/media/heroposter.png'
 
-  /**
-   * Mobile hero fix: the video element starts opacity-0 so the poster is
-   * always visible. We reveal the video only when it is ACTUALLY playing —
-   * which prevents the black frame that appears on iOS/Android when the
-   * browser loads the video element but hasn't started rendering frames yet.
-   *
-   * Using both `onCanPlay` (fires early on desktop) and `onPlay` (fires when
-   * the browser starts frame-delivery) for widest compatibility.
-   * `prefers-reduced-motion` keeps the video hidden entirely.
-   */
   const [videoReady, setVideoReady] = useState(false)
   const revealVideo = () => setVideoReady(true)
 
-  // Owner-editable hero copy (Site Settings → Homepage). Empty = default.
+  // Owner-editable hero copy (Site Settings → Homepage). Empty = brand default.
   const headingAr = settings?.hero_heading_ar || 'إحنا بنرسم لك سيناء'
   const headingEn = settings?.hero_heading_en || 'We map Sinai.'
   const subAr = settings?.hero_subheading_ar || 'وإنت بتعيشها'
@@ -97,8 +86,6 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   return (
     <section className="relative isolate flex min-h-svh items-center overflow-hidden bg-sea-900">
       <div className="absolute inset-0 -z-10">
-        {/* Poster — ALWAYS rendered, NEVER removed. It is the background
-            fallback for when autoplay fails or prefers-reduced-motion is on. */}
         <Image
           src={posterSrc}
           alt={ar ? 'طريق صحراوي في سيناء ليلاً' : 'A Sinai desert road at night'}
@@ -108,9 +95,6 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           className="object-cover"
         />
 
-        {/* Video: starts completely invisible (opacity-0). Fades in only
-            when the browser confirms it is actually delivering frames.
-            The poster image above acts as the persistent fallback layer. */}
         <video
           key={videoSrc}
           autoPlay
@@ -130,7 +114,6 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           <source src={videoSrc} type="video/mp4" />
         </video>
 
-        {/* Readability overlay only — all motion already lives in the video. */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
         <div className="absolute inset-0 bg-black/10" />
       </div>
@@ -154,8 +137,8 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-base leading-relaxed text-sand-100/85 sm:text-lg">
               {ar
-                ? 'انتقالات، إقامة، ورحلات سينا في مكان واحد. اختار اللي يناسب رحلتك وإحنا نأكد معاك التفاصيل.'
-                : 'Transfers, stays, and Sinai trips in one place. Choose what fits and we will confirm the details with you.'}
+                ? 'إقامة، انتقالات، رحلات، باقات وتجارب متظبطة في مكان واحد. اختار شكل رحلتك وإحنا نكمّل معاك التفاصيل.'
+                : "Stays, transfers, trips, packages and curated experiences in one place. Choose how you want to experience Sinai and we'll help shape the rest."}
             </p>
           </Reveal>
 
@@ -167,7 +150,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
                 variant="sun"
                 className="group justify-center"
               >
-                {(ar ? settings?.primary_cta_label_ar : settings?.primary_cta_label_en) || (ar ? 'خطط رحلتك' : 'PLAN YOUR TRIP')}
+                {ar ? 'ابدأ رحلتك' : 'Start your trip'}
                 <ArrowUpRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 rtl:-scale-x-100" />
               </ButtonLink>
 
@@ -177,7 +160,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
                 variant="outline-light"
                 className="justify-center backdrop-blur"
               >
-                {(ar ? settings?.secondary_cta_label_ar : settings?.secondary_cta_label_en) || (ar ? 'استكشف سيناء' : 'EXPLORE SINAI')}
+                {ar ? 'اكتشف سيناء' : 'Explore Sinai'}
               </ButtonLink>
             </div>
           </Reveal>
@@ -205,48 +188,76 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   )
 }
 
-/* ─────────────────────────── TRUST BAR ─────────────────────────── */
+/* ─────────────────────── PRIMARY DISCOVERY (4 paths) ─────────────────────── */
 
-/* ─────────────────────────── SERVICES ─────────────────────────── */
-
-function Services() {
-  const t = useTranslations()
+function PrimaryDiscovery() {
   const locale = useLocale()
   const ar = locale === 'ar'
+
+  const paths = [
+    {
+      icon: Building2,
+      href: '/book-dahab',
+      title_ar: 'دهب متظبطة',
+      title_en: 'Dahab, sorted',
+      body_ar: 'إقامة، انتقالات، أو الباكدج الكامل — اختار اللي يناسب رحلتك.',
+      body_en: 'Stay, transfers or the full Dahab package — choose what fits your trip.',
+    },
+    {
+      icon: Mountain,
+      href: '/sinai-trips',
+      title_ar: 'رحلات سيناء',
+      title_en: 'Sinai Trips',
+      body_ar: 'من البحر والصحرا للجبال والسهرات — احجز تجربة واحدة وعيشها.',
+      body_en: 'Sea, desert, mountains and nights — pick one experience and go.',
+    },
+    {
+      icon: Package,
+      href: '/sinai-trips',
+      title_ar: 'باقات الرحلات',
+      title_en: 'Trip Packages',
+      body_ar: 'أكتر من تجربة، متجمعة بسعر أفضل من حجز كل رحلة لوحدها.',
+      body_en: 'More experiences together, at a better total than booking them separately.',
+    },
+    {
+      icon: Sparkles,
+      href: '/signature',
+      title_ar: 'Signature Experiences',
+      title_en: 'Signature Experiences',
+      body_ar: 'رحلات كاملة متصممة حوالين نوع التجربة — من الهاني مون للغوص والكايت والمغامرة.',
+      body_en: 'Complete journeys built around an experience — from honeymoons to diving, kite and adventure.',
+    },
+  ]
 
   return (
     <section className="relative section-padding bg-sand-50">
       <TopoBackdrop />
       <div className="container-main relative">
         <SectionHeading
-          eyebrow={ar ? 'خدماتنا' : 'What we do'}
-          title={t('home.servicesTitle')}
-          subtitle={
-            ar
-              ? 'ابدأ باللي محتاجه: باكدج كامل، إقامة، رحلة، أو انتقال.'
-              : 'Start with what you need: a full package, stay, trip, or transfer.'
-          }
+          eyebrow={ar ? 'ابدأ من هنا' : 'Start here'}
+          title={ar ? 'إنت جاي سيناء تعمل إيه؟' : 'What brings you to Sinai?'}
+          subtitle={ar ? 'ابدأ من نوع الرحلة اللي شبهك.' : "Start with the kind of experience you're looking for."}
         />
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
-          {SERVICES.map((service, i) => (
-            <Reveal key={i} delay={i * 80} className={cn('h-full', i < 2 ? 'lg:col-span-6' : i === 2 ? 'lg:col-span-5' : 'lg:col-span-7')}>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {paths.map((path, i) => (
+            <Reveal key={path.href + path.title_en} delay={i * 80} className="h-full">
               <GlowCard className="h-full">
                 <Link
-                  href={service.href}
+                  href={path.href}
                   className="hover-lift group flex h-full flex-col border-[1.5px] border-sand-300 bg-card p-6 pin-card transition-colors hover:border-sea-900/25"
                 >
                   <span
                     aria-hidden
-                    className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-100 text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]"
+                    className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-100 text-sea-900 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]"
                   >
-                    {service.icon}
+                    <path.icon className="h-6 w-6" />
                   </span>
                   <h3 className="font-display text-lg font-semibold text-sea-900">
-                    {ar ? service.title_ar : service.title_en}
+                    {ar ? path.title_ar : path.title_en}
                   </h3>
                   <p className="mt-2.5 text-sm leading-relaxed text-sea-900/60">
-                    {ar ? service.description_ar : service.description_en}
+                    {ar ? path.body_ar : path.body_en}
                   </p>
                   <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-sea-600 transition-colors group-hover:text-sun-500">
                     {ar ? 'اعرف أكتر' : 'Learn more'}
@@ -262,55 +273,52 @@ function Services() {
   )
 }
 
-/* ─────────────────────────── HOW IT WORKS ─────────────────────────── */
+/* ─────────────────────────── TRIPS + PACKAGES ─────────────────────────── */
 
-function HowItWorks() {
-  const t = useTranslations('home')
+function TripsAndPackages({ trips, packages }: { trips: SinaiTrip[]; packages: TripPackage[] }) {
+  const locale = useLocale()
+  const ar = locale === 'ar'
+  const tripPicks = trips.slice(0, 3)
+  const packagePicks = packages.slice(0, 2)
 
-  const steps = [
-    { title: t('step1'), desc: t('step1Desc') },
-    { title: t('step2'), desc: t('step2Desc') },
-    { title: t('step3'), desc: t('step3Desc') },
-    { title: t('step4'), desc: t('step4Desc') },
-  ]
+  if (tripPicks.length === 0 && packagePicks.length === 0) return null
 
   return (
-    <section className="relative overflow-hidden bg-sea-900 py-20 text-white md:py-28">
-      <div className="absolute inset-0 depth-bg opacity-70" />
+    <section className="relative section-padding bg-sand-100">
+      <TopoBackdrop />
       <div className="container-main relative">
         <SectionHeading
-          eyebrow={t('howItWorksTitle')}
-          title={t('howItWorksTitle')}
-          subtitle={t('howItWorksSub')}
-          tone="light"
+          eyebrow={ar ? 'رحلات وباقات' : 'Trips & packages'}
+          title={ar ? 'اختار تجربتك في سيناء' : 'Choose your Sinai experience'}
+          subtitle={ar ? 'رحلة واحدة، أو باكدج يجمع لك أكتر من تجربة بسعر أحسن.' : 'Book one trip, or bundle more of Sinai into a better-value package.'}
+          action={
+            <ButtonLink href="/sinai-trips" variant="outline-ink" size="lg">
+              {ar ? 'عرض الكل' : 'View all'}
+              <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+            </ButtonLink>
+          }
         />
 
-        <ol className="relative grid gap-8 md:grid-cols-4 md:gap-6">
-          {/* the dotted route line that ties the four steps together */}
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-6 hidden border-t-2 border-dashed border-white/15 md:block"
-          />
-          {steps.map((step, i) => (
-            <Reveal key={i} delay={i * 90} as="li" className="relative">
-              <div className="relative mb-5 inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-sun-400 bg-sea-900 font-display text-lg font-extrabold text-sun-300">
-                {i + 1}
-              </div>
-              <h3 className="font-display text-lg font-semibold text-white">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-sand-100/65">{step.desc}</p>
+        <ScrollRail cols={3}>
+          {tripPicks.map((trip, i) => (
+            <Reveal key={trip.id} delay={i * 80} className="w-[78vw] shrink-0 sm:w-auto">
+              <TripCard trip={trip} />
             </Reveal>
           ))}
-        </ol>
+          {packagePicks.map((pkg, i) => (
+            <Reveal key={pkg.id} delay={(tripPicks.length + i) * 80} className="w-[78vw] shrink-0 sm:w-auto">
+              <TripPackageCard pkg={pkg} />
+            </Reveal>
+          ))}
+        </ScrollRail>
       </div>
-      <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
     </section>
   )
 }
 
-/* ─────────────────────────── ACCOMMODATIONS ─────────────────────────── */
+/* ─────────────────────────── STAYS / BOOK DAHAB ─────────────────────────── */
 
-function Accommodations({ items }: { items: Accommodation[] }) {
-  const t = useTranslations('home')
+function Stays({ items }: { items: Accommodation[] }) {
   const locale = useLocale()
   const ar = locale === 'ar'
   const picks = items.slice(0, 4)
@@ -322,11 +330,11 @@ function Accommodations({ items }: { items: Accommodation[] }) {
       <div className="container-main">
         <SectionHeading
           eyebrow={ar ? 'الإقامة' : 'Stays'}
-          title={t('accommodationsTitle')}
-          subtitle={t('accommodationsSub')}
+          title={ar ? 'نام في المكان اللي شبه رحلتك' : 'Stay somewhere that fits your trip'}
+          subtitle={ar ? 'فندق، شاليه أو كامب — شوف المكان والسعر وابدأ ترتب دهب.' : 'Hotel, chalet or camp — find your place and start shaping your Dahab stay.'}
           action={
             <ButtonLink href="/book-dahab" variant="outline-ink" size="lg">
-              {t('viewAll')}
+              {ar ? 'عرض الكل' : 'View all'}
               <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
             </ButtonLink>
           }
@@ -344,69 +352,36 @@ function Accommodations({ items }: { items: Accommodation[] }) {
   )
 }
 
-/* ─────────────────────────── SINAI TRIPS ─────────────────────────── */
+/* ─────────────────────────── SIGNATURE FEATURE MOMENT ─────────────────────────── */
 
-function Trips({ items }: { items: SinaiTrip[] }) {
-  const t = useTranslations('home')
+function SignatureFeature() {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const picks = items.slice(0, 3)
-
-  if (picks.length === 0) return null
 
   return (
-    <section className="relative section-padding bg-sand-100">
-      <TopoBackdrop />
-      <div className="container-main relative">
-        <SectionHeading
-          eyebrow={ar ? 'رحلات داخلية' : 'Day trips'}
-          title={t('tripsTitle')}
-          subtitle={t('tripsSub')}
-          action={
-            <ButtonLink href="/sinai-trips" variant="outline-ink" size="lg">
-              {t('viewAll')}
-              <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
-            </ButtonLink>
-          }
-        />
-
-        <ScrollRail cols={3}>
-          {picks.map((trip, i) => (
-            <Reveal key={trip.id} delay={i * 80} className="w-[78vw] shrink-0 sm:w-auto">
-              <TripCard trip={trip} />
-            </Reveal>
-          ))}
-        </ScrollRail>
-      </div>
-    </section>
-  )
-}
-
-/* ─────────────────────────── WHY US ─────────────────────────── */
-
-function ExploreSinai({ trip, settings }: { trip?: SinaiTrip; settings: SiteSettings | null }) {
-  const t = useTranslations('home')
-  const locale = useLocale()
-  const ar = locale === 'ar'
-  const image = settings?.explore_media_url || trip?.images?.[0] || '/media/heroposter.png'
-  const alt = (ar ? settings?.explore_media_alt_ar : settings?.explore_media_alt_en) || t('exploreMediaAlt')
-  const copy = (ar ? settings?.explore_copy_ar : settings?.explore_copy_en) || t('exploreCopy')
-  return (
-    <section className="relative isolate min-h-[32rem] overflow-hidden bg-sea-900 text-white md:min-h-[40rem]">
-      <Image src={image} alt={alt} fill sizes="100vw" className="-z-20 object-cover object-center" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/75 via-black/35 to-black/5 rtl:bg-gradient-to-l" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
-      <div className="container-main flex min-h-[32rem] items-end py-14 md:min-h-[40rem] md:items-center md:py-24">
+    <section className="relative isolate min-h-[32rem] overflow-hidden bg-sea-900 text-white md:min-h-[38rem]">
+      <Image
+        src="/media/heroposter.png"
+        alt={ar ? 'تجربة Signature في سيناء' : 'A Signature experience in Sinai'}
+        fill
+        sizes="100vw"
+        className="-z-20 object-cover object-center"
+      />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/80 via-black/40 to-black/10 rtl:bg-gradient-to-l" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+      <div className="container-main flex min-h-[32rem] items-end py-14 md:min-h-[38rem] md:items-center md:py-24">
         <Reveal className="max-w-2xl">
-          <span className="eyebrow text-sun-300">{t('exploreEyebrow')}</span>
-          <h2 className="mt-5 max-w-xl text-4xl font-extrabold leading-[1.04] sm:text-5xl md:text-7xl">
-            {t('exploreTitle')}
+          <span className="eyebrow text-sun-300">WEEMAP SIGNATURE</span>
+          <h2 className="mt-5 max-w-xl text-3xl font-extrabold leading-[1.1] sm:text-4xl md:text-5xl">
+            {ar ? 'مش كل رحلة تتعمل قطعة قطعة.' : "Some trips shouldn't be built piece by piece."}
           </h2>
-          <p className="mt-6 line-clamp-4 max-w-[36rem] text-base leading-relaxed text-white/85 sm:line-clamp-3 sm:text-lg">
-            {copy}
+          <p className="mt-6 max-w-[36rem] text-base leading-relaxed text-white/85 sm:text-lg">
+            {ar
+              ? 'Signature Experiences بتجمع المكان والنشاط والشركاء والتفاصيل في تجربة واحدة معمولة لفكرة الرحلة نفسها.'
+              : 'Signature Experiences bring the place, activity, partners and details together around one complete idea.'}
           </p>
-          <ButtonLink href="/sinai-trips" variant="sun" size="lg" className="mt-8">
-            {t('exploreCta')}
+          <ButtonLink href="/signature" variant="sun" size="lg" className="mt-8">
+            {ar ? 'اكتشف Signature Experiences' : 'Explore Signature Experiences'}
             <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
           </ButtonLink>
         </Reveal>
@@ -415,48 +390,63 @@ function ExploreSinai({ trip, settings }: { trip?: SinaiTrip; settings: SiteSett
   )
 }
 
-function WeemapPicks({ accommodation, trip }: { accommodation?: Accommodation; trip?: SinaiTrip }) {
+/* ─────────────────────────── MERCH + RENT ─────────────────────────── */
+
+function MoreFromWeemap() {
   const locale = useLocale()
   const ar = locale === 'ar'
-  if (!accommodation && !trip) return null
+
   return (
-    <section className="section-padding bg-sand-50">
+    <section className="section-padding bg-sand-100">
       <div className="container-main">
         <SectionHeading
-          eyebrow={ar ? 'اختيارات وي ماب' : 'WEEMAP Picks'}
-          title={ar ? 'نقط بداية لرحلة أحلى' : 'A considered place to start'}
-          subtitle={ar ? 'اختيارات من الإقامة والرحلات المميزة الموجودة دلوقتي.' : 'A focused edit from the stays and trips currently available.'}
+          eyebrow="MORE FROM WEEMAP"
+          title={ar ? 'خد اللي تحتاجه معاك' : 'Take more of the experience with you'}
         />
-        <div className="grid gap-5 lg:grid-cols-12 lg:items-stretch">
-          {accommodation && <div className="lg:col-span-7"><AccommodationCard acc={accommodation} /></div>}
-          {trip && <div className="lg:col-span-5"><TripCard trip={trip} /></div>}
-        </div>
-      </div>
-    </section>
-  )
-}
 
-function Partners() {
-  const locale = useLocale()
-  const ar = locale === 'ar'
-  return (
-    <section className="border-y border-white/10 bg-[#1b1b17] py-16 text-sand-50 md:py-20">
-      <div className="container-main grid gap-8 md:grid-cols-[1.4fr_0.6fr] md:items-end">
-        <Reveal>
-          <span className="eyebrow text-sun-300">{ar ? 'شركاء الرحلة' : 'Partners in the journey'}</span>
-          <h2 className="mt-4 max-w-3xl text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
-            {ar ? 'بنبني الرحلة مع الناس اللي عايشة سينا.' : 'The strongest Sinai journeys are built locally.'}
-          </h2>
-          <p className="mt-5 max-w-2xl leading-relaxed text-sand-100/70">
-            {ar ? 'لو بتدير مكان إقامة أو تجربة أو خدمة نقل، نحب نسمع منك.' : 'If you run a stay, experience, or transport service, we would like to hear from you.'}
-          </p>
-        </Reveal>
-        <Reveal delay={80} className="md:text-end">
-          <ButtonLink href="/partner" variant="outline-light" size="lg">
-            {ar ? 'اشتغل مع وي ماب' : 'Work with WEEMAP'}
-            <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
-          </ButtonLink>
-        </Reveal>
+        <div className="grid gap-5 md:grid-cols-2">
+          <Reveal className="h-full">
+            <Link
+              href="/merch"
+              className="hover-lift group flex h-full flex-col justify-between border-[1.5px] border-sand-300 bg-card p-8 pin-card transition-colors hover:border-sea-900/25"
+            >
+              <div>
+                <span aria-hidden className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-50 text-2xl">
+                  🛍️
+                </span>
+                <h3 className="font-display text-xl font-semibold text-sea-900">WEEMAP Merch</h3>
+                <p className="mt-3 text-sm leading-relaxed text-sea-900/60">
+                  {ar ? 'قطع بروح سيناء — للرحلة، للبحر، ولما ترجع.' : 'Pieces with the spirit of Sinai — for the trip, the sea and after you\'re back.'}
+                </p>
+              </div>
+              <span className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-sea-600 transition-colors group-hover:text-sun-500">
+                {ar ? 'شوف المتجر' : 'Shop Merch'}
+                <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+              </span>
+            </Link>
+          </Reveal>
+
+          <Reveal delay={80} className="h-full">
+            <Link
+              href="/rent"
+              className="hover-lift group flex h-full flex-col justify-between border-[1.5px] border-sand-300 bg-sea-900 p-8 pin-card text-white transition-colors hover:border-sun-400/60"
+            >
+              <div>
+                <span aria-hidden className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-2xl">
+                  🚲
+                </span>
+                <h3 className="font-display text-xl font-semibold text-white">Rent</h3>
+                <p className="mt-3 text-sm leading-relaxed text-white/70">
+                  {ar ? 'معدات مختارة باليوم عشان تتحرك أخف وتستمتع أكتر.' : 'Selected gear by the day, so you can travel lighter and enjoy more.'}
+                </p>
+              </div>
+              <span className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-sun-300 transition-colors group-hover:text-sun-200">
+                {ar ? 'شوف الإيجارات' : 'Explore Rentals'}
+                <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+              </span>
+            </Link>
+          </Reveal>
+        </div>
       </div>
     </section>
   )
@@ -465,7 +455,6 @@ function Partners() {
 /* ─────────────────────────── COMMUNITY ─────────────────────────── */
 
 function Community({ posts }: { posts: CommunityPost[] }) {
-  const t = useTranslations('home')
   const locale = useLocale()
   const ar = locale === 'ar'
   const picks = posts.slice(0, 3)
@@ -477,11 +466,11 @@ function Community({ posts }: { posts: CommunityPost[] }) {
       <div className="container-main">
         <SectionHeading
           eyebrow={ar ? 'المجتمع' : 'Community'}
-          title={t('communityTitle')}
-          subtitle={t('communitySub')}
+          title={ar ? 'اعرف المكان قبل ما توصله' : 'Know the place before you arrive'}
+          subtitle={ar ? 'قصص، أدلة وأماكن من سيناء تساعدك تشوف أكتر من مجرد الأماكن المشهورة.' : 'Stories, guides and places from Sinai that take you beyond the obvious stops.'}
           action={
             <ButtonLink href="/community" variant="outline-ink" size="lg">
-              {t('viewAll')}
+              {ar ? 'ادخل الكوميونيتي' : 'Explore the Community'}
               <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
             </ButtonLink>
           }
@@ -526,60 +515,9 @@ function Community({ posts }: { posts: CommunityPost[] }) {
   )
 }
 
-/* ─────────────────────────── DAHAB GUIDE ─────────────────────────── */
-
-function DahabGuide() {
-  const t = useTranslations()
-  const locale = useLocale()
-  const ar = locale === 'ar'
-
-  const guides = ar
-    ? [
-        { title: 'الجو في دهب', desc: 'دافي طول السنة — بس أمتع وقت بين أكتوبر وأبريل. الصيف حار بس البحر بيكسبها.' },
-        { title: 'اللي هتشوفه', desc: 'بلو هول، الوادي الملون، أبو جالوم، لاجونا، جزيرة فرعون — كل ناحية فيها حاجة.' },
-        { title: 'اللي هتعمله', desc: 'سنوركل، غوص، سفاري جبلية، كايت سيرف، كامبينج، يوجا على الشاطئ.' },
-        { title: 'خد بالك', desc: 'كاش مهم — ATM مش دايماً موجود. جيب صن بلوك ومواسم الموجة احجز بدري.' },
-      ]
-    : [
-        { title: 'Weather', desc: 'Warm year-round — October to April is the sweet spot. Summer is hot, but the sea makes up for it.' },
-        { title: 'What you\'ll see', desc: 'Blue Hole, Colored Canyon, Abu Galum, Lagona, Pharaoh\'s Island — every corner has something.' },
-        { title: 'What you\'ll do', desc: 'Snorkelling, diving, mountain safari, kitesurfing, camping, beach yoga.' },
-        { title: 'Good to know', desc: 'Bring cash — ATMs aren\'t always around. Sunscreen is a must. Book early in peak season.' },
-      ]
-
-  return (
-    <section className="relative section-padding bg-sand-100">
-      <TopoBackdrop />
-      <div className="container-main relative">
-        <SectionHeading
-          eyebrow={ar ? 'قبل ما تسافر' : 'Before you go'}
-          title={t('home.dahabGuideTitle')}
-        />
-
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {guides.map((item, i) => (
-            <Reveal key={i} delay={i * 70} className="h-full">
-              <div className="hover-lift h-full border-[1.5px] border-sand-300 bg-card p-6 pin-card">
-                <span className="font-display text-4xl font-extrabold text-sand-300">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <h3 className="mt-3 font-display text-base font-semibold text-sea-900">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sea-900/60">{item.desc}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 /* ─────────────────────────── FINAL CTA ─────────────────────────── */
 
 function FinalCta({ settings }: { settings: SiteSettings | null }) {
-  const t = useTranslations()
   const locale = useLocale()
   const ar = locale === 'ar'
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
@@ -598,17 +536,17 @@ function FinalCta({ settings }: { settings: SiteSettings | null }) {
       <div className="container-main relative text-center">
         <Reveal>
           <h2 className="mx-auto max-w-2xl font-display text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
-            {t('home.finalCta')}
+            {ar ? 'سيناء مستنياك' : 'Sinai is waiting'}
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/85 md:text-lg">
-            {t('home.finalCtaSub')}
+            {ar ? 'اختار البداية وإحنا نساعدك ترتب الباقي.' : "Choose where to start and we'll help you shape the rest."}
           </p>
         </Reveal>
 
         <Reveal delay={120}>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/book-dahab" size="lg" variant="ink" className="h-13 px-8">
-              {ar ? 'احجز دلوقتي' : 'Book now'}
+              {ar ? 'ابدأ رحلتك' : 'Start your trip'}
               <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
             </ButtonLink>
             <a
@@ -618,7 +556,7 @@ function FinalCta({ settings }: { settings: SiteSettings | null }) {
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full border-[1.5px] border-white/60 px-8 text-base font-medium text-white transition-all hover:bg-white/15"
             >
               <MessageCircle className="h-5 w-5" />
-              {t('home.whatsappBtn')}
+              {ar ? 'كلمنا على واتساب' : 'Talk to WEEMAP'}
             </a>
           </div>
         </Reveal>
