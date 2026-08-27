@@ -42,10 +42,10 @@ export function HomeClient({ accommodations, trips, posts, settings, packages }:
   return (
     <div className="overflow-x-clip">
       <Hero settings={settings} />
-      <ExploreSinai trip={featuredTrips[0]} settings={settings} />
       <PrimaryDiscovery />
       <TripsAndPackages trips={featuredTrips} packages={packages} />
       <Stays items={featuredAccs} />
+      <ExploreSinai trip={featuredTrips[0]} settings={settings} />
       <SignatureFeature />
       <MoreFromWeemap />
       <TrustSection />
