@@ -14,7 +14,7 @@ type ContentFilter = 'all' | 'trips' | 'packages'
 
 // Individual trips stay the main content — this many render before the
 // premium Trip Packages rail is inserted, with the rest continuing after.
-const TRIPS_BEFORE_RAIL = 6
+const TRIPS_BEFORE_RAIL = 5
 
 export function SinaiTripsClient({
   trips,
@@ -131,7 +131,7 @@ export function SinaiTripsClient({
       )}
 
       {showTrips && restBatch.length > 0 && (
-        <div className={cn('grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3', showPackages && contentFilter === 'all' && 'mt-5')}>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {restBatch.map((trip, i) => (
             <Reveal key={trip.id} delay={(i % 9) * 60}>
               <TripCard trip={trip} includesLabel={t('includes')} />

@@ -32,11 +32,11 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
   const linkGroups = [
     {
       title: t('explore'),
-      links: ['/book-dahab', '/sinai-trips', '/community'],
+      links: ['/book-dahab', '/sinai-trips', '/signature', '/merch', '/rent'],
     },
     {
       title: t('company'),
-      links: ['/about', '/partner'],
+      links: ['/community', '/about', '/partner'],
     },
     {
       title: t('support'),
