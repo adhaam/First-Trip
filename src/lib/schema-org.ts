@@ -11,7 +11,7 @@ import type { SiteSettings } from './types'
  */
 export function getSchemaOrg(settings?: SiteSettings | null) {
   const phone = settings?.phone_number || PHONE_NUMBER
-  const instagram = settings?.instagram_url || 'https://www.instagram.com/weemapeg/'
+  const instagram = settings?.instagram_url || 'https://instagram.com/weemapsinai/'
 
   return {
     '@context': 'https://schema.org',
@@ -24,7 +24,7 @@ export function getSchemaOrg(settings?: SiteSettings | null) {
       '@value': 'منصة سفر محلية في سيناء متخصصة في الباقات الشاملة، حجز الفنادق والشاليهات والكمبات، والرحلات الداخلية في جنوب سيناء',
     },
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.png`,
+    logo: `${SITE_URL}/brand/logo.png`,
     address: {
       '@type': 'PostalAddress',
       addressLocality: 'Dahab',
@@ -49,6 +49,39 @@ export function getSchemaOrg(settings?: SiteSettings | null) {
     areaServed: {
       '@type': 'City',
       name: 'Dahab, South Sinai, Egypt',
+    },
+  }
+}
+
+export function getArticleSchema(article: {
+  title: string
+  description: string
+  image: string
+  datePublished: string
+  url: string
+  inLanguage: string
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: article.title,
+    description: article.description,
+    image: article.image,
+    datePublished: article.datePublished,
+    dateModified: article.datePublished,
+    inLanguage: article.inLanguage,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': article.url,
+    },
+    url: article.url,
+    publisher: {
+      '@type': 'Organization',
+      name: 'WEEMAP SINAI',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/brand/logo.png`,
+      },
     },
   }
 }

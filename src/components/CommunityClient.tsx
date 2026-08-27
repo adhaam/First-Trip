@@ -2,13 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { Reveal } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { POST_CATEGORY_LABELS } from '@/lib/community'
-import { Pin, Calendar, BookOpen, Compass, Waves, Mountain, Landmark, X } from 'lucide-react'
+import { Pin, Calendar, BookOpen, Compass, Waves, Mountain, Landmark, MapPin, Gem, Route, Eye, X } from 'lucide-react'
 import type { CommunityPost, PostCategory } from '@/lib/types'
 
-const icons: Partial<Record<PostCategory, typeof BookOpen>> = {
+// Covers all 14 PostCategory values — kept exhaustive (not Partial) so a
+// newly added category can't silently fall back to the generic Compass icon
+// without a deliberate choice being made here.
+const icons: Record<PostCategory, typeof BookOpen> = {
+  stories: BookOpen,
+  'dahab-guide': MapPin,
+  'sinai-guide': Compass,
+  'hidden-gems': Gem,
   diving: Waves,
   freediving: Waves,
   watersports: Waves,
@@ -17,6 +25,8 @@ const icons: Partial<Record<PostCategory, typeof BookOpen>> = {
   'advanced-adventure': Mountain,
   history: Landmark,
   culture: Landmark,
+  itineraries: Route,
+  blog: BookOpen,
 }
 
 // ─── Post Modal ───────────────────────────────────────────────────────────────
@@ -246,16 +256,43 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
             >
               <article
                 className={cn(
-                  'group h-full overflow-hidden border bg-[#fffdf8] cursor-pointer hover:shadow-md transition-shadow',
+                  'group relative h-full overflow-hidden border bg-[#fffdf8] hover:shadow-md transition-shadow',
                   post.is_pinned ? 'border-sun-400' : 'border-sand-300',
                 )}
-                onClick={() => handleOpen(post)}
-                // Accessible keyboard activation
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpen(post) } }}
-                aria-label={`${ar ? 'اقرأ المنشور' : 'Read post'}: ${ar ? post.title_ar : post.title_en}`}
               >
+                {/* Quick-preview button — supplementary to the real link below,
+                    stays keyboard/screen-reader accessible as its own control
+                    and never intercepts the card's primary navigation. */}
+                <button
+                  type="button"
+                  onClick={() => handleOpen(post)}
+                  aria-label={`${ar ? 'معاينة سريعة' : 'Quick preview'}: ${ar ? post.title_ar : post.title_en}`}
+                  className={cn(
+                    'absolute top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/85 shadow-md opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-white',
+                    ar ? 'left-3' : 'right-3',
+                  )}
+                >
+                  <Eye className="h-4 w-4 text-sea-900" />
+                </button>
+
+                {/* Primary navigation — real link to the article page. Posts
+                    without a slug (shouldn't happen after the backfill, but
+                    guarded defensively) fall back to opening the modal. */}
+                {post.slug ? (
+                  <Link
+                    href={`/community/${post.slug}`}
+                    className="absolute inset-0 z-0"
+                    aria-label={`${ar ? 'اقرأ المنشور' : 'Read post'}: ${ar ? post.title_ar : post.title_en}`}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleOpen(post)}
+                    className="absolute inset-0 z-0"
+                    aria-label={`${ar ? 'اقرأ المنشور' : 'Read post'}: ${ar ? post.title_ar : post.title_en}`}
+                  />
+                )}
+
                 {post.image_url && (
                   <div
                     className={cn(

@@ -12,14 +12,15 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
-import { SinaiTrip } from '@/lib/types'
+import { SinaiTrip, TripCategory } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const emptyTrip: Partial<SinaiTrip> = {
   name_ar: '', name_en: '',
   description_ar: '', description_en: '',
-  category_ar: '', category_en: '',
+  category_ar: '', category_en: '', trip_category_id: null,
   images: [],
   duration: '', duration_en: '',
   price: 0,
@@ -32,6 +33,7 @@ const emptyTrip: Partial<SinaiTrip> = {
 export function SinaiTripManager() {
   const locale = useLocale()
   const [trips, setTrips] = useState<SinaiTrip[]>([])
+  const [categories, setCategories] = useState<TripCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -101,8 +103,18 @@ export function SinaiTripManager() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch
     load()
+    fetch('/api/admin/trip-categories')
+      .then(res => res.ok ? res.json() : { categories: [] })
+      .then(data => setCategories(data.categories || []))
+      .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const selectCategory = (categoryId: string | null) => {
+    const cat = categories.find(c => c.id === categoryId)
+    if (!cat) return
+    setForm(prev => ({ ...prev, trip_category_id: cat.id, category_ar: cat.name_ar, category_en: cat.name_en }))
+  }
 
   const filtered = trips.filter(t =>
     !search || t.name_ar.includes(search) || t.name_en.toLowerCase().includes(search.toLowerCase())
@@ -259,8 +271,19 @@ export function SinaiTripManager() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><Label>{locale === 'ar' ? 'الاسم (عربي)' : 'Name (Arabic)'}</Label><Input value={form.name_ar || ''} onChange={e => updateField('name_ar', e.target.value)} className="mt-1" /></div>
                 <div><Label>{locale === 'ar' ? 'الاسم (إنجليزي)' : 'Name (English)'}</Label><Input value={form.name_en || ''} onChange={e => updateField('name_en', e.target.value)} className="mt-1" /></div>
-                <div><Label>{locale === 'ar' ? 'الفئة (عربي)' : 'Category (Arabic)'}</Label><Input value={form.category_ar || ''} onChange={e => updateField('category_ar', e.target.value)} className="mt-1" /></div>
-                <div><Label>{locale === 'ar' ? 'الفئة (إنجليزي)' : 'Category (English)'}</Label><Input value={form.category_en || ''} onChange={e => updateField('category_en', e.target.value)} className="mt-1" /></div>
+                <div className="md:col-span-2">
+                  <Label>{locale === 'ar' ? 'الفئة' : 'Category'}</Label>
+                  <Select value={form.trip_category_id || undefined} onValueChange={selectCategory}>
+                    <SelectTrigger className="mt-1 w-full">
+                      <SelectValue placeholder={locale === 'ar' ? 'اختر فئة...' : 'Select a category...'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{locale === 'ar' ? c.name_ar : c.name_en}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div><Label>{locale === 'ar' ? 'المدة (عربي)' : 'Duration (Arabic)'}</Label><Input value={form.duration || ''} onChange={e => updateField('duration', e.target.value)} className="mt-1" /></div>
                 <div><Label>{locale === 'ar' ? 'المدة (إنجليزي)' : 'Duration (English)'}</Label><Input value={form.duration_en || ''} onChange={e => updateField('duration_en', e.target.value)} className="mt-1" /></div>
                 <div>

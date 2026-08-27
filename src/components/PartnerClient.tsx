@@ -4,7 +4,9 @@ import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Building2, Bus, Compass, Handshake, Mail, MessageCircle } from 'lucide-react'
 import { Reveal } from '@/components/motion/Reveal'
+import { PartnerInquiryForm } from '@/components/PartnerInquiryForm'
 import { WHATSAPP_NUMBER, EMAIL } from '@/lib/constants'
+import { trackEvent } from '@/lib/track'
 import type { SiteSettings } from '@/lib/types'
 
 export function PartnerClient({ settings }: { settings: SiteSettings | null }) {
@@ -96,7 +98,13 @@ export function PartnerClient({ settings }: { settings: SiteSettings | null }) {
               <p className="mt-3 max-w-xl leading-7 text-white/68">{t('contactText')}</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-sun-500 px-6 font-semibold hover:bg-sun-600">
+              <a
+                href={`https://wa.me/${whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent('whatsapp_cta_click', { source: 'partner_page' })}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-sun-500 px-6 font-semibold hover:bg-sun-600"
+              >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />{t('whatsapp')}
               </a>
               <a href={`mailto:${email}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-white/30 px-6 font-semibold hover:bg-white/10">
@@ -104,6 +112,18 @@ export function PartnerClient({ settings }: { settings: SiteSettings | null }) {
               </a>
             </div>
           </div>
+        </section>
+
+        <section className="container-main pb-14 md:pb-20">
+          <Reveal>
+            <div className="mx-auto max-w-2xl border-t-2 border-sun-500 bg-card p-7 sm:p-9">
+              <h2 className="font-display text-3xl font-bold text-sea-900">{t('formTitle')}</h2>
+              <p className="mt-3 text-sm leading-7 text-sea-900/65">{t('formSubtitle')}</p>
+              <div className="mt-7">
+                <PartnerInquiryForm />
+              </div>
+            </div>
+          </Reveal>
         </section>
       </main>
     </div>

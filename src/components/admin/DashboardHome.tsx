@@ -14,7 +14,7 @@ import {
   AlertTriangle, TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Accommodation, Booking, BookingStatus, SinaiTrip, SiteSettings } from '@/lib/types'
+import type { Accommodation, Booking, BookingStatus } from '@/lib/types'
 
 const STATUS_LABEL: Record<BookingStatus, { ar: string; en: string; cls: string }> = {
   new: { ar: 'جديد', en: 'New', cls: 'bg-purple-100 text-purple-700' },
@@ -52,8 +52,6 @@ export function DashboardHome() {
   const [loading, setLoading] = useState(true)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [accommodations, setAccommodations] = useState<Accommodation[]>([])
-  const [trips, setTrips] = useState<SinaiTrip[]>([])
-  const [settings, setSettings] = useState<SiteSettings | null>(null)
   const [customersCount, setCustomersCount] = useState(0)
 
   const [range, setRange] = useState<RangeKey>('month')
@@ -64,24 +62,18 @@ export function DashboardHome() {
     const run = async () => {
       setLoading(true)
       try {
-        const [bookingsRes, accRes, custRes, tripsRes, settingsRes] = await Promise.all([
+        const [bookingsRes, accRes, custRes] = await Promise.all([
           fetch('/api/admin/bookings'),
           fetch('/api/admin/accommodations'),
           fetch('/api/admin/customers'),
-          fetch('/api/admin/sinai-trips'),
-          fetch('/api/admin/site-settings'),
         ])
         if (bookingsRes.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
         const bookingsData = await bookingsRes.json().catch(() => ({}))
         const accData = await accRes.json().catch(() => ({}))
         const custData = await custRes.json().catch(() => ({}))
-        const tripsData = await tripsRes.json().catch(() => ({}))
-        const settingsData = await settingsRes.json().catch(() => ({}))
         setBookings(bookingsData.bookings || [])
         setAccommodations(accData.accommodations || [])
         setCustomersCount((custData.customers || []).length)
-        setTrips(tripsData.trips || [])
-        setSettings(settingsData.settings || settingsData.site_settings || null)
       } finally {
         setLoading(false)
       }
@@ -147,23 +139,13 @@ export function DashboardHome() {
       ar: `${noRoomPricing.length} أماكن من غير أسعار غرف أساسية`,
       en: `${noRoomPricing.length} accommodation(s) missing base room pricing`,
     })
-    const includedIds = settings?.package_included_trip_ids || []
-    if (includedIds.length < 2) items.push({
-      ar: 'الباكدج محتاج رحلتين مشمولتين متظبطين في إعدادات الموقع',
-      en: 'Package needs 2 included trips configured in Site Settings',
-    })
-    const includedNoPkgPrice = trips.filter(t => includedIds.includes(t.id) && (t.package_price == null || Number(t.package_price) <= 0))
-    if (includedNoPkgPrice.length) items.push({
-      ar: `${includedNoPkgPrice.length} رحلة مشمولة من غير "سعر باكدج" — هيتحسب بالسعر العام مؤقتًا`,
-      en: `${includedNoPkgPrice.length} included trip(s) missing a package cost — public price is used as fallback`,
-    })
     const newBookings = bookings.filter(b => b.status === 'new').length
     if (newBookings) items.push({
       ar: `${newBookings} حجز جديد مستني مراجعة`,
       en: `${newBookings} new booking(s) awaiting review`,
     })
     return items
-  }, [accommodations, trips, settings, bookings])
+  }, [accommodations, bookings])
 
   const fmt = (n: number) => `${n.toLocaleString()} ج.م`
 

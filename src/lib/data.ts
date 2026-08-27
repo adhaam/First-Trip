@@ -119,6 +119,14 @@ export async function getSeasonalRates(accommodationId: string): Promise<Accommo
   }))
 }
 
+// `package_price` is WEEMAP's internal cost when a trip is bundled into a
+// Trip Package or (historically) an included package trip — it must never
+// reach a public page's props/client bundle. Every public trip fetcher below
+// strips it before returning.
+function stripPackagePrice(trip: SinaiTrip): SinaiTrip {
+  return { ...trip, package_price: null }
+}
+
 export async function getSinaiTrips(): Promise<SinaiTrip[]> {
   if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
@@ -139,12 +147,12 @@ export async function getSinaiTrips(): Promise<SinaiTrip[]> {
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: true })
-      return (fallback ?? []) as SinaiTrip[]
+      return ((fallback ?? []) as SinaiTrip[]).map(stripPackagePrice)
     }
     console.error('getSinaiTrips error:', error)
     return []
   }
-  return (data ?? []) as SinaiTrip[]
+  return ((data ?? []) as SinaiTrip[]).map(stripPackagePrice)
 }
 
 export async function getSinaiTripById(id: string): Promise<SinaiTrip | null> {
@@ -161,7 +169,7 @@ export async function getSinaiTripById(id: string): Promise<SinaiTrip | null> {
     console.error('getSinaiTripById error:', error)
     return null
   }
-  return data as SinaiTrip | null
+  return data ? stripPackagePrice(data as SinaiTrip) : null
 }
 
 export async function getCommunityPosts(): Promise<CommunityPost[]> {
@@ -176,6 +184,43 @@ export async function getCommunityPosts(): Promise<CommunityPost[]> {
 
   if (error) {
     console.error('getCommunityPosts error:', error)
+    return []
+  }
+  return (data ?? []) as CommunityPost[]
+}
+
+export async function getCommunityPostBySlug(slug: string): Promise<CommunityPost | null> {
+  if (!isSupabaseConfigured()) return null
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('community_posts')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .maybeSingle()
+
+  if (error) {
+    console.error('getCommunityPostBySlug error:', error)
+    return null
+  }
+  return data as CommunityPost | null
+}
+
+export async function getRelatedCommunityPosts(post: CommunityPost, limit = 3): Promise<CommunityPost[]> {
+  if (!isSupabaseConfigured()) return []
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('community_posts')
+    .select('*')
+    .eq('category', post.category)
+    .eq('is_published', true)
+    .neq('id', post.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('getRelatedCommunityPosts error:', error)
     return []
   }
   return (data ?? []) as CommunityPost[]

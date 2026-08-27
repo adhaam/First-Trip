@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils'
 import { useCart } from './CartProvider'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import type { DeliveryZone } from '@/lib/commerce-types'
+import { HoneypotField } from '@/components/HoneypotField'
+import { Turnstile } from '@/components/Turnstile'
+import { trackEvent } from '@/lib/track'
 
 export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones: DeliveryZone[]; whatsapp?: string | null }) {
   const locale = useLocale()
@@ -25,6 +28,8 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState<{ orderNumber: string; totalPrice: number } | null>(null)
+  const [honeypot, setHoneypot] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const zone = deliveryZones.find((z) => z.id === cart.deliveryZoneId)
   const deliveryFee = cart.fulfillmentMethod === 'delivery' ? (zone?.fee_type === 'fixed' ? Number(zone.fixed_fee) : 0) : 0
@@ -33,6 +38,7 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
 
   const submit = async () => {
     setError('')
+    if (honeypot) return // silently drop — bot filled the hidden field
     if (name.trim().length < 3) { setError(commerce('nameRequired')); return }
     if (phone.trim().length < 8) { setError(commerce('phoneRequired')); return }
     if (cart.fulfillmentMethod === 'delivery') {
@@ -61,6 +67,8 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
               ? { rental_duration_days: item.durationDays, rental_start_date: item.startDate }
               : {}),
           })),
+          website: honeypot,
+          turnstile_token: turnstileToken || undefined,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -68,6 +76,10 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
         setError(data.error || commerce('checkoutError'))
         return
       }
+      const hasRental = cart.items.some((item) => item.kind === 'rental')
+      const hasSale = cart.items.some((item) => item.kind !== 'rental')
+      const orderType = hasRental && hasSale ? 'mixed' : hasRental ? 'rental' : 'merch'
+      trackEvent('commerce_order_created', { type: orderType, order_number: data.orderNumber || '' })
       setSuccess({ orderNumber: data.orderNumber, totalPrice: data.totalPrice })
       cart.clear()
     } catch {
@@ -96,6 +108,7 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
             href={`https://wa.me/${number}?text=${encodeURIComponent(waMessage)}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackEvent('whatsapp_cta_click', { source: 'cart_checkout' })}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 text-sm font-semibold text-white hover:bg-emerald-700"
           >
             <MessageCircle className="h-4 w-4" />
@@ -218,6 +231,9 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
           </div>
           <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{commerce('total')}</span><span className="tabular-nums">{total.toLocaleString()} {common('egp')}</span></div>
         </div>
+
+        <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+        <Turnstile onToken={setTurnstileToken} />
 
         {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
 

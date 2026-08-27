@@ -255,6 +255,13 @@ test('D4. Price-descending sort: most-expensive first, missing-price last', () =
 })
 
 // ─── E. Price summary is NOT above the form (structural check) ─────────────
+//
+// The two-column sticky-sidebar layout these tests originally asserted was
+// deliberately replaced by a single vertical stack (form card, then price
+// summary below) — see the "price summary — always below the form fields"
+// comment in BookingForm.tsx and commits 31e714d/08ce063. The structural
+// intent (summary after the form, never above/beside it) still holds; only
+// the now-removed two-column CSS markers are updated below.
 
 test('E1. Price summary renders AFTER </form> in BookingForm.tsx (not above the form)', () => {
   const src = readFileSync(
@@ -262,23 +269,27 @@ test('E1. Price summary renders AFTER </form> in BookingForm.tsx (not above the 
     'utf-8',
   )
   const formCloseIdx = src.lastIndexOf('</form>')
-  const summaryIdx = src.indexOf('lg:sticky lg:top-6')
+  const summaryIdx = src.indexOf('price summary — always below the form fields')
 
   assert.ok(formCloseIdx > -1, '</form> not found in BookingForm.tsx')
-  assert.ok(summaryIdx > -1, 'lg:sticky lg:top-6 not found — price summary right column missing')
+  assert.ok(summaryIdx > -1, 'price summary section marker not found in BookingForm.tsx')
   assert.ok(
     summaryIdx > formCloseIdx,
-    `Price summary sticky column (at index ${summaryIdx}) must appear AFTER </form> (at index ${formCloseIdx})`,
+    `Price summary section (at index ${summaryIdx}) must appear AFTER </form> (at index ${formCloseIdx})`,
   )
 })
 
-test('E2. BookingForm.tsx uses two-column grid layout', () => {
+test('E2. BookingForm.tsx uses a single vertical stack (form, then price summary) — not a two-column layout', () => {
   const src = readFileSync(
     join(__dirname, '../components/BookingForm.tsx'),
     'utf-8',
   )
   assert.ok(
-    src.includes('lg:grid-cols-[1fr_360px]'),
-    'Two-column grid layout not found in BookingForm.tsx',
+    !src.includes('lg:grid-cols-[1fr_360px]'),
+    'Old two-column grid layout marker found — approved layout is a single vertical stack',
+  )
+  assert.ok(
+    src.includes('price summary — always below the form fields'),
+    'Single-column stacked price summary not found in BookingForm.tsx',
   )
 })

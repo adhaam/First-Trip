@@ -360,19 +360,87 @@ export interface TripPriceInput {
 }
 
 /**
- * The rate used when a trip is one of the two INCLUDED package trips.
- * Uses the admin-configured package cost; falls back to the public price when
- * unconfigured (the dashboard warns about that state — it never blocks a sale).
+ * The two INCLUDED package trips are a free marketing perk — they must never
+ * add to the customer's total. `package_price` is retained on the trip row
+ * for historical/reporting purposes only and is intentionally not read here.
  */
-export function includedTripCost(trip: TripPriceInput): number {
-  const pkg = Number(trip.package_price)
-  if (Number.isFinite(pkg) && pkg > 0) return pkg
-  return Number(trip.price) || 0
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- keeps the TripPriceInput call-site shape stable
+export function includedTripCost(_trip: TripPriceInput): number {
+  return 0
 }
 
 /** Extra (customer-added) trips are always charged at the normal public price. */
 export function extraTripCost(trip: TripPriceInput): number {
   return Number(trip.price) || 0
+}
+
+// ─── Trip Package pricing ───
+//
+// A Trip Package (a curated bundle of existing Sinai Trips) is priced as
+// SUM(package_price) of its included trips — NEVER falls back to `price`.
+// A trip missing a valid package_price makes the whole package invalid
+// (unpublishable in admin, unbookable on the public site). This is a
+// distinct pricing path from the free Dahab-package included trips above:
+// Trip Packages are always charged in full, never free.
+
+export interface PackageTotals {
+  /** SUM(price) of the included trips — what booking them individually would cost. */
+  publicTotal: number
+  /** SUM(package_price) of the included trips — the only value a customer is ever charged. */
+  packageTotal: number
+  savings: number
+  /** false when any included trip is missing a valid (> 0) package_price, or there are no trips. */
+  isValid: boolean
+}
+
+export function computePackageTotals(trips: { price: number; package_price?: number | null }[]): PackageTotals {
+  if (trips.length === 0) return { publicTotal: 0, packageTotal: 0, savings: 0, isValid: false }
+  let publicTotal = 0
+  let packageTotal = 0
+  let isValid = true
+  for (const t of trips) {
+    publicTotal += Number(t.price) || 0
+    const pkg = Number(t.package_price)
+    if (!Number.isFinite(pkg) || pkg <= 0) {
+      isValid = false
+    } else {
+      packageTotal += pkg
+    }
+  }
+  return { publicTotal, packageTotal, savings: Math.max(0, publicTotal - packageTotal), isValid }
+}
+
+/**
+ * Authoritative duplicate-protection + pricing check, run server-side on
+ * every booking/quote request — never trust the client's selection.
+ * Rejects (does not silently resolve) any overlap: individual trip vs
+ * package, or package vs package sharing a trip.
+ */
+export function validateAndPriceTripPackages(
+  packages: { id: string; name_en: string; totals?: PackageTotals; trips?: { id: string; name_en: string }[] }[],
+  extraTripIds: string[],
+): { subtotal: number; error: string | null } {
+  for (const p of packages) {
+    if (!p.totals?.isValid) {
+      return { subtotal: 0, error: `Trip package "${p.name_en}" is not currently bookable.` }
+    }
+  }
+  const tripToPackage = new Map<string, string>()
+  for (const p of packages) {
+    for (const t of p.trips || []) {
+      if (tripToPackage.has(t.id)) {
+        return { subtotal: 0, error: `Trip "${t.name_en}" appears in more than one selected Trip Package.` }
+      }
+      tripToPackage.set(t.id, p.name_en)
+    }
+  }
+  for (const id of extraTripIds) {
+    if (tripToPackage.has(id)) {
+      return { subtotal: 0, error: `A selected trip is already included in a selected Trip Package.` }
+    }
+  }
+  const subtotal = packages.reduce((sum, p) => sum + (p.totals?.packageTotal ?? 0), 0)
+  return { subtotal, error: null }
 }
 
 /** 4-day package = 3 nights, 5-day package = 4 nights. */

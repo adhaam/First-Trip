@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import Image from 'next/image'
 import { getSinaiTrips } from '@/lib/data'
+import { getTripPackages } from '@/lib/trip-packages'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
 import { WaveDivider } from '@/components/brand/Section'
 import { buildAlternates } from '@/lib/seo'
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: {
 
 export default async function SinaiTripsPage() {
   const t = await getTranslations('sinai')
-  const trips = await getSinaiTrips()
+  const [trips, packages] = await Promise.all([getSinaiTrips(), getTripPackages()])
   const heroImage = trips[0]?.images?.[0] || '/media/heroposter.png'
 
   return (
@@ -47,7 +48,7 @@ export default async function SinaiTripsPage() {
       {/* Filter + Grid */}
       <section className="section-padding bg-sand-50">
         <div className="container-main">
-          <SinaiTripsClient trips={trips} />
+          <SinaiTripsClient trips={trips} packages={packages} />
         </div>
       </section>
     </div>

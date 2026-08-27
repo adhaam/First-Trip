@@ -15,6 +15,7 @@ import { getSiteSettings } from '@/lib/data'
 import { SITE_URL } from '@/lib/seo'
 import { CartProvider } from '@/components/commerce/CartProvider'
 import { CartDrawer } from '@/components/commerce/CartDrawer'
+import { Analytics } from '@vercel/analytics/next'
 import '../globals.css'
 
 // ─── Typeface pairing ───
@@ -66,7 +67,7 @@ export async function generateMetadata({ params }: {
     // src/app/favicon.ico is served automatically at /favicon.ico by Next's file
     // convention — only the apple-touch-icon needs to be declared explicitly.
     icons: {
-      apple: '/logo.png',
+      apple: '/brand/icon-180.png',
     },
     openGraph: {
       title,
@@ -134,6 +135,7 @@ export default async function RootLayout({
             </CartProvider>
           </TooltipProvider>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   )

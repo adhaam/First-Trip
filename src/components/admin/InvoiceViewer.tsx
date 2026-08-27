@@ -8,12 +8,13 @@ import { Loader2, Download, X, FileText } from 'lucide-react'
 interface InvoiceViewerProps {
   bookingId: string
   bookingNumber: string
+  bookingType: 'accommodation' | 'trip'
   locale: 'ar' | 'en'
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function InvoiceViewer({ bookingId, bookingNumber, locale, open, onOpenChange }: InvoiceViewerProps) {
+export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, open, onOpenChange }: InvoiceViewerProps) {
   const [loading, setLoading] = useState(false)
   const [invoiceHtml, setInvoiceHtml] = useState<string | null>(null)
   const [invoiceType, setInvoiceType] = useState<'request' | 'confirmation'>('request')
@@ -27,6 +28,7 @@ export function InvoiceViewer({ bookingId, bookingNumber, locale, open, onOpenCh
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookingId,
+          bookingType,
           type,
           locale,
         }),

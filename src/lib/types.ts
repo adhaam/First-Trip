@@ -188,15 +188,18 @@ export interface SinaiTrip {
   description_en: string
   category_ar: string
   category_en: string
+  /** FK to trip_categories (migration 016). Nullable for trips created before the taxonomy existed. */
+  trip_category_id?: string | null
   images: string[]
   duration: string   // e.g. "نصف يوم", "Full Day"
   duration_en: string
   /** Normal selling price — used when the trip is booked separately or added as an extra. */
   price: number
   /**
-   * What WEEMAP uses when this trip is one of the two included package trips.
-   * NULL/undefined = not configured yet; the pricing engine falls back to
-   * `price` and the admin dashboard should warn that it's unconfigured.
+   * Legacy package-cost field, retained for historical bookings/snapshots.
+   * The two included package trips are a free perk — the live pricing engine
+   * no longer reads this for included-trip pricing (see `includedTripCost`
+   * in src/lib/pricing.ts).
    */
   package_price?: number | null
   includes_ar: string[]
@@ -205,6 +208,73 @@ export interface SinaiTrip {
   sort_order: number
   is_active: boolean
   created_at: string
+}
+
+/** Controlled Sinai Trip taxonomy (migration 016). */
+export interface TripCategory {
+  id: string
+  slug: string
+  name_ar: string
+  name_en: string
+  is_active: boolean
+  sort_order: number
+}
+
+/** Package Categories (migration 017) — owner-managed, unlike the fixed TripCategory taxonomy. */
+export interface TripPackageCategory {
+  id: string
+  slug: string
+  name_ar: string
+  name_en: string
+  is_active: boolean
+  sort_order: number
+}
+
+/**
+ * A curated bundle of existing Sinai Trips (migration 017). `trips` is only
+ * populated by fetchers that join trip_package_items — see
+ * src/lib/trip-packages.ts. `package_total`/`public_total`/`savings` are
+ * always computed live from the joined trips' price/package_price, never
+ * cached on this row.
+ */
+export interface TripPackage {
+  id: string
+  slug: string
+  name_ar: string
+  name_en: string
+  short_description_ar: string
+  short_description_en: string
+  description_ar: string
+  description_en: string
+  image: string
+  badge_ar?: string | null
+  badge_en?: string | null
+  package_category_id?: string | null
+  featured: boolean
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  /** Present when fetched with items joined (admin editor, public detail/rail). */
+  trips?: TripPackageTrip[]
+  /**
+   * Computed aggregate totals — the ONLY pricing info public fetchers send to
+   * the client. Per-trip `package_price` is always stripped before a
+   * TripPackage reaches a public page (see stripPackagePrice-style handling
+   * in src/lib/trip-packages.ts); this pre-computed total is how the
+   * customer-visible price still gets through.
+   */
+  totals?: { publicTotal: number; packageTotal: number; savings: number; isValid: boolean }
+}
+
+/** A trip as it appears inside a package, carrying only what's safe to compute a total from. */
+export interface TripPackageTrip {
+  id: string
+  name_ar: string
+  name_en: string
+  image?: string | null
+  price: number
+  package_price: number | null
+  sort_order: number
 }
 
 export interface TripDate {
@@ -234,8 +304,10 @@ export interface Booking {
   /** 'double'/'triple' split the room price per occupant, 'single' = price_single_room. */
   room_type?: 'double' | 'single' | 'triple'
   meal_plan_key?: MealPlanKey | string
-  /** Sinai trip ids the customer added on top of the two included in the package. */
+  /** Sinai trip ids the customer added individually, priced at public `price`. */
   extra_trip_ids?: string[]
+  /** Trip Packages selected at booking time — see price_snapshot.trip_packages for the frozen totals. */
+  trip_package_ids?: string[]
   num_people: number
   notes?: string
   /** Admin-only note, never shown to the customer. */
@@ -294,6 +366,13 @@ export interface PriceSnapshot {
   meal_subtotal?: number
   extra_trips?: { trip_id: string; name_en: string; price: number }[]
   extra_trips_subtotal?: number
+  /**
+   * Trip Packages selected at booking time (migration 017). Each entry's
+   * `total` is SUM(package_price) for that package's trips, frozen here —
+   * never re-derived from live sinai_trips prices after booking.
+   */
+  trip_packages?: { package_id: string; name_en: string; trip_names_en: string[]; total: number }[]
+  trip_packages_subtotal?: number
   num_people?: number
   total: number
   computed_at: string
@@ -301,6 +380,7 @@ export interface PriceSnapshot {
 
 export interface CommunityPost {
   id: string
+  slug: string | null
   title_ar: string
   title_en: string
   content_ar: string
@@ -312,6 +392,7 @@ export interface CommunityPost {
   is_pinned: boolean
   is_published: boolean
   created_at: string
+  updated_at?: string
 }
 
 export interface SiteSettings {
@@ -331,7 +412,11 @@ export interface SiteSettings {
   privacy_policy_en: string
   terms_ar: string
   terms_en: string
-  /** Sinai trip ids bundled into every package by default — see lib/pricing.ts. */
+  /**
+   * Legacy field, retained for historical data only. The 2 free Sinai trips
+   * are a fixed marketing benefit — no live pricing path reads this, and the
+   * admin API no longer accepts writes to it (see SiteSettingsManager.tsx).
+   */
   package_included_trip_ids: string[]
   // ─── Website CMS (migration 005) — empty string/array = built-in default ───
   hero_heading_ar?: string
@@ -422,4 +507,147 @@ export interface WhyUsPoint {
   description_ar: string
   description_en: string
   icon: string
+}
+
+// ─── Signature Experiences (migration 018) ───
+// A separate, independently-priced product family — NOT a Trip Package.
+// See src/lib/pricing.ts header comment for the pricing-path boundary.
+
+export interface ExperienceCategory {
+  slug: string
+  label_ar: string
+  label_en: string
+  description_ar: string
+  description_en: string
+  is_active: boolean
+  sort_order: number
+}
+
+export interface ExperienceItineraryStep {
+  title_ar: string
+  title_en: string
+  description_ar?: string
+  description_en?: string
+}
+
+/** Admin-only shape — includes every private partner field. Never send this directly to a public page. */
+export interface ExperiencePartner {
+  id: string
+  name: string
+  service_category: string
+  public_description_ar: string
+  public_description_en: string
+  contact_name: string
+  contact_phone: string
+  contact_email: string
+  internal_notes: string
+  public_credit_enabled: boolean
+  is_active: boolean
+  created_at: string
+  updated_at?: string
+}
+
+/** The only partner shape a public page may ever receive — no contact info, no internal notes. */
+export interface PublicExperiencePartner {
+  id: string
+  name: string
+  public_description_ar: string
+  public_description_en: string
+}
+
+export interface ExperienceDate {
+  id: string
+  experience_id: string
+  start_date: string
+  end_date: string
+  total_spots: number
+  status: 'open' | 'cancelled'
+  is_open: boolean
+  price_override?: number | null
+}
+
+export interface Experience {
+  id: string
+  slug: string
+  title_ar: string
+  title_en: string
+  category?: string | null
+  short_description_ar: string
+  short_description_en: string
+  full_description_ar: string
+  full_description_en: string
+  included_ar: string[]
+  included_en: string[]
+  not_included_ar: string[]
+  not_included_en: string[]
+  itinerary: ExperienceItineraryStep[]
+  hero_image: string
+  gallery: string[]
+  duration_ar: string
+  duration_en: string
+  /** Independent, Admin-managed price. NEVER derived from Trip Package / package_price math. */
+  price: number
+  currency: 'EGP' | 'USD'
+  discount_value?: number | null
+  discount_type?: 'amount' | 'percentage' | null
+  discount_label: string
+  badge_ar?: string | null
+  badge_en?: string | null
+  featured: boolean
+  starting_from_price: boolean
+  status: 'draft' | 'published'
+  sort_order: number
+  created_at: string
+  updated_at?: string
+  /** Joined data — present depending on which fetcher populated it. */
+  category_info?: ExperienceCategory | null
+  dates?: ExperienceDate[]
+  /** Public pages only ever get PublicExperiencePartner[] — never the full ExperiencePartner. */
+  partners?: PublicExperiencePartner[]
+  trips?: Pick<SinaiTrip, 'id' | 'name_ar' | 'name_en' | 'images'>[]
+}
+
+export type ExperienceRequestStatus = 'new' | 'contacted' | 'planning' | 'confirmed' | 'completed' | 'cancelled'
+
+/** A Signature request — either against a published Experience, or a fully custom "Build Your Signature" request. */
+export interface ExperienceBooking {
+  id: string
+  experience_id?: string | null
+  experience_date_id?: string | null
+  customer_id?: string | null
+  full_name: string
+  phone: string
+  email?: string
+  spots_requested: number
+  notes: string
+  is_custom_request: boolean
+  preferred_date?: string | null
+  interests: string
+  duration_preference: string
+  quoted_price?: number | null
+  currency: string
+  status: ExperienceRequestStatus
+  source: string
+  payment_status: 'unpaid' | 'partial' | 'paid' | 'refunded'
+  amount_paid: number
+  created_at: string
+  updated_at?: string
+  /** Joined on the admin GET route. */
+  experiences?: { title_ar: string; title_en: string } | null
+}
+
+export type PartnerInquiryStatus = 'new' | 'contacted' | 'in_discussion' | 'closed'
+
+/** An inbound lead from a business/person asking to become a WEEMAP partner, submitted via the public /partner page form.
+ *  NOT the same as ExperiencePartner — that's an operational partner already onboarded to Signature Experiences. */
+export interface PartnerInquiry {
+  id: string
+  name: string
+  business_name?: string | null
+  phone: string
+  email?: string | null
+  partnership_type?: string | null
+  message?: string | null
+  status: PartnerInquiryStatus
+  created_at: string
 }

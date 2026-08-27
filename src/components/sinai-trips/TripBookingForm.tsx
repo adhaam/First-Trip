@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { MessageCircle, Check, Loader2 } from 'lucide-react'
+import { HoneypotField } from '@/components/HoneypotField'
+import { Turnstile } from '@/components/Turnstile'
+import { trackEvent } from '@/lib/track'
 
 interface TripBookingFormProps {
   tripId: string
@@ -35,6 +38,8 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [serverError, setServerError] = useState('')
+  const [honeypot, setHoneypot] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const todayIso = new Date().toISOString().slice(0, 10)
 
@@ -49,6 +54,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (honeypot) return // silently drop — bot filled the hidden field
     if (!validate()) return
     setSubmitting(true)
     setServerError('')
@@ -60,6 +66,8 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
         preferred_date: form.preferred_date || undefined,
         num_people: form.num_people,
         notes: form.notes.trim() || undefined,
+        website: honeypot,
+        turnstile_token: turnstileToken || undefined,
       }
       const res = await fetch('/api/trip-bookings', {
         method: 'POST',
@@ -71,6 +79,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
         setServerError(data.error || t('bookError'))
         return
       }
+      trackEvent('trip_booking_submitted', { trip_id: tripId, trip_name: tripNameEn })
       setSubmitted(true)
     } catch {
       setServerError(t('bookError'))
@@ -99,6 +108,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
           href={`https://wa.me/${whatsappClean}?text=${waText}`}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackEvent('whatsapp_cta_click', { source: 'sinai_trip' })}
           className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md bg-green-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700"
         >
           <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -194,6 +204,9 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
           className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-sea-900/40 focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
         />
       </div>
+
+      <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+      <Turnstile onToken={setTurnstileToken} />
 
       {serverError && <p className="text-sm text-red-600">{serverError}</p>}
 

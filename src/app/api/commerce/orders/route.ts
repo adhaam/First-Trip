@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createCommerceOrder } from '@/lib/orders'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 5
@@ -33,6 +34,8 @@ const orderSchema = z.object({
     rental_duration_days: z.number().int().min(1).optional(),
     rental_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   })).min(1).max(20),
+  website: z.string().max(200).optional(),
+  turnstile_token: z.string().optional(),
 })
 
 /**
@@ -52,9 +55,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null)
+
+    if (body && typeof body === 'object' && 'website' in body && body.website) {
+      return NextResponse.json({ success: true, orderId: null, orderNumber: null, totalPrice: 0 }, { status: 201 })
+    }
+
     const validated = orderSchema.safeParse(body)
     if (!validated.success) {
       return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
+    }
+
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      const humanVerified = await verifyTurnstile(validated.data.turnstile_token ?? null)
+      if (!humanVerified) {
+        return NextResponse.json({ error: 'Verification failed' }, { status: 400 })
+      }
     }
 
     const result = await createCommerceOrder({

@@ -10,11 +10,12 @@ const tripUpdateSchema = z.object({
   description_en: z.string().optional(),
   category_ar: z.string().optional(),
   category_en: z.string().optional(),
+  trip_category_id: z.string().uuid().nullable().optional(),
   images: z.array(z.string()).optional(),
   duration: z.string().optional(),
   duration_en: z.string().optional(),
   price: z.number().min(0).optional(),
-  // Package cost — used when this trip is included in a package (null = unset).
+  // Legacy package-cost field, retained for historical bookings/snapshots only.
   package_price: z.number().min(0).nullable().optional(),
   includes_ar: z.array(z.string()).optional(),
   includes_en: z.array(z.string()).optional(),

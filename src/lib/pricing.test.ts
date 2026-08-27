@@ -9,6 +9,7 @@ import {
   resolveNightlyRates,
   accommodationSubtotal,
   includedTripCost,
+  extraTripCost,
   quotePackageV2,
   buildPriceSnapshot,
   isPackageDepartureDay,
@@ -102,12 +103,17 @@ test('stay crossing a seasonal boundary is priced night-by-night', () => {
   assert.equal(accommodationSubtotal(nightly), 10400)
 })
 
-test('included trip uses PACKAGE cost; falls back to public price when unset', () => {
-  assert.equal(includedTripCost({ id: 't1', name_en: 'Blue Hole', price: 600, package_price: 400 }), 400)
-  assert.equal(includedTripCost({ id: 't2', name_en: 'Canyon', price: 600, package_price: null }), 600)
+test('included trip is always free, regardless of package_price', () => {
+  assert.equal(includedTripCost({ id: 't1', name_en: 'Blue Hole', price: 600, package_price: 400 }), 0)
+  assert.equal(includedTripCost({ id: 't2', name_en: 'Canyon', price: 600, package_price: null }), 0)
 })
 
-test('package total = room + transfer + 2 included package costs (× people)', () => {
+test('extra trip always uses public price, never package_price', () => {
+  assert.equal(extraTripCost({ id: 't1', name_en: 'Blue Hole', price: 600, package_price: 400 }), 600)
+  assert.equal(extraTripCost({ id: 't2', name_en: 'Canyon', price: 600, package_price: null }), 600)
+})
+
+test('package total = room + transfer + 2 FREE included trips (no charge for included trips)', () => {
   const quote = quotePackageV2({
     pricing,
     accommodation: acc,
@@ -125,12 +131,35 @@ test('package total = room + transfer + 2 included package costs (× people)', (
     direction: 'round_trip',
     numPeople: 2,
   })
-  // room 6000 + transfer (400×2 legs×2 ppl = 1600) + trips (850×2 = 1700)
+  // room 6000 + transfer (400×2 legs×2 ppl = 1600) + included trips = 0 (free perk)
   assert.equal(quote.accommodationSubtotal, 6000)
   assert.equal(quote.transferSubtotal, 1600)
-  assert.equal(quote.includedTripsSubtotal, 1700)
-  assert.equal(quote.total, 9300)
-  assert.equal(quote.perPerson, 4650)
+  assert.equal(quote.includedTripsSubtotal, 0)
+  assert.equal(quote.total, 7600)
+  assert.equal(quote.perPerson, 3800)
+})
+
+test('extra trips added on top are still priced (public price), unlike included trips', () => {
+  const quote = quotePackageV2({
+    pricing,
+    accommodation: acc,
+    roomType: 'double',
+    checkIn: '2026-10-01',
+    nights: 3,
+    mealPlanPricePerNight: 0,
+    includedTrips: [
+      { id: 't1', name_en: 'Blue Hole', price: 600, package_price: 400 },
+    ],
+    extraTrips: [
+      { id: 't3', name_en: 'Safari', price: 500, package_price: 300 },
+    ],
+    transferType: 'package_bus',
+    governorateCode: 'cairo',
+    direction: 'round_trip',
+    numPeople: 2,
+  })
+  assert.equal(quote.includedTripsSubtotal, 0)
+  assert.equal(quote.extraTripsSubtotal, 1000) // 500 × 2 people, ignores package_price
 })
 
 test('governorate change (Cairo → Alexandria) changes the transfer price', () => {
@@ -178,7 +207,7 @@ test('price snapshot freezes the rates used at booking time', () => {
   assert.equal(snap.total, quote.total)
   assert.equal(snap.nightly_room_rates?.length, 4)
   assert.equal(snap.nightly_room_rates?.[2].source, 'seasonal')
-  assert.equal(snap.included_trips?.[0].package_cost, 400)
+  assert.equal(snap.included_trips?.[0].package_cost, 0)
   assert.equal(snap.extra_trips?.[0].price, 500)
 
   // Historical safety: mutating live prices does NOT touch the snapshot.

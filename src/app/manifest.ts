@@ -1,9 +1,8 @@
 import type { MetadataRoute } from 'next'
 
 // Basic web app manifest — installable "Add to Home Screen" metadata for
-// mobile visitors coming from Instagram/WhatsApp. Icons point at the current
-// placeholder mark; swap once the real WEEMAP SVG lands (see
-// WEEMAP_ASSET_CHECKLIST.md).
+// mobile visitors coming from Instagram/WhatsApp. Icons use the official
+// WEEMAP SINAI brand pack (icon-only mark).
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'WEEMAP SINAI',
@@ -11,11 +10,11 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'We map Sinai. You live it. Packages, stays, transfers, and Sinai trips.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#1a1b18',
-    theme_color: '#1a1b18',
+    background_color: '#141310',
+    theme_color: '#141310',
     icons: [
-      { src: '/logo.png', sizes: '512x512', type: 'image/png' },
-      { src: '/logo.png', sizes: '192x192', type: 'image/png' },
+      { src: '/brand/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     ],
   }
 }

@@ -8,13 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/pricing.test.ts src/lib/trips.test.ts src/lib/ai-contract.test.ts src/lib/room-upgrades.test.ts src/lib/customer.test.ts src/lib/rental-pricing.test.ts src/lib/cart.test.ts src/lib/search.test.ts",
+    "test": "tsx --test src/lib/pricing.test.ts src/lib/trips.test.ts src/lib/ai-contract.test.ts src/lib/room-upgrades.test.ts src/lib/customer.test.ts src/lib/rental-pricing.test.ts src/lib/cart.test.ts src/lib/search.test.ts src/lib/experience-pricing.test.ts src/lib/trip-packages.test.ts",
     "test:upgrades": "tsx --test src/lib/room-upgrades.test.ts",
     "test:pricing": "tsx --test src/lib/pricing.test.ts",
     "test:trips": "tsx --test src/lib/trips.test.ts",
     "test:ai": "tsx --test src/lib/ai-contract.test.ts",
     "test:customer": "tsx --test src/lib/customer.test.ts",
     "test:rental-pricing": "tsx --test src/lib/rental-pricing.test.ts",
+    "test:invoice": "tsx --test src/lib/invoice.test.ts",
     "check:translations": "tsx scripts/check-translations.ts"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "@hookform/resolvers": "^5.7.1",
     "@supabase/supabase-js": "^2.112.2",
     "@types/leaflet": "^1.9.22",
+    "@vercel/analytics": "^2.0.1",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

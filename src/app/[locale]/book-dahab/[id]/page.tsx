@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getAccommodationById, getAccommodations, getRelatedAccommodations, getSiteSettings, getTransferPricing, getSinaiTrips } from '@/lib/data'
+import { getTripPackages } from '@/lib/trip-packages'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
@@ -31,11 +32,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const [all, pricing, settings, sinaiTrips] = await Promise.all([
+  const [all, pricing, settings, sinaiTrips, tripPackages] = await Promise.all([
     getAccommodations(),
     getTransferPricing(),
     getSiteSettings(),
     getSinaiTrips(),
+    getTripPackages(),
   ])
   const related = getRelatedAccommodations(accommodation, all)
 
@@ -46,7 +48,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const productSchema = getProductSchema({
     name: locale === 'ar' ? accommodation.name_ar || accommodation.name_en : accommodation.name_en || accommodation.name_ar,
     description: locale === 'ar' ? accommodation.description_ar : accommodation.description_en,
-    image: accommodation.image_url || accommodation.images?.[0] || `${SITE_URL}/logo.png`,
+    image: accommodation.image_url || accommodation.images?.[0] || `${SITE_URL}/brand/logo.png`,
     price: startingPrice,
   })
 
@@ -61,7 +63,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         pricing={pricing}
         whatsapp={settings?.whatsapp_number}
         sinaiTrips={sinaiTrips}
-        includedTripIds={settings?.package_included_trip_ids || []}
+        tripPackages={tripPackages}
       />
       <RelatedPlaces related={related} />
     </div>

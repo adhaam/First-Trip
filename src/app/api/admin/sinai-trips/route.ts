@@ -10,12 +10,13 @@ const tripSchema = z.object({
   description_en: z.string().optional().default(''),
   category_ar: z.string().optional().default(''),
   category_en: z.string().optional().default(''),
+  trip_category_id: z.string().uuid().nullable().optional(),
   images: z.array(z.string()).optional().default([]),
   duration: z.string().optional().default(''),
   duration_en: z.string().optional().default(''),
   price: z.number().min(0),
-  // What WEEMAP uses when this trip is one of the two included package trips.
-  // null = not configured yet → the pricing engine falls back to `price`.
+  // Legacy package-cost field, retained for historical bookings/snapshots only.
+  // The live pricing engine no longer reads this — included trips are free.
   package_price: z.number().min(0).nullable().optional(),
   includes_ar: z.array(z.string()).optional().default([]),
   includes_en: z.array(z.string()).optional().default([]),

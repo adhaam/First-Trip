@@ -1,42 +1,35 @@
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { MapPin } from 'lucide-react'
 
 type LogoSize = 'sm' | 'md' | 'lg' | 'xl'
 
-const MARK: Record<LogoSize, string> = {
+const LOCKUP_HEIGHT: Record<LogoSize, string> = {
+  sm: 'h-7 w-auto',
+  md: 'h-9 w-auto',
+  lg: 'h-14 w-auto',
+  xl: 'h-20 w-auto',
+}
+
+const MARK_SIZE: Record<LogoSize, string> = {
   sm: 'h-7 w-7',
   md: 'h-9 w-9',
   lg: 'h-14 w-14',
   xl: 'h-20 w-20',
 }
 
-const WORD: Record<LogoSize, string> = {
-  sm: 'text-sm',
-  md: 'text-base',
-  lg: 'text-xl',
-  xl: 'text-2xl',
-}
-
 /**
- * Single source of truth for the WEEMAP SINAI logo lockup.
- *
- * TEMPORARY MARK — the approved logo direction lives in
- * `_weemap_reference/WEEMAP_REFERENCE_PACK_FINAL/01_brand/logo/weemap-sinai-logo-brand-board.png`
- * (location-pin + hand gesture + Sinai mountain cue), but no production
- * vector exists yet. Until a clean SVG is exported, the mark is a styled
- * pin in WEEMAP orange and the lockup is set in the site's display face:
- *
- *   WEEMAP   (orange)
- *   SINAI    (ink / light)
- *
- * See WEEMAP_ASSET_CHECKLIST.md — replacing the temporary pin with the
- * production vector only touches this file.
+ * Single source of truth for the WEEMAP SINAI logo — official artwork,
+ * never recolored or filtered. `tone="ink"` wraps the mark in a dark
+ * chip since the artwork itself is a light cream+orange lockup and
+ * requires a dark/high-contrast host surface (see WEEMAP_SINAI_BRAND_PACK
+ * usage rules).
  */
 export function Logo({
   size = 'md',
   variant = 'lockup',
   tone = 'ink',
   className,
+  priority,
 }: {
   size?: LogoSize
   variant?: 'lockup' | 'mark'
@@ -44,30 +37,39 @@ export function Logo({
   className?: string
   priority?: boolean
 }) {
-  return (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
-      <span
-        className={cn(
-          'flex shrink-0 items-center justify-center rounded-xl bg-sun-400/15 text-sun-500',
-          MARK[size],
-        )}
-        aria-hidden
-      >
-        <MapPin className="h-[60%] w-[60%]" strokeWidth={2.5} />
-      </span>
+  const image =
+    variant === 'lockup' ? (
+      <Image
+        src="/brand/logo.png"
+        alt="WEEMAP SINAI"
+        width={1800}
+        height={752}
+        priority={priority}
+        className={cn(LOCKUP_HEIGHT[size], 'object-contain')}
+      />
+    ) : (
+      <Image
+        src="/brand/icon-192.png"
+        alt="WEEMAP SINAI"
+        width={192}
+        height={192}
+        priority={priority}
+        className={cn(MARK_SIZE[size], 'object-contain')}
+      />
+    )
 
-      {variant === 'lockup' && (
-        <span
-          className={cn(
-            'font-display font-extrabold tracking-tight whitespace-nowrap leading-none',
-            WORD[size],
-          )}
-        >
-          <span className={tone === 'light' ? 'text-sun-300' : 'text-sun-500'}>WEEMAP</span>
-          <span className="mx-1" />
-          <span className={tone === 'light' ? 'text-sea-200' : 'text-sea-700'}>SINAI</span>
-        </span>
+  if (tone === 'light') {
+    return <span className={cn('inline-flex items-center', className)}>{image}</span>
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-xl bg-weemap-charcoal px-2.5 py-1.5',
+        className,
       )}
+    >
+      {image}
     </span>
   )
 }

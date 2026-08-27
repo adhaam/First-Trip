@@ -3,14 +3,17 @@ import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
 import { getTransferPricing, getAccommodationById } from '@/lib/data'
+import { verifyTurnstile } from '@/lib/turnstile'
 import {
   quotePackage, quotePackageV2, quoteTransfer,
   buildPriceSnapshot, buildStaySnapshot,
   nightsForDuration, isPackageDepartureDay, isPackageReturnDay, roomsForPeople,
   baseNightlyRoomRate, upgradeSubtotal,
+  includedTripCost, extraTripCost, validateAndPriceTripPackages,
 } from '@/lib/pricing'
 import type { TripPriceInput } from '@/lib/pricing'
 import type { MealPlan, PriceSnapshot, RoomUpgrade } from '@/lib/types'
+import { getTripPackagesForPricing } from '@/lib/trip-packages'
 
 // Rate limiting (simple in-memory store — for production use Upstash Redis)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -57,8 +60,13 @@ const bookingSchema = z.object({
   })).optional(),
   meal_plan_key: z.string().optional(),
   extra_trip_ids: z.array(z.string().uuid()).optional(),
+  trip_package_ids: z.array(z.string().uuid()).optional(),
   num_people: z.number().int().min(1).max(50),
   notes: z.string().max(500).optional(),
+  // Honeypot — real users never see/fill this field. Optional so old
+  // clients without it still validate.
+  website: z.string().max(200).optional(),
+  turnstile_token: z.string().optional(),
 }).superRefine((value, ctx) => {
   const required = (path: keyof typeof value, message: string) => {
     if (!value[path]) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message })
@@ -85,6 +93,8 @@ type BookingInput = z.infer<typeof bookingSchema>
 interface PricingResult {
   total_price: number | null
   price_snapshot: PriceSnapshot | null
+  /** Set when server-side validation (e.g. Trip Package overlap) rejects the request. */
+  error?: string
 }
 
 /**
@@ -237,33 +247,33 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
   const pricing = await getTransferPricing()
 
   if (hasRoomPricing && input.trip_date) {
-    // The two trips bundled into every package by default, admin-configured
-    // in Website settings; their package cost sums into the total automatically.
-    const { data: settings } = await supabase
-      .from('site_settings')
-      .select('package_included_trip_ids')
-      .eq('id', 1)
-      .single()
-    const includedIds: string[] = Array.from(new Set(settings?.package_included_trip_ids || []))
+    // The 2 free Sinai trips are a fixed marketing benefit shown alongside
+    // every package booking — not tied to specific trip records, so no
+    // "included trips" are ever fetched or priced here.
     const extraIds = Array.from(new Set(input.extra_trip_ids || []))
-      .filter((id) => !includedIds.includes(id))
-    const tripIds = Array.from(new Set([...includedIds, ...extraIds]))
 
-    let includedTrips: TripPriceInput[] = []
+    const includedTrips: TripPriceInput[] = []
     let extraTrips: TripPriceInput[] = []
-    if (tripIds.length > 0) {
+    if (extraIds.length > 0) {
       const { data: trips } = await supabase
         .from('sinai_trips')
-        .select('id, name_en, price, package_price')
-        .in('id', tripIds)
-      const byId = new Map<string, TripPriceInput>(
-        (trips || []).map((t) => [
-          t.id,
-          { id: t.id, name_en: t.name_en, price: Number(t.price) || 0, package_price: t.package_price },
-        ]),
-      )
-      includedTrips = includedIds.flatMap((id) => byId.get(id) ?? [])
-      extraTrips = extraIds.flatMap((id) => byId.get(id) ?? [])
+        .select('id, name_en, price')
+        .in('id', extraIds)
+      extraTrips = (trips || []).map((t) => (
+        { id: t.id, name_en: t.name_en, price: Number(t.price) || 0 }
+      ))
+    }
+
+    // Trip Packages — server-side authoritative pricing + duplicate protection.
+    // Never trust the client's selection or totals.
+    const packageIds = Array.from(new Set(input.trip_package_ids || []))
+    const selectedPackages = await getTripPackagesForPricing(packageIds)
+    if (selectedPackages.length !== packageIds.length) {
+      return { total_price: null, price_snapshot: null, error: 'One or more selected Trip Packages are unavailable.' }
+    }
+    const { subtotal: packagesSubtotal, error: packagesError } = validateAndPriceTripPackages(selectedPackages, extraIds)
+    if (packagesError) {
+      return { total_price: null, price_snapshot: null, error: packagesError }
     }
 
     const transferType = input.transfer_type ?? 'hiace'
@@ -297,9 +307,10 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
         pricing, type: transferType, governorateCode: input.governorate, direction, numPeople: input.num_people,
       })
       let tripsTotal = 0
-      for (const t of includedTrips) tripsTotal += (t.package_price ?? t.price) * input.num_people
-      for (const t of extraTrips) tripsTotal += (t.package_price ?? t.price) * input.num_people
-      const total = roomTotal + mealTotal + transferQuote.total + tripsTotal
+      for (const t of includedTrips) tripsTotal += includedTripCost(t) * input.num_people
+      for (const t of extraTrips) tripsTotal += extraTripCost(t) * input.num_people
+      const packagesTotal = packagesSubtotal * input.num_people
+      const total = roomTotal + mealTotal + transferQuote.total + tripsTotal + packagesTotal
       return {
         total_price: total,
         price_snapshot: {
@@ -311,8 +322,15 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
           accommodation_subtotal: roomTotal,
           transfer_rate_used: transferQuote.perPerson,
           transfer_subtotal: transferQuote.total,
-          included_trips: includedTrips.map((t) => ({ trip_id: t.id, name_en: t.name_en, package_cost: t.package_price ?? t.price })),
-          extra_trips: extraTrips.map((t) => ({ trip_id: t.id, name_en: t.name_en, price: t.price })),
+          included_trips: includedTrips.map((t) => ({ trip_id: t.id, name_en: t.name_en, package_cost: includedTripCost(t) })),
+          extra_trips: extraTrips.map((t) => ({ trip_id: t.id, name_en: t.name_en, price: extraTripCost(t) })),
+          trip_packages: selectedPackages.map((p) => ({
+            package_id: p.id,
+            name_en: p.name_en,
+            trip_names_en: (p.trips || []).map((t) => t.name_en),
+            total: (p.totals?.packageTotal ?? 0) * input.num_people,
+          })),
+          trip_packages_subtotal: packagesTotal,
           num_people: input.num_people,
           total,
           computed_at: new Date().toISOString(),
@@ -343,11 +361,19 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
     }
     const quote = quotePackageV2(quoteInput)
     const upgradeTotal = upgradeSubtotal(upgradeExtra, numRooms, nights)
-    const totalWithUpgrade = quote.total + upgradeTotal
+    const packagesTotal = packagesSubtotal * input.num_people
+    const totalWithUpgrade = quote.total + upgradeTotal + packagesTotal
     const baseSnapshot = buildPriceSnapshot(quoteInput, quote)
     const snapshot: PriceSnapshot = {
       ...baseSnapshot,
       total: totalWithUpgrade,
+      trip_packages: selectedPackages.map((p) => ({
+        package_id: p.id,
+        name_en: p.name_en,
+        trip_names_en: (p.trips || []).map((t) => t.name_en),
+        total: (p.totals?.packageTotal ?? 0) * input.num_people,
+      })),
+      trip_packages_subtotal: packagesTotal,
       ...(upgrade ? {
         room_allocations: [{
           room_type: roomType,
@@ -413,6 +439,13 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null)
+
+    // Honeypot check — pretend success without writing anything, so bots
+    // don't learn the mechanism failed.
+    if (body && typeof body === 'object' && 'website' in body && body.website) {
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+
     const validated = bookingSchema.safeParse(body)
 
     if (!validated.success) {
@@ -422,13 +455,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      const humanVerified = await verifyTurnstile(validated.data.turnstile_token ?? null)
+      if (!humanVerified) {
+        return NextResponse.json({ error: 'Verification failed' }, { status: 400 })
+      }
+    }
+
     const dateError = validateDates(validated.data)
     if (dateError) {
       return NextResponse.json({ error: dateError }, { status: 400 })
     }
 
     const supabase = getSupabaseAdmin()
-    const { total_price, price_snapshot } = await priceBooking(validated.data)
+    const { total_price, price_snapshot, error: pricingError } = await priceBooking(validated.data)
+    if (pricingError) {
+      return NextResponse.json({ error: pricingError }, { status: 400 })
+    }
 
     // Resolve the canonical customer BEFORE creating the booking so it can
     // be linked via customer_id from the start (unified customer identity —
@@ -440,9 +483,14 @@ export async function POST(req: NextRequest) {
     })
 
     // Strip fields that don't exist as top-level booking columns
-    // (upgrade_id and room_allocations go into price_snapshot only)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { customer_email, room_allocations: _allocs, upgrade_id: _upgradeId, ...rest } = validated.data
+    // (upgrade_id/room_allocations go into price_snapshot only; website and
+    // turnstile_token are anti-bot fields, never persisted).
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    const {
+      customer_email, room_allocations: _allocs, upgrade_id: _upgradeId,
+      website: _website, turnstile_token: _turnstileToken, ...rest
+    } = validated.data
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     const { data, error } = await supabase
       .from('bookings')

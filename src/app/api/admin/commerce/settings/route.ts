@@ -32,7 +32,8 @@ export async function PATCH(req: NextRequest) {
   }
   // Online payment stays hard-disabled this phase regardless of what's sent —
   // "Do NOT integrate Stripe/Paymob/payment gateways... payment is disabled."
-  const { online_payment_enabled: _ignored, ...safe } = validated.data
+  const safe = { ...validated.data }
+  delete safe.online_payment_enabled
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase.from('commerce_settings').update(safe).eq('id', 1).select().single()
   if (error) return NextResponse.json({ error: 'Failed to update commerce settings' }, { status: 500 })

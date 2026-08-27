@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import {
   PACKAGE_DEPARTURE_DAYS, PACKAGE_RETURN_DAYS,
@@ -20,13 +21,16 @@ import {
 } from '@/lib/pricing'
 import type {
   Accommodation, MealPlan, SinaiTrip, TransferDirection, TransferGovernoratePrice,
-  TransferPricing, TransferType,
+  TransferPricing, TransferType, TripPackage,
 } from '@/lib/types'
 import {
   Send, CheckCircle2, MessageCircle, Loader2, AlertCircle,
-  Package, Bed, Bus, Calendar, Info, BedDouble, BedSingle, UtensilsCrossed, Plus, X, Mountain, Users, Sparkles,
+  Package, Bed, Bus, Calendar, Info, BedDouble, BedSingle, UtensilsCrossed, Plus, X, Mountain, Users, Sparkles, Layers, Check,
 } from 'lucide-react'
 import { RoomAllocator, type RoomAllocation, ROOM_OCCUPANCY } from '@/components/RoomAllocator'
+import { HoneypotField } from '@/components/HoneypotField'
+import { Turnstile } from '@/components/Turnstile'
+import { trackEvent } from '@/lib/track'
 import { cn } from '@/lib/utils'
 
 // ─── The one form to rule them all ───
@@ -87,23 +91,28 @@ interface Props {
   pricing: TransferPricing
   whatsapp?: string | null
   sinaiTrips?: SinaiTrip[]
-  /** Trip ids bundled into every package by default — their price is baked into the total. */
-  includedTripIds?: string[]
+  tripPackages?: TripPackage[]
 }
 
 export function BookingForm({
-  accommodation, pricing, whatsapp, sinaiTrips = [], includedTripIds = [],
+  accommodation, pricing, whatsapp, sinaiTrips = [], tripPackages = [],
 }: Props) {
   const t = useTranslations('book')
   const common = useTranslations('common')
+  const sinai = useTranslations('sinai')
   const locale = useLocale()
   const ar = locale === 'ar'
 
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState('')
+  const [honeypot, setHoneypot] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [extraTripIds, setExtraTripIds] = useState<string[]>([])
   const [addingTrip, setAddingTrip] = useState(false)
+  const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([])
+  const [tripSelectionTab, setTripSelectionTab] = useState<'trips' | 'packages'>('trips')
+  const [tripSelectionNotice, setTripSelectionNotice] = useState('')
   // Room allocation — used when party needs multiple room types
   const [roomAllocations, setRoomAllocations] = useState<RoomAllocation[]>([])
   const [useAllocator, setUseAllocator] = useState(false)
@@ -176,18 +185,61 @@ export function BookingForm({
   )
   const mealPlanPricePerNight = selectedMealPlan?.price_per_person_per_night || 0
 
-  const includedTrips = useMemo(
-    () => sinaiTrips.filter((trip) => includedTripIds.includes(trip.id)),
-    [sinaiTrips, includedTripIds],
+  const selectedPackages = useMemo(
+    () => tripPackages.filter((p) => selectedPackageIds.includes(p.id)),
+    [tripPackages, selectedPackageIds],
   )
+  // Trips already covered by a selected Trip Package — never offerable as an
+  // individually-selected extra trip at the same time (duplicate protection).
+  const packageTripIds = useMemo(
+    () => new Set(selectedPackages.flatMap((p) => (p.trips || []).map((t) => t.id))),
+    [selectedPackages],
+  )
+  const packagesSubtotal = useMemo(
+    () => selectedPackages.reduce((sum, p) => sum + (p.totals?.packageTotal ?? 0), 0),
+    [selectedPackages],
+  )
+
   const extraTripsAvailable = useMemo(
-    () => sinaiTrips.filter((trip) => !includedTripIds.includes(trip.id) && !extraTripIds.includes(trip.id)),
-    [sinaiTrips, includedTripIds, extraTripIds],
+    () => sinaiTrips.filter((trip) => !extraTripIds.includes(trip.id) && !packageTripIds.has(trip.id)),
+    [sinaiTrips, extraTripIds, packageTripIds],
   )
   const selectedExtraTrips = useMemo(
     () => sinaiTrips.filter((trip) => extraTripIds.includes(trip.id)),
     [sinaiTrips, extraTripIds],
   )
+
+  const addPackage = (pkg: TripPackage) => {
+    const otherSelected = selectedPackages.filter((p) => p.id !== pkg.id)
+    const otherTripIds = new Set(otherSelected.flatMap((p) => (p.trips || []).map((t) => t.id)))
+    const overlapsPackage = (pkg.trips || []).some((t) => otherTripIds.has(t.id))
+    if (overlapsPackage) {
+      setTripSelectionNotice(
+        ar
+          ? 'الباكدج ده فيه رحلة موجودة بالفعل ضمن باكدج اخترته. شيل الباكدج المتعارض أو اختار باكدج مختلف.'
+          : "This package includes a trip that's already part of another selected package. Remove the conflicting package or choose a different one.",
+      )
+      return
+    }
+    const pkgTripIds = new Set((pkg.trips || []).map((t) => t.id))
+    const removedIndividual = extraTripIds.filter((id) => pkgTripIds.has(id))
+    if (removedIndividual.length > 0) {
+      setExtraTripIds((prev) => prev.filter((id) => !pkgTripIds.has(id)))
+      setTripSelectionNotice(
+        ar
+          ? 'الرحلة دي موجودة بالفعل ضمن باكدج اخترته. غيّر اختيارك عشان ما تتحسبش مرتين.'
+          : 'This trip is already included in one of your selected packages. Change your selection to avoid adding it twice.',
+      )
+    } else {
+      setTripSelectionNotice('')
+    }
+    setSelectedPackageIds((prev) => [...prev, pkg.id])
+  }
+  const removePackage = (pkgId: string) => {
+    setSelectedPackageIds((prev) => prev.filter((id) => id !== pkgId))
+    setTripSelectionNotice('')
+  }
+
   const numRooms = roomsForPeople(roomType, numPeople)
   const packageNights = nightsForDuration(duration === '5' ? 5 : 4)
 
@@ -268,7 +320,7 @@ export function BookingForm({
         mealPlanPricePerNight,
         nights: packageNights,
         numRooms,
-        includedTrips,
+        includedTrips: [],
         extraTrips: selectedExtraTrips,
         transferType: packageTransferType,
         governorateCode: packageGov,
@@ -295,7 +347,7 @@ export function BookingForm({
     }
   }, [
     mode, hasRoomPricing, accommodation, pricing, roomType, mealPlanPricePerNight, duration,
-    packageNights, includedTrips, selectedExtraTrips, packageTransferType, packageGov, packageDirection, numPeople,
+    packageNights, selectedExtraTrips, packageTransferType, packageGov, packageDirection, numPeople,
     numRooms, packageDepartureDate, packageDepartureDates,
   ])
 
@@ -350,7 +402,7 @@ export function BookingForm({
 
   const total =
     (mode === 'package'
-      ? packageQuote?.total ?? 0
+      ? (packageQuote?.total ?? 0) + packagesSubtotal
       : mode === 'transfer-only'
       ? transferQuote?.total ?? 0
       : stayQuote?.total ?? 0) + upgradeTotal
@@ -363,6 +415,7 @@ export function BookingForm({
   }
 
   const onSubmit = async (data: FormData) => {
+    if (honeypot) return // silently drop — bot filled the hidden field
     setSubmitting(true)
     setServerError('')
 
@@ -386,6 +439,7 @@ export function BookingForm({
           meal_plan_key: hasRoomPricing ? (mealPlanKey || undefined) : undefined,
           upgrade_id: hasRoomPricing && upgradeId ? upgradeId : undefined,
           extra_trip_ids: hasRoomPricing && extraTripIds.length ? extraTripIds : undefined,
+          trip_package_ids: hasRoomPricing && selectedPackageIds.length ? selectedPackageIds : undefined,
           num_people: numPeople,
           notes: data.notes || undefined,
         }
@@ -428,7 +482,7 @@ export function BookingForm({
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, website: honeypot, turnstile_token: turnstileToken || undefined }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -440,6 +494,10 @@ export function BookingForm({
         )
         return
       }
+      trackEvent('accommodation_booking_submitted', {
+        booking_type: data.mode,
+        accommodation: accommodation.name_en,
+      })
       setSubmitted(true)
     } catch {
       setServerError(
@@ -482,6 +540,7 @@ export function BookingForm({
           href={whatsappLink()}
           target="_blank"
           rel="noopener"
+          onClick={() => trackEvent('whatsapp_cta_click', { source: 'book_dahab' })}
           className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] font-semibold text-white transition-colors hover:bg-[#1FBE59]"
         >
           <MessageCircle className="h-4 w-4" />
@@ -694,61 +753,126 @@ export function BookingForm({
                   </div>
                 )}
 
-                {/* Extra Sinai trips */}
+                {/* Individual trips / Trip Packages */}
                 <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <Label className="flex items-center gap-1.5">
-                      <Mountain className="h-4 w-4 text-sea-500" />
-                      {ar ? 'رحلات إضافية' : 'Extra trips'}
-                    </Label>
-                    {extraTripsAvailable.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setAddingTrip((v) => !v)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-sea-600 hover:text-sea-800"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        {ar ? 'إضافة رحلة' : 'Add trip'}
-                      </button>
-                    )}
-                  </div>
+                  <Label className="mb-2 flex items-center gap-1.5">
+                    <Mountain className="h-4 w-4 text-sea-500" />
+                    {ar ? 'كمّل تجربتك في سيناء' : 'Make more of your Sinai stay'}
+                  </Label>
 
-                  {addingTrip && (
-                    <Select
-                      value=""
-                      onValueChange={(v) => { if (v) { setExtraTripIds((prev) => [...prev, v]); setAddingTrip(false) } }}
-                    >
-                      <SelectTrigger className="w-full mb-2">
-                        <SelectValue placeholder={ar ? 'اختر رحلة' : 'Choose a trip'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {extraTripsAvailable.map((trip) => (
-                          <SelectItem key={trip.id} value={trip.id}>
-                            {ar ? trip.name_ar : trip.name_en} — {formatEGP(trip.price, locale)} {common('egp')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {tripSelectionNotice && (
+                    <p className="mb-2 flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      {tripSelectionNotice}
+                    </p>
                   )}
 
-                  {selectedExtraTrips.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedExtraTrips.map((trip) => (
-                        <span
-                          key={trip.id}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-sea-200 bg-sea-50 px-3 py-1 text-xs font-medium text-sea-700"
-                        >
-                          {ar ? trip.name_ar : trip.name_en}
+                  <Tabs value={tripSelectionTab} onValueChange={(v) => v && setTripSelectionTab(v as 'trips' | 'packages')}>
+                    <TabsList>
+                      <TabsTrigger value="trips">{ar ? 'رحلات فردية' : 'Individual Trips'}</TabsTrigger>
+                      {tripPackages.length > 0 && (
+                        <TabsTrigger value="packages">{ar ? 'باقات رحلات' : 'Trip Packages'}</TabsTrigger>
+                      )}
+                    </TabsList>
+
+                    <TabsContent value="trips" className="mt-3">
+                      <div className="mb-2 flex items-center justify-end">
+                        {extraTripsAvailable.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setExtraTripIds((prev) => prev.filter((id) => id !== trip.id))}
+                            onClick={() => setAddingTrip((v) => !v)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-sea-600 hover:text-sea-800"
                           >
-                            <X className="h-3 w-3" />
+                            <Plus className="h-3.5 w-3.5" />
+                            {ar ? 'إضافة رحلة' : 'Add trip'}
                           </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                        )}
+                      </div>
+
+                      {addingTrip && (
+                        <Select
+                          value=""
+                          onValueChange={(v) => { if (v) { setExtraTripIds((prev) => [...prev, v]); setAddingTrip(false) } }}
+                        >
+                          <SelectTrigger className="w-full mb-2">
+                            <SelectValue placeholder={ar ? 'اختر رحلة' : 'Choose a trip'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {extraTripsAvailable.map((trip) => (
+                              <SelectItem key={trip.id} value={trip.id}>
+                                {ar ? trip.name_ar : trip.name_en} — {formatEGP(trip.price, locale)} {common('egp')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {selectedExtraTrips.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedExtraTrips.map((trip) => (
+                            <span
+                              key={trip.id}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-sea-200 bg-sea-50 px-3 py-1 text-xs font-medium text-sea-700"
+                            >
+                              {ar ? trip.name_ar : trip.name_en}
+                              <button
+                                type="button"
+                                onClick={() => setExtraTripIds((prev) => prev.filter((id) => id !== trip.id))}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="packages" className="mt-3 space-y-2.5">
+                      {tripPackages.map((pkg) => {
+                        const isSelected = selectedPackageIds.includes(pkg.id)
+                        const pkgName = ar ? pkg.name_ar : pkg.name_en
+                        const tripNames = (pkg.trips || []).map((t) => (ar ? t.name_ar : t.name_en))
+                        const pkgTotal = pkg.totals?.packageTotal ?? 0
+                        return (
+                          <div
+                            key={pkg.id}
+                            className={cn(
+                              'rounded-xl border p-3 transition-colors',
+                              isSelected ? 'border-sun-400 bg-sun-50' : 'border-sea-200 bg-white',
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 text-sm font-semibold text-sea-900">
+                                  <Layers className="h-3.5 w-3.5 shrink-0 text-sun-500" />
+                                  {pkgName}
+                                </div>
+                                <p className="mt-0.5 text-xs text-sea-900/55">
+                                  {sinai('experiencesCount', { count: tripNames.length })} — {tripNames.join(' · ')}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => (isSelected ? removePackage(pkg.id) : addPackage(pkg))}
+                                className={cn(
+                                  'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                                  isSelected
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'border border-sun-500 text-sun-600 hover:bg-sun-500 hover:text-white',
+                                )}
+                              >
+                                {isSelected ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                                {isSelected ? (ar ? 'تمت الإضافة' : 'Added') : (ar ? 'أضف الباكدج' : 'Add package')}
+                              </button>
+                            </div>
+                            <div className="mt-2 text-sm font-bold text-sea-900">
+                              {formatEGP(pkgTotal, locale)} {common('egp')}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </>
             )}
@@ -1119,6 +1243,9 @@ export function BookingForm({
           <Textarea rows={3} placeholder={t('notesPlaceholder')} {...register('notes')} />
         </div>
 
+        <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+        <Turnstile onToken={setTurnstileToken} />
+
         {serverError && (
           <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1140,6 +1267,7 @@ export function BookingForm({
             href={whatsappLink()}
             target="_blank"
             rel="noopener"
+            onClick={() => trackEvent('whatsapp_cta_click', { source: 'book_dahab' })}
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border-[1.5px] border-[#25D366] font-semibold text-[#128C4A] transition-colors hover:bg-[#25D366]/10"
           >
             <MessageCircle className="h-4 w-4" />
@@ -1157,6 +1285,12 @@ export function BookingForm({
               {t('priceBreakdown')}
             </div>
 
+            {mode === 'package' && packageQuote && (
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-sun-50 px-3 py-1 text-xs font-semibold text-sun-700">
+                ✓ {t('includedTripsBadge')}
+              </div>
+            )}
+
             <div className="mt-3 space-y-1.5 text-sm">
               {mode === 'package' && packageQuote && (
                 <>
@@ -1168,12 +1302,6 @@ export function BookingForm({
                     <Line
                       label={selectedMealPlan ? (ar ? selectedMealPlan.label_ar : selectedMealPlan.label_en) : ''}
                       value={`${formatEGP(packageQuote.mealSubtotal, locale)} ${common('egp')}`}
-                    />
-                  )}
-                  {includedTrips.length > 0 && (
-                    <Line
-                      label={ar ? 'رحلات مضمّنة' : 'Included trips'}
-                      value={`${formatEGP(packageQuote.includedTripsSubtotal, locale)} ${common('egp')}`}
                     />
                   )}
                   <Line
@@ -1189,6 +1317,21 @@ export function BookingForm({
                       label={ar ? 'رحلات إضافية' : 'Extra trips'}
                       value={`${formatEGP(packageQuote.extraTripsSubtotal, locale)} ${common('egp')}`}
                     />
+                  )}
+                  {selectedPackages.length > 0 && (
+                    <>
+                      {selectedPackages.map((pkg) => (
+                        <Line
+                          key={pkg.id}
+                          label={ar ? pkg.name_ar : pkg.name_en}
+                          value={`${formatEGP(pkg.totals?.packageTotal ?? 0, locale)} ${common('egp')}`}
+                        />
+                      ))}
+                      <Line
+                        label={ar ? 'إجمالي باقات الرحلات' : 'Trip Packages total'}
+                        value={`${formatEGP(packagesSubtotal, locale)} ${common('egp')}`}
+                      />
+                    </>
                   )}
                   {selectedUpgrade && upgradeTotal > 0 && (
                     <Line

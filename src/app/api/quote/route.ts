@@ -11,9 +11,13 @@ import {
   accommodationSubtotal,
   resolveNightlyRates,
   roomsForPeople,
+  includedTripCost,
+  extraTripCost,
+  validateAndPriceTripPackages,
 } from '@/lib/pricing'
 import type { MealPlan, RoomUpgrade } from '@/lib/types'
 import type { TripPriceInput } from '@/lib/pricing'
+import { getTripPackagesForPricing } from '@/lib/trip-packages'
 
 // ─── calculate_package_quote ──────────────────────────────────────────────────
 //
@@ -32,6 +36,26 @@ import type { TripPriceInput } from '@/lib/pricing'
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Simple in-memory per-IP rate limit, consistent with /api/bookings and
+// /api/trip-bookings. Quote calc is low-risk (no DB write, no PII) so the
+// limit is generous — this exists to keep casual scrapers/bots from hammering
+// the endpoint, not to restrict legitimate price-checking.
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 20
+const RATE_WINDOW = 60 * 60 * 1000
+
+function rateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count += 1
+  return true
+}
+
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
 const quoteSchema = z.object({
@@ -43,6 +67,7 @@ const quoteSchema = z.object({
   // Package-specific
   duration: z.union([z.literal(4), z.literal(5)]).optional(),
   extra_trip_ids: z.array(z.string().uuid()).optional(),
+  trip_package_ids: z.array(z.string().uuid()).optional(),
 
   // Accommodation-only
   nights: z.number().int().min(1).max(30).optional(),
@@ -85,6 +110,14 @@ function resolveUpgrade(
 }
 
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0] ||
+    req.headers.get('x-real-ip') ||
+    'unknown'
+  if (!rateLimit(ip)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const body = await req.json().catch(() => null)
   const validated = quoteSchema.safeParse(body)
   if (!validated.success) {
@@ -219,35 +252,43 @@ export async function POST(req: NextRequest) {
     }
 
     // ─── package ───
+    // The 2 free Sinai trips are a fixed marketing benefit shown alongside
+    // every package quote — not tied to specific trip records, so no
+    // "included trips" are ever fetched or priced here.
     const [pricing] = await Promise.all([getTransferPricing()])
 
     const supabase = getSupabaseAdmin()
-    const { data: settings } = await supabase
-      .from('site_settings')
-      .select('package_included_trip_ids')
-      .eq('id', 1)
-      .single()
-    const includedIds: string[] = Array.from(new Set(settings?.package_included_trip_ids || []))
     const extraIds = Array.from(new Set(input.extra_trip_ids || []))
-      .filter((id) => !includedIds.includes(id))
-    const tripIds = Array.from(new Set([...includedIds, ...extraIds]))
 
-    let includedTrips: TripPriceInput[] = []
+    const includedTrips: TripPriceInput[] = []
     let extraTrips: TripPriceInput[] = []
-    if (tripIds.length > 0) {
+    if (extraIds.length > 0) {
       const { data: trips } = await supabase
         .from('sinai_trips')
-        .select('id, name_en, price, package_price')
-        .in('id', tripIds)
-      const byId = new Map<string, TripPriceInput>(
-        (trips || []).map((t) => [
-          t.id,
-          { id: t.id, name_en: t.name_en, price: Number(t.price) || 0, package_price: t.package_price },
-        ]),
-      )
-      includedTrips = includedIds.flatMap((id) => byId.get(id) ?? [])
-      extraTrips = extraIds.flatMap((id) => byId.get(id) ?? [])
+        .select('id, name_en, price')
+        .in('id', extraIds)
+      extraTrips = (trips || []).map((t) => (
+        { id: t.id, name_en: t.name_en, price: Number(t.price) || 0 }
+      ))
     }
+
+    // Trip Packages — server-side authoritative pricing + duplicate protection.
+    const packageIds = Array.from(new Set(input.trip_package_ids || []))
+    const selectedPackages = await getTripPackagesForPricing(packageIds)
+    if (selectedPackages.length !== packageIds.length) {
+      return NextResponse.json({ error: 'One or more selected Trip Packages are unavailable.' }, { status: 400 })
+    }
+    const { subtotal: packagesPerPersonSubtotal, error: packagesError } = validateAndPriceTripPackages(selectedPackages, extraIds)
+    if (packagesError) {
+      return NextResponse.json({ error: packagesError }, { status: 400 })
+    }
+    const packagesSubtotal = packagesPerPersonSubtotal * input.num_people
+    const tripPackagesResponse = selectedPackages.map((p) => ({
+      package_id: p.id,
+      name: p.name_en,
+      trip_names: (p.trips || []).map((t) => t.name_en),
+      total: (p.totals?.packageTotal ?? 0) * input.num_people,
+    }))
 
     const transferType = input.transfer_type ?? 'hiace'
     const direction = input.transfer_direction ?? 'round_trip'
@@ -293,9 +334,9 @@ export async function POST(req: NextRequest) {
       const mealTotal = mealPlanPricePerNight * input.num_people * nights
       const transferQuote = quoteTransfer({ pricing, type: transferType, governorateCode: input.governorate, direction, numPeople: input.num_people })
       let tripsTotal = 0
-      for (const t of includedTrips) tripsTotal += (t.package_price ?? t.price) * input.num_people
-      for (const t of extraTrips) tripsTotal += t.price * input.num_people
-      const total = roomTotal + mealTotal + transferQuote.total + tripsTotal
+      for (const t of includedTrips) tripsTotal += includedTripCost(t) * input.num_people
+      for (const t of extraTrips) tripsTotal += extraTripCost(t) * input.num_people
+      const total = roomTotal + mealTotal + transferQuote.total + tripsTotal + packagesSubtotal
       return NextResponse.json({
         booking_type: 'package',
         accommodation_name: acc.name_en,
@@ -307,9 +348,11 @@ export async function POST(req: NextRequest) {
         transfer_subtotal: transferQuote.total,
         meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
         meal_subtotal: mealTotal,
-        included_trips: includedTrips.map((t) => ({ name: t.name_en, cost: t.package_price ?? t.price })),
-        extra_trips: extraTrips.map((t) => ({ name: t.name_en, cost: t.price })),
+        included_trips: includedTrips.map((t) => ({ name: t.name_en, cost: includedTripCost(t) })),
+        extra_trips: extraTrips.map((t) => ({ name: t.name_en, cost: extraTripCost(t) })),
         trips_subtotal: tripsTotal,
+        trip_packages: tripPackagesResponse,
+        trip_packages_subtotal: packagesSubtotal,
         num_people: input.num_people,
         per_person: total / input.num_people,
         total,
@@ -340,7 +383,7 @@ export async function POST(req: NextRequest) {
       numPeople: input.num_people,
     })
     const upgradeTotal = upgradeSubtotal(upgradeExtra, numRooms, nights)
-    const total = quote.total + upgradeTotal
+    const total = quote.total + upgradeTotal + packagesSubtotal
 
     return NextResponse.json({
       booking_type: 'package',
@@ -356,10 +399,12 @@ export async function POST(req: NextRequest) {
       upgrade_subtotal: upgradeTotal,
       meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
       meal_subtotal: quote.mealSubtotal,
-      included_trips: includedTrips.map((t) => ({ name: t.name_en, cost: t.package_price ?? t.price })),
-      extra_trips: extraTrips.map((t) => ({ name: t.name_en, cost: t.price })),
+      included_trips: includedTrips.map((t) => ({ name: t.name_en, cost: includedTripCost(t) })),
+      extra_trips: extraTrips.map((t) => ({ name: t.name_en, cost: extraTripCost(t) })),
       included_trips_subtotal: quote.includedTripsSubtotal,
       extra_trips_subtotal: quote.extraTripsSubtotal,
+      trip_packages: tripPackagesResponse,
+      trip_packages_subtotal: packagesSubtotal,
       num_people: quote.numPeople,
       per_person: total / quote.numPeople,
       total,

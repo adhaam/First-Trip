@@ -55,15 +55,15 @@ export function Header() {
         'top-0 z-50 w-full transition-all duration-300',
         isHome ? 'fixed' : 'sticky',
         scrolled
-          ? 'border-b border-sand-300/70 bg-sand-50/90 backdrop-blur-md supports-[backdrop-filter]:bg-sand-50/75'
+          ? 'border-b border-white/10 bg-weemap-charcoal/90 backdrop-blur-md supports-[backdrop-filter]:bg-weemap-charcoal/75'
           : transparent
             ? 'border-b border-transparent bg-transparent'
-            : 'border-b border-transparent bg-sand-50',
+            : 'border-b border-white/10 bg-weemap-charcoal',
       )}
     >
       <div className="container-main flex h-[4.5rem] items-center justify-between gap-4">
         <Link href="/" aria-label="WEEMAP SINAI" className="shrink-0">
-          <Logo size="md" priority tone={transparent ? 'light' : 'ink'} />
+          <Logo size="md" priority tone="light" />
         </Link>
 
         {/* Desktop nav — a single ink hairline rail rather than floating pills */}
@@ -78,9 +78,7 @@ export function Header() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative px-3 py-2 text-[0.9rem] font-medium transition-colors',
-                  transparent
-                    ? active ? 'text-white' : 'text-white/75 hover:text-white'
-                    : active ? 'text-sea-700' : 'text-sea-900/65 hover:text-sea-700',
+                  active ? 'text-white' : 'text-white/75 hover:text-white',
                 )}
               >
                 {t(labelKey)}
@@ -97,7 +95,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-1.5">
-          <GlobalSearch transparent={transparent} />
+          <GlobalSearch />
 
           <button
             type="button"
@@ -105,7 +103,7 @@ export function Header() {
             aria-label={locale === 'ar' ? 'سلة WEEMAP' : 'WEEMAP cart'}
             className={cn(
               'relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors',
-              transparent ? 'text-white hover:bg-white/10' : 'text-sea-900 hover:bg-sand-200',
+              'text-white hover:bg-white/10',
             )}
           >
             <ShoppingBag className="h-5 w-5" />
@@ -122,9 +120,7 @@ export function Header() {
             aria-label={otherLocale === 'ar' ? 'التبديل إلى العربية' : 'Switch to English'}
             className={cn(
               'inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors',
-              transparent
-                ? 'text-white/85 hover:bg-white/10 hover:text-white'
-                : 'text-sea-900/70 hover:bg-sand-200 hover:text-sea-900',
+              'text-white/85 hover:bg-white/10 hover:text-white',
             )}
           >
             <Globe className="h-4 w-4" />
@@ -148,7 +144,7 @@ export function Header() {
             <SheetTrigger
               className={cn(
                 'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors xl:hidden',
-                transparent ? 'text-white hover:bg-white/10' : 'text-sea-900 hover:bg-sand-200',
+                'text-white hover:bg-white/10',
               )}
             >
               <Menu className="h-5 w-5" />

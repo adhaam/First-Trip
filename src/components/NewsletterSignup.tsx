@@ -5,6 +5,8 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Reveal } from '@/components/motion/Reveal'
 import { Mail, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { HoneypotField } from '@/components/HoneypotField'
+import { Turnstile } from '@/components/Turnstile'
 
 /**
  * Email capture — the "stay in the loop" band above the footer.
@@ -18,9 +20,12 @@ export function NewsletterSignup() {
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
   const [errMsg, setErrMsg] = useState('')
+  const [honeypot, setHoneypot] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (honeypot) return // silently drop — bot filled the hidden field
     if (!email || !email.includes('@')) return
     setState('loading')
     setErrMsg('')
@@ -28,7 +33,9 @@ export function NewsletterSignup() {
       const res = await fetch('/api/newsletter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, locale, source: 'homepage-footer' }),
+        body: JSON.stringify({
+          email, locale, source: 'homepage-footer', website: honeypot, turnstile_token: turnstileToken || undefined,
+        }),
       })
       if (!res.ok) {
         setState('err')
@@ -117,6 +124,8 @@ export function NewsletterSignup() {
                     )}
                   </button>
                 </div>
+                <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+                <Turnstile onToken={setTurnstileToken} />
                 {errMsg && (
                   <p id="newsletter-error" role="alert" className="mt-3 text-xs text-red-200">{errMsg}</p>
                 )}

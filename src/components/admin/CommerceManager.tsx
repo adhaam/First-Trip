@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocale } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, Plus, MessageCircle, Trash2 } from 'lucide-react'
+import { Loader2, Plus, MessageCircle, Trash2, Search, Pencil, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ProductEditor } from './ProductEditor'
 
@@ -44,6 +44,7 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
   const [form, setForm] = useState({ slug: '', name_ar: '', name_en: '', applies_to: 'both' as const })
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [query, setQuery] = useState('')
 
   const create = async () => {
     setFormError('')
@@ -69,6 +70,12 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
     onReload()
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return items
+    return items.filter((c) => c.name_ar.toLowerCase().includes(q) || c.name_en.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q))
+  }, [items, query])
+
   return (
     <div className="space-y-4">
       <Card>
@@ -88,6 +95,10 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
           {formError && <p className="sm:col-span-5 text-xs text-red-600 font-medium">{formError}</p>}
         </CardContent>
       </Card>
+      <div className="relative max-w-xs">
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ar ? 'دور بالاسم أو المعرف' : 'Search by name or slug'} className="ps-9" />
+      </div>
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
@@ -99,7 +110,7 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
             </TableRow></TableHeader>
             <TableBody>
               {loading && <TableRow><TableCell colSpan={4} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
-              {!loading && items.map((c) => (
+              {!loading && filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{ar ? c.name_ar : c.name_en}</TableCell>
                   <TableCell dir="ltr">{c.slug}</TableCell>
@@ -108,6 +119,7 @@ function CategoriesTab({ items, loading, onReload }: { items: Category[]; loadin
                 </TableRow>
               ))}
               {!loading && items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-gray-400 py-8">{ar ? 'لا توجد تصنيفات بعد' : 'No categories yet'}</TableCell></TableRow>}
+              {!loading && items.length > 0 && filtered.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-gray-400 py-8">{ar ? 'لا توجد نتائج مطابقة' : 'No categories match your search'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -133,11 +145,18 @@ function ProductsTab({ categories, collections }: { categories: Category[]; coll
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [creatingNew, setCreatingNew] = useState(false)
+  const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
     try { setItems((await api('/api/admin/commerce/products')).products || []) } finally { setLoading(false) }
   }, [api])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return items
+    return items.filter((p) => p.name_ar.toLowerCase().includes(q) || p.name_en.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q))
+  }, [items, query])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch
@@ -159,7 +178,11 @@ function ProductsTab({ categories, collections }: { categories: Category[]; coll
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative max-w-xs grow">
+          <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ar ? 'دور بالاسم أو المعرف' : 'Search products…'} className="ps-9" />
+        </div>
         <Button onClick={() => setCreatingNew(true)} className="bg-brand-blue hover:bg-brand-blue-dark text-white"><Plus className="h-4 w-4 mr-1" />{ar ? 'إضافة منتج' : 'Add product'}</Button>
       </div>
       <Card>
@@ -175,10 +198,14 @@ function ProductsTab({ categories, collections }: { categories: Category[]; coll
             </TableRow></TableHeader>
             <TableBody>
               {loading && <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
-              {!loading && items.map((p) => (
+              {!loading && filtered.map((p) => (
                 <TableRow key={p.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setEditingId(p.id)}>
                   <TableCell className="font-medium">{ar ? p.name_ar : p.name_en} {p.is_featured && <span className="ms-1 text-xs text-sun-600">★</span>}</TableCell>
-                  <TableCell>{p.product_type === 'sale' ? (ar ? 'بيع' : 'Sale') : (ar ? 'إيجار' : 'Rental')}</TableCell>
+                  <TableCell>
+                    <Badge className={p.product_type === 'sale' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}>
+                      {p.product_type === 'sale' ? (ar ? 'بيع' : 'Sale') : (ar ? 'إيجار' : 'Rental')}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{p.commerce_categories ? (ar ? p.commerce_categories.name_ar : p.commerce_categories.name_en) : '—'}</TableCell>
                   <TableCell>{p.base_price}</TableCell>
                   <TableCell>{p.product_type === 'rental' ? (p.total_inventory ?? '—') : '—'}</TableCell>
@@ -190,6 +217,7 @@ function ProductsTab({ categories, collections }: { categories: Category[]; coll
                 </TableRow>
               ))}
               {!loading && items.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">{ar ? 'لا توجد منتجات بعد' : 'No products yet'}</TableCell></TableRow>}
+              {!loading && items.length > 0 && filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">{ar ? 'لا توجد نتائج مطابقة' : 'No products match your search'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -233,11 +261,18 @@ function OrdersTab() {
   const [items, setItems] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<OrderDetail | null>(null)
+  const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
     try { setItems((await api('/api/admin/commerce/orders')).orders || []) } finally { setLoading(false) }
   }, [api])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return items
+    return items.filter((o) => o.order_number.toLowerCase().includes(q) || (o.customers?.name || '').toLowerCase().includes(q) || (o.customers?.phone || '').includes(q))
+  }, [items, query])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch
@@ -267,6 +302,10 @@ function OrdersTab() {
 
   return (
     <div className="space-y-4">
+      <div className="relative max-w-xs">
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ar ? 'دور برقم الطلب أو اسم العميل' : 'Search by order # or customer'} className="ps-9" />
+      </div>
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
@@ -279,7 +318,7 @@ function OrdersTab() {
             </TableRow></TableHeader>
             <TableBody>
               {loading && <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
-              {!loading && items.map((o) => (
+              {!loading && filtered.map((o) => (
                 <TableRow key={o.id} className="cursor-pointer hover:bg-gray-50" onClick={() => openDetail(o.id)}>
                   <TableCell className="font-medium" dir="ltr">{o.order_number}</TableCell>
                   <TableCell>{o.customers?.name || '—'} <span dir="ltr" className="text-gray-400">{o.customers?.phone}</span></TableCell>
@@ -296,6 +335,7 @@ function OrdersTab() {
                 </TableRow>
               ))}
               {!loading && items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات بعد' : 'No orders yet'}</TableCell></TableRow>}
+              {!loading && items.length > 0 && filtered.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">{ar ? 'لا توجد نتائج مطابقة' : 'No orders match your search'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -557,6 +597,7 @@ function CollectionsTab({ items, loading, onReload }: { items: Collection[]; loa
   const [form, setForm] = useState({ slug: '', name_ar: '', name_en: '' })
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [query, setQuery] = useState('')
 
   const create = async () => {
     setFormError('')
@@ -581,6 +622,12 @@ function CollectionsTab({ items, loading, onReload }: { items: Collection[]; loa
     onReload()
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return items
+    return items.filter((c) => c.name_ar.toLowerCase().includes(q) || c.name_en.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q))
+  }, [items, query])
+
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-500">{ar ? 'مجموعات مختارة (مش تصنيفات) — منتج ممكن يكون في أكتر من مجموعة. عيّن المنتجات من داخل محرر المنتج.' : 'Curated groupings (not categories) — a product can belong to several. Assign products from within the product editor.'}</p>
@@ -593,6 +640,10 @@ function CollectionsTab({ items, loading, onReload }: { items: Collection[]; loa
           {formError && <p className="sm:col-span-4 text-xs text-red-600 font-medium">{formError}</p>}
         </CardContent>
       </Card>
+      <div className="relative max-w-xs">
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ar ? 'دور بالاسم أو المعرف' : 'Search by name or slug'} className="ps-9" />
+      </div>
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
@@ -603,7 +654,7 @@ function CollectionsTab({ items, loading, onReload }: { items: Collection[]; loa
             </TableRow></TableHeader>
             <TableBody>
               {loading && <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
-              {!loading && items.map((c) => (
+              {!loading && filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{ar ? c.name_ar : c.name_en}</TableCell>
                   <TableCell dir="ltr">{c.slug}</TableCell>
@@ -611,6 +662,7 @@ function CollectionsTab({ items, loading, onReload }: { items: Collection[]; loa
                 </TableRow>
               ))}
               {!loading && items.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-gray-400 py-8">{ar ? 'لا توجد مجموعات بعد' : 'No collections yet'}</TableCell></TableRow>}
+              {!loading && items.length > 0 && filtered.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-gray-400 py-8">{ar ? 'لا توجد نتائج مطابقة' : 'No collections match your search'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -631,6 +683,10 @@ function DeliveryTab() {
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ name_ar: '', name_en: '', fee_type: 'fixed' as Zone['fee_type'], fixed_fee: 0 })
   const [saving, setSaving] = useState(false)
+  const [query, setQuery] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ name_ar: '', name_en: '', fee_type: 'fixed' as Zone['fee_type'], fixed_fee: 0 })
+  const [editSaving, setEditSaving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -651,6 +707,27 @@ function DeliveryTab() {
     } catch (e) { alert((e as Error).message) } finally { setSaving(false) }
   }
 
+  const startEdit = (z: Zone) => {
+    setEditingId(z.id)
+    setEditForm({ name_ar: z.name_ar, name_en: z.name_en, fee_type: z.fee_type, fixed_fee: z.fixed_fee })
+  }
+  const cancelEdit = () => setEditingId(null)
+  const saveEdit = async (id: string) => {
+    if (!editForm.name_ar || !editForm.name_en) return
+    setEditSaving(true)
+    try {
+      await api(`/api/admin/commerce/delivery-zones/${id}`, { method: 'PATCH', body: JSON.stringify(editForm) })
+      setEditingId(null)
+      load()
+    } catch (e) { alert((e as Error).message) } finally { setEditSaving(false) }
+  }
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return items
+    return items.filter((z) => z.name_ar.toLowerCase().includes(q) || z.name_en.toLowerCase().includes(q))
+  }, [items, query])
+
   return (
     <div className="space-y-4">
       <Card>
@@ -669,6 +746,10 @@ function DeliveryTab() {
           <Button onClick={create} disabled={saving}><Plus className="h-4 w-4 mr-1" />{ar ? 'إضافة منطقة' : 'Add zone'}</Button>
         </CardContent>
       </Card>
+      <div className="relative max-w-xs">
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ar ? 'دور بالاسم' : 'Search zones…'} className="ps-9" />
+      </div>
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
@@ -676,17 +757,48 @@ function DeliveryTab() {
               <TableHead>{ar ? 'الاسم' : 'Name'}</TableHead>
               <TableHead>{ar ? 'نوع الرسم' : 'Fee type'}</TableHead>
               <TableHead>{ar ? 'الرسم' : 'Fee'}</TableHead>
+              <TableHead />
             </TableRow></TableHeader>
             <TableBody>
-              {loading && <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
-              {!loading && items.map((z) => (
-                <TableRow key={z.id}>
-                  <TableCell className="font-medium">{ar ? z.name_ar : z.name_en}</TableCell>
-                  <TableCell>{z.fee_type}</TableCell>
-                  <TableCell>{z.fee_type === 'fixed' ? z.fixed_fee : '—'}</TableCell>
-                </TableRow>
+              {loading && <TableRow><TableCell colSpan={4} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
+              {!loading && filtered.map((z) => (
+                editingId === z.id ? (
+                  <TableRow key={z.id}>
+                    <TableCell colSpan={4}>
+                      <div className="grid gap-2 py-1 sm:grid-cols-5">
+                        <Input placeholder={ar ? 'الاسم بالعربي' : 'Name (Arabic)'} value={editForm.name_ar} onChange={(e) => setEditForm((f) => ({ ...f, name_ar: e.target.value }))} />
+                        <Input placeholder={ar ? 'الاسم بالإنجليزي' : 'Name (English)'} value={editForm.name_en} onChange={(e) => setEditForm((f) => ({ ...f, name_en: e.target.value }))} />
+                        <Select value={editForm.fee_type} onValueChange={(v) => v && setEditForm((f) => ({ ...f, fee_type: v as Zone['fee_type'] }))}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fixed">{ar ? 'رسم ثابت' : 'Fixed fee'}</SelectItem>
+                            <SelectItem value="free">{ar ? 'مجاني' : 'Free'}</SelectItem>
+                            <SelectItem value="quote">{ar ? 'عرض سعر يدوي' : 'Manual quote'}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input type="number" placeholder={ar ? 'الرسم' : 'Fee'} value={editForm.fixed_fee} onChange={(e) => setEditForm((f) => ({ ...f, fixed_fee: Number(e.target.value) }))} disabled={editForm.fee_type !== 'fixed'} />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => saveEdit(z.id)} disabled={editSaving}><Check className="h-4 w-4 mr-1" />{ar ? 'حفظ' : 'Save'}</Button>
+                          <Button size="sm" variant="outline" onClick={cancelEdit} disabled={editSaving}><X className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <TableRow key={z.id}>
+                    <TableCell className="font-medium">{ar ? z.name_ar : z.name_en}</TableCell>
+                    <TableCell>{z.fee_type}</TableCell>
+                    <TableCell>{z.fee_type === 'fixed' ? z.fixed_fee : '—'}</TableCell>
+                    <TableCell>
+                      <button type="button" onClick={() => startEdit(z)} aria-label={ar ? 'تعديل المنطقة' : 'Edit zone'}>
+                        <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-brand-blue" />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                )
               ))}
-              {!loading && items.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-gray-400 py-8">{ar ? 'لا توجد مناطق توصيل بعد' : 'No delivery zones yet'}</TableCell></TableRow>}
+              {!loading && items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-gray-400 py-8">{ar ? 'لا توجد مناطق توصيل بعد' : 'No delivery zones yet'}</TableCell></TableRow>}
+              {!loading && items.length > 0 && filtered.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-gray-400 py-8">{ar ? 'لا توجد نتائج مطابقة' : 'No zones match your search'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

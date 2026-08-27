@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { getAccommodations, getSinaiTrips, getCommerceProducts } from '@/lib/data'
+import { getAccommodations, getSinaiTrips, getCommerceProducts, getCommunityPosts } from '@/lib/data'
 import { getPathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { SITE_URL } from '@/lib/seo'
@@ -76,6 +76,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: trip.created_at ? new Date(trip.created_at) : new Date(),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
+        alternates: localizedAlternates(path),
+      })
+    }
+  }
+
+  // Real community post pages — same pattern as accommodations/trips above.
+  // Posts without a slug (pre-migration-019 rows, or the DB where that
+  // migration hasn't been applied yet) are skipped rather than emitting a
+  // broken sitemap URL.
+  const communityPosts = await getCommunityPosts().catch(() => [])
+  for (const locale of routing.locales) {
+    for (const post of communityPosts) {
+      if (!post.slug) continue
+      const path = `/community/${post.slug}`
+      entries.push({
+        url: localizedUrl(path, locale),
+        lastModified: post.updated_at ? new Date(post.updated_at) : (post.created_at ? new Date(post.created_at) : new Date()),
+        changeFrequency: 'weekly' as const,
+        priority: 0.6,
         alternates: localizedAlternates(path),
       })
     }

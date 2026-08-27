@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 const schema = z.object({
   email: z.string().email(),
   locale: z.enum(['ar', 'en']).optional().default('ar'),
   source: z.string().max(60).optional(),
+  website: z.string().max(200).optional(),
+  turnstile_token: z.string().optional(),
 })
 
 // simple per-IP rate limit to keep casual scrapers away
@@ -36,9 +39,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null)
+
+    if (body && typeof body === 'object' && 'website' in body && body.website) {
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+
     const parsed = schema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
+    }
+
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      const humanVerified = await verifyTurnstile(parsed.data.turnstile_token ?? null)
+      if (!humanVerified) {
+        return NextResponse.json({ error: 'Verification failed' }, { status: 400 })
+      }
     }
 
     const supabase = getSupabaseAdmin()

@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Plus, ChevronUp } from 'lucide-react'
+import { Loader2, Plus, ChevronUp, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { InvoiceViewer } from './InvoiceViewer'
 
 type TripBookingStatus = 'new' | 'contacted' | 'confirmed' | 'completed' | 'cancelled'
 
@@ -56,6 +57,11 @@ export function TripBookingsManager() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+
+  // ─── invoice viewer ───
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const [invoiceBookingId, setInvoiceBookingId] = useState<string | null>(null)
+  const [invoiceBookingNumber, setInvoiceBookingNumber] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -233,16 +239,17 @@ export function TripBookingsManager() {
                 <TableHead>{ar ? 'عدد الأشخاص' : 'People'}</TableHead>
                 <TableHead>{ar ? 'السعر' : 'Price'}</TableHead>
                 <TableHead>{ar ? 'الحالة' : 'Status'}</TableHead>
+                <TableHead>{ar ? 'فاتورة' : 'Invoice'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />{ar ? 'جاري التحميل...' : 'Loading...'}
                 </TableCell></TableRow>
               )}
               {!loading && error && (
-                <TableRow><TableCell colSpan={7} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
               )}
               {!loading && !error && bookings.map((b) => (
                 <TableRow key={b.id}>
@@ -264,15 +271,42 @@ export function TripBookingsManager() {
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setInvoiceBookingId(b.id)
+                        setInvoiceBookingNumber(`TB-${b.id.slice(0, 8).toUpperCase()}`)
+                        setInvoiceOpen(true)
+                      }}
+                      className="gap-1.5"
+                    >
+                      <FileText className="h-4 w-4" />
+                      {ar ? 'فاتورة' : 'Invoice'}
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               {!loading && !error && bookings.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Invoice Viewer */}
+      {invoiceBookingId && (
+        <InvoiceViewer
+          bookingId={invoiceBookingId}
+          bookingNumber={invoiceBookingNumber}
+          bookingType="trip"
+          locale={locale as 'ar' | 'en'}
+          open={invoiceOpen}
+          onOpenChange={setInvoiceOpen}
+        />
+      )}
     </div>
   )
 }

@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { AlertCircle, Info, Loader2, RotateCcw, Search } from 'lucide-react'
+import { AlertCircle, Download, Info, Loader2, RotateCcw, Search, UserCheck, UserX } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toCsv, downloadCsv } from '@/lib/csv'
 
 interface Subscriber {
   id: string
@@ -31,6 +32,7 @@ export function NewsletterManager() {
   const [configured, setConfigured] = useState<boolean | null>(null)
   const [search, setSearch] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -58,6 +60,38 @@ export function NewsletterManager() {
     const q = search.toLowerCase()
     return subscribers.filter(s => s.email.toLowerCase().includes(q))
   }, [subscribers, search])
+
+  const toggleSubscribed = async (sub: Subscriber) => {
+    const nextUnsubscribed = !sub.unsubscribed
+    setTogglingId(sub.id)
+    // Optimistic update — the badge/action flips immediately, reverted on failure.
+    setSubscribers((prev) => prev.map((s) => (s.id === sub.id ? { ...s, unsubscribed: nextUnsubscribed } : s)))
+    try {
+      const res = await fetch(`/api/admin/newsletter/${sub.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unsubscribed: nextUnsubscribed }),
+      })
+      if (res.status === 401) { router.replace('/admin'); return }
+      if (!res.ok) throw new Error('failed')
+    } catch {
+      setSubscribers((prev) => prev.map((s) => (s.id === sub.id ? { ...s, unsubscribed: sub.unsubscribed } : s)))
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  const exportCsv = () => {
+    const headers = ['Email', 'Locale', 'Source', 'Status', 'Date Subscribed']
+    const rows = filtered.map((s) => [
+      s.email,
+      s.locale,
+      s.source,
+      s.unsubscribed ? 'Unsubscribed' : 'Active',
+      s.created_at,
+    ])
+    downloadCsv(`newsletter-subscribers-${new Date().toISOString().split('T')[0]}.csv`, toCsv(headers, rows))
+  }
 
   if (loading) {
     return (
@@ -113,15 +147,21 @@ export function NewsletterManager() {
             ({subscribers.length})
           </span>
         </h2>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            type="text"
-            placeholder={ar ? 'بحث بالإيميل...' : 'Search by email...'}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              type="text"
+              placeholder={ar ? 'بحث بالإيميل...' : 'Search by email...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0} className="shrink-0 gap-1.5">
+            <Download className="h-4 w-4" />
+            {ar ? 'تصدير CSV' : 'Export CSV'}
+          </Button>
         </div>
       </div>
 
@@ -135,12 +175,13 @@ export function NewsletterManager() {
                 <TableHead>{ar ? 'المصدر' : 'Source'}</TableHead>
                 <TableHead>{ar ? 'تاريخ الاشتراك' : 'Date Subscribed'}</TableHead>
                 <TableHead>{ar ? 'الحالة' : 'Status'}</TableHead>
+                <TableHead>{ar ? 'إجراء' : 'Action'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-400">
                     {search
                       ? (ar ? 'لا توجد نتائج' : 'No results found')
                       : (ar ? 'لا يوجد مشتركين بعد' : 'No subscribers yet')}
@@ -168,6 +209,27 @@ export function NewsletterManager() {
                           ? (ar ? 'ألغى الاشتراك' : 'Unsubscribed')
                           : (ar ? 'مشترك' : 'Active')}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleSubscribed(sub)}
+                        disabled={togglingId === sub.id}
+                        className="gap-1.5"
+                      >
+                        {togglingId === sub.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : sub.unsubscribed ? (
+                          <UserCheck className="h-3.5 w-3.5" />
+                        ) : (
+                          <UserX className="h-3.5 w-3.5" />
+                        )}
+                        {sub.unsubscribed
+                          ? (ar ? 'إعادة الاشتراك' : 'Resubscribe')
+                          : (ar ? 'إلغاء الاشتراك' : 'Unsubscribe')}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))

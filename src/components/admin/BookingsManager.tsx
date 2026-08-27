@@ -913,6 +913,7 @@ export function BookingsManager() {
         <InvoiceViewer
           bookingId={invoiceBookingId}
           bookingNumber={invoiceBookingNumber}
+          bookingType="accommodation"
           locale={locale as 'ar' | 'en'}
           open={invoiceOpen}
           onOpenChange={setInvoiceOpen}

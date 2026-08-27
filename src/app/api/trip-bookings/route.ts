@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 // Simple in-memory rate limit, consistent with /api/bookings.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -31,6 +32,8 @@ const tripBookingSchema = z.object({
   children: z.number().int().min(0).max(50).optional(),
   selected_options: z.record(z.string(), z.unknown()).optional().default({}),
   notes: z.string().max(500).optional(),
+  website: z.string().max(200).optional(),
+  turnstile_token: z.string().optional(),
 })
 
 /**
@@ -49,9 +52,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null)
+
+    if (body && typeof body === 'object' && 'website' in body && body.website) {
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+
     const validated = tripBookingSchema.safeParse(body)
     if (!validated.success) {
       return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
+    }
+
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      const humanVerified = await verifyTurnstile(validated.data.turnstile_token ?? null)
+      if (!humanVerified) {
+        return NextResponse.json({ error: 'Verification failed' }, { status: 400 })
+      }
     }
 
     const supabase = getSupabaseAdmin()

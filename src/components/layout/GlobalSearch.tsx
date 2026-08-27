@@ -8,10 +8,6 @@ import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import type { SearchResult, SearchResultType } from '@/app/api/search/route'
 
-interface GlobalSearchProps {
-  transparent?: boolean
-}
-
 const TYPE_ORDER: SearchResultType[] = ['accommodation', 'trip', 'merch', 'rental']
 
 function groupResults(results: SearchResult[]): Map<SearchResultType, SearchResult[]> {
@@ -28,7 +24,7 @@ function ResultIcon({ type }: { type: SearchResultType }) {
   return <Package className="h-3.5 w-3.5 shrink-0 text-brand-orange" aria-hidden />
 }
 
-export function GlobalSearch({ transparent }: GlobalSearchProps) {
+export function GlobalSearch() {
   const t = useTranslations('search')
   const locale = useLocale()
   const ar = locale === 'ar'
@@ -139,7 +135,7 @@ export function GlobalSearch({ transparent }: GlobalSearchProps) {
         aria-label={t('label')}
         className={cn(
           'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors',
-          transparent ? 'text-white hover:bg-white/10' : 'text-sea-900 hover:bg-sand-200',
+          'text-white hover:bg-white/10',
         )}
       >
         <Search className="h-5 w-5" />

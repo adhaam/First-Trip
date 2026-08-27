@@ -36,7 +36,13 @@ interface ProductFull {
   seo_title?: string; seo_description_ar?: string; seo_description_en?: string
 }
 
-const REQUIREMENT_OPTIONS = ['id_required', 'license_required', 'deposit_required']
+const REQUIREMENT_OPTIONS = ['id_required', 'license_required', 'deposit_required'] as const
+const REQUIREMENT_LABELS_AR: Record<(typeof REQUIREMENT_OPTIONS)[number], string> = {
+  id_required: 'يتطلب بطاقة هوية', license_required: 'يتطلب رخصة', deposit_required: 'يتطلب تأمين',
+}
+const REQUIREMENT_LABELS_EN: Record<(typeof REQUIREMENT_OPTIONS)[number], string> = {
+  id_required: 'ID required', license_required: 'License required', deposit_required: 'Deposit required',
+}
 
 function emptyProduct(type: 'sale' | 'rental'): ProductFull {
   return {
@@ -359,7 +365,7 @@ export function ProductEditor({ api, productId, categories, collections, onClose
                       onClick={() => set('rental_requirements', product.rental_requirements.includes(req) ? product.rental_requirements.filter((r) => r !== req) : [...product.rental_requirements, req])}
                       className={`h-8 rounded-md border px-2.5 text-xs font-medium ${product.rental_requirements.includes(req) ? 'border-brand-blue bg-brand-blue/10 text-brand-blue' : 'border-gray-300 text-gray-500'}`}
                     >
-                      {req.replace('_', ' ')}
+                      {ar ? REQUIREMENT_LABELS_AR[req] : REQUIREMENT_LABELS_EN[req]}
                     </button>
                   ))}
                 </div>

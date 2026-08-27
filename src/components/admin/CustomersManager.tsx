@@ -4,11 +4,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { useLocale } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, Search, MessageCircle } from 'lucide-react'
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog'
+import { Loader2, Search, MessageCircle, Pencil } from 'lucide-react'
 
 interface Customer {
   id: string
@@ -32,6 +36,7 @@ interface CustomerDetail {
     tripBookingsCount: number
     merchOrdersCount: number
     rentalsCount: number
+    signatureBookingsCount: number
     confirmedValue: number
     lastActivityAt: string | null
   }
@@ -39,6 +44,7 @@ interface CustomerDetail {
   tripBookings: { id: string; sinai_trips: { name_ar: string; name_en: string } | null; preferred_date: string | null; status: string; final_price: number | null; quoted_price: number | null; created_at: string }[]
   merchOrders: { id: string; order_number: string; status: string; total_price: number; created_at: string }[]
   rentalOrders: { id: string; order_number: string; status: string; total_price: number; created_at: string }[]
+  experienceBookings: { id: string; experiences: { title_ar: string; title_en: string } | null; is_custom_request: boolean; status: string; quoted_price: number | null; currency: string; created_at: string }[]
 }
 
 export function CustomersManager() {
@@ -50,6 +56,10 @@ export function CustomersManager() {
   const [query, setQuery] = useState('')
   const [detail, setDetail] = useState<CustomerDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState<{ name: string; email: string; notes: string; preferred_language: 'ar' | 'en' }>({ name: '', email: '', notes: '', preferred_language: 'ar' })
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState('')
 
   const load = useCallback(async (q?: string) => {
     setLoading(true)
@@ -86,6 +96,45 @@ export function CustomersManager() {
       if (res.ok) setDetail(data)
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  const openEdit = () => {
+    if (!detail) return
+    setEditForm({
+      name: detail.customer.name || '',
+      email: detail.customer.email || '',
+      notes: detail.customer.notes || '',
+      preferred_language: detail.customer.preferred_language || 'ar',
+    })
+    setEditError('')
+    setEditOpen(true)
+  }
+
+  const saveEdit = async () => {
+    if (!detail) return
+    if (!editForm.name.trim()) {
+      setEditError(ar ? 'الاسم مطلوب' : 'Name is required')
+      return
+    }
+    setEditSaving(true)
+    setEditError('')
+    try {
+      const res = await fetch(`/api/admin/customers/${detail.customer.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      const updatedCustomer = data.customer as Customer
+      setDetail((prev) => (prev ? { ...prev, customer: updatedCustomer } : prev))
+      setCustomers((prev) => prev.map((c) => (c.id === updatedCustomer.id ? { ...c, ...updatedCustomer } : c)))
+      setEditOpen(false)
+    } catch {
+      setEditError(ar ? 'تعذر حفظ التعديلات' : 'Failed to save changes')
+    } finally {
+      setEditSaving(false)
     }
   }
 
@@ -143,22 +192,30 @@ export function CustomersManager() {
                   <div>
                     <DialogTitle className="text-lg font-bold text-gray-900">{detail.customer.name}</DialogTitle>
                     <p dir="ltr" className="text-sm text-gray-500">{detail.customer.phone}</p>
+                    {detail.customer.email && <p dir="ltr" className="text-sm text-gray-500">{detail.customer.email}</p>}
                     <p className="text-xs text-gray-400">
                       {ar ? 'عميل منذ' : 'Customer since'} {new Date(detail.customer.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-US')}
                       {' · '}
                       {ar ? 'اللغة المفضلة' : 'Preferred language'}: {detail.customer.preferred_language}
                     </p>
+                    {detail.customer.notes && <p className="mt-1 text-xs text-gray-500 whitespace-pre-wrap">{detail.customer.notes}</p>}
                   </div>
-                  {/* Prefer normalized (E.164) phone — raw `phone` may be local format and would produce a broken wa.me link */}
-                  <a href={`https://wa.me/${(detail.customer.whatsapp_phone || detail.customer.normalized_phone || detail.customer.phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
-                    <MessageCircle className="h-4 w-4" />
-                  </a>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button type="button" variant="outline" size="icon-sm" onClick={openEdit} aria-label={ar ? 'تعديل' : 'Edit'}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    {/* Prefer normalized (E.164) phone — raw `phone` may be local format and would produce a broken wa.me link */}
+                    <a href={`https://wa.me/${(detail.customer.whatsapp_phone || detail.customer.normalized_phone || detail.customer.phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+                      <MessageCircle className="h-4 w-4" />
+                    </a>
+                  </div>
                 </div>
 
-                <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
                   {[
                     { label: ar ? 'حجوزات الإقامة' : 'Accommodation', value: detail.summary.accommodationBookingsCount },
                     { label: ar ? 'رحلات سيناء' : 'Trip bookings', value: detail.summary.tripBookingsCount },
+                    { label: ar ? 'التجارب المميزة' : 'Signature', value: detail.summary.signatureBookingsCount },
                     { label: ar ? 'طلبات المتجر' : 'Merch orders', value: detail.summary.merchOrdersCount },
                     { label: ar ? 'الإيجارات' : 'Rentals', value: detail.summary.rentalsCount },
                   ].map((s) => (
@@ -183,6 +240,16 @@ export function CustomersManager() {
                     <Row key={b.id} left={b.sinai_trips ? (ar ? b.sinai_trips.name_ar : b.sinai_trips.name_en) : '—'} mid={b.status} right={(b.final_price ?? b.quoted_price) ? `${b.final_price ?? b.quoted_price} ${ar ? 'ج.م' : 'EGP'}` : '—'} />
                   ))}
                 </Section>
+                <Section title={ar ? 'التجارب المميزة (Signature)' : 'Signature experience requests'}>
+                  {detail.experienceBookings.map((b) => (
+                    <Row
+                      key={b.id}
+                      left={b.experiences ? (ar ? b.experiences.title_ar : b.experiences.title_en) : (ar ? 'ابنِ تجربتك' : 'Build Your Signature')}
+                      mid={b.status}
+                      right={b.quoted_price ? `${b.quoted_price} ${b.currency || (ar ? 'ج.م' : 'EGP')}` : '—'}
+                    />
+                  ))}
+                </Section>
                 <Section title={ar ? 'طلبات المتجر' : 'Merch orders'}>
                   {detail.merchOrders.map((o) => (
                     <Row key={o.id} left={o.order_number} mid={o.status} right={`${o.total_price} ${ar ? 'ج.م' : 'EGP'}`} />
@@ -195,6 +262,45 @@ export function CustomersManager() {
                 </Section>
               </>
             )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={(open) => !editSaving && setEditOpen(open)}>
+        <DialogContent className="w-full max-w-md">
+          <DialogTitle className="text-base font-bold text-gray-900">{ar ? 'تعديل بيانات العميل' : 'Edit customer'}</DialogTitle>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="customer-name">{ar ? 'الاسم' : 'Name'}</Label>
+              <Input id="customer-name" className="mt-1" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="customer-email">{ar ? 'البريد الإلكتروني' : 'Email'}</Label>
+              <Input id="customer-email" type="email" dir="ltr" className="mt-1" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="customer-language">{ar ? 'اللغة المفضلة' : 'Preferred language'}</Label>
+              <Select value={editForm.preferred_language} onValueChange={(v) => v && setEditForm((f) => ({ ...f, preferred_language: v as 'ar' | 'en' }))}>
+                <SelectTrigger id="customer-language" className="mt-1 w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ar">{ar ? 'عربي' : 'Arabic'}</SelectItem>
+                  <SelectItem value="en">{ar ? 'إنجليزي' : 'English'}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="customer-notes">{ar ? 'ملاحظات' : 'Notes'}</Label>
+              <Textarea id="customer-notes" className="mt-1" rows={3} value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} />
+            </div>
+            {editError && <p className="text-sm text-red-500">{editError}</p>}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={editSaving}>
+              {ar ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button type="button" onClick={saveEdit} disabled={editSaving}>
+              {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : (ar ? 'حفظ' : 'Save')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

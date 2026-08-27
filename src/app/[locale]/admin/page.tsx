@@ -91,7 +91,7 @@ export default function AdminLoginPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-brand-blue hover:bg-brand-blue-dark"
+                className="w-full bg-weemap-orange hover:bg-sun-600"
                 size="lg"
               >
                 <LogIn className="h-4 w-4 mr-2" />

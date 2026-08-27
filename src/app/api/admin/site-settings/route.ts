@@ -31,7 +31,10 @@ const settingsSchema = z.object({
   privacy_policy_en: z.string().optional(),
   terms_ar: z.string().optional(),
   terms_en: z.string().optional(),
-  package_included_trip_ids: z.array(z.string().uuid()).optional(),
+  // package_included_trip_ids intentionally omitted — the 2 free Sinai
+  // trips are a fixed marketing benefit, not an admin-configurable
+  // per-trip selection. The column and its historical value are kept,
+  // but this API no longer accepts writes to it.
   // ─── Website CMS (migration 005) ───
   hero_heading_ar: z.string().max(160).optional(),
   hero_heading_en: z.string().max(160).optional(),

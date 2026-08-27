@@ -22,7 +22,7 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
   // Verified WEEMAP channels only — Facebook is TBD, so it stays settings-driven
   // with no legacy fallback (see _weemap_reference/06_business-info/WEEMAP_INFO.md).
   const facebook = settings?.facebook_url || ''
-  const instagram = settings?.instagram_url || 'https://www.instagram.com/weemapeg/'
+  const instagram = settings?.instagram_url || 'https://instagram.com/weemapsinai/'
   const isAdminRoute =
     pathname === '/admin' ||
     pathname.startsWith('/admin/') ||
