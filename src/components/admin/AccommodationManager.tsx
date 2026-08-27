@@ -798,7 +798,7 @@ export function AccommodationManager() {
                     ? 'السعر هنا هو سعر الغرفة كاملة لليلة — سعر الفرد بيتحسب تلقائيًا (دبل ÷ 2، تريبل ÷ 3).'
                     : 'Each price is the TOTAL room price per night — per-person is derived (double ÷ 2, triple ÷ 3).'}
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <Label className="text-xs flex items-center gap-1"><BedSingle className="h-3.5 w-3.5 text-gray-400" />{locale === 'ar' ? 'سينجل (فرد — لليلة)' : 'Single (1 — per night)'}</Label>
                     <Input type="number" min={0} value={form.price_single_room || 0} onChange={e => updateField('price_single_room', parseInt(e.target.value))} className="mt-1" />
@@ -895,7 +895,7 @@ export function AccommodationManager() {
                     ? 'تستخدم بس لو مفيش سعر غرف متحدد فوق. الأفضل تسيبها وتعتمد على أسعار الغرف.'
                     : "Only used if the room prices above aren't set. Prefer relying on room prices instead."}
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <Label className="text-xs">{locale === 'ar' ? 'سعر الليلة' : 'Per Night'}</Label>
                     <Input type="number" min={0} value={form.price_per_night || 0} onChange={e => updateField('price_per_night', parseInt(e.target.value))} className="mt-1" />

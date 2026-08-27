@@ -123,9 +123,6 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                     const duration = ar
                       ? (trip as unknown as { duration?: string }).duration
                       : (trip as unknown as { duration_en?: string }).duration_en
-                    const publicPrice = Number(trip.price) || 0
-                    const packagePrice = Number(trip.package_price) || 0
-
                     return (
                       <div key={trip.id} className="flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
                         <div className="relative aspect-[16/10] overflow-hidden">
@@ -148,24 +145,6 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                           {tripDesc && (
                             <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-sea-900/60">{tripDesc}</p>
                           )}
-                          <div className="mt-auto flex items-end justify-between gap-3 border-t border-sand-200 pt-4">
-                            <div>
-                              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-sea-900/45">
-                                {ar ? 'السعر العادي' : 'Regular price'}
-                              </p>
-                              <p className="text-sm font-medium text-sea-900/45 line-through">
-                                {fmt(publicPrice)} {common('egp')}
-                              </p>
-                            </div>
-                            <div className="text-end">
-                              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-sun-600">
-                                {ar ? 'داخل الباكدج' : 'In this package'}
-                              </p>
-                              <p className="font-display text-lg font-bold text-sea-900">
-                                {fmt(packagePrice)} <span className="text-xs font-semibold text-sea-900/60">{common('egp')}</span>
-                              </p>
-                            </div>
-                          </div>
                         </div>
                       </div>
                     )

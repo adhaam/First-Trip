@@ -14,7 +14,7 @@ import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { NewsletterSignup } from '@/components/NewsletterSignup'
 import { TrustSection } from '@/components/TrustSection'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
-import { ArrowUpRight, MessageCircle, Building2, Mountain, Package, Sparkles } from 'lucide-react'
+import { ArrowUpRight, MessageCircle, Building2, Mountain, Package, Sparkles, ShoppingBag, Bike } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type {
   Accommodation, CommunityPost, SinaiTrip, SiteSettings, TripPackage,
@@ -42,12 +42,14 @@ export function HomeClient({ accommodations, trips, posts, settings, packages }:
   return (
     <div className="overflow-x-clip">
       <Hero settings={settings} />
+      <ExploreSinai trip={featuredTrips[0]} settings={settings} />
       <PrimaryDiscovery />
       <TripsAndPackages trips={featuredTrips} packages={packages} />
       <Stays items={featuredAccs} />
       <SignatureFeature />
       <MoreFromWeemap />
       <TrustSection />
+      {settings?.show_partners !== false && <Partners />}
       {settings?.show_community !== false && <Community posts={posts} />}
       {settings?.show_newsletter !== false && <NewsletterSignup />}
       <FinalCta settings={settings} />
@@ -150,7 +152,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
                 variant="sun"
                 className="group justify-center"
               >
-                {ar ? 'ابدأ رحلتك' : 'Start your trip'}
+                {(ar ? settings?.primary_cta_label_ar : settings?.primary_cta_label_en) || (ar ? 'ابدأ رحلتك' : 'Start your trip')}
                 <ArrowUpRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 rtl:-scale-x-100" />
               </ButtonLink>
 
@@ -160,7 +162,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
                 variant="outline-light"
                 className="justify-center backdrop-blur"
               >
-                {ar ? 'اكتشف سيناء' : 'Explore Sinai'}
+                {(ar ? settings?.secondary_cta_label_ar : settings?.secondary_cta_label_en) || (ar ? 'اكتشف سيناء' : 'Explore Sinai')}
               </ButtonLink>
             </div>
           </Reveal>
@@ -184,6 +186,39 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
       </div>
 
       <WaveDivider className="absolute inset-x-0 bottom-0 z-10 text-sand-50" />
+    </section>
+  )
+}
+
+function ExploreSinai({ trip, settings }: { trip?: SinaiTrip; settings: SiteSettings | null }) {
+  const locale = useLocale()
+  const ar = locale === 'ar'
+  const image = settings?.explore_media_url || trip?.images?.[0] || '/media/heroposter.png'
+  const alt = (ar ? settings?.explore_media_alt_ar : settings?.explore_media_alt_en)
+    || (ar ? 'طبيعة سيناء' : 'The landscape of Sinai')
+  const copy = (ar ? settings?.explore_copy_ar : settings?.explore_copy_en)
+    || (ar
+      ? 'من البحر للصحرا، ومن الهدوء للمغامرة — سيناء فيها مكان لكل شكل رحلة.'
+      : 'From sea to desert, stillness to adventure — Sinai has room for every kind of journey.')
+
+  return (
+    <section className="relative isolate min-h-[34rem] overflow-hidden bg-sea-900 text-white md:min-h-[44rem]">
+      <Image src={image} alt={alt} fill sizes="100vw" className="-z-20 object-cover object-center" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/75 via-black/30 to-transparent rtl:bg-gradient-to-l" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+      <div className="container-main flex min-h-[34rem] items-end py-16 md:min-h-[44rem] md:items-center md:py-28">
+        <Reveal className="max-w-2xl">
+          <span className="eyebrow text-sun-300">{ar ? 'بين البحر والجبل' : 'Sea, mountains and everything between'}</span>
+          <h2 className="mt-5 max-w-xl font-display text-4xl font-extrabold leading-[1.04] sm:text-5xl md:text-7xl">
+            {ar ? 'سيناء أكتر من مجرد مكان.' : 'Sinai is more than a place.'}
+          </h2>
+          <p className="mt-6 max-w-[36rem] text-base leading-relaxed text-white/85 sm:text-lg">{copy}</p>
+          <ButtonLink href="/sinai-trips" variant="sun" size="lg" className="mt-8">
+            {ar ? 'اكتشف سيناء' : 'Explore Sinai'}
+            <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+          </ButtonLink>
+        </Reveal>
+      </div>
     </section>
   )
 }
@@ -239,27 +274,30 @@ function PrimaryDiscovery() {
           subtitle={ar ? 'ابدأ من نوع الرحلة اللي شبهك.' : "Start with the kind of experience you're looking for."}
         />
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
           {paths.map((path, i) => (
-            <Reveal key={path.href + path.title_en} delay={i * 80} className="h-full">
+            <Reveal key={path.href + path.title_en} delay={i * 80} className={cn('h-full', i === 0 || i === 3 ? 'lg:col-span-7' : 'lg:col-span-5')}>
               <GlowCard className="h-full">
                 <Link
                   href={path.href}
-                  className="hover-lift group flex h-full flex-col border-[1.5px] border-sand-300 bg-card p-6 pin-card transition-colors hover:border-sea-900/25"
+                  className={cn(
+                    'hover-lift group flex h-full min-h-64 flex-col border-[1.5px] p-7 pin-card transition-colors md:p-8',
+                    i === 3 ? 'border-sea-800 bg-sea-900 text-white hover:border-sun-400/60' : 'border-sand-300 bg-card hover:border-sea-900/25',
+                  )}
                 >
                   <span
                     aria-hidden
-                    className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-100 text-sea-900 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]"
+                    className={cn('mb-8 inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]', i === 3 ? 'bg-white/10 text-sun-300' : 'bg-sand-100 text-sea-900')}
                   >
                     <path.icon className="h-6 w-6" />
                   </span>
-                  <h3 className="font-display text-lg font-semibold text-sea-900">
+                  <h3 className={cn('font-display text-xl font-semibold', i === 3 ? 'text-white' : 'text-sea-900')}>
                     {ar ? path.title_ar : path.title_en}
                   </h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-sea-900/60">
+                  <p className={cn('mt-3 max-w-lg text-sm leading-relaxed', i === 3 ? 'text-white/70' : 'text-sea-900/60')}>
                     {ar ? path.body_ar : path.body_en}
                   </p>
-                  <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-sea-600 transition-colors group-hover:text-sun-500">
+                  <span className={cn('mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold transition-colors group-hover:text-sun-500', i === 3 ? 'text-sun-300' : 'text-sea-600')}>
                     {ar ? 'اعرف أكتر' : 'Learn more'}
                     <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
                   </span>
@@ -279,7 +317,7 @@ function TripsAndPackages({ trips, packages }: { trips: SinaiTrip[]; packages: T
   const locale = useLocale()
   const ar = locale === 'ar'
   const tripPicks = trips.slice(0, 3)
-  const packagePicks = packages.slice(0, 2)
+  const packagePicks = packages.slice(0, 1)
 
   if (tripPicks.length === 0 && packagePicks.length === 0) return null
 
@@ -321,7 +359,7 @@ function TripsAndPackages({ trips, packages }: { trips: SinaiTrip[]; packages: T
 function Stays({ items }: { items: Accommodation[] }) {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const picks = items.slice(0, 4)
+  const picks = items.slice(0, 3)
 
   if (picks.length === 0) return null
 
@@ -340,7 +378,7 @@ function Stays({ items }: { items: Accommodation[] }) {
           }
         />
 
-        <ScrollRail>
+        <ScrollRail cols={3}>
           {picks.map((acc, i) => (
             <Reveal key={acc.id} delay={i * 80} className="w-[78vw] shrink-0 sm:w-auto">
               <AccommodationCard acc={acc} priority={i === 0} />
@@ -411,8 +449,8 @@ function MoreFromWeemap() {
               className="hover-lift group flex h-full flex-col justify-between border-[1.5px] border-sand-300 bg-card p-8 pin-card transition-colors hover:border-sea-900/25"
             >
               <div>
-                <span aria-hidden className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-50 text-2xl">
-                  🛍️
+                <span aria-hidden className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-50 text-sea-900">
+                  <ShoppingBag className="h-6 w-6" />
                 </span>
                 <h3 className="font-display text-xl font-semibold text-sea-900">WEEMAP Merch</h3>
                 <p className="mt-3 text-sm leading-relaxed text-sea-900/60">
@@ -432,8 +470,8 @@ function MoreFromWeemap() {
               className="hover-lift group flex h-full flex-col justify-between border-[1.5px] border-sand-300 bg-sea-900 p-8 pin-card text-white transition-colors hover:border-sun-400/60"
             >
               <div>
-                <span aria-hidden className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-2xl">
-                  🚲
+                <span aria-hidden className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-sun-300">
+                  <Bike className="h-6 w-6" />
                 </span>
                 <h3 className="font-display text-xl font-semibold text-white">Rent</h3>
                 <p className="mt-3 text-sm leading-relaxed text-white/70">
@@ -453,6 +491,33 @@ function MoreFromWeemap() {
 }
 
 /* ─────────────────────────── COMMUNITY ─────────────────────────── */
+
+function Partners() {
+  const locale = useLocale()
+  const ar = locale === 'ar'
+
+  return (
+    <section className="border-y border-white/10 bg-[#1b1b17] py-16 text-sand-50 md:py-20">
+      <div className="container-main grid gap-8 md:grid-cols-[1.4fr_0.6fr] md:items-end">
+        <Reveal>
+          <span className="eyebrow text-sun-300">{ar ? 'شركاء الرحلة' : 'Partners in the journey'}</span>
+          <h2 className="mt-4 max-w-3xl font-display text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
+            {ar ? 'بنبني الرحلة مع الناس اللي عايشة سينا.' : 'The strongest Sinai journeys are built locally.'}
+          </h2>
+          <p className="mt-5 max-w-2xl leading-relaxed text-sand-100/70">
+            {ar ? 'إقامات، أدلاء، ومقدمو تجارب محليون يعرفون المكان ويهتمون بتفاصيله.' : 'Stays, guides and local experience makers who know the place and care about its details.'}
+          </p>
+        </Reveal>
+        <Reveal delay={80} className="md:text-end">
+          <ButtonLink href="/partner" variant="outline-light" size="lg">
+            {ar ? 'اشتغل مع WEEMAP' : 'Work with WEEMAP'}
+            <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+          </ButtonLink>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
 
 function Community({ posts }: { posts: CommunityPost[] }) {
   const locale = useLocale()

@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
   }, [sidebarOpen])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-50">
       {/* Sidebar */}
       <aside id="admin-sidebar" className={cn(
         'fixed inset-y-0 z-50 flex w-64 flex-col bg-weemap-charcoal text-white transition-transform lg:static',
@@ -235,9 +235,9 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         {/* Top Bar */}
-        <header className="bg-white border-b px-4 lg:px-8 h-16 flex items-center justify-between">
+        <header className="flex h-16 min-w-0 items-center justify-between gap-2 border-b bg-white px-4 lg:px-8">
           <button
             type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -252,14 +252,14 @@ export default function AdminDashboardPage() {
             <span className="hidden truncate font-semibold text-gray-900 sm:inline">
               {locale === 'ar' ? 'مركز تحكم WEEMAP' : 'WEEMAP Business Control Center'}
             </span>
-            <span className="text-sm text-gray-500">
+            <span className="truncate text-sm text-gray-500">
               {locale === 'ar' ? 'مرحباً، أدمن' : 'Welcome, Admin'}
             </span>
           </div>
         </header>
 
         {/* Page Content */}
-        <main id="admin-main" className="min-w-0 flex-1 p-4 lg:p-8">
+        <main id="admin-main" className="w-full min-w-0 max-w-full flex-1 overflow-x-hidden p-4 lg:p-8">
           {active === 'dashboard' && <DashboardHome />}
           {active === 'accommodations' && <AccommodationManager />}
           {active === 'sinai-trips' && <SinaiTripManager />}

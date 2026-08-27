@@ -391,7 +391,7 @@ export function TripPackageManager() {
                   </p>
                 )}
 
-                <div className="mt-3 grid grid-cols-3 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                <div className="mt-3 grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm sm:grid-cols-3">
                   <div>
                     <div className="text-xs text-gray-500">{ar ? 'الإجمالي العام' : 'Public total'}</div>
                     <div className="font-semibold text-gray-700">{fmt(totals.publicTotal)}</div>
