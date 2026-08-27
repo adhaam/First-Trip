@@ -46,8 +46,8 @@ export function HomeClient({ accommodations, trips, posts, settings, packages }:
       <TripsAndPackages trips={featuredTrips} packages={packages} />
       <Stays items={featuredAccs} />
       <ExploreSinai trip={featuredTrips[0]} settings={settings} />
-      <SignatureFeature />
       <MoreFromWeemap />
+      <SignatureFeature />
       <TrustSection />
       {settings?.show_partners !== false && <Partners />}
       {settings?.show_community !== false && <Community posts={posts} />}
