@@ -15,31 +15,37 @@ const nextConfig: NextConfig = {
     ]
   },
   images: {
-    // ─── Preview deployments opt out of the optimiser ───
-    // `/_next/image` is a Vercel function. On a deployment with Deployment
-    // Protection enabled — which every Preview here has — it answers with a
-    // 302 to the Vercel SSO page instead of an image. An <img> that follows
-    // that redirect gets HTML back, cannot decode it, and renders the
-    // browser's broken-image icon. Verified on the ad-readiness Preview:
-    //   /brand/logo.webp                                    -> 200 image/webp
-    //   /_next/image?url=%2Fbrand%2Flogo.webp&w=256&q=75     -> 302 -> SSO
-    // So on Preview the images are served straight from the CDN, exactly as
-    // they were before this pass, which keeps Previews reviewable. Production
-    // is unprotected and keeps full AVIF/WebP optimisation — the 95% first-load
-    // media reduction is unaffected. The production path is still exercised
-    // locally by `next build && next start`.
-    unoptimized: process.env.VERCEL_ENV === 'preview',
-
-    // Optimisation is ON in production. It was previously disabled site-wide,
-    // which meant a 2 MB hero PNG and a 304 KB logo were shipped to every
-    // visitor at full size with no srcset and no modern format.
+    // ─── The optimiser is OFF everywhere. EMERGENCY HOTFIX. ───
+    // Vercel's Image Optimization quota for this account is exhausted, so
+    // every `/_next/image` request on production answered:
+    //   HTTP 402  OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED
+    // which broke 111 of the 114 images on the live homepage — the hero
+    // poster and every accommodation, trip, community and Supabase image.
+    // Only the brand logo survived, because it already bypassed the optimiser.
     //
-    // The sharp edge: once the optimiser is active, a remote src on a hostname
-    // that is not listed below makes next/image throw and takes the page down.
-    // Accommodation, trip and product images are owner-entered, so components
-    // that render them use <SafeImage> (src/components/SafeImage.tsx), which
-    // falls back to serving an unknown host as-is instead of crashing.
-    // Keep OPTIMIZABLE_HOSTS in that file in sync with this list.
+    // With this flag every image is served straight from /public or from its
+    // remote host, exactly as the site behaved before the ad-readiness pass.
+    //
+    // Almost none of the media win is lost: it came from re-encoding the
+    // assets, not from the optimiser — heroposter 2,097 KB -> 74 KB WebP,
+    // logo 304 KB -> 41 KB WebP, hero video 3,608 KB -> 236 KB WebM with the
+    // audio track stripped, and the video is still desktop-gated. What is
+    // given up is per-device srcset and AVIF negotiation.
+    //
+    // A protected Preview also cannot reach `/_next/image` (it answers 302 to
+    // the Vercel SSO page), so this single flag covers that case too.
+    //
+    // To turn optimisation back on, raise the Vercel image quota first, then
+    // set this to `process.env.VERCEL_ENV === 'preview'` so Previews stay
+    // reviewable while production optimises.
+    unoptimized: true,
+
+    // Kept for the day optimisation is re-enabled. `formats` and
+    // `remotePatterns` are inert while `unoptimized` is true, but a remote src
+    // on an unlisted hostname would make next/image throw the moment it is
+    // switched back on — so components rendering owner-entered images use
+    // <SafeImage> (src/components/SafeImage.tsx). Keep OPTIMIZABLE_HOSTS in
+    // that file in sync with this list.
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
