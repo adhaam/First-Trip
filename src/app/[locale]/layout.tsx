@@ -16,6 +16,8 @@ import { SITE_URL } from '@/lib/seo'
 import { CartProvider } from '@/components/commerce/CartProvider'
 import { CartDrawer } from '@/components/commerce/CartDrawer'
 import { Analytics } from '@vercel/analytics/next'
+import { AnalyticsScripts } from '@/components/analytics/AnalyticsScripts'
+import { AnalyticsNoScript } from '@/components/analytics/AnalyticsNoScript'
 import '../globals.css'
 
 // ─── Typeface pairing ───
@@ -115,6 +117,7 @@ export default async function RootLayout({
       <body
         className={`${jakarta.variable} ${almarai.variable} font-sans antialiased`}
       >
+        <AnalyticsNoScript />
         <NextIntlClientProvider messages={messages} locale={locale}>
           <TooltipProvider>
             <CartProvider>
@@ -136,6 +139,7 @@ export default async function RootLayout({
           </TooltipProvider>
         </NextIntlClientProvider>
         <Analytics />
+        <AnalyticsScripts />
       </body>
     </html>
   )
