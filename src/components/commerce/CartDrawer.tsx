@@ -1,11 +1,13 @@
 'use client'
 
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useCart } from './CartProvider'
 import { Minus, Plus, Trash2, ShoppingBag, KeyRound } from 'lucide-react'
+import { trackConversion } from '@/lib/conversion'
+import { formatAmount } from '@/lib/format'
 
 export function CartDrawer() {
   const locale = useLocale()
@@ -28,7 +30,7 @@ export function CartDrawer() {
           <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
             <ShoppingBag className="h-10 w-10 text-sand-400" />
             <p className="text-sm font-medium text-sea-900">{ar ? 'السلة فاضية' : 'Your cart is empty'}</p>
-            <p className="text-xs text-sea-900/50">
+            <p className="text-xs text-ink-subtle">
               {ar ? 'تصفح المتجر أو الإيجارات وابدأ الإضافة' : 'Browse Merch or Rentals to get started'}
             </p>
           </div>
@@ -55,13 +57,13 @@ export function CartDrawer() {
                       type="button"
                       onClick={() => cart.remove(item.lineId)}
                       aria-label={ar ? 'إزالة' : 'Remove'}
-                      className="shrink-0 text-sea-900/40 hover:text-red-500"
+                      className="shrink-0 text-ink-subtle hover:text-red-500"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                   {(item.optionSummaryAr || item.optionSummaryEn) && (
-                    <p className="mt-0.5 truncate text-[11px] text-sea-900/50">
+                    <p className="mt-0.5 truncate text-[11px] text-ink-subtle">
                       {ar ? item.optionSummaryAr : item.optionSummaryEn}
                     </p>
                   )}
@@ -93,7 +95,7 @@ export function CartDrawer() {
                       </button>
                     </div>
                     <span className="text-sm font-bold text-sea-900 tabular-nums">
-                      {(item.unitPriceEstimate * item.quantity).toLocaleString()} {ar ? 'ج.م' : 'EGP'}
+                      {formatAmount(item.unitPriceEstimate * item.quantity, locale)} {ar ? 'ج.م' : 'EGP'}
                     </span>
                   </div>
                 </div>
@@ -105,16 +107,28 @@ export function CartDrawer() {
         {cart.items.length > 0 && (
           <div className="border-t border-sand-200 bg-white px-4 py-4">
             <div className="mb-3 flex items-center justify-between text-sm">
-              <span className="text-sea-900/60">{ar ? 'الإجمالي التقريبي' : 'Estimated subtotal'}</span>
-              <span className="font-bold text-sea-900 tabular-nums">{cart.subtotal.toLocaleString()} {ar ? 'ج.م' : 'EGP'}</span>
+              <span className="text-ink-muted">{ar ? 'الإجمالي التقريبي' : 'Estimated subtotal'}</span>
+              <span className="font-bold text-sea-900 tabular-nums">{formatAmount(cart.subtotal, locale)} {ar ? 'ج.م' : 'EGP'}</span>
             </div>
-            <p className="mb-3 text-[11px] text-sea-900/45">
+            <p className="mb-3 text-[11px] text-ink-subtle">
               {ar ? 'السعر النهائي والتوصيل يتأكدوا عند إرسال الطلب' : 'Final price and delivery are confirmed at checkout'}
             </p>
             <Link
               href="/cart"
-              onClick={cart.close}
-              className="flex h-12 w-full items-center justify-center rounded-full bg-sun-500 text-sm font-semibold text-white transition-colors hover:bg-sun-600"
+              onClick={() => {
+                trackConversion(
+                  'checkout_started',
+                  {
+                    items_count: cart.items.length,
+                    value: Math.round(cart.subtotal),
+                    currency: 'EGP',
+                    source: 'cart_drawer',
+                  },
+                  { once: false },
+                )
+                cart.close()
+              }}
+              className="flex h-12 w-full items-center justify-center rounded-full bg-sun-500 text-sm font-semibold text-on-accent transition-colors hover:bg-sun-600"
             >
               {ar ? 'الذهاب للسلة' : 'Go to cart'}
             </Link>

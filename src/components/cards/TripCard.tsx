@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Clock, ArrowUpRight, Check } from 'lucide-react'
@@ -8,6 +8,7 @@ import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { getTripRouteSlug } from '@/lib/trips'
 import type { SinaiTrip } from '@/lib/types'
+import { Price } from '@/components/Price'
 
 export function TripCard({
   trip,
@@ -26,7 +27,7 @@ export function TripCard({
   const ar = locale === 'ar'
 
   const name = ar ? trip.name_ar : trip.name_en
-  const cover = trip.images?.[0] || '/media/heroposter.png'
+  const cover = trip.images?.[0] || '/media/heroposter.webp'
   const duration = ar ? trip.duration : trip.duration_en || trip.duration
   const category = ar ? trip.category_ar : trip.category_en
   const href = `/sinai-trips/${getTripRouteSlug(trip)}`
@@ -66,18 +67,18 @@ export function TripCard({
         </div>
 
         <div className="flex flex-1 flex-col p-5">
-          <p className="line-clamp-2 text-sm leading-relaxed text-sea-900/60">
+          <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">
             {ar ? trip.description_ar : trip.description_en}
           </p>
 
           {includesLabel && (ar ? trip.includes_ar : trip.includes_en)?.length > 0 && (
             <div className="mt-4 border-t border-sand-200 pt-4">
-              <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-sea-900/45">
+              <div className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-subtle">
                 {includesLabel}
               </div>
               <ul className="space-y-1">
                 {(ar ? trip.includes_ar : trip.includes_en).slice(0, 3).map((inc, idx) => (
-                  <li key={idx} className="flex items-center gap-1.5 text-xs text-sea-900/55">
+                  <li key={idx} className="flex items-center gap-1.5 text-xs text-ink-subtle">
                     <Check className="h-3 w-3 shrink-0 text-emerald-600" />
                     <span className="truncate">{inc}</span>
                   </li>
@@ -87,12 +88,14 @@ export function TripCard({
           )}
 
           <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-            <div className="font-display text-lg font-bold text-sea-900">
-              {Number(trip.price).toLocaleString()}{' '}
-              <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
-            </div>
+            <Price
+              amount={Number(trip.price)}
+              label={common('from')}
+              unit={common('perPerson')}
+              size="md"
+            />
             <span
-              className="inline-flex items-center gap-1.5 rounded-md border border-sun-500 px-4 py-2 text-xs font-semibold text-sun-600 transition-colors hover:bg-sun-500 hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-md border border-sun-600 px-4 py-2 text-xs font-semibold text-sun-700 transition-colors hover:bg-sun-500 hover:text-on-accent"
             >
               {detail('viewTrip')}
               <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" />

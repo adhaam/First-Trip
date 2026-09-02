@@ -4,7 +4,7 @@ export default async function Loading() {
   const t = await getTranslations('states')
 
   return (
-    <main aria-busy="true" aria-label={t('loading')} className="container-main py-20">
+    <div aria-busy="true" aria-label={t('loading')} className="container-main py-20">
       <span className="sr-only">{t('loading')}</span>
       <div className="animate-pulse">
         <div className="h-5 w-28 rounded bg-sand-300" />
@@ -23,6 +23,6 @@ export default async function Loading() {
           ))}
         </div>
       </div>
-    </main>
+    </div>
   )
 }

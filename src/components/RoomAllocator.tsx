@@ -81,7 +81,7 @@ export function RoomAllocator({ numPeople, allocations, onChange }: RoomAllocato
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-sea-900/60 mb-1">
+      <div className="text-xs text-ink-muted mb-1">
         {ar
           ? `وزع ${numPeople} ضيف على أنواع الغرف`
           : `Distribute ${numPeople} guests across room types`}
@@ -110,7 +110,7 @@ export function RoomAllocator({ numPeople, allocations, onChange }: RoomAllocato
                 <div className="font-semibold text-sm text-sea-900">
                   {ar ? label_ar : label_en}
                 </div>
-                <div className="text-[11px] text-sea-900/50">
+                <div className="text-[11px] text-ink-subtle">
                   {ar ? cap_ar : cap_en}
                 </div>
               </div>
@@ -118,7 +118,7 @@ export function RoomAllocator({ numPeople, allocations, onChange }: RoomAllocato
 
             <div className="flex items-center gap-2">
               {count > 0 && (
-                <span className="text-xs text-sea-900/50 tabular-nums">
+                <span className="text-xs text-ink-subtle tabular-nums">
                   = {persons} {ar ? (persons === 1 ? 'شخص' : 'أشخاص') : (persons === 1 ? 'person' : 'people')}
                 </span>
               )}

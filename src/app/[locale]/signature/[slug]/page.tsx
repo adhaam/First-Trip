@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { ArrowLeft, Check, Clock, Layers3, X } from 'lucide-react'
@@ -56,7 +56,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
   const notIncluded = (ar ? experience.not_included_ar : experience.not_included_en) || []
   const itinerary = experience.itinerary || []
   const gallery = (experience.gallery || []).filter(Boolean)
-  const cover = experience.hero_image || gallery[0] || '/media/heroposter.png'
+  const cover = experience.hero_image || gallery[0] || '/media/heroposter.webp'
   const price = discountedExperiencePrice(experience)
   const canonicalPath = `/signature/${experience.slug}`
 
@@ -92,7 +92,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
         </div>
       </header>
 
-      <main>
+      <div>
         <section className="container-main py-12 md:py-18">
           <div className="grid gap-10 lg:grid-cols-[1fr_20rem] lg:gap-16">
             <div className="space-y-12">
@@ -111,7 +111,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
               {fullDescription && (
                 <section aria-labelledby="exp-overview-heading">
                   <h2 id="exp-overview-heading" className="font-display text-2xl font-bold text-sea-900">{t('overview')}</h2>
-                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-sea-900/72">{fullDescription}</p>
+                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-ink-muted">{fullDescription}</p>
                 </section>
               )}
 
@@ -123,7 +123,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
                       <li key={i} className="border-s-2 border-weemap-orange ps-4">
                         <p className="font-semibold text-sea-900">{ar ? step.title_ar : step.title_en}</p>
                         {(ar ? step.description_ar : step.description_en) && (
-                          <p className="mt-1 text-sm leading-6 text-sea-900/65">{ar ? step.description_ar : step.description_en}</p>
+                          <p className="mt-1 text-sm leading-6 text-ink-muted">{ar ? step.description_ar : step.description_en}</p>
                         )}
                       </li>
                     ))}
@@ -138,7 +138,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
                       <h2 id="exp-inclusions-heading" className="font-display text-xl font-bold text-sea-900">{t('included')}</h2>
                       <ul className="mt-4 space-y-2.5">
                         {included.map((item) => (
-                          <li key={item} className="flex items-start gap-2.5 text-sm leading-6 text-sea-900/72">
+                          <li key={item} className="flex items-start gap-2.5 text-sm leading-6 text-ink-muted">
                             <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
                             <span>{item}</span>
                           </li>
@@ -151,8 +151,8 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
                       <h2 className="font-display text-xl font-bold text-sea-900">{t('notIncluded')}</h2>
                       <ul className="mt-4 space-y-2.5">
                         {notIncluded.map((item) => (
-                          <li key={item} className="flex items-start gap-2.5 text-sm leading-6 text-sea-900/72">
-                            <X className="mt-0.5 h-4 w-4 shrink-0 text-sea-900/30" aria-hidden="true" />
+                          <li key={item} className="flex items-start gap-2.5 text-sm leading-6 text-ink-muted">
+                            <X className="mt-0.5 h-4 w-4 shrink-0 text-ink-subtle" aria-hidden="true" />
                             <span>{item}</span>
                           </li>
                         ))}
@@ -167,7 +167,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
                   <h2 id="exp-trips-heading" className="font-display text-xl font-bold text-sea-900">{t('relatedTrips')}</h2>
                   <ul className="mt-4 flex flex-wrap gap-2">
                     {experience.trips.map((trip) => (
-                      <li key={trip.id} className="rounded-full border border-sand-300 bg-white px-3 py-1.5 text-sm text-sea-900/75">
+                      <li key={trip.id} className="rounded-full border border-sand-300 bg-white px-3 py-1.5 text-sm text-ink-muted">
                         {ar ? trip.name_ar : trip.name_en}
                       </li>
                     ))}
@@ -185,7 +185,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
                       <div key={partner.id} className="rounded-xl border border-sand-300 bg-white p-4">
                         <p className="font-semibold text-sea-900">{partner.name}</p>
                         {(ar ? partner.public_description_ar : partner.public_description_en) && (
-                          <p className="mt-1 text-sm text-sea-900/60">{ar ? partner.public_description_ar : partner.public_description_en}</p>
+                          <p className="mt-1 text-sm text-ink-muted">{ar ? partner.public_description_ar : partner.public_description_en}</p>
                         )}
                       </div>
                     ))}
@@ -199,13 +199,13 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
                 <dl className="divide-y divide-sand-300 border-y border-sand-300">
                   {duration && (
                     <div className="flex items-center justify-between gap-4 py-4">
-                      <dt className="flex items-center gap-2 text-sm text-sea-900/60"><Clock className="h-4 w-4" aria-hidden="true" />{t('duration')}</dt>
+                      <dt className="flex items-center gap-2 text-sm text-ink-muted"><Clock className="h-4 w-4" aria-hidden="true" />{t('duration')}</dt>
                       <dd className="text-sm font-semibold text-sea-900">{duration}</dd>
                     </div>
                   )}
                   {category && (
                     <div className="flex items-center justify-between gap-4 py-4">
-                      <dt className="flex items-center gap-2 text-sm text-sea-900/60"><Layers3 className="h-4 w-4" aria-hidden="true" />{t('category')}</dt>
+                      <dt className="flex items-center gap-2 text-sm text-ink-muted"><Layers3 className="h-4 w-4" aria-hidden="true" />{t('category')}</dt>
                       <dd className="text-sm font-semibold text-sea-900">{category}</dd>
                     </div>
                   )}
@@ -213,8 +213,8 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
               )}
               {price > 0 && (
                 <p className="mt-4 font-display text-2xl font-extrabold text-sea-900">
-                  {experience.starting_from_price && <span className="me-1.5 text-sm font-semibold text-sea-900/60">{t('startingFrom')}</span>}
-                  {price.toLocaleString(ar ? 'ar-EG' : 'en-US')} <span className="text-base font-semibold text-sea-900/70">{common('egp')}</span>
+                  {experience.starting_from_price && <span className="me-1.5 text-sm font-semibold text-ink-muted">{t('startingFrom')}</span>}
+                  {price.toLocaleString(ar ? 'ar-EG' : 'en-US')} <span className="text-base font-semibold text-ink-muted">{common('egp')}</span>
                 </p>
               )}
               <div className="mt-6 border-t border-sand-200 pt-6">
@@ -223,7 +223,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
             </aside>
           </div>
         </section>
-      </main>
+      </div>
     </article>
   )
 }

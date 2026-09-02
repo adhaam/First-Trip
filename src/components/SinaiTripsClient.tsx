@@ -6,7 +6,8 @@ import { Reveal } from '@/components/motion/Reveal'
 import { TripCard } from '@/components/cards/TripCard'
 import { TripPackageRail } from '@/components/TripPackageRail'
 import { TripPackageCard } from '@/components/cards/TripPackageCard'
-import { Filter } from 'lucide-react'
+import { Filter, Mountain } from 'lucide-react'
+import { EmptyState, ResultCount } from '@/components/EmptyState'
 import { cn } from '@/lib/utils'
 import type { SinaiTrip, TripPackage } from '@/lib/types'
 
@@ -42,9 +43,11 @@ export function SinaiTripsClient({
 
   if (trips.length === 0 && packages.length === 0) {
     return (
-      <div className="container-main py-16 text-center text-sea-900/40">
-        {states('noTrips')}
-      </div>
+      <EmptyState
+        icon={<Mountain className="h-8 w-8" />}
+        title={states('noTrips')}
+        className="my-8"
+      />
     )
   }
 
@@ -71,7 +74,7 @@ export function SinaiTripsClient({
                 'min-h-9 shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors',
                 contentFilter === id
                   ? 'bg-sea-900 text-white'
-                  : 'border border-sand-300 bg-white text-sea-900/60 hover:text-sea-900',
+                  : 'border border-sand-300 bg-white text-ink-muted hover:text-sea-900',
               )}
             >
               {label}
@@ -82,7 +85,7 @@ export function SinaiTripsClient({
 
       {showTrips && (
         <div className="no-scrollbar mb-8 flex items-center gap-2 overflow-x-auto pb-2">
-          <Filter className="h-4 w-4 shrink-0 text-sea-900/35" />
+          <Filter className="h-4 w-4 shrink-0 text-ink-subtle" />
           {categories.map((cat) => (
             <button
               key={cat.id}
@@ -92,8 +95,8 @@ export function SinaiTripsClient({
               className={cn(
                 'min-h-11 shrink-0 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
                 filter === cat.id
-                  ? 'bg-sun-500 text-white'
-                  : 'border border-sand-300 bg-white text-sea-900/60 hover:text-sea-900',
+                  ? 'bg-sun-500 text-on-accent'
+                  : 'border border-sand-300 bg-white text-ink-muted hover:text-sea-900',
               )}
             >
               {cat.id === 'all' ? (ar ? cat.label_ar : cat.label_en) : cat.id}
@@ -103,9 +106,21 @@ export function SinaiTripsClient({
       )}
 
       {showTrips && filtered.length === 0 && !showPackages && (
-        <div className="py-16 text-center text-sea-900/40">
-          {states('noTripMatches')}
-        </div>
+        <EmptyState
+          icon={<Mountain className="h-8 w-8" />}
+          title={states('noTripMatches')}
+          onClear={filter !== 'all' || contentFilter !== 'all'
+            ? () => { setFilter('all'); setContentFilter('all') }
+            : undefined}
+        />
+      )}
+
+      {showTrips && (
+        <ResultCount
+          count={filtered.length}
+          label={`${filtered.length} ${ar ? 'رحلة' : filtered.length === 1 ? 'trip' : 'trips'}`}
+          className="mb-5"
+        />
       )}
 
       {showTrips && firstBatch.length > 0 && (
@@ -133,7 +148,7 @@ export function SinaiTripsClient({
       {showTrips && restBatch.length > 0 && (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {restBatch.map((trip, i) => (
-            <Reveal key={trip.id} delay={(i % 9) * 60}>
+            <Reveal key={trip.id} delay={(i % 9) * 60} className="h-full">
               <TripCard trip={trip} includesLabel={t('includes')} />
             </Reveal>
           ))}

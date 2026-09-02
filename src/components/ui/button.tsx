@@ -9,6 +9,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        // The single primary action style for public-facing forms. Ink on sun
+        // measures 5.77; the previous white-on-sun submit buttons were 2.29-3.00.
+        primary:
+          "bg-sun-500 text-on-accent hover:bg-sun-600 disabled:bg-sand-300 disabled:text-ink-subtle disabled:opacity-100",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
@@ -31,6 +35,9 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        // 44px — the minimum comfortable touch target. Used by public forms.
+        touch: "h-11 gap-2 px-5 text-sm",
+        "touch-lg": "h-12 gap-2 px-6 text-base",
       },
     },
     defaultVariants: {

@@ -28,7 +28,7 @@ export default async function CommunityPage() {
     <div className="bg-sand-50">
       <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-24 grain">
         <div className="absolute inset-0 opacity-20">
-          <Image src="/media/heroposter.png" alt="" fill sizes="100vw" className="object-cover" />
+          <Image src="/media/heroposter.webp" alt="" fill sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
         </div>
         <div className="container-main relative z-10">

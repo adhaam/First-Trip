@@ -46,7 +46,7 @@ export function SignatureClient({
               >
                 <div>
                   <h3 className={cn('font-display text-lg font-bold', isBuild ? 'text-weemap-orange' : 'text-sea-900')}>{label}</h3>
-                  {desc && <p className={cn('mt-2 text-sm leading-relaxed', isBuild ? 'text-white/75' : 'text-sea-900/60')}>{desc}</p>}
+                  {desc && <p className={cn('mt-2 text-sm leading-relaxed', isBuild ? 'text-white/75' : 'text-ink-muted')}>{desc}</p>}
                 </div>
                 {isBuild && (
                   <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-weemap-orange">
@@ -68,9 +68,9 @@ export function SignatureClient({
       )}
 
       {experiences.length === 0 ? (
-        <div className="py-16 text-center text-sea-900/40">{t('noExperiences')}</div>
+        <div className="py-16 text-center text-ink-subtle">{t('noExperiences')}</div>
       ) : filtered.length === 0 ? (
-        <div className="py-16 text-center text-sea-900/40">{states('noTripMatches')}</div>
+        <div className="py-16 text-center text-ink-subtle">{states('noTripMatches')}</div>
       ) : (
         <div id="experiences" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((exp, i) => (

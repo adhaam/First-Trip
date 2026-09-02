@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Minus, Plus, KeyRound, Check, ShieldCheck, Truck, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ import { useCart } from './CartProvider'
 import { quoteRental } from '@/lib/rental-pricing'
 import { addRentalDays, todayIso } from '@/lib/cart'
 import type { CommerceProduct, CommerceProductVariant, CartRentalItem, DeliveryZone } from '@/lib/commerce-types'
+import { formatAmount } from '@/lib/format'
 
 const REQUIREMENT_KEYS: Record<string, string> = {
   id_required: 'requirement_id_required',
@@ -97,7 +98,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
   const showDelivery = product.delivery_enabled && deliveryZones.length > 0
   const showPickup = product.pickup_enabled
 
-  const images = product.images?.length ? product.images : ['/media/heroposter.png']
+  const images = product.images?.length ? product.images : ['/media/heroposter.webp']
   const deliveryFee = fulfillment === 'delivery' ? deliveryZones.find((z) => z.id === zoneId) : null
   const deliveryFeeAmount = deliveryFee?.fee_type === 'fixed' ? Number(deliveryFee.fixed_fee) : 0
   const canAdd = quote != null && (!hasOptions || matchedVariant) && availability.available && (fulfillment === 'pickup' || !!zoneId || deliveryZones.length === 0)
@@ -142,13 +143,13 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
           <div className="relative aspect-square overflow-hidden rounded-2xl border border-sand-300 bg-white">
             <Image src={images[activeImage]} alt={ar ? product.name_ar : product.name_en} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
             {product.badge_text && (
-              <span className="absolute start-3 top-3 rounded-full bg-sun-500 px-3 py-1 text-xs font-semibold text-white shadow">{product.badge_text}</span>
+              <span className="absolute start-3 top-3 rounded-full bg-sun-500 px-3 py-1 text-xs font-semibold text-on-accent shadow">{product.badge_text}</span>
             )}
           </div>
           {images.length > 1 && (
             <div className="mt-3 flex gap-2 overflow-x-auto">
               {images.map((img, i) => (
-                <button key={img + i} type="button" onClick={() => setActiveImage(i)} className={cn('relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2', activeImage === i ? 'border-sun-500' : 'border-transparent')}>
+                <button key={img + i} type="button" onClick={() => setActiveImage(i)} className={cn('relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2', activeImage === i ? 'border-sun-600' : 'border-transparent')}>
                   <Image src={img} alt="" fill sizes="64px" className="object-cover" />
                 </button>
               ))}
@@ -156,19 +157,19 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
           )}
 
           {(ar ? product.description_ar : product.description_en) && (
-            <p className="mt-5 whitespace-pre-line text-sm leading-relaxed text-sea-900/65">{ar ? product.description_ar : product.description_en}</p>
+            <p className="mt-5 whitespace-pre-line text-sm leading-relaxed text-ink-muted">{ar ? product.description_ar : product.description_en}</p>
           )}
 
           {product.rental_requirements?.length > 0 && (
             <div className="mt-5 rounded-xl border border-sand-200 bg-white p-4">
               <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-sea-900"><ShieldCheck className="h-4 w-4 text-sea-600" />{commerce('requirements')}</p>
-              <ul className="space-y-1 text-sm text-sea-900/65">
+              <ul className="space-y-1 text-sm text-ink-muted">
                 {product.rental_requirements.map((req) => (
                   <li key={req}>• {REQUIREMENT_KEYS[req] ? commerce(REQUIREMENT_KEYS[req]) : req}</li>
                 ))}
               </ul>
               {product.deposit_amount > 0 && (
-                <p className="mt-2 text-sm font-semibold text-sea-900">{commerce('deposit')}: {Number(product.deposit_amount).toLocaleString()} {common('egp')}</p>
+                <p className="mt-2 text-sm font-semibold text-sea-900">{commerce('deposit')}: {formatAmount(Number(product.deposit_amount), locale)} {common('egp')}</p>
               )}
             </div>
           )}
@@ -176,7 +177,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
 
         <div>
           {product.commerce_categories && (
-            <p className="text-xs font-semibold uppercase tracking-wider text-sea-900/40">{ar ? product.commerce_categories.name_ar : product.commerce_categories.name_en}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">{ar ? product.commerce_categories.name_ar : product.commerce_categories.name_en}</p>
           )}
           <h1 className="mt-2 font-display text-3xl font-extrabold text-sea-900">{ar ? product.name_ar : product.name_en}</h1>
 
@@ -191,7 +192,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
                     type="button"
                     onClick={() => setSelected((prev) => ({ ...prev, [option.id]: val.id }))}
                     aria-pressed={selected[option.id] === val.id}
-                    className={cn('min-h-10 rounded-lg border px-4 text-sm font-medium transition-colors', selected[option.id] === val.id ? 'border-sun-500 bg-sun-500 text-white' : 'border-sand-300 bg-white text-sea-900/70 hover:border-sea-400')}
+                    className={cn('min-h-10 rounded-lg border px-4 text-sm font-medium transition-colors', selected[option.id] === val.id ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 bg-white text-ink-muted hover:border-sea-400')}
                   >
                     {ar ? val.value_ar : val.value_en}
                   </button>
@@ -209,7 +210,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
               value={startDate}
               min={todayIso()}
               onChange={(e) => setStartDate(e.target.value < todayIso() ? todayIso() : e.target.value)}
-              className="h-11 w-full max-w-[220px] rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 focus:border-sea-500 focus:outline-none"
+              className="h-11 w-full max-w-[220px] rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
               dir="ltr"
             />
           </div>
@@ -218,7 +219,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
           <div className="mt-5">
             <p className="mb-2 text-sm font-semibold text-sea-900">{commerce('duration')}</p>
             {tiers.length === 0 ? (
-              <p className="text-xs text-sea-900/45">
+              <p className="text-xs text-ink-subtle">
                 {hasOptions && !allOptionsSelected ? commerce('selectOptions') : commerce('noPricingConfigured')}
               </p>
             ) : (
@@ -229,7 +230,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
                     type="button"
                     onClick={() => setDurationDays(t.duration_days)}
                     aria-pressed={durationDays === t.duration_days}
-                    className={cn('min-h-10 rounded-lg border px-4 text-sm font-medium transition-colors', durationDays === t.duration_days ? 'border-sun-500 bg-sun-500 text-white' : 'border-sand-300 bg-white text-sea-900/70 hover:border-sea-400')}
+                    className={cn('min-h-10 rounded-lg border px-4 text-sm font-medium transition-colors', durationDays === t.duration_days ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 bg-white text-ink-muted hover:border-sea-400')}
                   >
                     {ar ? (t.label_ar || `${t.duration_days} يوم`) : (t.label_en || `${t.duration_days}d`)}
                   </button>
@@ -237,7 +238,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
               </div>
             )}
             {endDate && (
-              <p className="mt-2 text-xs text-sea-900/50">{commerce('returnsOn')}: <span dir="ltr" className="font-medium text-sea-900">{endDate}</span></p>
+              <p className="mt-2 text-xs text-ink-subtle">{commerce('returnsOn')}: <span dir="ltr" className="font-medium text-sea-900">{endDate}</span></p>
             )}
           </div>
 
@@ -261,7 +262,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
             </p>
           )}
           {!availability.checking && availability.available && availability.remaining != null && availability.remaining <= 3 && (
-            <p className="mt-3 text-xs font-medium text-sun-600">{commerce('unitsLeft', { count: availability.remaining })}</p>
+            <p className="mt-3 text-xs font-medium text-sun-700">{commerce('unitsLeft', { count: availability.remaining })}</p>
           )}
 
           {/* Fulfillment */}
@@ -270,18 +271,18 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
               <p className="mb-2 text-sm font-semibold text-sea-900">{commerce('fulfillment')}</p>
               <div className="flex gap-2">
                 {showPickup && (
-                  <button type="button" onClick={() => setFulfillment('pickup')} className={cn('flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', fulfillment === 'pickup' ? 'border-sun-500 bg-sun-500 text-white' : 'border-sand-300 bg-white text-sea-900/70')}>
+                  <button type="button" onClick={() => setFulfillment('pickup')} className={cn('flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', fulfillment === 'pickup' ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 bg-white text-ink-muted')}>
                     <MapPin className="h-4 w-4" />{commerce('pickup')}
                   </button>
                 )}
                 {showDelivery && (
-                  <button type="button" onClick={() => setFulfillment('delivery')} className={cn('flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', fulfillment === 'delivery' ? 'border-sun-500 bg-sun-500 text-white' : 'border-sand-300 bg-white text-sea-900/70')}>
+                  <button type="button" onClick={() => setFulfillment('delivery')} className={cn('flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', fulfillment === 'delivery' ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 bg-white text-ink-muted')}>
                     <Truck className="h-4 w-4" />{commerce('delivery')}
                   </button>
                 )}
               </div>
               {fulfillment === 'delivery' && showDelivery && (
-                <select aria-label={commerce('deliveryZone')} value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="mt-2 h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 focus:border-sea-500 focus:outline-none">
+                <select aria-label={commerce('deliveryZone')} value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="mt-2 h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700">
                   {deliveryZones.map((z) => (
                     <option key={z.id} value={z.id}>
                       {ar ? z.name_ar : z.name_en} {z.fee_type === 'fixed' ? `(+${z.fixed_fee} ${common('egp')})` : z.fee_type === 'free' ? `(${common('egp')} 0)` : `(${commerce('deliveryFeeConfirm')})`}
@@ -290,7 +291,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
                 </select>
               )}
               {fulfillment === 'pickup' && (product.pickup_instructions_ar || product.pickup_instructions_en) && (
-                <p className="mt-2 text-xs text-sea-900/50">{ar ? product.pickup_instructions_ar : product.pickup_instructions_en}</p>
+                <p className="mt-2 text-xs text-ink-subtle">{ar ? product.pickup_instructions_ar : product.pickup_instructions_en}</p>
               )}
             </div>
           )}
@@ -298,14 +299,14 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
           {/* Price summary */}
           {quote && (
             <div className="mt-6 space-y-1.5 rounded-xl border border-sand-200 bg-white p-4 text-sm">
-              <div className="flex justify-between text-sea-900/60"><span>{commerce('itemSubtotal')}</span><span className="tabular-nums text-sea-900">{quote.subtotal.toLocaleString()} {common('egp')}</span></div>
-              <div className="flex justify-between text-sea-900/60">
+              <div className="flex justify-between text-ink-muted"><span>{commerce('itemSubtotal')}</span><span className="tabular-nums text-sea-900">{formatAmount(quote.subtotal, locale)} {common('egp')}</span></div>
+              <div className="flex justify-between text-ink-muted">
                 <span>{commerce('deliveryFee')}</span>
                 <span className="tabular-nums text-sea-900">
-                  {fulfillment === 'pickup' ? '—' : deliveryFee?.fee_type === 'quote' ? commerce('deliveryFeeConfirm') : `${deliveryFeeAmount.toLocaleString()} ${common('egp')}`}
+                  {fulfillment === 'pickup' ? '—' : deliveryFee?.fee_type === 'quote' ? commerce('deliveryFeeConfirm') : `${formatAmount(deliveryFeeAmount, locale)} ${common('egp')}`}
                 </span>
               </div>
-              <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{commerce('estimatedTotal')}</span><span className="tabular-nums">{(quote.subtotal + deliveryFeeAmount).toLocaleString()} {common('egp')}</span></div>
+              <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{commerce('estimatedTotal')}</span><span className="tabular-nums">{formatAmount(quote.subtotal + deliveryFeeAmount, locale)} {common('egp')}</span></div>
             </div>
           )}
 
@@ -313,7 +314,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
             type="button"
             onClick={addToCart}
             disabled={!canAdd}
-            className={cn('mt-6 flex h-13 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:bg-sand-300', justAdded ? 'bg-emerald-600' : 'bg-sun-500 hover:bg-sun-600')}
+            className={cn('mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-on-accent transition-colors disabled:cursor-not-allowed disabled:bg-sand-300 disabled:text-ink-subtle', justAdded ? 'bg-emerald-600' : 'bg-sun-500 hover:bg-sun-600')}
           >
             {justAdded ? <Check className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
             {justAdded ? commerce('addedToCart') : commerce('addToCart')}

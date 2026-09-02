@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { CartItem, CartState, FulfillmentMethod } from '@/lib/commerce-types'
+import { trackConversion } from '@/lib/conversion'
 import {
   CART_STORAGE_KEY, addItem, cartItemCount, cartSubtotal, emptyCart, parseCart, removeItem,
   serializeCart, updateQuantity,
@@ -47,6 +48,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const add = useCallback((item: CartItem) => {
     setState((prev) => ({ ...prev, items: addItem(prev.items, item) }))
+    // Direct result of the customer pressing "add" — not a render side effect.
+    trackConversion(
+      'cart_item_added',
+      {
+        content_type: item.kind === 'rental' ? 'rental' : 'product',
+        item_id: item.productId,
+        quantity: item.quantity,
+        value: Math.round(Number(item.unitPriceEstimate) || 0),
+        currency: 'EGP',
+      },
+      { once: false },
+    )
     setIsOpen(true)
   }, [])
   const remove = useCallback((lineId: string) => {

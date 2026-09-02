@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { ArrowLeft, ArrowUpRight, Check, Clock, Layers3, MessageCircle } from 'lucide-react'
@@ -64,7 +64,7 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
   const category = ((ar ? trip.category_ar : trip.category_en) || '').trim()
   const includes = ((ar ? trip.includes_ar : trip.includes_en) || []).filter(Boolean)
   const images = (trip.images || []).filter(Boolean)
-  const cover = images[0] || '/media/heroposter.png'
+  const cover = images[0] || '/media/heroposter.webp'
   const otherTrips = trips.filter((item) => item.id !== trip.id)
   const related = [
     ...otherTrips.filter((item) => trip.category_en && item.category_en === trip.category_en),
@@ -110,7 +110,7 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main>
+      <div>
         <section className="container-main py-12 md:py-18">
           <div className="grid gap-10 lg:grid-cols-[1fr_20rem] lg:gap-16">
             <div className="space-y-12">
@@ -130,7 +130,7 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
               {description && (
                 <section aria-labelledby="trip-overview-heading">
                   <h2 id="trip-overview-heading" className="font-display text-2xl font-bold text-sea-900">{t('overview')}</h2>
-                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-sea-900/72">{description}</p>
+                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-ink-muted">{description}</p>
                 </section>
               )}
 
@@ -139,8 +139,8 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
                   <h2 id="trip-includes-heading" className="font-display text-2xl font-bold text-sea-900">{t('included')}</h2>
                   <ul className="mt-5 grid gap-3 sm:grid-cols-2">
                     {includes.map((item) => (
-                      <li key={item} className="flex items-start gap-3 border-t border-sand-300 pt-3 text-sm leading-6 text-sea-900/72">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-sun-500" aria-hidden="true" />
+                      <li key={item} className="flex items-start gap-3 border-t border-sand-300 pt-3 text-sm leading-6 text-ink-muted">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-sun-700" aria-hidden="true" />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -155,13 +155,13 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
                 <dl className="mt-5 divide-y divide-sand-300 border-y border-sand-300">
                   {duration && (
                     <div className="flex items-center justify-between gap-4 py-4">
-                      <dt className="flex items-center gap-2 text-sm text-sea-900/60"><Clock className="h-4 w-4" aria-hidden="true" />{t('duration')}</dt>
+                      <dt className="flex items-center gap-2 text-sm text-ink-muted"><Clock className="h-4 w-4" aria-hidden="true" />{t('duration')}</dt>
                       <dd className="text-sm font-semibold text-sea-900">{duration}</dd>
                     </div>
                   )}
                   {category && (
                     <div className="flex items-center justify-between gap-4 py-4">
-                      <dt className="flex items-center gap-2 text-sm text-sea-900/60"><Layers3 className="h-4 w-4" aria-hidden="true" />{t('category')}</dt>
+                      <dt className="flex items-center gap-2 text-sm text-ink-muted"><Layers3 className="h-4 w-4" aria-hidden="true" />{t('category')}</dt>
                       <dd className="text-sm font-semibold text-sea-900">{category}</dd>
                     </div>
                   )}
@@ -181,7 +181,7 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
                 />
               </div>
               <div className="mt-4 border-t border-sand-200 pt-4">
-                <p className="mb-3 text-xs text-sea-900/50">{ar ? 'أو تواصل معنا مباشرة:' : 'Or reach us directly:'}</p>
+                <p className="mb-3 text-xs text-ink-subtle">{ar ? 'أو تواصل معنا مباشرة:' : 'Or reach us directly:'}</p>
                 <a
                   href={`https://wa.me/${whatsapp}?text=${message}`}
                   target="_blank"
@@ -207,7 +207,7 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
             </div>
           </section>
         )}
-      </main>
+      </div>
     </article>
   )
 }

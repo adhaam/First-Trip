@@ -1,13 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Minus, Plus, ShoppingBag, Check, PackageX } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCart } from './CartProvider'
 import type { CommerceProduct, CommerceProductVariant } from '@/lib/commerce-types'
 import type { CartMerchItem } from '@/lib/commerce-types'
+import { formatAmount } from '@/lib/format'
 
 export function ProductDetailClient({ product }: { product: CommerceProduct }) {
   const locale = useLocale()
@@ -42,7 +43,7 @@ export function ProductDetailClient({ product }: { product: CommerceProduct }) {
   const outOfStock = product.track_inventory && matchedVariant != null && stock !== null && stock <= 0
   const canAdd = (!hasOptions || matchedVariant) && !outOfStock
 
-  const images = product.images?.length ? product.images : ['/media/heroposter.png']
+  const images = product.images?.length ? product.images : ['/media/heroposter.webp']
 
   const addToCart = () => {
     if (!canAdd) return
@@ -84,7 +85,7 @@ export function ProductDetailClient({ product }: { product: CommerceProduct }) {
           <div className="relative aspect-square overflow-hidden rounded-2xl border border-sand-300 bg-white">
             <Image src={images[activeImage]} alt={ar ? product.name_ar : product.name_en} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
             {product.badge_text && (
-              <span className="absolute start-3 top-3 rounded-full bg-sun-500 px-3 py-1 text-xs font-semibold text-white shadow">
+              <span className="absolute start-3 top-3 rounded-full bg-sun-500 px-3 py-1 text-xs font-semibold text-on-accent shadow">
                 {product.badge_text}
               </span>
             )}
@@ -98,7 +99,7 @@ export function ProductDetailClient({ product }: { product: CommerceProduct }) {
                   onClick={() => setActiveImage(i)}
                   className={cn(
                     'relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2',
-                    activeImage === i ? 'border-sun-500' : 'border-transparent',
+                    activeImage === i ? 'border-sun-600' : 'border-transparent',
                   )}
                 >
                   <Image src={img} alt="" fill sizes="64px" className="object-cover" />
@@ -111,21 +112,21 @@ export function ProductDetailClient({ product }: { product: CommerceProduct }) {
         {/* Details */}
         <div>
           {product.commerce_categories && (
-            <p className="text-xs font-semibold uppercase tracking-wider text-sea-900/40">
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">
               {ar ? product.commerce_categories.name_ar : product.commerce_categories.name_en}
             </p>
           )}
           <h1 className="mt-2 font-display text-3xl font-extrabold text-sea-900">{ar ? product.name_ar : product.name_en}</h1>
 
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-sea-900">{price.toLocaleString()} {common('egp')}</span>
+            <span className="text-2xl font-bold text-sea-900">{formatAmount(price, locale)} {common('egp')}</span>
             {product.compare_at_price && Number(product.compare_at_price) > price && (
-              <span className="text-sm text-sea-900/35 line-through">{Number(product.compare_at_price).toLocaleString()} {common('egp')}</span>
+              <span className="text-sm text-ink-subtle line-through">{formatAmount(Number(product.compare_at_price), locale)} {common('egp')}</span>
             )}
           </div>
 
           {(ar ? product.description_ar : product.description_en) && (
-            <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-sea-900/65">
+            <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
               {ar ? product.description_ar : product.description_en}
             </p>
           )}
@@ -144,8 +145,8 @@ export function ProductDetailClient({ product }: { product: CommerceProduct }) {
                     className={cn(
                       'min-h-10 rounded-lg border px-4 text-sm font-medium transition-colors',
                       selected[option.id] === val.id
-                        ? 'border-sun-500 bg-sun-500 text-white'
-                        : 'border-sand-300 bg-white text-sea-900/70 hover:border-sea-400',
+                        ? 'border-sun-600 bg-sun-500 text-on-accent'
+                        : 'border-sand-300 bg-white text-ink-muted hover:border-sea-400',
                     )}
                   >
                     {ar ? val.value_ar : val.value_en}
@@ -156,13 +157,13 @@ export function ProductDetailClient({ product }: { product: CommerceProduct }) {
           ))}
 
           {hasOptions && !allOptionsSelected && (
-            <p className="mt-3 text-xs text-sea-900/45">{commerce('selectOptions')}</p>
+            <p className="mt-3 text-xs text-ink-subtle">{commerce('selectOptions')}</p>
           )}
           {hasOptions && allOptionsSelected && !matchedVariant && (
             <p className="mt-3 text-xs font-medium text-red-600">{commerce('outOfStock')}</p>
           )}
           {matchedVariant && product.track_inventory && stock !== null && stock > 0 && stock <= 5 && (
-            <p className="mt-3 text-xs font-medium text-sun-600">{commerce('unitsLeft', { count: stock })}</p>
+            <p className="mt-3 text-xs font-medium text-sun-700">{commerce('unitsLeft', { count: stock })}</p>
           )}
           {outOfStock && (
             <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-red-600">

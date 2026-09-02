@@ -1,12 +1,13 @@
 'use client'
 
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { ArrowUpRight, PackageX } from 'lucide-react'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import type { CommerceProduct } from '@/lib/commerce-types'
+import { formatAmount } from '@/lib/format'
 
 function cheapestTier(product: CommerceProduct) {
   const tiers = product.rental_pricing_tiers?.filter((t) => t.variant_id === null) || []
@@ -25,7 +26,7 @@ export function ProductCard({ product, featured = false, className }: {
   const commerce = useTranslations('commerce')
 
   const name = ar ? product.name_ar : product.name_en
-  const cover = product.images?.[0] || '/media/heroposter.png'
+  const cover = product.images?.[0] || '/media/heroposter.webp'
   const category = product.commerce_categories ? (ar ? product.commerce_categories.name_ar : product.commerce_categories.name_en) : null
   const href = product.product_type === 'sale' ? `/merch/${product.slug}` : `/rent/${product.slug}`
 
@@ -62,7 +63,7 @@ export function ProductCard({ product, featured = false, className }: {
                 </span>
               ) : <span />}
               {product.badge_text && (
-                <span className="rounded-full bg-sun-500 px-3 py-1 text-[0.7rem] font-semibold text-white shadow">
+                <span className="rounded-full bg-sun-500 px-3 py-1 text-[0.7rem] font-semibold text-on-accent shadow">
                   {product.badge_text}
                 </span>
               )}
@@ -83,7 +84,7 @@ export function ProductCard({ product, featured = false, className }: {
           </div>
 
           <div className="flex flex-1 flex-col p-5">
-            <p className="line-clamp-2 text-sm leading-relaxed text-sea-900/60">
+            <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">
               {ar ? product.description_ar : product.description_en}
             </p>
 
@@ -92,28 +93,28 @@ export function ProductCard({ product, featured = false, className }: {
                 {product.product_type === 'rental' ? (
                   tier ? (
                     <>
-                      <span className="text-xs font-medium text-sea-900/50">{commerce('from')} </span>
-                      {Number(tier.price).toLocaleString()} <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
-                      <span className="text-xs font-medium text-sea-900/50"> / {ar ? (tier.label_ar || `${tier.duration_days} يوم`) : (tier.label_en || `${tier.duration_days}d`)}</span>
+                      <span className="text-xs font-medium text-ink-subtle">{commerce('from')} </span>
+                      {formatAmount(Number(tier.price), locale)} <span className="text-sm font-semibold text-ink-muted">{common('egp')}</span>
+                      <span className="text-xs font-medium text-ink-subtle"> / {ar ? (tier.label_ar || `${tier.duration_days} يوم`) : (tier.label_en || `${tier.duration_days}d`)}</span>
                     </>
                   ) : (
-                    <span className="text-sm font-medium text-sea-900/50">{commerce('contactForPrice')}</span>
+                    <span className="text-sm font-medium text-ink-subtle">{commerce('contactForPrice')}</span>
                   )
                 ) : (
                   <>
                     {hasVariants && minVariantPrice !== Number(product.base_price) && (
-                      <span className="text-xs font-medium text-sea-900/50">{commerce('from')} </span>
+                      <span className="text-xs font-medium text-ink-subtle">{commerce('from')} </span>
                     )}
-                    {minVariantPrice.toLocaleString()} <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+                    {formatAmount(minVariantPrice, locale)} <span className="text-sm font-semibold text-ink-muted">{common('egp')}</span>
                     {product.compare_at_price && Number(product.compare_at_price) > minVariantPrice && (
-                      <span className="ms-1.5 text-xs font-medium text-sea-900/35 line-through">
-                        {Number(product.compare_at_price).toLocaleString()}
+                      <span className="ms-1.5 text-xs font-medium text-ink-subtle line-through">
+                        {formatAmount(Number(product.compare_at_price), locale)}
                       </span>
                     )}
                   </>
                 )}
               </div>
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-sun-500 px-4 py-2 text-xs font-semibold text-sun-600 transition-colors hover:bg-sun-500 hover:text-white">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-sun-600 px-4 py-2 text-xs font-semibold text-sun-700 transition-colors hover:bg-sun-500 hover:text-on-accent">
                 {product.product_type === 'rental' ? commerce('chooseDates') : commerce('view')}
                 <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" />
               </span>

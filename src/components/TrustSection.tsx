@@ -21,7 +21,7 @@ export function TrustSection() {
             <h2 id="trust-heading" className="font-display text-2xl font-bold text-sea-900 md:text-3xl">
               {t('title')}
             </h2>
-            <p className="mt-3 leading-relaxed text-sea-900/65">{t('subtitle')}</p>
+            <p className="mt-3 leading-relaxed text-ink-muted">{t('subtitle')}</p>
           </div>
         </Reveal>
 
@@ -29,9 +29,9 @@ export function TrustSection() {
           {items.map(({ icon: Icon, title, text }, index) => (
             <Reveal key={title} delay={index * 60}>
               <article className="border-t border-sand-300 pt-5">
-                <Icon className="h-6 w-6 text-sun-500" aria-hidden="true" />
+                <Icon className="h-6 w-6 text-sun-700" aria-hidden="true" />
                 <h3 className="mt-4 font-display text-base font-bold text-sea-900">{title}</h3>
-                <p className="mt-2 text-sm leading-6 text-sea-900/65">{text}</p>
+                <p className="mt-2 text-sm leading-6 text-ink-muted">{text}</p>
               </article>
             </Reveal>
           ))}

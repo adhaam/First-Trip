@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { ArrowUpRight } from 'lucide-react'
@@ -8,6 +8,7 @@ import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { discountedExperiencePrice } from '@/lib/experience-pricing'
 import type { Experience } from '@/lib/types'
+import { formatAmount } from '@/lib/format'
 
 export function SignatureExperienceCard({ experience, className }: { experience: Experience; className?: string }) {
   const t = useTranslations('signature')
@@ -18,7 +19,7 @@ export function SignatureExperienceCard({ experience, className }: { experience:
   const name = ar ? experience.title_ar : experience.title_en
   const badge = ar ? experience.badge_ar : experience.badge_en
   const category = ar ? experience.category_info?.label_ar : experience.category_info?.label_en
-  const cover = experience.hero_image || experience.gallery?.[0] || '/media/heroposter.png'
+  const cover = experience.hero_image || experience.gallery?.[0] || '/media/heroposter.webp'
   const price = discountedExperiencePrice(experience)
 
   return (
@@ -51,17 +52,17 @@ export function SignatureExperienceCard({ experience, className }: { experience:
 
           <div className="flex flex-1 flex-col p-5">
             {experience.short_description_ar && (
-              <p className="line-clamp-2 text-sm leading-relaxed text-sea-900/60">
+              <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">
                 {ar ? experience.short_description_ar : experience.short_description_en}
               </p>
             )}
 
             <div className="mt-auto flex items-center justify-between gap-3 pt-5">
               <div className="font-display text-lg font-bold text-sea-900">
-                {experience.starting_from_price && <span className="me-1 text-sm font-semibold text-sea-900/60">{t('startingFrom')}</span>}
-                {price.toLocaleString()} <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+                {experience.starting_from_price && <span className="me-1 text-sm font-semibold text-ink-muted">{t('startingFrom')}</span>}
+                {formatAmount(price, locale)} <span className="text-sm font-semibold text-ink-muted">{common('egp')}</span>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-weemap-orange px-4 py-2 text-xs font-semibold text-weemap-orange transition-colors group-hover:bg-weemap-orange group-hover:text-white">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-weemap-orange px-4 py-2 text-xs font-semibold text-weemap-orange transition-colors group-hover:bg-weemap-orange group-hover:text-on-accent">
                 {t('requestCta')}
                 <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" />
               </span>

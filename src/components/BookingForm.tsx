@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -30,8 +30,9 @@ import {
 import { RoomAllocator, type RoomAllocation, ROOM_OCCUPANCY } from '@/components/RoomAllocator'
 import { HoneypotField } from '@/components/HoneypotField'
 import { Turnstile } from '@/components/Turnstile'
-import { trackEvent } from '@/lib/track'
+import { trackConversion, trackRequestFailure } from '@/lib/conversion'
 import { cn } from '@/lib/utils'
+import { formatAmount } from '@/lib/format'
 
 // ─── The one form to rule them all ───
 // Adham's brief: no more separate /transfers page. Whether the user wants a
@@ -66,14 +67,16 @@ const schema = z.object({
   transfer_return_date: z.string().optional(),
 
   // shared
-  num_people: z.string().min(1, 'Required'),
-  full_name: z.string().min(3, 'Min 3 chars'),
-  phone: z.string().min(10, 'Invalid phone'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  // Messages are stable CODES, not display text — the schema lives outside the
+  // component and cannot reach the translator. `fieldError()` below maps them.
+  num_people: z.string().min(1, 'required'),
+  full_name: z.string().min(3, 'nameShort'),
+  phone: z.string().min(10, 'phoneInvalid'),
+  email: z.string().email('emailInvalid').optional().or(z.literal('')),
   notes: z.string().optional(),
 }).superRefine((value, ctx) => {
   const required = (path: keyof typeof value) => {
-    if (!value[path]) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: 'Required' })
+    if (!value[path]) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: 'required' })
   }
   if (value.mode === 'package') required('package_governorate')
   if (value.mode === 'stay-only') required('check_in_date')
@@ -99,6 +102,7 @@ export function BookingForm({
 }: Props) {
   const t = useTranslations('book')
   const common = useTranslations('common')
+  const forms = useTranslations('forms')
   const sinai = useTranslations('sinai')
   const locale = useLocale()
   const ar = locale === 'ar'
@@ -106,6 +110,11 @@ export function BookingForm({
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState('')
+  // Focus targets for the two moments a keyboard/SR user must be moved:
+  // a rejected submit, and a successful one.
+  const errorSummaryRef = useRef<HTMLDivElement>(null)
+  const successRef = useRef<HTMLDivElement>(null)
+  const [showErrorSummary, setShowErrorSummary] = useState(false)
   const [honeypot, setHoneypot] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [extraTripIds, setExtraTripIds] = useState<string[]>([])
@@ -414,7 +423,54 @@ export function BookingForm({
     })
   }
 
+  // Maps the schema's error codes onto the translated strings. An unknown code
+  // falls back to the generic "required" message rather than leaking a code.
+  const fieldError = (message?: string) => {
+    if (!message) return undefined
+    const known = ['required', 'nameShort', 'phoneInvalid', 'emailInvalid'] as const
+    return forms(known.includes(message as (typeof known)[number]) ? `err_${message}` : 'err_required')
+  }
+
+  /** IDs for the aria-describedby wiring — one place so they cannot drift. */
+  const fieldId = (name: string) => `booking-${name}`
+  const errorId = (name: string) => `booking-${name}-error`
+
+  // Move focus to the summary when a submit is rejected, so the visitor is told
+  // what happened instead of the button silently doing nothing.
+  useEffect(() => {
+    if (showErrorSummary) errorSummaryRef.current?.focus()
+  }, [showErrorSummary])
+
+  // Announce and focus the confirmation when the request goes through.
+  useEffect(() => {
+    if (submitted) successRef.current?.focus()
+  }, [submitted])
+
+  const onInvalid = () => {
+    setShowErrorSummary(true)
+  }
+
+  // The error summary needs a human label per invalid field, in the visitor's
+  // language. Order follows the visual order of the form.
+  const FIELD_LABELS: { name: string; label: string }[] = [
+    { name: 'num_people', label: t('numPeople') },
+    { name: 'full_name', label: t('fullName') },
+    { name: 'phone', label: t('phoneNumber') },
+    { name: 'email', label: t('emailLabel') },
+    { name: 'package_governorate', label: t('governorate') },
+    { name: 'check_in_date', label: t('checkIn') },
+    { name: 'transfer_governorate', label: t('governorate') },
+    { name: 'transfer_date', label: t('transferDate') },
+    { name: 'transfer_return_date', label: t('returnDate') },
+  ]
+  const invalidFields = FIELD_LABELS.filter(
+    (field) => Boolean((errors as Record<string, unknown>)[field.name]),
+  )
+
   const onSubmit = async (data: FormData) => {
+    // Guards against a double-tap or an Enter-key repeat firing two requests.
+    if (submitting) return
+    setShowErrorSummary(false)
     if (honeypot) return // silently drop — bot filled the hidden field
     setSubmitting(true)
     setServerError('')
@@ -492,14 +548,25 @@ export function BookingForm({
               ? 'حصلت مشكلة في الإرسال. جرّب تاني أو كلمنا على واتساب.'
               : 'Something went wrong. Try again or WhatsApp us.'),
         )
+        trackRequestFailure('accommodation', 'server')
         return
       }
-      trackEvent('accommodation_booking_submitted', {
-        booking_type: data.mode,
-        accommodation: accommodation.name_en,
+      // Fired only after the server confirmed the request. `total` is the same
+      // estimate already shown to the customer. No personal field is sent.
+      trackConversion('accommodation_request_submitted', {
+        content_type: 'accommodation',
+        booking_mode: data.mode,
+        item_id: accommodation.id,
+        item_name: accommodation.name_en,
+        item_category: accommodation.type,
+        num_people: numPeople,
+        value: Math.round(total),
+        currency: 'EGP',
+        source: 'book_dahab',
       })
       setSubmitted(true)
     } catch {
+      trackRequestFailure('accommodation', 'network')
       setServerError(
         ar ? 'مفيش اتصال بالإنترنت. جرّب تاني.' : 'Network error. Please try again.',
       )
@@ -524,14 +591,20 @@ export function BookingForm({
 
   if (submitted) {
     return (
-      <div className="rounded-3xl border-[1.5px] border-sea-100 bg-card p-8 text-center shadow-sm">
+      <div
+        ref={successRef}
+        role="status"
+        aria-live="polite"
+        tabIndex={-1}
+        className="rounded-3xl border-[1.5px] border-sea-100 bg-card p-8 text-center shadow-sm outline-none"
+      >
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
           <CheckCircle2 className="h-7 w-7 text-emerald-600" />
         </div>
         <h3 className="font-display text-xl font-bold text-sea-900">
           {ar ? 'وصلنا طلبك!' : 'Your request is in!'}
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-sea-900/60">
+        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           {ar
             ? 'هنكلمك خلال ساعات قليلة نأكد الحجز ونظبط التفاصيل.'
             : 'We\'ll call you within a few hours to confirm and sort details.'}
@@ -540,8 +613,8 @@ export function BookingForm({
           href={whatsappLink()}
           target="_blank"
           rel="noopener"
-          onClick={() => trackEvent('whatsapp_cta_click', { source: 'book_dahab' })}
-          className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] font-semibold text-white transition-colors hover:bg-[#1FBE59]"
+          onClick={() => trackConversion('whatsapp_click', { source: 'book_dahab', content_type: 'accommodation' }, { once: false })}
+          className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] text-sm font-semibold text-on-accent transition-colors hover:bg-[#1FBE59]"
         >
           <MessageCircle className="h-4 w-4" />
           {ar ? 'كمّل على واتساب' : 'Continue on WhatsApp'}
@@ -560,10 +633,11 @@ export function BookingForm({
 
       {/* ─── booking form card ─── */}
       <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate aria-labelledby="booking-form-heading" className="space-y-6 p-6">
+        <h2 id="booking-form-heading" className="sr-only">{t('bookingType')}</h2>
         {/* ─── mode selector ─── */}
-        <div>
-          <Label className="mb-2.5 block">{t('bookingType')}</Label>
+        <div role="radiogroup" aria-labelledby="booking-mode-label">
+          <Label id="booking-mode-label" className="mb-2.5 block">{t('bookingType')}</Label>
           <div className="grid gap-2">
             <ModeOption
               icon={Package}
@@ -844,10 +918,10 @@ export function BookingForm({
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5 text-sm font-semibold text-sea-900">
-                                  <Layers className="h-3.5 w-3.5 shrink-0 text-sun-500" />
+                                  <Layers className="h-3.5 w-3.5 shrink-0 text-sun-700" />
                                   {pkgName}
                                 </div>
-                                <p className="mt-0.5 text-xs text-sea-900/55">
+                                <p className="mt-0.5 text-xs text-ink-subtle">
                                   {sinai('experiencesCount', { count: tripNames.length })} — {tripNames.join(' · ')}
                                 </p>
                               </div>
@@ -858,7 +932,7 @@ export function BookingForm({
                                   'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
                                   isSelected
                                     ? 'bg-emerald-100 text-emerald-700'
-                                    : 'border border-sun-500 text-sun-600 hover:bg-sun-500 hover:text-white',
+                                    : 'border border-sun-600 text-sun-700 hover:bg-sun-500 hover:text-on-accent',
                                 )}
                               >
                                 {isSelected ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
@@ -903,8 +977,8 @@ export function BookingForm({
                 </SelectContent>
               </Select>
               {packageReturnDate && packageDirection === 'round_trip' && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-sea-900/60">
-                  <Info className="h-3.5 w-3.5 shrink-0 text-sun-500" />
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted">
+                  <Info className="h-3.5 w-3.5 shrink-0 text-sun-700" />
                   {ar ? 'الرجوع:' : 'Return:'}{' '}
                   <span className="font-semibold text-sea-900">
                     {new Date(`${packageReturnDate}T00:00:00`).toLocaleDateString(ar ? 'ar-EG' : 'en-GB', {
@@ -1107,8 +1181,8 @@ export function BookingForm({
                     className={cn(
                       'rounded-2xl border-[1.5px] px-2 py-2.5 text-xs font-medium transition-colors sm:text-sm',
                       transferDirection === d
-                        ? 'border-sun-500 bg-sun-50 text-sea-900'
-                        : 'border-sea-100 text-sea-900/65 hover:border-sea-300',
+                        ? 'border-sun-600 bg-sun-50 text-sea-900'
+                        : 'border-sea-100 text-ink-muted hover:border-sea-300',
                     )}
                   >
                     {d === 'round_trip'
@@ -1151,7 +1225,7 @@ export function BookingForm({
                   />
                 )}
                 {transferType === 'package_bus' && (
-                  <p className="mt-1.5 text-xs text-sea-900/45">
+                  <p className="mt-1.5 text-xs text-ink-subtle">
                     {transferDirection === 'from_dahab' ? t('returnDaysNote') : t('departureDaysNote')}
                   </p>
                 )}
@@ -1186,7 +1260,7 @@ export function BookingForm({
             </div>
 
             {mode === 'transfer-only' && (
-              <div className="flex items-start gap-3 rounded-2xl border border-sea-100 bg-sea-50/40 p-4 text-xs leading-relaxed text-sea-900/70">
+              <div className="flex items-start gap-3 rounded-2xl border border-sea-100 bg-sea-50/40 p-4 text-xs leading-relaxed text-ink-muted">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-sea-500" />
                 <span>
                   {ar
@@ -1200,75 +1274,186 @@ export function BookingForm({
 
         {/* ─── shared fields ─── */}
         <div>
-          <Label className="mb-1.5 block">{t('numPeople')}</Label>
-          <Input type="number" min="1" max="50" inputMode="numeric" {...register('num_people')} />
+          <Label htmlFor={fieldId('num_people')} className="mb-1.5 block">{t('numPeople')}</Label>
+          <Input
+            id={fieldId('num_people')}
+            type="number"
+            min="1"
+            max="50"
+            inputMode="numeric"
+            aria-invalid={Boolean(errors.num_people) || undefined}
+            aria-describedby={errors.num_people ? errorId('num_people') : undefined}
+            {...register('num_people')}
+          />
+          {errors.num_people && (
+            <p id={errorId('num_people')} role="alert" className="mt-1.5 text-sm text-red-700">
+              {fieldError(errors.num_people.message)}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label className="mb-1.5 block">{t('fullName')}</Label>
-            <Input {...register('full_name')} aria-invalid={Boolean(errors.full_name)} />
+            <Label htmlFor={fieldId('full_name')} className="mb-1.5 block">
+              {t('fullName')} <span className="text-sun-700" aria-hidden>*</span>
+              <span className="sr-only">({forms('required')})</span>
+            </Label>
+            <Input
+              id={fieldId('full_name')}
+              autoComplete="name"
+              required
+              aria-invalid={Boolean(errors.full_name) || undefined}
+              aria-describedby={errors.full_name ? errorId('full_name') : undefined}
+              {...register('full_name')}
+            />
             {errors.full_name && (
-              <p className="mt-1 text-xs text-red-600">{errors.full_name.message}</p>
+              <p id={errorId('full_name')} role="alert" className="mt-1.5 text-sm text-red-700">
+                {fieldError(errors.full_name.message)}
+              </p>
             )}
           </div>
           <div>
-            <Label className="mb-1.5 block">{t('phoneNumber')}</Label>
+            <Label htmlFor={fieldId('phone')} className="mb-1.5 block">
+              {t('phoneNumber')} <span className="text-sun-700" aria-hidden>*</span>
+              <span className="sr-only">({forms('required')})</span>
+            </Label>
             <Input
+              id={fieldId('phone')}
               type="tel"
               dir="ltr"
               inputMode="tel"
+              autoComplete="tel"
+              required
+              aria-invalid={Boolean(errors.phone) || undefined}
+              aria-describedby={errors.phone ? errorId('phone') : undefined}
               {...register('phone')}
-              aria-invalid={Boolean(errors.phone)}
             />
-            {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
+            {errors.phone && (
+              <p id={errorId('phone')} role="alert" className="mt-1.5 text-sm text-red-700">
+                {fieldError(errors.phone.message)}
+              </p>
+            )}
           </div>
         </div>
 
         <div>
-          <Label className="mb-1.5 block">{ar ? 'الإيميل (اختياري)' : 'Email (optional)'}</Label>
+          <Label htmlFor={fieldId('email')} className="mb-1.5 block">
+            {t('emailLabel')}{' '}
+            <span className="font-normal text-ink-subtle">({forms('optional')})</span>
+          </Label>
           <Input
+            id={fieldId('email')}
             type="email"
             dir="ltr"
             inputMode="email"
+            autoComplete="email"
             placeholder="example@email.com"
+            aria-invalid={Boolean(errors.email) || undefined}
+            aria-describedby={errors.email ? errorId('email') : undefined}
             {...register('email')}
-            aria-invalid={Boolean(errors.email)}
           />
-          {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
+          {errors.email && (
+            <p id={errorId('email')} role="alert" className="mt-1.5 text-sm text-red-700">
+              {fieldError(errors.email.message)}
+            </p>
+          )}
         </div>
 
         <div>
-          <Label className="mb-1.5 block">{t('notes')}</Label>
-          <Textarea rows={3} placeholder={t('notesPlaceholder')} {...register('notes')} />
+          <Label htmlFor={fieldId('notes')} className="mb-1.5 block">{t('notes')}</Label>
+          <Textarea
+            id={fieldId('notes')}
+            rows={3}
+            placeholder={t('notesPlaceholder')}
+            {...register('notes')}
+          />
         </div>
 
         <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
         <Turnstile onToken={setTurnstileToken} />
 
+        {/* Failed-submit summary. Inline field errors stay exactly where they
+            are; this is the focus target that tells a keyboard or screen-reader
+            user the submit was rejected and links straight to each bad field. */}
+        {showErrorSummary && invalidFields.length > 0 && (
+          <div
+            ref={errorSummaryRef}
+            role="alert"
+            tabIndex={-1}
+            className="rounded-xl border border-red-300 bg-red-50 p-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+          >
+            <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
+              {forms('errorSummaryTitle')}
+            </p>
+            <p className="mt-1 text-sm text-red-800">{forms('errorSummaryIntro')}</p>
+            <ul className="mt-2 space-y-1">
+              {invalidFields.map(({ name, label }) => (
+                <li key={name}>
+                  <a
+                    href={`#${fieldId(name)}`}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      document.getElementById(fieldId(name))?.focus()
+                    }}
+                    className="text-sm font-medium text-red-800 underline underline-offset-2 hover:text-red-900"
+                  >
+                    {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {serverError && (
-          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>{serverError}</span>
           </div>
         )}
 
         <div className="space-y-2.5 pt-1">
+          {/* WEEMAP takes a request and confirms availability afterwards. Saying
+              so before the button — not only in the success panel — is what the
+              other request forms already do. */}
+          <p className="rounded-xl border border-sand-300 bg-sand-100 p-3 text-xs leading-relaxed text-ink-muted">
+            {forms('requestNotice')}
+          </p>
+
+          {!allocationComplete && (
+            <p id="booking-allocation-hint" className="text-xs font-medium text-sun-700">
+              {forms('completeAllocation')}
+            </p>
+          )}
+
           <Button
             type="submit"
-            disabled={submitting || !allocationComplete}
-            title={!allocationComplete ? (ar ? 'وزّع كل الضيوف أولاً' : 'Allocate all guests before submitting') : undefined}
-            className="h-12 w-full rounded-full bg-gradient-to-r from-sun-500 to-sun-400 text-base font-semibold text-white shadow-sm transition-all hover:from-sun-600 hover:to-sun-500 hover:shadow-md disabled:opacity-60"
+            // aria-disabled rather than disabled: a disabled button is skipped by
+            // the keyboard entirely, so the visitor never reaches the reason. The
+            // submit handler is the thing that actually blocks.
+            aria-disabled={submitting || !allocationComplete}
+            aria-busy={submitting}
+            aria-describedby={!allocationComplete ? 'booking-allocation-hint' : undefined}
+            onClick={(event) => {
+              if (submitting || !allocationComplete) event.preventDefault()
+            }}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-sun-500 text-base font-semibold text-on-accent transition-colors hover:bg-sun-600 disabled:cursor-not-allowed disabled:bg-sand-300 disabled:text-ink-subtle"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {t('submit')}
+            {submitting
+              ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              : <Send className="h-4 w-4 rtl:-scale-x-100" aria-hidden />}
+            {submitting ? forms('sending') : t('submit')}
           </Button>
           <a
             href={whatsappLink()}
             target="_blank"
             rel="noopener"
-            onClick={() => trackEvent('whatsapp_cta_click', { source: 'book_dahab' })}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border-[1.5px] border-[#25D366] font-semibold text-[#128C4A] transition-colors hover:bg-[#25D366]/10"
+            onClick={() => trackConversion('whatsapp_click', { source: 'book_dahab', content_type: 'accommodation' }, { once: false })}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border-[1.5px] border-[#128C4A] font-semibold text-[#0F7A40] transition-colors hover:bg-[#25D366]/15"
           >
             <MessageCircle className="h-4 w-4" />
             {t('whatsappBooking')}
@@ -1281,7 +1466,7 @@ export function BookingForm({
       <div>
         <div className="overflow-hidden rounded-3xl border-[1.5px] border-sea-100 bg-card shadow-sm">
           <div className="bg-gradient-to-br from-sea-50 to-sun-50 p-6">
-            <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sea-900/50">
+            <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-ink-subtle">
               {t('priceBreakdown')}
             </div>
 
@@ -1374,16 +1559,16 @@ export function BookingForm({
             </div>
 
             <div className="mt-4 flex items-end justify-between gap-3 border-t border-sea-200/60 pt-4">
-              <div className="text-xs text-sea-900/55">
+              <div className="text-xs text-ink-subtle">
                 {t('totalFor')} {numPeople} {numPeople === 1 ? common('person') : common('people')}
               </div>
               <div className="font-display text-3xl font-bold text-sea-900">
                 {formatEGP(total, locale)}{' '}
-                <span className="text-base font-semibold text-sea-900/70">{common('egp')}</span>
+                <span className="text-base font-semibold text-ink-muted">{common('egp')}</span>
               </div>
             </div>
 
-            <p className="mt-2 text-[0.7rem] leading-relaxed text-sea-900/45">
+            <p className="mt-2 text-[0.7rem] leading-relaxed text-ink-subtle">
               {ar ? '* السعر النهائي بيتأكد معاك قبل أي دفع.' : '* Final price confirmed before any payment.'}
             </p>
           </div>
@@ -1397,7 +1582,7 @@ export function BookingForm({
 function Line({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="text-sea-900/60">{label}</span>
+      <span className="text-ink-muted">{label}</span>
       <span className="font-medium text-sea-900">{value}</span>
     </div>
   )
@@ -1415,25 +1600,28 @@ function ModeOption({
   return (
     <button
       type="button"
+      role="radio"
+      aria-checked={active}
       onClick={onClick}
       className={cn(
         'flex items-start gap-3 rounded-2xl border-[1.5px] p-4 text-start transition-colors',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-700',
         active
-          ? 'border-sun-500 bg-sun-50'
+          ? 'border-sun-600 bg-sun-50'
           : 'border-sea-100 hover:border-sea-300',
       )}
     >
       <span
         className={cn(
           'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
-          active ? 'bg-sun-500 text-white' : 'bg-sand-100 text-sea-700',
+          active ? 'bg-sun-500 text-on-accent' : 'bg-sand-100 text-sea-700',
         )}
       >
         <Icon className="h-5 w-5" />
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm font-semibold text-sea-900">{title}</span>
-        <span className="mt-0.5 block text-xs text-sea-900/55">{desc}</span>
+        <span className="mt-0.5 block text-xs text-ink-subtle">{desc}</span>
       </span>
     </button>
   )
@@ -1454,13 +1642,13 @@ function RoomTypeCard({
       onClick={onClick}
       className={cn(
         'flex items-center gap-2.5 rounded-2xl border-[1.5px] p-3 text-start transition-colors',
-        active ? 'border-sun-500 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
+        active ? 'border-sun-600 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
       )}
     >
-      <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-sea-600' : 'text-sea-900/40')} />
+      <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-sea-600' : 'text-ink-subtle')} />
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-sea-900">{title}</span>
-        <span className="mt-0.5 block text-[0.7rem] leading-snug text-sea-900/55">{desc}</span>
+        <span className="mt-0.5 block text-[0.7rem] leading-snug text-ink-subtle">{desc}</span>
       </span>
     </button>
   )
@@ -1480,12 +1668,12 @@ function MealPlanCard({
       onClick={onClick}
       className={cn(
         'flex items-center justify-between gap-3 rounded-2xl border-[1.5px] px-4 py-2.5 text-start transition-colors',
-        active ? 'border-sun-500 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
+        active ? 'border-sun-600 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
       )}
     >
       <span className="text-sm font-medium text-sea-900">{ar ? plan.label_ar : plan.label_en}</span>
       <span className="shrink-0 text-xs font-semibold text-sea-600">
-        {plan.price_per_person_per_night > 0 ? `+${plan.price_per_person_per_night.toLocaleString()}` : (ar ? 'مجاني' : 'Free')}
+        {plan.price_per_person_per_night > 0 ? `+${formatAmount(plan.price_per_person_per_night, ar ? 'ar' : 'en')}` : (ar ? 'مجاني' : 'Free')}
       </span>
     </button>
   )
@@ -1505,12 +1693,12 @@ function UpgradeCard({
       onClick={onClick}
       className={cn(
         'flex items-center justify-between gap-3 rounded-2xl border-[1.5px] px-4 py-2.5 text-start transition-colors',
-        selected ? 'border-sun-500 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
+        selected ? 'border-sun-600 bg-sun-50' : 'border-sea-100 hover:border-sea-300',
       )}
     >
       <span className="text-sm font-medium text-sea-900">{label}</span>
       {extra && (
-        <span className="shrink-0 text-xs font-semibold text-sun-600">{extra}</span>
+        <span className="shrink-0 text-xs font-semibold text-sun-700">{extra}</span>
       )}
     </button>
   )
@@ -1531,12 +1719,12 @@ function TransferTypeCard({
       className={cn(
         'rounded-2xl border-[1.5px] p-3 text-start transition-colors',
         active
-          ? 'border-sun-500 bg-sun-50'
+          ? 'border-sun-600 bg-sun-50'
           : 'border-sea-100 hover:border-sea-300',
       )}
     >
       <div className="text-sm font-semibold text-sea-900">{title}</div>
-      <div className="mt-1 text-xs leading-snug text-sea-900/60">{desc}</div>
+      <div className="mt-1 text-xs leading-snug text-ink-muted">{desc}</div>
     </button>
   )
 }

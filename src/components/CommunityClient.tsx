@@ -129,8 +129,8 @@ function PostModal({
         {/* Body */}
         <div className="flex-1 p-6 md:p-8">
           {/* Meta */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-sea-900/50 mb-4">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-sun-600">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-ink-subtle mb-4">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-sun-700">
               <Icon className="h-3.5 w-3.5" />
               {POST_CATEGORY_LABELS[post.category][ar ? 'ar' : 'en']}
             </span>
@@ -155,7 +155,7 @@ function PostModal({
           </h2>
 
           {/* Content */}
-          <p className="whitespace-pre-line leading-relaxed text-sea-900/75">
+          <p className="whitespace-pre-line leading-relaxed text-ink-muted">
             {content}
           </p>
 
@@ -228,8 +228,8 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
             className={cn(
               'min-h-11 shrink-0 rounded-md border px-4 py-2 text-sm font-semibold transition-colors',
               filter === category
-                ? 'border-sun-500 bg-sun-500 text-white'
-                : 'border-sand-300 bg-sand-50 text-sea-900/70 hover:border-sun-400 hover:text-sea-900',
+                ? 'border-sun-600 bg-sun-500 text-on-accent'
+                : 'border-sand-300 bg-sand-50 text-ink-muted hover:border-sun-400 hover:text-sea-900',
             )}
           >
             {category === 'all'
@@ -310,8 +310,8 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
                   </div>
                 )}
                 <div className={cn('p-6', featured && 'md:p-8')}>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-sea-900/50">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-sun-600">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-ink-subtle">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-sun-700">
                       <Icon className="h-3.5 w-3.5" />
                       {POST_CATEGORY_LABELS[post.category][ar ? 'ar' : 'en']}
                     </span>
@@ -340,11 +340,11 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
                     {ar ? post.title_ar : post.title_en}
                   </h2>
                   {/* Teaser — always clamped; full content in modal */}
-                  <p className="mt-4 line-clamp-4 whitespace-pre-line leading-relaxed text-sea-900/68">
+                  <p className="mt-4 line-clamp-4 whitespace-pre-line leading-relaxed text-ink-muted">
                     {content}
                   </p>
                   {(wordCount > 45 || post.video_url) && (
-                    <span className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-sun-600 hover:text-sun-500 pointer-events-none">
+                    <span className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-sun-700 hover:text-sun-700 pointer-events-none">
                       <BookOpen className="h-4 w-4" />
                       {t('readMore')}
                     </span>
@@ -357,7 +357,7 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
       </div>
 
       {sorted.length === 0 && (
-        <div className="border border-sand-300 py-16 text-center text-sea-900/50">
+        <div className="border border-sand-300 py-16 text-center text-ink-subtle">
           {states('noContent')}
         </div>
       )}

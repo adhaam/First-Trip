@@ -27,7 +27,7 @@ export function SectionHeading({
   return (
     <div
       className={cn(
-        'mb-10 flex flex-col gap-4 md:mb-14',
+        'mb-7 flex flex-col gap-4 sm:mb-10 md:mb-14',
         action && 'md:flex-row md:items-end md:justify-between',
         className,
       )}
@@ -37,7 +37,7 @@ export function SectionHeading({
           <span
             className={cn(
               'eyebrow mb-3',
-              tone === 'light' ? 'text-sun-300' : 'text-sun-500',
+              tone === 'light' ? 'text-sun-300' : 'text-sun-700',
             )}
           >
             <span aria-hidden className="h-px w-6 bg-current" />
@@ -56,7 +56,7 @@ export function SectionHeading({
           <p
             className={cn(
               'mt-4 text-base leading-relaxed md:text-lg',
-              tone === 'light' ? 'text-sea-100/80' : 'text-sea-900/65',
+              tone === 'light' ? 'text-sea-100/80' : 'text-ink-muted',
             )}
           >
             {subtitle}

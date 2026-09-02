@@ -1,12 +1,13 @@
 'use client'
 
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { ArrowUpRight, Layers } from 'lucide-react'
 import { GlowCard } from '@/components/motion/Reveal'
 import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import type { TripPackage } from '@/lib/types'
+import { formatAmount } from '@/lib/format'
 
 export function TripPackageRail({ packages }: { packages: TripPackage[] }) {
   const t = useTranslations('sinai')
@@ -20,12 +21,12 @@ export function TripPackageRail({ packages }: { packages: TripPackage[] }) {
   return (
     <section className="my-8 rounded-3xl border-[1.5px] border-sun-300 bg-gradient-to-br from-sun-50 to-sand-50 p-5 md:p-8">
       <div className="mb-5 max-w-2xl">
-        <span className="eyebrow mb-2 text-sun-600">
+        <span className="eyebrow mb-2 text-sun-700">
           <span aria-hidden className="h-px w-6 bg-current" />
           {ar ? 'باكدجات WEEMAP' : 'WEEMAP Packages'}
         </span>
         <h2 className="font-display text-2xl font-bold text-sea-900 sm:text-3xl">{t('packagesTitle')}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-sea-900/60">{t('packagesDescription')}</p>
+        <p className="mt-2 text-sm leading-relaxed text-ink-muted">{t('packagesDescription')}</p>
       </div>
 
       {packages.length === 1 ? (
@@ -51,7 +52,7 @@ function FeaturedPackage({ pkg }: { pkg: TripPackage }) {
 
   const name = ar ? pkg.name_ar : pkg.name_en
   const badge = ar ? pkg.badge_ar : pkg.badge_en
-  const cover = pkg.image || pkg.trips?.[0]?.image || '/media/heroposter.png'
+  const cover = pkg.image || pkg.trips?.[0]?.image || '/media/heroposter.webp'
   const tripNames = (pkg.trips || []).map((tr) => (ar ? tr.name_ar : tr.name_en))
   const total = pkg.totals?.packageTotal ?? 0
 
@@ -74,7 +75,7 @@ function FeaturedPackage({ pkg }: { pkg: TripPackage }) {
             <div className="absolute inset-0 bg-gradient-to-t from-sea-900/60 to-transparent" />
 
             {badge && (
-              <span className="absolute start-3 top-3 rounded-full bg-sun-500 px-3 py-1 text-[0.7rem] font-semibold text-white shadow">
+              <span className="absolute start-3 top-3 rounded-full bg-sun-500 px-3 py-1 text-[0.7rem] font-semibold text-on-accent shadow">
                 {badge}
               </span>
             )}
@@ -88,14 +89,14 @@ function FeaturedPackage({ pkg }: { pkg: TripPackage }) {
           <div className="flex flex-col justify-center p-6 sm:p-8">
             <h3 className="font-display text-2xl font-bold leading-snug text-sea-900">{name}</h3>
             {tripNames.length > 0 && (
-              <p className="mt-3 text-sm leading-relaxed text-sea-900/60">{tripNames.join(' · ')}</p>
+              <p className="mt-3 text-sm leading-relaxed text-ink-muted">{tripNames.join(' · ')}</p>
             )}
             <div className="mt-6 flex items-center justify-between gap-3">
               <div className="font-display text-xl font-bold text-sea-900">
-                {total.toLocaleString()}{' '}
-                <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+                {formatAmount(total, locale)}{' '}
+                <span className="text-sm font-semibold text-ink-muted">{common('egp')}</span>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-sun-500 px-4 py-2 text-xs font-semibold text-sun-600 transition-colors group-hover:bg-sun-500 group-hover:text-white">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-sun-600 px-4 py-2 text-xs font-semibold text-sun-700 transition-colors group-hover:bg-sun-500 group-hover:text-on-accent">
                 {t('explorePackage')}
                 <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" />
               </span>

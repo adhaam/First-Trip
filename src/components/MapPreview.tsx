@@ -58,7 +58,7 @@ export function MapPreview({
               <span className="text-sm font-semibold text-sea-900">
                 {ar ? 'اعرض الخريطة' : 'Show map'}
               </span>
-              {label && <span className="text-xs text-sea-900/55">{label}</span>}
+              {label && <span className="text-xs text-ink-subtle">{label}</span>}
             </button>
           )}
         </div>
@@ -68,7 +68,7 @@ export function MapPreview({
         href={external}
         target="_blank"
         rel="noopener"
-        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-sea-600 transition-colors hover:text-sun-500"
+        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-sea-600 transition-colors hover:text-sun-700"
       >
         {t('openInMaps')}
         <ExternalLink className="h-3.5 w-3.5" />

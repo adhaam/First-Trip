@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: {
   const description =
     (locale === 'ar' ? settings?.seo_description_ar : settings?.seo_description_en) ||
     (locale === 'ar' ? DEFAULT_DESC_AR : DEFAULT_DESC_EN)
-  const socialImage = settings?.social_share_image || '/media/heroposter.png'
+  const socialImage = settings?.social_share_image || '/media/og-cover.jpg'
   const organizationName = settings?.organization_name || 'WEEMAP SINAI'
   return {
     metadataBase: new URL(SITE_URL),
@@ -79,7 +79,7 @@ export async function generateMetadata({ params }: {
       // The other locale this same content is available in — og:locale:alternate.
       alternateLocale: locale === 'ar' ? 'en_US' : 'ar_EG',
       siteName: organizationName,
-      images: [{ url: socialImage, alt: organizationName }],
+      images: [{ url: socialImage, width: 1200, height: 630, alt: organizationName }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -101,6 +101,7 @@ export default async function RootLayout({
   const messages = await getMessages()
   const settings = await getSiteSettings()
   const dir = locale === 'ar' ? 'rtl' : 'ltr'
+  const skipLabel = locale === 'ar' ? 'تخطَّ إلى المحتوى' : 'Skip to main content'
   const aiEnabled = process.env.NEXT_PUBLIC_WEEMAP_AI_ENABLED === 'true'
   const chatAvailable = aiEnabled
     && Boolean(process.env.WEEMAP_N8N_CHAT_WEBHOOK_URL?.trim())
@@ -122,8 +123,17 @@ export default async function RootLayout({
           <TooltipProvider>
             <CartProvider>
               <div className="flex min-h-screen flex-col">
+                {/* First stop for a keyboard user. Without it they tab through
+                    the logo, search, cart, language, Book and the whole nav on
+                    every single navigation before reaching any page content. */}
+                <a
+                  href="#main-content"
+                  className="sr-only rounded-b-lg bg-sea-900 px-5 py-3 text-sm font-semibold text-sand-50 focus-visible:not-sr-only focus-visible:fixed focus-visible:inset-x-0 focus-visible:top-0 focus-visible:z-[100] focus-visible:mx-auto focus-visible:w-fit focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300"
+                >
+                  {skipLabel}
+                </a>
                 <Header />
-                <main className="flex-1">{children}</main>
+                <main id="main-content" tabIndex={-1} className="flex-1 outline-none">{children}</main>
                 <Footer settings={settings} />
                 {aiEnabled ? (
                   <WeemapAI

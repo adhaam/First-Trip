@@ -13,7 +13,17 @@
     "about": "About",
     "merch": "Merch",
     "rent": "Rent",
-    "policy": "Policy"
+    "policy": "Policy",
+    "more": "More",
+    "primaryLabel": "Main navigation",
+    "cartLabel": "WEEMAP cart",
+    "menu": "Menu",
+    "closeMenu": "Close menu",
+    "bookCta": "Book",
+    "bookTripCta": "Book your trip",
+    "groupPlan": "Plan your trip",
+    "groupShop": "Shop & rentals",
+    "groupWeemap": "About WEEMAP"
   },
   "hero": {
     "title": "Dahab isn't a trip, it's a mood",
@@ -173,7 +183,10 @@
     "noTransferHint": "You'll make your own way to Dahab.",
     "fixedSchedule": "Fixed schedule",
     "fixedScheduleHint": "The bus leaves Sun/Thu, returns Mon/Fri. Different dates? WhatsApp us.",
-    "nextDeparture": "Next departure"
+    "nextDeparture": "Next departure",
+    "emailLabel": "Email",
+    "checkIn": "Check-in date",
+    "transferDate": "Transfer date"
   },
   "sinai": {
     "title": "Sinai Trips",
@@ -350,7 +363,9 @@
     "noTrips": "No trips are available right now.",
     "noTripMatches": "No trips match this filter.",
     "noContent": "No published content is available right now.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "clearFilters": "Clear filters",
+    "showingAll": "Showing all results"
   },
   "future": {
     "merchTitle": "Merch is coming soon.",
@@ -466,7 +481,10 @@
     "nights": "nights",
     "days": "days",
     "person": "person",
-    "people": "people"
+    "people": "people",
+    "priceOnRequest": "Price on request",
+    "from": "From",
+    "perPerson": "per person"
   },
   "search": {
     "placeholder": "Search WEEMAP…",
@@ -482,7 +500,9 @@
     "groupRentals": "Rental Gear",
     "from": "From",
     "viewAll": "View all results",
-    "prompt": "Search stays, trips, gear…"
+    "prompt": "Search stays, trips, gear…",
+    "searching": "Searching…",
+    "resultsCount": "{count} results"
   },
   "signature": {
     "eyebrow": "WEEMAP SIGNATURE",
@@ -518,5 +538,22 @@
     "category": "Category",
     "noExperiences": "No Signature Experiences are published yet — check back soon.",
     "backToSignature": "Back to Signature Experiences"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
+  "forms": {
+    "errorSummaryTitle": "Please check these fields",
+    "errorSummaryIntro": "Fix the fields below, then send your request again.",
+    "required": "Required",
+    "optional": "Optional",
+    "sending": "Sending…",
+    "sendingLabel": "Sending your request…",
+    "requestNotice": "This is a request. WEEMAP confirms availability and details with you — no instant confirmation and no payment now.",
+    "completeAllocation": "Assign every guest to a room before sending the request.",
+    "err_required": "This field is required",
+    "err_nameShort": "Enter your full name (at least 3 characters)",
+    "err_phoneInvalid": "Enter a valid phone number",
+    "err_emailInvalid": "Enter a valid email address"
   }
 }

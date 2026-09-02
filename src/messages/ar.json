@@ -13,7 +13,17 @@
     "about": "عننا",
     "merch": "ميرش",
     "rent": "إيجار",
-    "policy": "السياسة"
+    "policy": "السياسة",
+    "more": "المزيد",
+    "primaryLabel": "التنقل الرئيسي",
+    "cartLabel": "سلة WEEMAP",
+    "menu": "القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "bookCta": "احجز",
+    "bookTripCta": "احجز رحلتك",
+    "groupPlan": "خطط رحلتك",
+    "groupShop": "المتجر والإيجارات",
+    "groupWeemap": "عن WEEMAP"
   },
   "hero": {
     "title": "دهب مش رحلة، دي مود حياة",
@@ -173,7 +183,10 @@
     "noTransferHint": "إنت هتوصل دهب بنفسك.",
     "fixedSchedule": "المواعيد ثابتة",
     "fixedScheduleHint": "الباص بيتحرك كل أحد أو خميس، والرجوع اثنين أو جمعة. لو ميعاد مختلف، كلمنا على الواتس.",
-    "nextDeparture": "القيامة الجاية"
+    "nextDeparture": "القيامة الجاية",
+    "emailLabel": "الإيميل",
+    "checkIn": "تاريخ الوصول",
+    "transferDate": "تاريخ الانتقال"
   },
   "sinai": {
     "title": "رحلات سيناء",
@@ -350,7 +363,9 @@
     "noTrips": "لا توجد رحلات متاحة حالياً.",
     "noTripMatches": "لا توجد رحلات تطابق هذا الفلتر.",
     "noContent": "لا يوجد محتوى منشور متاح حالياً.",
-    "retry": "حاول مرة أخرى"
+    "retry": "حاول مرة أخرى",
+    "clearFilters": "امسح الفلاتر",
+    "showingAll": "عرض كل النتائج"
   },
   "future": {
     "merchTitle": "الميرش قادم قريباً.",
@@ -466,7 +481,10 @@
     "nights": "ليالي",
     "days": "أيام",
     "person": "فرد",
-    "people": "أفراد"
+    "people": "أفراد",
+    "priceOnRequest": "السعر عند الطلب",
+    "from": "يبدأ من",
+    "perPerson": "للفرد"
   },
   "search": {
     "placeholder": "ابحث في WEEMAP…",
@@ -482,7 +500,9 @@
     "groupRentals": "معدات الإيجار",
     "from": "من",
     "viewAll": "عرض كل النتائج",
-    "prompt": "ابحث عن إقامة أو رحلة أو معدات…"
+    "prompt": "ابحث عن إقامة أو رحلة أو معدات…",
+    "searching": "بندوّر…",
+    "resultsCount": "{count} نتيجة"
   },
   "signature": {
     "eyebrow": "WEEMAP SIGNATURE",
@@ -518,5 +538,22 @@
     "category": "التصنيف",
     "noExperiences": "لسه مفيش تجارب مميزة منشورة — تابعنا قريبًا.",
     "backToSignature": "رجوع لـ Signature Experiences"
+  },
+  "a11y": {
+    "skipToContent": "تخطَّ إلى المحتوى"
+  },
+  "forms": {
+    "errorSummaryTitle": "فيه حاجات محتاجة مراجعة",
+    "errorSummaryIntro": "صحّح البيانات دي وابعت الطلب تاني.",
+    "required": "مطلوب",
+    "optional": "اختياري",
+    "sending": "جاري الإرسال…",
+    "sendingLabel": "بنبعت طلبك…",
+    "requestNotice": "ده طلب مبدئي — WEEMAP هتأكد التوافر والتفاصيل معاك. مفيش تأكيد فوري ومفيش دفع دلوقتي.",
+    "completeAllocation": "وزّع كل الضيوف على الغرف قبل ما تبعت الطلب.",
+    "err_required": "الحقل ده مطلوب",
+    "err_nameShort": "اكتب اسمك كامل (٣ حروف على الأقل)",
+    "err_phoneInvalid": "رقم موبايل غير صحيح",
+    "err_emailInvalid": "إيميل غير صحيح"
   }
 }

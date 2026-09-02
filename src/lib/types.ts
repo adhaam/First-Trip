@@ -472,7 +472,12 @@ export interface NavItem {
   label_ar: string
   label_en: string
   href: string
+  /** Lucide icon key — see NAV_ICONS in components/layout/Header.tsx. */
   icon?: string
+  /** Shown directly in the desktop bar. Everything else lives under "More". */
+  primary?: boolean
+  /** Grouping used by the mobile drawer. */
+  group?: 'plan' | 'shop' | 'weemap'
 }
 
 export interface ServiceItem {

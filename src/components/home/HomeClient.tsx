@@ -1,7 +1,7 @@
 'use client'
 
-import Image from 'next/image'
-import { useState } from 'react'
+import { SafeImage as Image } from '@/components/SafeImage'
+import { useCallback, useState, useSyncExternalStore } from 'react'
 import { useLocale } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { ButtonLink } from '@/components/ButtonLink'
@@ -59,6 +59,46 @@ export function HomeClient({ accommodations, trips, posts, settings, packages }:
 
 /* ─────────────────────────── HERO ─────────────────────────── */
 
+const WIDE_QUERY = '(min-width: 1024px)'
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+/**
+ * Whether the decorative hero video is worth downloading for this client.
+ *
+ * `useSyncExternalStore` rather than an effect: matchMedia and the Network
+ * Information API are external systems, the server snapshot is pinned to false
+ * so SSR and the first client render agree, and the answer updates if the
+ * viewport is resized or the motion preference changes mid-session.
+ */
+function useHeroVideoEnabled(): boolean {
+  const subscribe = useCallback((onChange: () => void) => {
+    if (typeof window === 'undefined' || !window.matchMedia) return () => {}
+    const wide = window.matchMedia(WIDE_QUERY)
+    const motion = window.matchMedia(REDUCED_MOTION_QUERY)
+    wide.addEventListener('change', onChange)
+    motion.addEventListener('change', onChange)
+    return () => {
+      wide.removeEventListener('change', onChange)
+      motion.removeEventListener('change', onChange)
+    }
+  }, [])
+
+  const getSnapshot = useCallback(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    if (!window.matchMedia(WIDE_QUERY).matches) return false
+    if (window.matchMedia(REDUCED_MOTION_QUERY).matches) return false
+
+    const connection = (
+      navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }
+    ).connection
+    if (connection?.saveData === true) return false
+    if (connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g') return false
+    return true
+  }, [])
+
+  return useSyncExternalStore(subscribe, getSnapshot, () => false)
+}
+
 /**
  * WEEMAP video-first hero.
  *
@@ -67,16 +107,31 @@ export function HomeClient({ accommodations, trips, posts, settings, packages }:
  * poster fallback, and a single readability overlay. Every bit of motion
  * (the road, the light, the vehicle) already lives inside the video itself,
  * so there is deliberately no scroll-driven choreography, parallax layers,
- * or canvas/WebGL here. `prefers-reduced-motion` swaps the video for the
- * static poster frame.
+ * or canvas/WebGL here.
+ *
+ * ─── Loading policy ─────────────────────────────────────────────────────────
+ * The video is decoration behind a dark scrim. It used to be a 3.7 MB H.264
+ * file with an unused audio track, `preload="auto"`, downloaded on every device
+ * including phones on mobile data — competing for bandwidth with the LCP image.
+ *
+ * Now it is a 272 KB / 242 KB re-encode with the audio track stripped, and it
+ * is not requested at all unless the client opts in:
+ *   · viewport ≥ 1024px (phones and most tablets get the poster only)
+ *   · `prefers-reduced-motion` is not set
+ *   · the browser is not reporting Save-Data
+ *   · the effective connection type is not 2g/slow-2g
+ *
+ * The decision runs after mount, so the server and the first client render
+ * agree (no video element, no hydration mismatch) and the hero paints from the
+ * poster alone.
  */
 function Hero({ settings }: { settings: SiteSettings | null }) {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const videoSrc = '/media/herovideo.mp4'
-  const posterSrc = '/media/heroposter.png'
+  const posterSrc = '/media/heroposter.webp'
 
   const [videoReady, setVideoReady] = useState(false)
+  const playVideo = useHeroVideoEnabled()
   const revealVideo = () => setVideoReady(true)
 
   // Owner-editable hero copy (Site Settings → Homepage). Empty = brand default.
@@ -97,24 +152,28 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           className="object-cover"
         />
 
-        <video
-          key={videoSrc}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          aria-hidden
-          onCanPlay={revealVideo}
-          onPlay={revealVideo}
-          className={cn(
-            'absolute inset-0 h-full w-full object-cover motion-reduce:hidden',
-            'transition-opacity duration-700',
-            videoReady ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          <source src={videoSrc} type="video/mp4" />
-        </video>
+        {playVideo && (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-hidden
+            tabIndex={-1}
+            poster={posterSrc}
+            onCanPlay={revealVideo}
+            onPlay={revealVideo}
+            className={cn(
+              'absolute inset-0 h-full w-full object-cover motion-reduce:hidden',
+              'transition-opacity duration-700',
+              videoReady ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            <source src="/media/herovideo-720.webm" type="video/webm" />
+            <source src="/media/herovideo-720.mp4" type="video/mp4" />
+          </video>
+        )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
         <div className="absolute inset-0 bg-black/10" />
@@ -122,21 +181,21 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
 
       <div className="container-main relative z-10 py-28 md:py-32">
         <div className="max-w-2xl">
-          <Reveal>
+          <Reveal always>
             <span className="eyebrow mb-6 text-sun-300">
               <span aria-hidden className="h-px w-8 bg-current" />
               {ar ? 'دهب · جنوب سيناء · مصر' : 'Dahab · South Sinai · Egypt'}
             </span>
           </Reveal>
 
-          <Reveal delay={80}>
+          <Reveal always>
             <h1 className="font-display text-[2.6rem] font-bold uppercase leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
               <span className="block">{ar ? headingAr : headingEn}</span>
               <span className="mt-2 block text-sun-300">{ar ? subAr : subEn}</span>
             </h1>
           </Reveal>
 
-          <Reveal delay={160}>
+          <Reveal always>
             <p className="mt-7 max-w-xl text-base leading-relaxed text-sand-100/85 sm:text-lg">
               {ar
                 ? 'إقامة، انتقالات، رحلات، باقات وتجارب متظبطة في مكان واحد. اختار شكل رحلتك وإحنا نكمّل معاك التفاصيل.'
@@ -144,7 +203,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
             </p>
           </Reveal>
 
-          <Reveal delay={240}>
+          <Reveal always>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
               <ButtonLink
                 href="/book-dahab"
@@ -170,7 +229,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           {/* brand stamp — small human detail rather than another badge row.
               No founding-year claim: historical facts need verification first
               (see _weemap_reference/06_business-info/WEEMAP_INFO.md). */}
-          <Reveal delay={320}>
+          <Reveal always>
             <div className="mt-12 inline-flex items-center gap-3 border-s-2 border-sun-400/70 ps-4">
               <Logo size="sm" variant="mark" tone="light" />
               <p className="text-sm leading-snug text-sand-100/70">
@@ -193,7 +252,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
 function ExploreSinai({ trip, settings }: { trip?: SinaiTrip; settings: SiteSettings | null }) {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const image = settings?.explore_media_url || trip?.images?.[0] || '/media/heroposter.png'
+  const image = settings?.explore_media_url || trip?.images?.[0] || '/media/heroposter.webp'
   const alt = (ar ? settings?.explore_media_alt_ar : settings?.explore_media_alt_en)
     || (ar ? 'طبيعة سيناء' : 'The landscape of Sinai')
   const copy = (ar ? settings?.explore_copy_ar : settings?.explore_copy_en)
@@ -281,23 +340,23 @@ function PrimaryDiscovery() {
                 <Link
                   href={path.href}
                   className={cn(
-                    'hover-lift group flex h-full min-h-64 flex-col border-[1.5px] p-7 pin-card transition-colors md:p-8',
+                    'hover-lift group flex h-full min-h-52 flex-col border-[1.5px] p-6 pin-card transition-colors sm:min-h-64 sm:p-7 md:p-8',
                     i === 3 ? 'border-sea-800 bg-sea-900 text-white hover:border-sun-400/60' : 'border-sand-300 bg-card hover:border-sea-900/25',
                   )}
                 >
                   <span
                     aria-hidden
-                    className={cn('mb-8 inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]', i === 3 ? 'bg-white/10 text-sun-300' : 'bg-sand-100 text-sea-900')}
+                    className={cn('mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl sm:mb-8 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]', i === 3 ? 'bg-white/10 text-sun-300' : 'bg-sand-100 text-sea-900')}
                   >
                     <path.icon className="h-6 w-6" />
                   </span>
                   <h3 className={cn('font-display text-xl font-semibold', i === 3 ? 'text-white' : 'text-sea-900')}>
                     {ar ? path.title_ar : path.title_en}
                   </h3>
-                  <p className={cn('mt-3 max-w-lg text-sm leading-relaxed', i === 3 ? 'text-white/70' : 'text-sea-900/60')}>
+                  <p className={cn('mt-3 max-w-lg text-sm leading-relaxed', i === 3 ? 'text-white/70' : 'text-ink-muted')}>
                     {ar ? path.body_ar : path.body_en}
                   </p>
-                  <span className={cn('mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold transition-colors group-hover:text-sun-500', i === 3 ? 'text-sun-300' : 'text-sea-600')}>
+                  <span className={cn('mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold transition-colors group-hover:text-sun-700', i === 3 ? 'text-sun-300' : 'text-sea-600')}>
                     {ar ? 'اعرف أكتر' : 'Learn more'}
                     <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
                   </span>
@@ -399,7 +458,7 @@ function SignatureFeature() {
   return (
     <section className="relative isolate min-h-[32rem] overflow-hidden bg-sea-900 text-white md:min-h-[38rem]">
       <Image
-        src="/media/heroposter.png"
+        src="/media/heroposter.webp"
         alt={ar ? 'تجربة Signature في سيناء' : 'A Signature experience in Sinai'}
         fill
         sizes="100vw"
@@ -453,11 +512,11 @@ function MoreFromWeemap() {
                   <ShoppingBag className="h-6 w-6" />
                 </span>
                 <h3 className="font-display text-xl font-semibold text-sea-900">WEEMAP Merch</h3>
-                <p className="mt-3 text-sm leading-relaxed text-sea-900/60">
+                <p className="mt-3 text-sm leading-relaxed text-ink-muted">
                   {ar ? 'قطع بروح سيناء — للرحلة، للبحر، ولما ترجع.' : 'Pieces with the spirit of Sinai — for the trip, the sea and after you\'re back.'}
                 </p>
               </div>
-              <span className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-sea-600 transition-colors group-hover:text-sun-500">
+              <span className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-sea-600 transition-colors group-hover:text-sun-700">
                 {ar ? 'شوف المتجر' : 'Shop Merch'}
                 <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
               </span>
@@ -563,10 +622,10 @@ function Community({ posts }: { posts: CommunityPost[] }) {
                   <h3 className="font-display text-base font-semibold leading-snug text-sea-900">
                     {ar ? post.title_ar : post.title_en}
                   </h3>
-                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-sea-900/60">
+                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-muted">
                     {ar ? post.content_ar : post.content_en}
                   </p>
-                  <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-sea-600 transition-colors group-hover:text-sun-500">
+                  <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-sea-600 transition-colors group-hover:text-sun-700">
                     {ar ? 'اقرأ المزيد' : 'Read more'}
                     <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
                   </span>
@@ -588,14 +647,14 @@ function FinalCta({ settings }: { settings: SiteSettings | null }) {
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
 
   return (
-    <section className="relative overflow-hidden bg-sun-400 py-20 text-white md:py-28 grain">
+    <section className="relative overflow-hidden bg-sun-400 py-20 text-on-accent md:py-28 grain">
       <div
         aria-hidden
-        className="absolute -end-24 -top-24 h-80 w-80 rounded-full border-[3rem] border-white/10"
+        className="absolute -end-24 -top-24 h-80 w-80 rounded-full border-[3rem] border-on-accent/10"
       />
       <div
         aria-hidden
-        className="absolute -bottom-32 -start-16 h-72 w-72 rounded-full border-[2.5rem] border-white/10"
+        className="absolute -bottom-32 -start-16 h-72 w-72 rounded-full border-[2.5rem] border-on-accent/10"
       />
 
       <div className="container-main relative text-center">
@@ -603,7 +662,7 @@ function FinalCta({ settings }: { settings: SiteSettings | null }) {
           <h2 className="mx-auto max-w-2xl font-display text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
             {ar ? 'سيناء مستنياك' : 'Sinai is waiting'}
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/85 md:text-lg">
+          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-on-accent/85 md:text-lg">
             {ar ? 'اختار البداية وإحنا نساعدك ترتب الباقي.' : "Choose where to start and we'll help you shape the rest."}
           </p>
         </Reveal>
@@ -618,7 +677,7 @@ function FinalCta({ settings }: { settings: SiteSettings | null }) {
               href={`https://wa.me/${whatsapp}`}
               target="_blank"
               rel="noopener"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border-[1.5px] border-white/60 px-8 text-base font-medium text-white transition-all hover:bg-white/15"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border-[1.5px] border-on-accent/65 px-8 text-base font-medium text-on-accent transition-all hover:bg-on-accent/10"
             >
               <MessageCircle className="h-5 w-5" />
               {ar ? 'كلمنا على واتساب' : 'Talk to WEEMAP'}

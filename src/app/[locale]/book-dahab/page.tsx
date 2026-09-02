@@ -32,7 +32,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
     getSiteSettings(),
   ])
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
-  const heroImage = accommodations[0]?.image_url || accommodations[0]?.images?.[0] || '/media/heroposter.png'
+  const heroImage = accommodations[0]?.image_url || accommodations[0]?.images?.[0] || '/media/heroposter.webp'
 
   return (
     <div className="bg-sand-50">
@@ -58,16 +58,16 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
         <div className="container-main grid items-center gap-12 md:grid-cols-2">
           <Reveal>
             <SectionHeading eyebrow={ar ? 'عن الرحلة' : 'The trip'} title={t('aboutTrip')} className="mb-6" />
-            <p className="leading-relaxed text-sea-900/65">
+            <p className="leading-relaxed text-ink-muted">
               {ar
                 ? 'باكدج WEEMAP بيجمع الانتقالات والإقامة والرحلات المضمّنة في طلب واحد، وتقدر كمان تحجز الإقامة أو الانتقال لوحده.'
                 : 'A WEEMAP package brings transfers, accommodation, and included trips into one request. You can also book a stay or transfer on its own.'}
             </p>
-            <div className="mt-6 flex items-center gap-2 text-sun-500">
+            <div className="mt-6 flex items-center gap-2 text-sun-700">
               <Calendar className="h-5 w-5" />
               <span className="font-semibold text-sea-900">{t('schedule')}</span>
             </div>
-            <p className="mt-1 text-sm text-sea-900/50">{t('scheduleText')}</p>
+            <p className="mt-1 text-sm text-ink-subtle">{t('scheduleText')}</p>
           </Reveal>
 
           <Reveal delay={100}>
@@ -81,7 +81,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
                     <div className="font-semibold text-sea-900">
                       {ar ? 'كل يوم خميس' : 'Every Thursday'}
                     </div>
-                    <div className="text-sm text-sea-900/50">{t('day4')}</div>
+                    <div className="text-sm text-ink-subtle">{t('day4')}</div>
                   </div>
                   <span className="rounded-full bg-sea-900 px-3 py-1 text-xs font-semibold text-white">
                     4
@@ -92,9 +92,9 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
                     <div className="font-semibold text-sea-900">
                       {ar ? 'كل يوم أحد' : 'Every Sunday'}
                     </div>
-                    <div className="text-sm text-sea-900/50">{t('day5')}</div>
+                    <div className="text-sm text-ink-subtle">{t('day5')}</div>
                   </div>
-                  <span className="rounded-full bg-sun-400 px-3 py-1 text-xs font-semibold text-white">
+                  <span className="rounded-full bg-sun-400 px-3 py-1 text-xs font-semibold text-on-accent">
                     5
                   </span>
                 </div>
@@ -103,7 +103,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
                     <div className="font-semibold text-sea-900">
                       {ar ? 'كل يوم بالهايس' : 'Every day with Hiace'}
                     </div>
-                    <div className="text-sm text-sea-900/50">
+                    <div className="text-sm text-ink-subtle">
                       {ar ? 'هايس خاص — أي يوم على مزاجك' : 'Private Hiace — any day you want'}
                     </div>
                   </div>
@@ -112,7 +112,7 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
                   </span>
                 </div>
               </div>
-              <p className="mt-4 text-center text-xs text-sea-900/40">
+              <p className="mt-4 text-center text-xs text-ink-subtle">
                 {ar ? 'الباص كل أحد وخميس · الهايس كل يوم' : 'Bus every Sun & Thu · Hiace every day'}
               </p>
             </div>
@@ -129,12 +129,12 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
       </section>
 
       {/* ─── CTA ─── */}
-      <section className="relative overflow-hidden bg-sun-400 py-16 text-center text-white">
+      <section className="relative overflow-hidden bg-sun-400 py-16 text-center text-on-accent">
         <div className="container-main relative">
           <h2 className="font-display text-2xl font-bold sm:text-3xl">
             {ar ? 'مش لاقي المكان المناسب؟' : 'Can\'t find the right place?'}
           </h2>
-          <p className="mx-auto mt-2 max-w-lg text-white/85">
+          <p className="mx-auto mt-2 max-w-lg text-on-accent/85">
             {ar ? 'كلمنا على واتساب ونرشحلك على مزاجك' : 'Message us on WhatsApp and we\'ll recommend something for you'}
           </p>
           <a

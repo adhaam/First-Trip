@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { ArrowLeft, Clock, Layers } from 'lucide-react'
@@ -58,7 +58,7 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
   const shortDescription = (ar ? pkg.short_description_ar : pkg.short_description_en) || ''
   const description = (ar ? pkg.description_ar : pkg.description_en) || ''
   const trips = pkg.trips || []
-  const cover = pkg.image || trips[0]?.image || '/media/heroposter.png'
+  const cover = pkg.image || trips[0]?.image || '/media/heroposter.webp'
   const totals = pkg.totals ?? { publicTotal: 0, packageTotal: 0, savings: 0, isValid: false }
   const canonicalPath = `/sinai-trips/packages/${pkg.slug}`
   const whatsappNumber = settings?.whatsapp_number || WHATSAPP_NUMBER
@@ -95,7 +95,7 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main>
+      <div>
         <section className="container-main py-12 md:py-18">
           <div className="grid gap-10 lg:grid-cols-[1fr_22rem] lg:gap-16">
             <div className="space-y-12">
@@ -104,13 +104,13 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                   <h2 id="package-overview-heading" className="font-display text-2xl font-bold text-sea-900">
                     {ar ? 'عن الباكدج' : 'About this package'}
                   </h2>
-                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-sea-900/72">{description}</p>
+                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-ink-muted">{description}</p>
                 </section>
               )}
 
               <section aria-labelledby="package-trips-heading">
                 <h2 id="package-trips-heading" className="flex items-center gap-2 font-display text-2xl font-bold text-sea-900">
-                  <Layers className="h-5 w-5 text-sun-500" aria-hidden="true" />
+                  <Layers className="h-5 w-5 text-sun-700" aria-hidden="true" />
                   {t('experiencesCount', { count: trips.length })}
                 </h2>
 
@@ -127,7 +127,7 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                       <div key={trip.id} className="flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
                         <div className="relative aspect-[16/10] overflow-hidden">
                           <Image
-                            src={trip.image || '/media/heroposter.png'}
+                            src={trip.image || '/media/heroposter.webp'}
                             alt={tripName}
                             fill
                             sizes="(max-width: 640px) 100vw, 45vw"
@@ -143,7 +143,7 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                         <div className="flex flex-1 flex-col p-5">
                           <h3 className="font-display text-base font-semibold text-sea-900">{tripName}</h3>
                           {tripDesc && (
-                            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-sea-900/60">{tripDesc}</p>
+                            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">{tripDesc}</p>
                           )}
                         </div>
                       </div>
@@ -160,15 +160,15 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                 </h2>
                 <dl className="mt-4 space-y-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <dt className="text-sea-900/60">{ar ? 'لو حجزتهم منفصلين' : 'Booked separately'}</dt>
-                    <dd className="font-medium text-sea-900/50 line-through">
+                    <dt className="text-ink-muted">{ar ? 'لو حجزتهم منفصلين' : 'Booked separately'}</dt>
+                    <dd className="font-medium text-ink-subtle line-through">
                       {fmt(totals.publicTotal)} {common('egp')}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="text-sea-900/70 font-medium">{ar ? 'سعر الباكدج' : 'Package price'}</dt>
+                    <dt className="text-ink-muted font-medium">{ar ? 'سعر الباكدج' : 'Package price'}</dt>
                     <dd className="font-display text-xl font-extrabold text-sea-900">
-                      {fmt(totals.packageTotal)} <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
+                      {fmt(totals.packageTotal)} <span className="text-sm font-semibold text-ink-muted">{common('egp')}</span>
                     </dd>
                   </div>
                   {totals.savings > 0 && (
@@ -180,7 +180,7 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
                     </div>
                   )}
                 </dl>
-                <p className="mt-3 text-xs text-sea-900/50">
+                <p className="mt-3 text-xs text-ink-subtle">
                   {ar ? `للـ ${trips.length} تجارب مع بعض` : `For all ${trips.length} experiences together`}
                 </p>
               </div>
@@ -196,7 +196,7 @@ export default async function TripPackageDetailPage({ params }: PageProps) {
             </aside>
           </div>
         </section>
-      </main>
+      </div>
     </article>
   )
 }

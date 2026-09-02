@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { HoneypotField } from '@/components/HoneypotField'
 import { Turnstile } from '@/components/Turnstile'
-import { trackEvent } from '@/lib/track'
+import { trackConversion } from '@/lib/conversion'
 
 const PARTNERSHIP_TYPES = ['hotel', 'experience', 'transport', 'other'] as const
 
@@ -47,7 +47,11 @@ export function PartnerInquiryForm() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error()
-      trackEvent('partner_inquiry_submitted', { partnership_type: partnershipType || 'unspecified' })
+      trackConversion('partner_inquiry_submitted', {
+        content_type: 'partner',
+        partnership_type: partnershipType || 'unspecified',
+        source: 'partner_page',
+      })
       setSubmitted(true)
     } catch {
       setError(t('formError'))
@@ -70,19 +74,19 @@ export function PartnerInquiryForm() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="partner-name">{t('formName')}</Label>
-          <Input id="partner-name" name="name" required minLength={2} maxLength={100} className="mt-1" />
+          <Input id="partner-name" name="name" autoComplete="name" required minLength={2} maxLength={100} className="mt-1" />
         </div>
         <div>
           <Label htmlFor="partner-business_name">{t('formBusinessName')}</Label>
-          <Input id="partner-business_name" name="business_name" maxLength={150} className="mt-1" />
+          <Input id="partner-business_name" name="business_name" autoComplete="organization" maxLength={150} className="mt-1" />
         </div>
         <div>
           <Label htmlFor="partner-phone">{t('formPhone')}</Label>
-          <Input id="partner-phone" name="phone" dir="ltr" required minLength={6} maxLength={20} className="mt-1" />
+          <Input id="partner-phone" name="phone" autoComplete="tel" dir="ltr" required minLength={6} maxLength={20} className="mt-1" />
         </div>
         <div>
           <Label htmlFor="partner-email">{t('formEmail')}</Label>
-          <Input id="partner-email" name="email" type="email" dir="ltr" className="mt-1" />
+          <Input id="partner-email" name="email" autoComplete="email" type="email" dir="ltr" className="mt-1" />
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="partner-type">{t('formType')}</Label>
@@ -105,11 +109,11 @@ export function PartnerInquiryForm() {
       <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
       <Turnstile onToken={setTurnstileToken} />
       {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-      <Button type="submit" disabled={submitting} className="w-full bg-weemap-orange hover:bg-sun-600">
+      <Button type="submit" variant="primary" size="touch-lg" disabled={submitting} className="w-full rounded-full">
         {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
         {submitting ? t('formSending') : t('formSubmit')}
       </Button>
-      <p className="text-center text-xs text-sea-900/45">{t('formNote')}</p>
+      <p className="text-center text-xs text-ink-subtle">{t('formNote')}</p>
     </form>
   )
 }

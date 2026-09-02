@@ -4,11 +4,20 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import { Search, X, Loader2, MapPin, Mountain, ShoppingBag, Package } from 'lucide-react'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { cn } from '@/lib/utils'
 import type { SearchResult, SearchResultType } from '@/app/api/search/route'
+import { trackConversion } from '@/lib/conversion'
 
 const TYPE_ORDER: SearchResultType[] = ['accommodation', 'trip', 'merch', 'rental']
+
+/** Search result kinds mapped onto the conversion layer's content types. */
+const SEARCH_CONTENT_TYPE = {
+  accommodation: 'accommodation',
+  trip: 'trip',
+  merch: 'product',
+  rental: 'rental',
+} as const
 
 function groupResults(results: SearchResult[]): Map<SearchResultType, SearchResult[]> {
   const map = new Map<SearchResultType, SearchResult[]>()
@@ -19,7 +28,7 @@ function groupResults(results: SearchResult[]): Map<SearchResultType, SearchResu
 
 function ResultIcon({ type }: { type: SearchResultType }) {
   if (type === 'accommodation') return <MapPin className="h-3.5 w-3.5 shrink-0 text-sea-500" aria-hidden />
-  if (type === 'trip') return <Mountain className="h-3.5 w-3.5 shrink-0 text-sun-500" aria-hidden />
+  if (type === 'trip') return <Mountain className="h-3.5 w-3.5 shrink-0 text-sun-700" aria-hidden />
   if (type === 'merch') return <ShoppingBag className="h-3.5 w-3.5 shrink-0 text-brand-blue" aria-hidden />
   return <Package className="h-3.5 w-3.5 shrink-0 text-brand-orange" aria-hidden />
 }
@@ -38,6 +47,8 @@ export function GlobalSearch() {
   const [activeIdx, setActiveIdx] = useState(-1)
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const openSearch = () => {
@@ -54,6 +65,9 @@ export function GlobalSearch() {
     setQuery('')
     setResults([])
     setError(false)
+    // Returning focus to the button that opened the dialog is what stops a
+    // keyboard user being dumped back at the top of the document.
+    requestAnimationFrame(() => triggerRef.current?.focus())
   }, [])
 
   // Keyboard shortcut: Ctrl+K / Cmd+K
@@ -68,6 +82,43 @@ export function GlobalSearch() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [open, closeSearch])
+
+  // Focus trap + body scroll lock. Without the trap, Tab walks straight out of
+  // an `aria-modal` dialog and into the page behind it, which is exactly the
+  // situation the attribute promises cannot happen.
+  useEffect(() => {
+    if (!open) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+      const panel = panelRef.current
+      if (!panel) return
+
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open])
 
   // Debounced search
   useEffect(() => {
@@ -114,6 +165,13 @@ export function GlobalSearch() {
   }
 
   const navigate = (r: SearchResult) => {
+    // Fired on selection, not on typing: a debounced query is not intent, and
+    // firing per keystroke would flood the pixel with noise.
+    trackConversion(
+      'search_result_selected',
+      { content_type: SEARCH_CONTENT_TYPE[r.type], item_id: r.id, source: 'global_search' },
+      { once: false },
+    )
     closeSearch()
     router.push(r.url as Parameters<typeof router.push>[0])
   }
@@ -127,12 +185,23 @@ export function GlobalSearch() {
     return ar ? t('groupRentals') : t('groupRentals')
   }
 
+  // Results flat list for keyboard indexing
+  let globalIdx = 0
+  const resultNodes: { result: SearchResult; idx: number }[] = []
+  for (const type of TYPE_ORDER) {
+    for (const r of (grouped.get(type) || [])) {
+      resultNodes.push({ result: r, idx: globalIdx++ })
+    }
+  }
+
   if (!open) {
     return (
       <button
+        ref={triggerRef}
         type="button"
         onClick={openSearch}
         aria-label={t('label')}
+        aria-haspopup="dialog"
         className={cn(
           'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors',
           'text-white hover:bg-white/10',
@@ -141,15 +210,6 @@ export function GlobalSearch() {
         <Search className="h-5 w-5" />
       </button>
     )
-  }
-
-  // Results flat list for keyboard indexing
-  let globalIdx = 0
-  const resultNodes: { result: SearchResult; idx: number }[] = []
-  for (const type of TYPE_ORDER) {
-    for (const r of (grouped.get(type) || [])) {
-      resultNodes.push({ result: r, idx: globalIdx++ })
-    }
   }
 
   return (
@@ -163,6 +223,7 @@ export function GlobalSearch() {
 
       {/* Panel */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={t('label')}
@@ -172,17 +233,22 @@ export function GlobalSearch() {
         <div className="flex items-center gap-2 border-b border-sand-200 px-4 py-3">
           {loading
             ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-sea-500" aria-hidden />
-            : <Search className="h-5 w-5 shrink-0 text-sea-900/40" aria-hidden />
+            : <Search className="h-5 w-5 shrink-0 text-ink-subtle" aria-hidden />
           }
           <input
             ref={inputRef}
             type="search"
+            role="combobox"
+            aria-expanded={resultNodes.length > 0}
+            aria-controls="global-search-listbox"
+            aria-autocomplete="list"
+            aria-activedescendant={activeIdx >= 0 ? `global-search-option-${activeIdx}` : undefined}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('placeholder')}
             aria-label={t('label')}
-            className="min-w-0 flex-1 bg-transparent text-sm text-sea-900 placeholder:text-sea-900/40 focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-700"
             autoComplete="off"
             spellCheck={false}
           />
@@ -190,22 +256,33 @@ export function GlobalSearch() {
             type="button"
             onClick={closeSearch}
             aria-label={t('close')}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sea-900/50 hover:bg-sand-200 hover:text-sea-900"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-subtle hover:bg-sand-200 hover:text-sea-900"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
+        {/* Screen readers get told how many results the query produced; sighted
+            users can already see the list change. */}
+        <p aria-live="polite" className="sr-only">
+          {query.length < 2 ? '' : loading ? t('searching') : t('resultsCount', { count: resultNodes.length })}
+        </p>
+
         {/* Results */}
-        <div className="max-h-[60vh] overflow-y-auto" role="listbox" aria-label={t('label')}>
+        <div
+          id="global-search-listbox"
+          className="max-h-[60vh] overflow-y-auto"
+          role="listbox"
+          aria-label={t('label')}
+        >
           {!query || query.length < 2 ? (
-            <p className="px-4 py-8 text-center text-sm text-sea-900/45">{t('prompt')}</p>
+            <p className="px-4 py-8 text-center text-sm text-ink-subtle">{t('prompt')}</p>
           ) : error ? (
             <p className="px-4 py-8 text-center text-sm text-red-500">{t('error')}</p>
           ) : !loading && results.length === 0 ? (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-sea-900/70">{t('empty', { query })}</p>
-              <p className="mt-1 text-xs text-sea-900/40">{t('emptyHint')}</p>
+              <p className="text-sm text-ink-muted">{t('empty', { query })}</p>
+              <p className="mt-1 text-xs text-ink-subtle">{t('emptyHint')}</p>
             </div>
           ) : (
             <div className="py-2">
@@ -214,7 +291,7 @@ export function GlobalSearch() {
                 if (group.length === 0) return null
                 return (
                   <div key={type}>
-                    <p className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-sea-900/40">
+                    <p className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">
                       {groupLabel(type)}
                     </p>
                     {group.map((r) => {
@@ -226,6 +303,7 @@ export function GlobalSearch() {
                       return (
                         <button
                           key={r.id}
+                          id={`global-search-option-${node.idx}`}
                           type="button"
                           role="option"
                           aria-selected={isActive}
@@ -248,7 +326,7 @@ export function GlobalSearch() {
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-sea-900">{title}</p>
                             {(cat || desc) && (
-                              <p className="mt-0.5 truncate text-[11px] text-sea-900/50">
+                              <p className="mt-0.5 truncate text-[11px] text-ink-subtle">
                                 {cat && <span>{cat}{desc ? ' · ' : ''}</span>}
                                 {desc && <span>{desc}</span>}
                               </p>

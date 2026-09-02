@@ -45,6 +45,11 @@
   --color-sun-400: #EA9A3E;
   --color-sun-500: #D97F22;
   --color-sun-600: #B8631A;
+  /* 700/800 exist so accent-coloured TEXT has a contrast-safe depth to sit at.
+     sun-500/600 are fill colours: as text on sand they measure 2.95 / 4.06,
+     below the 4.5 floor. sun-700 measures 6.13 on sand-50 and 5.05 on sand-200. */
+  --color-sun-700: #8F4C12;
+  --color-sun-800: #6B380B;
 
   /* ─── Sand → warm desert paper tones instead of clinical white/grey.
         This is the "Dahab at golden hour" surface: off-white with a warm
@@ -54,6 +59,18 @@
   --color-sand-200: #EEE1C6;
   --color-sand-300: #DFCBA0;
   --color-sand-400: #BFA477;
+
+  /* ─── Semantic text tones ───
+     Replaces the ad-hoc `text-sea-900/NN` alpha pattern. Nine different alpha
+     values were in use and everything below /65 failed WCAG AA. These are solid
+     warm greys measured against every light surface in the system
+     (sand-50 / sand-100 / sand-200 / card) and against the dark surfaces too. */
+  --color-ink: var(--ink-strong);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  /* Text/icon colour for anything sitting on a sun (orange) fill. White on
+     sun-400 measures 2.29 — the ink measures 7.57. */
+  --color-on-accent: var(--on-accent);
 
   /* Back-compat aliases — older markup still refers to these */
   --color-brand-blue: #1D86A3;
@@ -120,13 +137,18 @@
   --popover: #FFFDF8;
   --popover-foreground: #1A1B18;
   --primary: #D97F22;
-  --primary-foreground: #FFFDF8;
+  /* Ink, not white. White on #D97F22 is 3.00 — below AA for the button label,
+     the badge text and the selected-day glyph this token paints. Ink is 5.77. */
+  --primary-foreground: #1A1B18;
   --secondary: #F6EEDE;
   --secondary-foreground: #1A1B18;
   --muted: #F6EEDE;
-  --muted-foreground: #6B7E82;
+  /* was #6B7E82 — 3.99 on the page background, below the AA floor for the
+     placeholder + muted text every shadcn primitive renders with it. */
+  --muted-foreground: #566669;
   --accent: #EA9A3E;
-  --accent-foreground: #FFFDF8;
+  /* White on #EA9A3E is 2.29 — the worst pairing in the system. Ink is 7.57. */
+  --accent-foreground: #1A1B18;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #DFCBA0;
   --input: #DFCBA0;
@@ -151,6 +173,16 @@
   --pin-radius: 0.875rem;
   --pin-radius-rtl: 0.875rem;
   --ink: #1A1B18;
+
+  /* Semantic text tones — see the @theme block above for the rationale.
+     Measured contrast (sand-50 / sand-100 / card / sand-200):
+       ink-strong  #1A1B18  →  15.9 / 14.7 / 16.7 / 13.1
+       ink-muted   #5A5852  →   6.66 / 6.17 / 7.00 / 5.49
+       ink-subtle  #65635D  →   5.62 / 5.21 / 5.91 / 4.64   ← the floor */
+  --ink-strong: #1A1B18;
+  --ink-muted: #5A5852;
+  --ink-subtle: #65635D;
+  --on-accent: #1A1B18;
 
   /* WEEMAP SINAI brand color aliases (kept for older markup) */
   --ft-blue: #1D86A3;
@@ -183,6 +215,13 @@
   --sidebar: #10171A;
   --sidebar-foreground: #F1EADA;
   --sidebar-border: rgba(255, 255, 255, 0.08);
+
+  /* Dark counterparts — measured against #14201B / #1C2A22 / #23342B */
+  --ink-strong: #F1EADA;
+  --ink-muted: #B6BDB2;
+  --ink-subtle: #A6AFA4;
+  /* The sun fills stay light-on-dark-text in dark mode too. */
+  --on-accent: #10171A;
 }
 
 /* ─── RTL ─── */
@@ -236,6 +275,16 @@ html[dir="rtl"] .ltr-only {
   }
 }
 
+/* ─── Arabic display leading floor ───
+   Unlayered on purpose: Tailwind utilities live in @layer utilities, and
+   unlayered rules beat every layer. A `leading-none` hero heading therefore
+   cannot clip Arabic glyphs, while Latin headings keep their tight display
+   leading untouched. */
+html[dir="rtl"] :is(h1, h2, h3, h4) {
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
 /* ═══════════ Layout utilities ═══════════ */
 
 @utility container-main {
@@ -243,7 +292,11 @@ html[dir="rtl"] .ltr-only {
 }
 
 @utility section-padding {
-  @apply py-16 md:py-24;
+  /* 64px of padding above and below every section on a phone, on top of a
+     56px heading margin, meant a mobile visitor got roughly one card per
+     screen and several swipes of empty sand between sections. Desktop
+     rhythm is unchanged. */
+  @apply py-10 sm:py-14 md:py-24;
 }
 
 /* ═══════════ Signature surfaces ═══════════ */
@@ -337,19 +390,40 @@ html[dir="rtl"] .ltr-only {
   transform: translateY(-4px);
 }
 
-/* Reveal-on-scroll, driven by a single IntersectionObserver (see <Reveal/>). */
+/* Reveal-on-scroll, driven by a single IntersectionObserver (see <Reveal/>).
+   ───────────────────────────────────────────────────────────────────────────
+   PROGRESSIVE ENHANCEMENT CONTRACT — do not invert this.
+
+   The base state is VISIBLE. Server-rendered HTML carries data-visible="true",
+   so the page is fully readable before hydration, with JavaScript disabled,
+   blocked, throttled, or broken. Nothing conversion-critical — hero copy, CTAs,
+   cards, form content — is ever gated behind a script running.
+
+   The hidden state is opt-IN and applied only by <Reveal/>, after mount, and
+   only to elements that were measured as safely below the fold at that moment
+   (see src/components/motion/Reveal.tsx). Because the element is off-screen
+   when it flips to data-visible="false", the viewer never sees content vanish.
+
+   Anything above the fold is left alone permanently: it renders visible, stays
+   visible, and never animates — so the LCP element is never delayed by JS. */
 .reveal {
+  opacity: 1;
+  transform: none;
+}
+
+.reveal[data-visible="false"] {
   opacity: 0;
   transform: translateY(22px);
+}
+
+/* The transition is attached only once the element is under observation, so a
+   never-observed element (no JS) has no transition to get stuck mid-way. */
+.reveal[data-visible="false"],
+.reveal[data-reveal="armed"] {
   transition:
     opacity 620ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
-}
-
-.reveal[data-visible="true"] {
-  opacity: 1;
-  transform: none;
 }
 
 /* Pointer-tracking glow used on feature cards. */
@@ -381,7 +455,8 @@ html[dir="rtl"] .ltr-only {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 
-  .reveal {
+  .reveal,
+  .reveal[data-visible="false"] {
     opacity: 1;
     transform: none;
     transition: none;

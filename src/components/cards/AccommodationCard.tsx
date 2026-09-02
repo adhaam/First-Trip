@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Star, MapPin, ArrowUpRight } from 'lucide-react'
@@ -8,6 +8,7 @@ import { ACCOMMODATION_TAGS } from '@/lib/constants'
 import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import type { Accommodation } from '@/lib/types'
+import { Price } from '@/components/Price'
 
 export function AccommodationCard({
   acc,
@@ -19,12 +20,11 @@ export function AccommodationCard({
   priority?: boolean
 }) {
   const t = useTranslations('book')
-  const common = useTranslations('common')
   const locale = useLocale()
   const ar = locale === 'ar'
 
   const tag = ACCOMMODATION_TAGS[acc.type]
-  const cover = acc.image_url || acc.images?.[0] || '/media/heroposter.png'
+  const cover = acc.image_url || acc.images?.[0] || '/media/heroposter.webp'
   const configuredRoomRates = [acc.price_single_room, acc.price_double_room, acc.price_triple_room]
     .map(Number)
     .filter((price) => price > 0)
@@ -80,27 +80,21 @@ export function AccommodationCard({
             {name}
           </h3>
 
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-sea-900/60">
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">
             {ar ? acc.description_ar : acc.description_en}
           </p>
 
           <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-            <div>
-              <div className="text-[0.7rem] uppercase tracking-wider text-sea-900/45">
-                {t('priceStartsFrom')}
-              </div>
-              <div className="font-display text-xl font-bold text-sea-900">
-                {startingRoomRate.toLocaleString()}{' '}
-                <span className="text-sm font-semibold text-sea-900/70">{common('egp')}</span>
-              </div>
-              <div className="text-[0.7rem] text-sea-900/45">
-                {t('perNight')} · {ar ? 'للغرفة' : 'per room'}
-              </div>
-            </div>
+            <Price
+              amount={startingRoomRate}
+              label={t('priceStartsFrom')}
+              unit={`${t('perNight')} · ${ar ? 'للغرفة' : 'per room'}`}
+              size="lg"
+            />
 
             <span
               aria-hidden
-              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-md bg-sand-100 px-3 text-xs font-semibold text-sea-900 transition-all duration-300 group-hover:bg-sun-400 group-hover:text-white"
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-md bg-sand-100 px-3 text-xs font-semibold text-sea-900 transition-all duration-300 group-hover:bg-sun-400 group-hover:text-on-accent"
             >
               {t('viewDetails')}
               <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />

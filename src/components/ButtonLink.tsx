@@ -7,17 +7,17 @@ import { cn } from '@/lib/utils'
 const variants = {
   default: 'bg-primary text-primary-foreground hover:bg-primary/80',
   ink: 'bg-sea-900 text-sand-50 hover:bg-sea-700',
-  sun: 'bg-sun-400 text-white hover:bg-sun-500',
+  sun: 'bg-sun-400 text-on-accent hover:bg-sun-500',
   'outline-ink': 'border-[1.5px] border-sea-900 text-sea-900 hover:bg-sea-900 hover:text-sand-50',
   'outline-light': 'border-[1.5px] border-white/45 text-white hover:bg-white/10 hover:border-white/70',
-  orange: 'bg-brand-orange text-white hover:bg-brand-orange-dark shadow-sm',
+  orange: 'bg-brand-orange text-on-accent hover:bg-brand-orange-dark shadow-sm',
   outline: 'border border-border bg-background hover:bg-muted hover:text-foreground',
   secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
   ghost: 'hover:bg-muted hover:text-foreground',
   destructive: 'bg-destructive/10 text-destructive hover:bg-destructive/20',
   link: 'text-primary underline-offset-4 hover:underline',
-  whatsapp: 'bg-green-600 text-white hover:bg-green-700',
-  'whatsapp-outline': 'border border-green-500 text-green-600 hover:bg-green-50',
+  whatsapp: 'bg-[#25D366] text-on-accent hover:bg-[#1FBE59]',
+  'whatsapp-outline': 'border border-[#128C4A] text-[#0F7A40] hover:bg-[#25D366]/15',
 }
 
 const sizes = {

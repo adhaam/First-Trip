@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { trackConversion } from '@/lib/conversion'
 import {
   Sheet,
   SheetContent,
@@ -194,6 +195,10 @@ export function WeemapAI({
 
       if (!response.ok) throw new Error('Lead request failed')
 
+      // Confirmed 2xx only. The name/phone/email the visitor typed stay in
+      // the request body and are never forwarded to an analytics vendor.
+      trackConversion('assistant_lead_submitted', { source: 'assistant' })
+
       window.localStorage.setItem(LEAD_KEY, sessionId)
       const firstName = lead.name.trim().split(/\s+/)[0]
       setMessages([{ id: crypto.randomUUID(), role: 'assistant', content: t('welcomeNamed', { name: firstName }) }])
@@ -271,9 +276,15 @@ export function WeemapAI({
   if (isAdminRoute) return null
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (next) trackConversion('assistant_opened', { source: 'assistant' }, { once: false })
+        setOpen(next)
+      }}
+    >
       <SheetTrigger
-        className={`group fixed z-50 inline-flex min-h-12 items-center gap-2 rounded-full bg-sun-500 px-4 text-sm font-bold text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.65)] transition-all hover:bg-sun-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-sea-900 ${locale === 'ar' ? 'left-5' : 'right-5'}`}
+        className={`group fixed z-50 inline-flex min-h-12 items-center gap-2 rounded-full bg-sun-500 px-4 text-sm font-bold text-on-accent shadow-[0_10px_30px_-12px_rgba(0,0,0,0.65)] transition-all hover:bg-sun-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-sea-900 ${locale === 'ar' ? 'left-5' : 'right-5'}`}
         style={{ bottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
       >
         <Sparkles className="h-5 w-5" aria-hidden />
@@ -288,7 +299,7 @@ export function WeemapAI({
       >
         <SheetHeader className="shrink-0 border-b border-white/10 bg-sea-900 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pe-14 text-start text-white">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-sun-500 text-white" aria-hidden>
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-sun-500 text-on-accent" aria-hidden>
               <Compass className="h-5 w-5" />
             </span>
             <div>
@@ -300,26 +311,26 @@ export function WeemapAI({
 
         {!initialized ? (
           <div className="flex flex-1 items-center justify-center" role="status">
-            <Loader2 className="h-6 w-6 animate-spin text-sun-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-sun-700" />
             <span className="sr-only">{t('submitting')}</span>
           </div>
         ) : !leadReady ? (
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6">
             <div className="mx-auto max-w-sm">
-              <span className="eyebrow text-sun-600">WEEMAP SINAI</span>
+              <span className="eyebrow text-sun-700">WEEMAP SINAI</span>
               <h2 className="mt-4 font-display text-2xl font-extrabold text-sea-900">{t('welcomeTitle')}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-sea-900/65">{t('welcomeDescription')}</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{t('welcomeDescription')}</p>
 
               {!chatAvailable && (
-                <div className="mt-5 flex gap-3 rounded-xl border border-sun-500/25 bg-sun-100/70 p-3 text-sm leading-relaxed text-sea-900/75">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-sun-600" aria-hidden />
+                <div className="mt-5 flex gap-3 rounded-xl border border-sun-600/25 bg-sun-100/70 p-3 text-sm leading-relaxed text-ink-muted">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-sun-700" aria-hidden />
                   <p>{t('availabilityLead')}</p>
                 </div>
               )}
 
               {chatAvailable && <form className="mt-6 space-y-4" onSubmit={submitLead} noValidate>
                 <div>
-                  <Label htmlFor="weemap-ai-name">{t('nameLabel')} <span aria-hidden className="text-sun-600">*</span></Label>
+                  <Label htmlFor="weemap-ai-name">{t('nameLabel')} <span aria-hidden className="text-sun-700">*</span></Label>
                   <Input
                     id="weemap-ai-name"
                     autoComplete="name"
@@ -334,7 +345,7 @@ export function WeemapAI({
                 </div>
 
                 <div>
-                  <Label htmlFor="weemap-ai-phone">{t('whatsappLabel')} <span aria-hidden className="text-sun-600">*</span></Label>
+                  <Label htmlFor="weemap-ai-phone">{t('whatsappLabel')} <span aria-hidden className="text-sun-700">*</span></Label>
                   <Input
                     id="weemap-ai-phone"
                     type="tel"
@@ -352,7 +363,7 @@ export function WeemapAI({
                 </div>
 
                 <div>
-                  <Label htmlFor="weemap-ai-email">{t('emailLabel')} <span className="font-normal text-sea-900/45">({t('optional')})</span></Label>
+                  <Label htmlFor="weemap-ai-email">{t('emailLabel')} <span className="font-normal text-ink-subtle">({t('optional')})</span></Label>
                   <Input
                     id="weemap-ai-email"
                     type="email"
@@ -371,14 +382,14 @@ export function WeemapAI({
 
                 {leadError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800" role="alert">{leadError}</p>}
 
-                <Button type="submit" disabled={submittingLead || !sessionId} className="min-h-12 w-full rounded-xl bg-sun-500 px-5 font-bold text-white hover:bg-sun-600">
+                <Button type="submit" disabled={submittingLead || !sessionId} className="min-h-12 w-full rounded-xl bg-sun-500 px-5 font-bold text-on-accent hover:bg-sun-600">
                   {submittingLead ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
                   {submittingLead ? t('submitting') : t('startChatting')}
                 </Button>
 
-                <p className="text-xs leading-relaxed text-sea-900/55">
+                <p className="text-xs leading-relaxed text-ink-subtle">
                   {t('privacyBefore')}{' '}
-                  <Link href="/policy" onClick={() => setOpen(false)} className="font-semibold text-sea-700 underline underline-offset-2 hover:text-sun-600">
+                  <Link href="/policy" onClick={() => setOpen(false)} className="font-semibold text-sea-700 underline underline-offset-2 hover:text-sun-700">
                     {t('privacyLink')}
                   </Link>
                   {t('privacyAfter')}
@@ -397,11 +408,11 @@ export function WeemapAI({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5" role="log" aria-live="polite" aria-label={t('title')}>
-              {messages.length === 0 && <p className="py-10 text-center text-sm text-sea-900/50">{t('empty')}</p>}
+              {messages.length === 0 && <p className="py-10 text-center text-sm text-ink-subtle">{t('empty')}</p>}
               <div className="space-y-4">
                 {messages.map(message => (
                   <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end rtl:justify-start' : 'justify-start rtl:justify-end'}`}>
-                    <div className={`max-w-[85%] break-words rounded-2xl px-4 py-3 text-sm leading-relaxed ${message.role === 'user' ? 'rounded-br-sm bg-sun-500 text-white rtl:rounded-bl-sm rtl:rounded-br-2xl' : 'rounded-bl-sm border border-sea-900/10 bg-white text-sea-900 rtl:rounded-br-sm rtl:rounded-bl-2xl'}`}>
+                    <div className={`max-w-[85%] break-words rounded-2xl px-4 py-3 text-sm leading-relaxed ${message.role === 'user' ? 'rounded-br-sm bg-sun-500 text-on-accent rtl:rounded-bl-sm rtl:rounded-br-2xl' : 'rounded-bl-sm border border-sea-900/10 bg-white text-sea-900 rtl:rounded-br-sm rtl:rounded-bl-2xl'}`}>
                       {message.content}
                     </div>
                   </div>
@@ -419,9 +430,9 @@ export function WeemapAI({
 
             <div className="shrink-0 border-t border-sea-900/10 bg-sand-50 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
               {!chatAvailable && (
-                <div className="mb-3 rounded-xl border border-sun-500/25 bg-sun-100/70 p-3" role="status">
+                <div className="mb-3 rounded-xl border border-sun-600/25 bg-sun-100/70 p-3" role="status">
                   <p className="font-semibold text-sea-900">{t('unavailableTitle')}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-sea-900/65">{t('unavailableDescription')}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-muted">{t('unavailableDescription')}</p>
                 </div>
               )}
 
@@ -456,7 +467,7 @@ export function WeemapAI({
                   disabled={!chatAvailable || sending || !draft.trim()}
                   onClick={() => void sendMessage(draft)}
                   aria-label={t('send')}
-                  className="h-12 w-12 rounded-xl bg-sun-500 p-0 text-white hover:bg-sun-600"
+                  className="h-12 w-12 rounded-xl bg-sun-500 p-0 text-on-accent hover:bg-sun-600"
                 >
                   {sending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Send className="h-5 w-5 rtl:-scale-x-100" aria-hidden />}
                   <span className="sr-only">{sending ? t('sending') : t('send')}</span>

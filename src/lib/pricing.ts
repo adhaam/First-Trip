@@ -9,6 +9,7 @@
 //   round trip                      = that, doubled
 //   total                           = that, times the number of people
 
+import { formatAmount } from './format'
 import type {
   AccommodationSeasonalRate,
   PriceSnapshot,
@@ -741,6 +742,17 @@ export function quoteStay({
 // ─── Formatting ───
 
 export function formatEGP(value: number, locale: string): string {
-  const n = Math.round(value)
-  return n.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')
+  // Delegates to the single formatting layer so money renders identically
+  // everywhere. Display only — no value, rounding rule or calculation changes.
+  //
+  // For the two locales this app ships ('ar' and 'en') the output is
+  // byte-identical to the previous inline implementation (Math.round, then
+  // ar-EG / en-US grouping) — verified in format.test.ts.
+  //
+  // The one difference is on an unreachable path: an *unrecognised* locale
+  // string used to fall back to en-US, and now falls back to the app's real
+  // default locale, Arabic (routing.defaultLocale). `locale` here always comes
+  // from next-intl's useLocale()/getLocale(), which only ever yields 'ar' or
+  // 'en', so no rendered price is affected.
+  return formatAmount(value, locale)
 }

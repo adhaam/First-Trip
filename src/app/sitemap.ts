@@ -14,6 +14,9 @@ const STATIC_PAGES: { path: string; priority: number; changeFrequency: 'daily' |
   { path: '/', priority: 1, changeFrequency: 'daily' },
   { path: '/book-dahab', priority: 0.9, changeFrequency: 'weekly' },
   { path: '/sinai-trips', priority: 0.7, changeFrequency: 'weekly' },
+  // Signature Experiences is a top-level nav item, a homepage feature section
+  // and a full product line with its own detail routes — it was absent here.
+  { path: '/signature', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/community', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/partner', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/about', priority: 0.7, changeFrequency: 'weekly' },

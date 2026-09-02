@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { Link } from '@/i18n/navigation'
 import { getCommunityPostBySlug, getRelatedCommunityPosts } from '@/lib/data'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
@@ -75,17 +75,17 @@ export default async function CommunityPostPage({ params }: {
           {/* Back to community */}
           <Link
             href="/community"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-sea-900/60 hover:text-sun-600 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-ink-muted hover:text-sun-700 transition-colors"
           >
             <BackIcon className="h-4 w-4" />
             {ar ? 'العودة للكوميونيتي' : 'Back to Community'}
           </Link>
 
           {/* Meta */}
-          <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-sea-900/50">
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-ink-subtle">
             <Link
               href="/community"
-              className="inline-flex items-center gap-1.5 font-semibold text-sun-600 hover:text-sun-500"
+              className="inline-flex items-center gap-1.5 font-semibold text-sun-700 hover:text-sun-700"
             >
               {POST_CATEGORY_LABELS[post.category][ar ? 'ar' : 'en']}
             </Link>
@@ -121,7 +121,7 @@ export default async function CommunityPostPage({ params }: {
           )}
 
           {/* Body */}
-          <div className="mt-8 whitespace-pre-line text-lg leading-relaxed text-sea-900/80">
+          <div className="mt-8 whitespace-pre-line text-lg leading-relaxed text-ink-muted">
             {content}
           </div>
 
@@ -163,7 +163,7 @@ export default async function CommunityPostPage({ params }: {
                     </div>
                   )}
                   <div className="p-4">
-                    <span className="text-xs font-semibold text-sun-600">
+                    <span className="text-xs font-semibold text-sun-700">
                       {POST_CATEGORY_LABELS[r.category][ar ? 'ar' : 'en']}
                     </span>
                     <h3 className="mt-2 font-display font-bold leading-tight text-sea-900">

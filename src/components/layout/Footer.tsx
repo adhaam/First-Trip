@@ -136,7 +136,7 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-sun-400 px-6 text-sm font-semibold text-white transition-colors hover:bg-sun-500"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-sun-400 px-6 text-sm font-semibold text-on-accent transition-colors hover:bg-sun-500"
             >
               WhatsApp
               <ArrowUpRight className="h-4 w-4" />

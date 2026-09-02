@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Script from 'next/script'
 import { FB_PIXEL_ID, GTM_ID } from '@/lib/analytics'
+import { captureAttribution } from '@/lib/conversion'
 
 /**
  * Google Tag Manager + Meta (Facebook) Pixel.
@@ -25,6 +26,13 @@ import { FB_PIXEL_ID, GTM_ID } from '@/lib/analytics'
  */
 export function AnalyticsScripts() {
   const pathname = usePathname()
+
+  // Record utm_*, referrer origin and landing path for the first page of the
+  // session so a conversion three pages later still carries its campaign.
+  // Reads only; sends nothing. See captureAttribution() for what is stored.
+  useEffect(() => {
+    captureAttribution()
+  }, [])
 
   useEffect(() => {
     if (!FB_PIXEL_ID) return

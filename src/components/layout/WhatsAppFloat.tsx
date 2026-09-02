@@ -6,7 +6,7 @@ import { MessageCircle } from 'lucide-react'
 import { useLocale } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { trackEvent } from '@/lib/track'
+import { trackConversion } from '@/lib/conversion'
 
 /**
  * Floating WhatsApp button.
@@ -43,15 +43,17 @@ export function WhatsAppFloat({ number }: { number?: string | null }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="WhatsApp"
-      onClick={() => trackEvent('whatsapp_cta_click', { source: 'floating_button' })}
+      onClick={() => trackConversion('whatsapp_click', { source: 'floating_button' }, { once: false })}
       className={cn(
-        'group fixed bottom-5 z-50 flex items-center gap-2 rounded-full bg-[#25D366] py-3 text-white shadow-[0_6px_24px_-6px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-[#1FBE59] focus-visible:ring-2 focus-visible:ring-white/70',
+        'group fixed z-50 flex min-h-12 items-center gap-2 rounded-full bg-[#25D366] py-3 text-on-accent shadow-[0_6px_24px_-6px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-[#1FBE59]',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sea-900',
         compact ? 'px-3.5' : 'px-4',
         mounted ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
         locale === 'ar' ? 'left-5' : 'right-5',
       )}
+      style={{ bottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
     >
-      <MessageCircle className="h-5 w-5 shrink-0" />
+      <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
       <span
         className={cn(
           'overflow-hidden whitespace-nowrap text-sm font-semibold transition-all duration-300',

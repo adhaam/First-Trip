@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { MessageCircle, Check, Loader2 } from 'lucide-react'
 import { HoneypotField } from '@/components/HoneypotField'
 import { Turnstile } from '@/components/Turnstile'
-import { trackEvent } from '@/lib/track'
+import { trackConversion, trackRequestFailure } from '@/lib/conversion'
 
 interface TripBookingFormProps {
   tripId: string
@@ -77,11 +77,19 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setServerError(data.error || t('bookError'))
+        trackRequestFailure('trip', 'server')
         return
       }
-      trackEvent('trip_booking_submitted', { trip_id: tripId, trip_name: tripNameEn })
+      trackConversion('trip_request_submitted', {
+        content_type: 'trip',
+        item_id: tripId,
+        item_name: tripNameEn,
+        num_people: form.num_people,
+        source: 'trip_detail',
+      })
       setSubmitted(true)
     } catch {
+      trackRequestFailure('trip', 'network')
       setServerError(t('bookError'))
     } finally {
       setSubmitting(false)
@@ -98,18 +106,18 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
 
   if (submitted) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-5 text-center">
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-          <Check className="h-5 w-5 text-green-600" aria-hidden="true" />
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-center">
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+          <Check className="h-5 w-5 text-emerald-700" aria-hidden="true" />
         </div>
-        <p className="font-semibold text-green-800">{t('bookSuccess')}</p>
-        <p className="mt-1 text-sm text-green-700">{t('bookSuccessText')}</p>
+        <p className="font-semibold text-emerald-800">{t('bookSuccess')}</p>
+        <p className="mt-1 text-sm text-emerald-800">{t('bookSuccessText')}</p>
         <a
           href={`https://wa.me/${whatsappClean}?text=${waText}`}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => trackEvent('whatsapp_cta_click', { source: 'sinai_trip' })}
-          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md bg-green-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+          onClick={() => trackConversion('whatsapp_click', { source: 'sinai_trip', content_type: 'trip', item_id: tripId }, { once: false })}
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-[#25D366] px-5 text-sm font-semibold text-on-accent transition-colors hover:bg-[#1FBE59]"
         >
           <MessageCircle className="h-4 w-4" aria-hidden="true" />
           {t('bookWhatsApp')}
@@ -121,7 +129,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <h3 className="font-display text-base font-semibold text-sea-900">{t('bookForm')}</h3>
-      <p className="text-xs leading-5 text-sea-900/60">{t('bookFormHint')}</p>
+      <p className="text-xs leading-5 text-ink-muted">{t('bookFormHint')}</p>
 
       <div>
         <label htmlFor="trip-book-name" className="mb-1 block text-xs font-medium text-sea-900">
@@ -133,7 +141,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
           autoComplete="name"
           value={form.customer_name}
           onChange={(e) => setForm((p) => ({ ...p, customer_name: e.target.value }))}
-          className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-sea-900/40 focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
+          className="min-h-11 w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
           placeholder={ar ? 'اسمك الكامل' : 'Your full name'}
         />
         {errors.customer_name && <p className="mt-1 text-[11px] text-red-600">{errors.customer_name}</p>}
@@ -151,7 +159,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
           dir="ltr"
           value={form.customer_phone}
           onChange={(e) => setForm((p) => ({ ...p, customer_phone: e.target.value }))}
-          className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-sea-900/40 focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
+          className="min-h-11 w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
           placeholder="+20 1xx xxx xxxx"
         />
         {errors.customer_phone && <p className="mt-1 text-[11px] text-red-600">{errors.customer_phone}</p>}
@@ -170,7 +178,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
             inputMode="numeric"
             value={form.num_people}
             onChange={(e) => setForm((p) => ({ ...p, num_people: Math.max(1, parseInt(e.target.value) || 1) }))}
-            className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
+            className="min-h-11 w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
           />
           {errors.num_people && <p className="mt-1 text-[11px] text-red-600">{errors.num_people}</p>}
         </div>
@@ -185,7 +193,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
             min={todayIso}
             value={form.preferred_date}
             onChange={(e) => setForm((p) => ({ ...p, preferred_date: e.target.value < todayIso ? todayIso : e.target.value }))}
-            className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
+            className="min-h-11 w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
           />
         </div>
       </div>
@@ -201,7 +209,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
           value={form.notes}
           onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
           placeholder={t('bookNotesPlaceholder')}
-          className="w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-sea-900/40 focus:border-sea-500 focus:outline-none focus:ring-1 focus:ring-sea-500"
+          className="min-h-11 w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
         />
       </div>
 
@@ -213,7 +221,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-sea-700 px-5 text-sm font-semibold text-white transition-colors hover:bg-sea-800 disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-sun-500 text-base font-semibold text-on-accent transition-colors hover:bg-sun-600 disabled:cursor-not-allowed disabled:bg-sand-300 disabled:text-ink-subtle"
       >
         {submitting ? (
           <>

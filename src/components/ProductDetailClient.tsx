@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
+import { SafeImage as Image } from '@/components/SafeImage'
 import { useTranslations, useLocale } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { BookingForm } from '@/components/BookingForm'
@@ -43,7 +43,7 @@ export function ProductDetailClient({
   const tag = ACCOMMODATION_TAGS[accommodation.type]
   const images = accommodation.images?.length
     ? accommodation.images
-    : [accommodation.image_url || '/media/heroposter.png']
+    : [accommodation.image_url || '/media/heroposter.webp']
   const name = ar ? accommodation.name_ar : accommodation.name_en
   const amenities = (ar ? accommodation.amenities_ar : accommodation.amenities_en) ?? []
   const location = ar
@@ -196,7 +196,7 @@ export function ProductDetailClient({
             {description && (
               <Reveal>
                 <h2 className="font-display text-xl font-bold text-sea-900">{t('aboutTrip')}</h2>
-                <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-loose text-sea-900/70">
+                <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-loose text-ink-muted">
                   {description}
                 </p>
               </Reveal>
@@ -216,7 +216,7 @@ export function ProductDetailClient({
                         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sea-50 text-sea-600">
                           <Icon className="h-4 w-4" />
                         </span>
-                        <span className="text-sm font-medium text-sea-900/80">{amenity}</span>
+                        <span className="text-sm font-medium text-ink-muted">{amenity}</span>
                       </li>
                     )
                   })}
@@ -242,7 +242,7 @@ export function ProductDetailClient({
                 </div>
 
                 <div className="border-t border-sand-300 bg-sand-100 px-6 py-4">
-                  <p className="text-xs leading-relaxed text-sea-900/55">
+                  <p className="text-xs leading-relaxed text-ink-subtle">
                     {accommodation.seasonal_rates?.length
                       ? (ar ? 'الفترات الموسمية بتتحسب ليلة بليلة في نموذج الحجز.' : 'Seasonal periods are calculated night by night in the booking form.')
                       : (ar ? 'اختار التواريخ والتفاصيل تحت علشان تشوف الملخص الكامل.' : 'Choose dates and details below to see the full calculated summary.')}
@@ -279,12 +279,12 @@ export function ProductDetailClient({
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sand-300 bg-sand-50/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <div className="text-[0.65rem] uppercase tracking-wider text-sea-900/45">
+            <div className="text-[0.65rem] uppercase tracking-wider text-ink-subtle">
               {t('priceStartsFrom')}
             </div>
             <div className="truncate font-display text-lg font-bold text-sea-900">
               {formatEGP(cheapest, locale)}{' '}
-              <span className="text-xs font-semibold text-sea-900/70">{common('egp')}</span>
+              <span className="text-xs font-semibold text-ink-muted">{common('egp')}</span>
             </div>
           </div>
           <a
@@ -298,7 +298,7 @@ export function ProductDetailClient({
           </a>
           <a
             href="#booking-form"
-            className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-sun-400 px-6 text-sm font-semibold text-white"
+            className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-sun-400 px-6 text-sm font-semibold text-on-accent"
           >
             {ar ? 'احجز' : 'Book'}
           </a>
@@ -319,11 +319,11 @@ function IncludedTile({
 }) {
   return (
     <div className="bg-card p-5">
-      <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sun-50 text-sun-500">
+      <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sun-50 text-sun-700">
         <Icon className="h-5 w-5" />
       </span>
       <h3 className="font-display text-sm font-bold text-sea-900">{title}</h3>
-      <p className="mt-1 text-xs leading-relaxed text-sea-900/55">{desc}</p>
+      <p className="mt-1 text-xs leading-relaxed text-ink-subtle">{desc}</p>
     </div>
   )
 }
@@ -350,11 +350,11 @@ function PriceRow({
     >
       <div className="min-w-0">
         <div className="text-sm font-semibold text-sea-900">{label}</div>
-        <div className="mt-0.5 text-xs text-sea-900/50">{sub}</div>
+        <div className="mt-0.5 text-xs text-ink-subtle">{sub}</div>
       </div>
       <div className="shrink-0 text-end">
         <span className="font-display text-lg font-bold text-sea-900">{value}</span>{' '}
-        <span className="text-xs font-semibold text-sea-900/60">{currency}</span>
+        <span className="text-xs font-semibold text-ink-muted">{currency}</span>
       </div>
     </div>
   )

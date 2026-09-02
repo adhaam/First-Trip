@@ -5,15 +5,15 @@ export default async function NotFound() {
   const t = await getTranslations('states')
 
   return (
-    <main className="container-main flex min-h-[65svh] items-center justify-center py-20 text-center">
+    <div className="container-main flex min-h-[65svh] items-center justify-center py-20 text-center">
       <div className="max-w-lg">
-        <p className="eyebrow justify-center text-sun-600">404</p>
+        <p className="eyebrow justify-center text-sun-700">404</p>
         <h1 className="mt-4 font-display text-4xl font-bold text-sea-900">{t('pageNotFound')}</h1>
-        <p className="mt-4 leading-7 text-sea-900/65">{t('pageNotFoundText')}</p>
-        <Link href="/" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-md bg-sun-500 px-6 font-semibold text-white hover:bg-sun-600">
+        <p className="mt-4 leading-7 text-ink-muted">{t('pageNotFoundText')}</p>
+        <Link href="/" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-md bg-sun-500 px-6 font-semibold text-on-accent hover:bg-sun-600">
           {t('backHome')}
         </Link>
       </div>
-    </main>
+    </div>
   )
 }

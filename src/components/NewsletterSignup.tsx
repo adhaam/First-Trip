@@ -7,6 +7,7 @@ import { Mail, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HoneypotField } from '@/components/HoneypotField'
 import { Turnstile } from '@/components/Turnstile'
+import { trackConversion } from '@/lib/conversion'
 
 /**
  * Email capture — the "stay in the loop" band above the footer.
@@ -43,6 +44,8 @@ export function NewsletterSignup() {
         return
       }
       setState('ok')
+      // No email address is sent — only the fact that a signup succeeded.
+      trackConversion('newsletter_subscribed', { content_type: 'newsletter', source: 'homepage_footer' })
     } catch {
       setState('err')
       setErrMsg(t('newsletterNetworkError'))
@@ -107,7 +110,7 @@ export function NewsletterSignup() {
                     aria-invalid={state === 'err'}
                     aria-describedby={state === 'err' ? 'newsletter-error' : undefined}
                     dir="ltr"
-                    className="min-w-0 flex-1 border-0 bg-transparent px-4 py-2 text-sm text-sea-900 placeholder:text-sea-900/40 outline-none"
+                    className="min-w-0 flex-1 border-0 bg-transparent px-4 py-2 text-sm text-sea-900 placeholder:text-ink-subtle outline-none"
                   />
                   <button
                     type="submit"

@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: {
 export default async function SinaiTripsPage() {
   const t = await getTranslations('sinai')
   const [trips, packages] = await Promise.all([getSinaiTrips(), getTripPackages()])
-  const heroImage = trips[0]?.images?.[0] || '/media/heroposter.png'
+  const heroImage = trips[0]?.images?.[0] || '/media/heroposter.webp'
 
   return (
     <div className="bg-sand-50">

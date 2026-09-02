@@ -7,17 +7,25 @@ export const WHATSAPP_NUMBER = '+201005744083'
 export const PHONE_NUMBER = '+201005744083'
 export const EMAIL = 'info@weemapsinai.com'
 
+// `icon` is a Lucide key, resolved by NAV_ICONS in the Header. Emoji were used
+// here before: they render differently on every platform, never take the brand
+// colour, and are read out literally by screen readers.
+//
+// `primary` marks the five revenue routes that sit directly in the desktop bar
+// from the `lg` breakpoint up. The rest live under a "More" menu on desktop and
+// in labelled groups in the mobile drawer — ten flat items was an overloaded
+// nav, and it collapsed entirely into a hamburger below 1280px.
 export const NAV_ITEMS: NavItem[] = [
-  { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: '🏠' },
-  { label_ar: 'احجز دهب', label_en: 'Book Dahab', href: '/book-dahab', icon: '📅' },
-  { label_ar: 'رحلات سيناء', label_en: 'Sinai Trips', href: '/sinai-trips', icon: '🏜️' },
-  { label_ar: 'Signature Experiences', label_en: 'Signature Experiences', href: '/signature', icon: '✨' },
-  { label_ar: 'المتجر', label_en: 'Merch', href: '/merch', icon: '🛍️' },
-  { label_ar: 'الإيجارات', label_en: 'Rental', href: '/rent', icon: '🚲' },
-  { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: '👥' },
-  { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: '🤝' },
-  { label_ar: 'عن الشركة', label_en: 'About Us', href: '/about', icon: '📖' },
-  { label_ar: 'السياسة والاسترداد', label_en: 'Policy & Refund', href: '/policy', icon: '📋' },
+  { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: 'home', group: 'plan' },
+  { label_ar: 'احجز دهب', label_en: 'Book Dahab', href: '/book-dahab', icon: 'bed', primary: true, group: 'plan' },
+  { label_ar: 'رحلات سيناء', label_en: 'Sinai Trips', href: '/sinai-trips', icon: 'mountain', primary: true, group: 'plan' },
+  { label_ar: 'Signature Experiences', label_en: 'Signature Experiences', href: '/signature', icon: 'sparkles', primary: true, group: 'plan' },
+  { label_ar: 'المتجر', label_en: 'Merch', href: '/merch', icon: 'bag', primary: true, group: 'shop' },
+  { label_ar: 'الإيجارات', label_en: 'Rental', href: '/rent', icon: 'bike', primary: true, group: 'shop' },
+  { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: 'users', group: 'weemap' },
+  { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: 'handshake', group: 'weemap' },
+  { label_ar: 'عن الشركة', label_en: 'About Us', href: '/about', icon: 'book', group: 'weemap' },
+  { label_ar: 'السياسة والاسترداد', label_en: 'Policy & Refund', href: '/policy', icon: 'shield', group: 'weemap' },
 ]
 
 export const NAV_LABEL_KEYS: Record<string, string> = {
@@ -39,7 +47,7 @@ export const SERVICES: ServiceItem[] = [
     title_en: 'The Full Trip',
     description_ar: 'انتقالات، إقامة، ورحلتين داخل سيناء — إنت بس تنزل من العربية.',
     description_en: 'Transportation, accommodation, and two day trips in Sinai - all you have to do is show up.',
-    icon: '🎯',
+    icon: 'target',
     href: '/book-dahab',
   },
   {
@@ -47,7 +55,7 @@ export const SERVICES: ServiceItem[] = [
     title_en: 'Accommodation Only',
     description_ar: 'كامب على البحر، شاليه هادي، أو فندق فخم — على مزاجك.',
     description_en: 'A camp on the sea, a quiet chalet, or a proper hotel — your call.',
-    icon: '🏨',
+    icon: 'hotel',
     href: '/book-dahab',
   },
   {
@@ -55,7 +63,7 @@ export const SERVICES: ServiceItem[] = [
     title_en: 'Transportation Only',
     description_ar: 'هايس خاص من محافظتك لدهب — مواعيدك إنت.',
     description_en: 'A private Hiace from your city to Dahab — on your schedule.',
-    icon: '🚐',
+    icon: 'van',
     href: '/book-dahab',
   },
   {
@@ -63,7 +71,7 @@ export const SERVICES: ServiceItem[] = [
     title_en: 'Sinai Adventures',
     description_ar: 'بلو هول، الوادي الملون، جبل موسى، سفاري — الأماكن اللي بتكسر روتين المدينة.',
     description_en: 'Blue Hole, Colored Canyon, Mt. Sinai, safari — places that break your routine.',
-    icon: '🏜️',
+    icon: 'mountain',
     href: '/sinai-trips',
   },
 ]

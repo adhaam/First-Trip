@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { HoneypotField } from '@/components/HoneypotField'
 import { Turnstile } from '@/components/Turnstile'
-import { trackEvent } from '@/lib/track'
+import { trackConversion, trackRequestFailure } from '@/lib/conversion'
 
 export function SignatureRequestForm({ experienceId }: { experienceId?: string }) {
   const t = useTranslations('signature')
@@ -48,11 +48,13 @@ export function SignatureRequestForm({ experienceId }: { experienceId?: string }
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error()
-      trackEvent(experienceId ? 'signature_request_submitted' : 'build_your_signature_submitted', {
-        experience_id: experienceId || 'custom',
-      })
+      trackConversion(
+        experienceId ? 'signature_request_submitted' : 'build_signature_request_submitted',
+        { content_type: 'signature', item_id: experienceId || 'custom', source: 'signature' },
+      )
       setSubmitted(true)
     } catch {
+      trackRequestFailure('signature', 'network')
       setError(t('requestFailed'))
     } finally {
       setSubmitting(false)
@@ -73,15 +75,15 @@ export function SignatureRequestForm({ experienceId }: { experienceId?: string }
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="full_name">{t('fullName')}</Label>
-          <Input id="full_name" name="full_name" required minLength={3} maxLength={100} className="mt-1" />
+          <Input id="full_name" name="full_name" autoComplete="name" required minLength={3} maxLength={100} className="mt-1" />
         </div>
         <div>
           <Label htmlFor="phone">{t('whatsapp')}</Label>
-          <Input id="phone" name="phone" dir="ltr" required minLength={10} maxLength={20} className="mt-1" />
+          <Input id="phone" name="phone" autoComplete="tel" dir="ltr" required minLength={10} maxLength={20} className="mt-1" />
         </div>
         <div>
           <Label htmlFor="email">{t('email')}</Label>
-          <Input id="email" name="email" type="email" dir="ltr" className="mt-1" />
+          <Input id="email" name="email" autoComplete="email" type="email" dir="ltr" className="mt-1" />
         </div>
         <div>
           <Label htmlFor="preferred_date">{t('preferredDate')}</Label>
@@ -107,11 +109,11 @@ export function SignatureRequestForm({ experienceId }: { experienceId?: string }
       <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
       <Turnstile onToken={setTurnstileToken} />
       {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-      <Button type="submit" disabled={submitting} className="w-full bg-weemap-orange hover:bg-sun-600">
+      <Button type="submit" variant="primary" size="touch-lg" disabled={submitting} className="w-full rounded-full">
         {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
         {submitting ? t('sending') : t('submit')}
       </Button>
-      <p className="text-center text-xs text-sea-900/45">{ar ? 'ده طلب مبدئي — مفيش تأكيد فوري.' : "This is a request, not an instant confirmation."}</p>
+      <p className="text-center text-xs text-ink-subtle">{ar ? 'ده طلب مبدئي — مفيش تأكيد فوري.' : "This is a request, not an instant confirmation."}</p>
     </form>
   )
 }

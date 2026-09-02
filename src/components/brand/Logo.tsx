@@ -10,6 +10,14 @@ const LOCKUP_HEIGHT: Record<LogoSize, string> = {
   xl: 'h-20 w-auto',
 }
 
+/** Rendered width hints so the optimiser can pick the right variant. */
+const LOCKUP_SIZES: Record<LogoSize, string> = {
+  sm: '68px',
+  md: '86px',
+  lg: '134px',
+  xl: '192px',
+}
+
 const MARK_SIZE: Record<LogoSize, string> = {
   sm: 'h-7 w-7',
   md: 'h-9 w-9',
@@ -40,11 +48,15 @@ export function Logo({
   const image =
     variant === 'lockup' ? (
       <Image
-        src="/brand/logo.png"
+        // 720x301 WebP (41 KB) rather than the 1800x752 PNG (304 KB) this used
+        // to load on every page for a lockup that renders 36-80px tall. Still
+        // 3x the largest rendered height, so it stays crisp on any display.
+        src="/brand/logo.webp"
         alt="WEEMAP SINAI"
-        width={1800}
-        height={752}
+        width={720}
+        height={301}
         priority={priority}
+        sizes={LOCKUP_SIZES[size]}
         className={cn(LOCKUP_HEIGHT[size], 'object-contain')}
       />
     ) : (
@@ -54,6 +66,7 @@ export function Logo({
         width={192}
         height={192}
         priority={priority}
+        sizes="192px"
         className={cn(MARK_SIZE[size], 'object-contain')}
       />
     )
