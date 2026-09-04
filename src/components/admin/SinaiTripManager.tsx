@@ -14,8 +14,18 @@ import {
 } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
-import { SinaiTrip, TripCategory } from '@/lib/types'
+import { SinaiTrip, TripCategory, TripDiscountType } from '@/lib/types'
+import { effectiveTripPrice } from '@/lib/pricing'
 import { cn } from '@/lib/utils'
+
+/** `<input type="datetime-local">` needs `YYYY-MM-DDTHH:mm` in local time. */
+function toLocalInputValue(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 const emptyTrip: Partial<SinaiTrip> = {
   name_ar: '', name_en: '',
@@ -25,6 +35,10 @@ const emptyTrip: Partial<SinaiTrip> = {
   duration: '', duration_en: '',
   price: 0,
   package_price: null,
+  discount_type: null,
+  discount_value: null,
+  discount_starts_at: null,
+  discount_ends_at: null,
   includes_ar: [], includes_en: [],
   sort_order: 0,
   is_active: true,
@@ -305,6 +319,90 @@ export function SinaiTripManager() {
                       : 'Used inside the package total when this trip is one of the two included trips.'}
                   </p>
                 </div>
+
+                {/* ─── Discount ─── applies to the public price only. */}
+                <div className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+                  <Label className="mb-3 block text-sm font-semibold">
+                    {locale === 'ar' ? 'الخصم' : 'Discount'}
+                  </Label>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label className="text-xs">{locale === 'ar' ? 'نوع الخصم' : 'Discount type'}</Label>
+                      <Select
+                        value={form.discount_type || 'none'}
+                        onValueChange={v => {
+                          if (!v) return
+                          // 'none' is a UI-only placeholder — a Select cannot
+                          // hold an empty value. It is stored as NULL, which
+                          // is what the DB CHECK constraint expects.
+                          const next = v === 'none' ? null : (v as TripDiscountType)
+                          setForm(prev => ({
+                            ...prev,
+                            discount_type: next,
+                            discount_value: next === null ? null : (prev.discount_value || 0),
+                          }))
+                        }}
+                      >
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{locale === 'ar' ? 'بدون خصم' : 'No discount'}</SelectItem>
+                          <SelectItem value="amount">{locale === 'ar' ? 'مبلغ ثابت (ج.م)' : 'Flat amount (EGP)'}</SelectItem>
+                          <SelectItem value="percentage">{locale === 'ar' ? 'نسبة مئوية (%)' : 'Percentage (%)'}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">
+                        {form.discount_type === 'percentage'
+                          ? (locale === 'ar' ? 'قيمة الخصم (%)' : 'Discount value (%)')
+                          : (locale === 'ar' ? 'قيمة الخصم (ج.م)' : 'Discount value (EGP)')}
+                      </Label>
+                      <Input
+                        type="number" min={0}
+                        max={form.discount_type === 'percentage' ? 100 : (form.price || undefined)}
+                        disabled={!form.discount_type}
+                        value={form.discount_value ?? ''}
+                        onChange={e => updateField('discount_value', Number(e.target.value) || 0)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label className="text-xs">
+                        {locale === 'ar' ? 'يبدأ في (اختياري)' : 'Starts at (optional)'}
+                      </Label>
+                      <Input
+                        type="datetime-local"
+                        disabled={!form.discount_type}
+                        value={toLocalInputValue(form.discount_starts_at)}
+                        onChange={e => updateField('discount_starts_at', e.target.value || null)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">
+                        {locale === 'ar' ? 'ينتهي في (اختياري)' : 'Ends at (optional)'}
+                      </Label>
+                      <Input
+                        type="datetime-local"
+                        disabled={!form.discount_type}
+                        value={toLocalInputValue(form.discount_ends_at)}
+                        onChange={e => updateField('discount_ends_at', e.target.value || null)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <DiscountPreview form={form} locale={locale} />
+
+                  <p className="mt-2 text-[11px] text-gray-500">
+                    {locale === 'ar'
+                      ? 'الخصم بيتطبق على السعر العام بس — سعر الباكدج مش بيتأثر. الحجوزات القديمة بتفضل بسعرها الأصلي.'
+                      : 'The discount applies to the public price only — package cost is unaffected. Existing bookings keep the price they were made at.'}
+                  </p>
+                </div>
                 <div className="md:col-span-2">
                   <Label className="mb-2 block">{locale === 'ar' ? 'صور الرحلة' : 'Trip Images'}</Label>
                   {/* Upload button */}
@@ -447,7 +545,20 @@ function TripRow({
       <TableCell>{locale === 'ar' ? t.category_ar : t.category_en}</TableCell>
       <TableCell>{locale === 'ar' ? t.duration : t.duration_en}</TableCell>
       <TableCell>
-        <div>{t.price?.toLocaleString()} ج.م</div>
+        {(() => {
+          const priced = effectiveTripPrice(t)
+          return priced.isDiscounted ? (
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[11px] text-gray-400 line-through">{priced.original.toLocaleString()}</span>
+              <span className="font-semibold text-green-700">{priced.final.toLocaleString()} ج.م</span>
+              <span className="rounded bg-green-100 px-1 text-[10px] font-semibold text-green-800">
+                −{priced.discountType === 'percentage' ? `${priced.discountValue}%` : priced.discountAmount.toLocaleString()}
+              </span>
+            </div>
+          ) : (
+            <div>{t.price?.toLocaleString()} ج.م</div>
+          )
+        })()}
         <div className={cn('text-[11px]', t.package_price == null ? 'text-amber-600' : 'text-gray-400')}>
           {t.package_price != null
             ? `${locale === 'ar' ? 'باكدج: ' : 'Pkg: '}${Number(t.package_price).toLocaleString()}`
@@ -482,5 +593,51 @@ function TripRow({
     >
       {row}
     </Reorder.Item>
+  )
+}
+
+/**
+ * Live "what the customer will actually pay" readout for the discount block.
+ * Runs the same effectiveTripPrice() the server prices with, so the admin
+ * can never see a preview that disagrees with the real charge — including
+ * the clamps for an over-100% or over-price value.
+ */
+function DiscountPreview({ form, locale }: { form: Partial<SinaiTrip>; locale: string }) {
+  const ar = locale === 'ar'
+  const priced = effectiveTripPrice({
+    price: Number(form.price) || 0,
+    discount_type: form.discount_type,
+    discount_value: form.discount_value,
+    discount_starts_at: form.discount_starts_at,
+    discount_ends_at: form.discount_ends_at,
+  })
+
+  if (!priced.isDiscounted) {
+    // Distinguish "no discount configured" from "configured but not live yet",
+    // otherwise a scheduled discount looks like it silently failed to save.
+    const configured = Boolean(form.discount_type) && Number(form.discount_value) > 0
+    return (
+      <p className="mt-3 text-xs text-gray-500">
+        {configured
+          ? (ar
+              ? 'الخصم متسجّل بس مش فعّال دلوقتي (بره فترة التواريخ المحددة).'
+              : 'Discount saved but not active right now (outside the configured date window).')
+          : (ar ? 'مفيش خصم — العميل هيدفع السعر العام.' : 'No discount — the customer pays the public price.')}
+      </p>
+    )
+  }
+
+  const fmt = (n: number) => n.toLocaleString(ar ? 'ar-EG' : 'en-US')
+  return (
+    <div className="mt-3 flex flex-wrap items-baseline gap-2 rounded-md bg-white px-3 py-2 text-sm">
+      <span className="text-gray-400 line-through">{fmt(priced.original)}</span>
+      <span className="text-lg font-bold text-green-700">{fmt(priced.final)} {ar ? 'ج.م' : 'EGP'}</span>
+      <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
+        −{priced.discountType === 'percentage' ? `${priced.discountValue}%` : `${fmt(priced.discountAmount)} ${ar ? 'ج.م' : 'EGP'}`}
+      </span>
+      <span className="text-xs text-gray-500">
+        {ar ? `يوفّر ${fmt(priced.discountAmount)} ج.م للفرد` : `Saves ${fmt(priced.discountAmount)} EGP per person`}
+      </span>
+    </div>
   )
 }

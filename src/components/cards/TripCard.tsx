@@ -8,6 +8,7 @@ import { GlowCard } from '@/components/motion/Reveal'
 import { cn } from '@/lib/utils'
 import { getTripRouteSlug } from '@/lib/trips'
 import type { SinaiTrip } from '@/lib/types'
+import { effectiveTripPrice } from '@/lib/pricing'
 import { Price } from '@/components/Price'
 
 export function TripCard({
@@ -32,6 +33,7 @@ export function TripCard({
   const category = ar ? trip.category_ar : trip.category_en
   const href = `/sinai-trips/${getTripRouteSlug(trip)}`
   const detail = useTranslations('tripDetail')
+  const priced = effectiveTripPrice(trip)
 
   return (
     <GlowCard className={cn('h-full', className)}>
@@ -89,7 +91,8 @@ export function TripCard({
 
           <div className="mt-auto flex items-center justify-between gap-3 pt-5">
             <Price
-              amount={Number(trip.price)}
+              amount={priced.final}
+              originalAmount={priced.original}
               label={common('from')}
               unit={common('perPerson')}
               size="md"

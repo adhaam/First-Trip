@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -8,13 +8,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Plus, ChevronUp, FileText } from 'lucide-react'
+import { Loader2, Plus, ChevronUp, FileText, Banknote } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { effectiveTripPrice } from '@/lib/pricing'
+import type { TripDiscountType } from '@/lib/types'
 import { InvoiceViewer } from './InvoiceViewer'
 
 type TripBookingStatus = 'new' | 'contacted' | 'confirmed' | 'completed' | 'cancelled'
 
-interface SinaiTrip { id: string; name_ar: string; name_en: string }
+interface SinaiTrip {
+  id: string
+  name_ar: string
+  name_en: string
+  price: number
+  discount_type?: TripDiscountType | null
+  discount_value?: number | null
+  discount_starts_at?: string | null
+  discount_ends_at?: string | null
+}
 
 interface TripBooking {
   id: string
@@ -47,7 +58,14 @@ const STATUS_LABELS_EN: Record<TripBookingStatus, string> = {
   new: 'New', contacted: 'Contacted', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
 }
 
-const EMPTY_FORM = { customer_name: '', customer_phone: '', trip_id: '', preferred_date: '', num_people: 1, quoted_price: '' }
+const EMPTY_FORM = {
+  customer_name: '', customer_phone: '', trip_id: '', preferred_date: '',
+  num_people: 1,
+  quoted_price: '',
+  /** Employee took manual control — stops the calculated price overwriting it. */
+  price_override: false,
+  price_override_reason: '',
+}
 
 export function TripBookingsManager() {
   const locale = useLocale()
@@ -104,6 +122,24 @@ export function TripBookingsManager() {
     })
   }
 
+  // The trips list is already in state, so the price is derived synchronously
+  // from the same effectiveTripPrice() the server will charge with — no
+  // request, no debounce, and no way for the preview to drift from the total.
+  const calculated = useMemo(() => {
+    const trip = trips.find((t) => t.id === form.trip_id)
+    if (!trip) return null
+    const priced = effectiveTripPrice(trip)
+    const people = Math.max(1, Number(form.num_people) || 1)
+    return { priced, people, total: priced.final * people }
+  }, [trips, form.trip_id, form.num_people])
+
+  // Derived, never mirrored into state: the calculated total IS the price
+  // unless the employee has taken manual control. Two stored copies of the
+  // same number is how a stale total reaches a booking.
+  const effectivePrice = form.price_override
+    ? (form.quoted_price ? Number(form.quoted_price) : null)
+    : (calculated?.total ?? null)
+
   const createBooking = async () => {
     setFormError('')
     if (!form.customer_name.trim() || !form.customer_phone.trim() || !form.trip_id) {
@@ -121,7 +157,17 @@ export function TripBookingsManager() {
           trip_id: form.trip_id,
           preferred_date: form.preferred_date || null,
           num_people: form.num_people,
-          quoted_price: form.quoted_price ? Number(form.quoted_price) : null,
+          // Only sent on an explicit override; otherwise the server prices
+          // the booking from the trip's own row and this is ignored anyway.
+          ...(form.price_override
+            ? {
+                price_override: true,
+                quoted_price: effectivePrice,
+                ...(form.price_override_reason
+                  ? { price_override_reason: form.price_override_reason }
+                  : {}),
+              }
+            : {}),
         }),
       })
       const data = await res.json()
@@ -205,15 +251,104 @@ export function TripBookingsManager() {
                   onChange={(e) => setForm((f) => ({ ...f, num_people: Number(e.target.value) }))}
                 />
               </div>
-              <div>
-                <Label className="mb-1 block text-xs">{ar ? 'السعر المقترح (ج.م)' : 'Quoted price (EGP)'}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  placeholder={ar ? 'اختياري' : 'Optional'}
-                  value={form.quoted_price}
-                  onChange={(e) => setForm((f) => ({ ...f, quoted_price: e.target.value }))}
-                />
+              <div className="sm:col-span-2">
+                <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-3">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <Label className="flex items-center gap-2 text-xs font-semibold">
+                      <Banknote className="h-3.5 w-3.5" />
+                      {ar ? 'السعر المحسوب تلقائياً' : 'Auto-calculated price'}
+                    </Label>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={form.price_override}
+                        onChange={(e) => setForm((f) => ({
+                          ...f,
+                          price_override: e.target.checked,
+                          // Seed the manual field from the calculated total so
+                          // the employee edits a real number, not an empty box.
+                          quoted_price: e.target.checked
+                            ? (f.quoted_price || (calculated ? String(calculated.total) : ''))
+                            : '',
+                          price_override_reason: e.target.checked ? f.price_override_reason : '',
+                        }))}
+                        className="h-3.5 w-3.5 accent-amber-600"
+                      />
+                      {ar ? 'تعديل السعر يدوياً' : 'Set the price manually'}
+                    </label>
+                  </div>
+
+                  {!calculated ? (
+                    <p className="text-xs text-gray-500">
+                      {ar ? 'اختر رحلة عشان السعر يتحسب.' : 'Pick a trip to calculate the price.'}
+                    </p>
+                  ) : (
+                    <>
+                      <div className="text-xs text-gray-600">
+                        {calculated.priced.isDiscounted ? (
+                          <>
+                            <span className="text-gray-400 line-through">
+                              {calculated.priced.original.toLocaleString()}
+                            </span>{' '}
+                            <span className="font-semibold text-green-700">
+                              {calculated.priced.final.toLocaleString()}
+                            </span>{' '}
+                            {ar ? 'ج.م للفرد' : 'EGP per person'}
+                            <span className="ms-1 rounded bg-green-100 px-1 text-[10px] font-semibold text-green-800">
+                              −{calculated.priced.discountType === 'percentage'
+                                ? `${calculated.priced.discountValue}%`
+                                : calculated.priced.discountAmount.toLocaleString()}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {calculated.priced.final.toLocaleString()} {ar ? 'ج.م للفرد' : 'EGP per person'}
+                          </>
+                        )}
+                        {' × '}{calculated.people}
+                      </div>
+                      <div className="mt-1 flex items-baseline justify-between">
+                        <span className="text-xs font-semibold text-gray-700">
+                          {ar ? 'الإجمالي المحسوب' : 'Calculated total'}
+                        </span>
+                        <span className={cn(
+                          'text-base font-bold tabular-nums',
+                          form.price_override && Number(form.quoted_price) !== calculated.total
+                            ? 'text-gray-400 line-through'
+                            : 'text-gray-900',
+                        )}>
+                          {calculated.total.toLocaleString()} {ar ? 'ج.م' : 'EGP'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {form.price_override && (
+                    <div className="mt-2 space-y-2 border-t border-gray-200 pt-2">
+                      <div>
+                        <Label className="mb-1 block text-xs">
+                          {ar ? 'السعر النهائي المتفق عليه (ج.م)' : 'Agreed final price (EGP)'}
+                        </Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.quoted_price}
+                          onChange={(e) => setForm((f) => ({ ...f, quoted_price: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1 block text-xs">
+                          {ar ? 'سبب التعديل (اختياري)' : 'Reason for the override (optional)'}
+                        </Label>
+                        <Input
+                          value={form.price_override_reason}
+                          placeholder={ar ? 'مثلاً: عميل دائم' : 'e.g. returning customer'}
+                          onChange={(e) => setForm((f) => ({ ...f, price_override_reason: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             {formError && <p className="text-xs text-red-600 font-medium">{formError}</p>}

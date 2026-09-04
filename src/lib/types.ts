@@ -7,6 +7,13 @@ export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded'
 export type BookingSource =
   | 'website' | 'manual' | 'whatsapp' | 'instagram' | 'facebook' | 'referral' | 'other'
 export type TripDuration = 4 | 5
+/**
+ * Discount kinds. Matches the convention already established for Signature
+ * Experiences (see lib/experience-pricing.ts) and the shape the DB enforces:
+ * a CHECK constraint allows only 'amount' | 'percentage', and NULL means no
+ * discount. Do NOT introduce a 'none' sentinel — NULL is the absence.
+ */
+export type TripDiscountType = 'amount' | 'percentage'
 export type PostCategory =
   | 'stories'
   | 'dahab-guide'
@@ -202,6 +209,16 @@ export interface SinaiTrip {
    * in src/lib/pricing.ts).
    */
   package_price?: number | null
+  /**
+   * Discount on the public `price` only (migration 022) — `package_price` is
+   * never discounted. Resolve with effectiveTripPrice() in lib/pricing.ts;
+   * never apply the percentage or subtraction inline at a call site.
+   */
+  discount_type?: TripDiscountType | null
+  discount_value?: number | null
+  /** Optional window. NULL start = already active, NULL end = no expiry. */
+  discount_starts_at?: string | null
+  discount_ends_at?: string | null
   includes_ar: string[]
   includes_en: string[]
   /** Admin-controlled display order. Lower = shown first. Added in migration 012. */
@@ -364,7 +381,18 @@ export interface PriceSnapshot {
   meal_plan_key?: string
   meal_plan_price_per_person_per_night?: number
   meal_subtotal?: number
-  extra_trips?: { trip_id: string; name_en: string; price: number }[]
+  /**
+   * `price` is what was actually charged per person (post-discount). The two
+   * discount fields are present only when a discount applied, so the invoice
+   * can show the customer the saving instead of a silently lower number.
+   */
+  extra_trips?: {
+    trip_id: string
+    name_en: string
+    price: number
+    price_before_discount?: number
+    discount_per_person?: number
+  }[]
   extra_trips_subtotal?: number
   /**
    * Trip Packages selected at booking time (migration 017). Each entry's
@@ -375,6 +403,46 @@ export interface PriceSnapshot {
   trip_packages_subtotal?: number
   num_people?: number
   total: number
+  /**
+   * Set when an admin deliberately replaced the computed total for an
+   * exceptional case. `total` then holds the agreed amount and
+   * `computed_total` what the pricing engine had produced — the components
+   * above still describe the booking, so the invoice stays itemised and the
+   * difference remains auditable instead of vanishing into one number.
+   */
+  price_override?: boolean
+  computed_total?: number
+  price_override_reason?: string
+  computed_at: string
+}
+
+/**
+ * Frozen pricing for a single-trip booking (migration 022). Same "never
+ * re-derive" contract as PriceSnapshot: a discount that later changes or
+ * expires must not move the price of a booking already made.
+ */
+export interface TripBookingPriceSnapshot {
+  /** Undiscounted public price, per person. */
+  unit_price_before_discount: number
+  /** What came off each person's price. 0 when no discount applied. */
+  discount_per_person: number
+  /** Null when no discount applied — never a 'none' sentinel. */
+  discount_type: TripDiscountType | null
+  /** Percentage points when type is 'percentage', EGP when 'amount'. */
+  discount_value: number
+  /** unit_price_before_discount - discount_per_person. */
+  unit_price: number
+  num_people: number
+  /** unit_price * num_people, unless an admin overrode it — see below. */
+  total: number
+  /**
+   * Set when an admin replaced the calculated total. The per-person figures
+   * above still describe how the trip was priced, so the invoice stays
+   * itemised and the gap remains auditable.
+   */
+  price_override?: boolean
+  computed_total?: number
+  price_override_reason?: string
   computed_at: string
 }
 

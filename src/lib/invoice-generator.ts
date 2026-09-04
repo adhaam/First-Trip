@@ -1,5 +1,17 @@
 import type { SiteSettings } from '@/lib/types'
 
+/**
+ * One "what did I book" fact, shown above the charges table. Bilingual pairs
+ * rather than keys, because a value can be a translated label (a room type,
+ * a transfer direction) as easily as a raw number.
+ */
+export interface InvoiceDetail {
+  label_ar: string
+  label_en: string
+  value_ar: string
+  value_en: string
+}
+
 export interface InvoiceData {
   type: 'request' | 'confirmation'
   invoiceNumber: string
@@ -7,16 +19,30 @@ export interface InvoiceData {
   customerPhone: string
   customerEmail?: string
   orderDate: string
+  /**
+   * The booking's own facts — party size, dates, transfer type and
+   * direction, room and nights, meal plan. Without these an invoice shows a
+   * price with nothing to justify it, which is exactly how a 5-person
+   * transfer-only booking ended up reading as "Accommodation, qty 2".
+   */
+  details?: InvoiceDetail[]
   items: Array<{
     description_ar: string
     description_en: string
     quantity: number
     unitPrice: number
+    /** How the amount was reached, e.g. "5 people x 950 EGP x 2 legs". */
+    meta_ar?: string
+    meta_en?: string
   }>
   subtotal: number
   deliveryFee?: number
+  /** Shown as its own deducted row when a discount applied to this booking. */
+  discount?: { label_ar: string; label_en: string; amount: number }
   depositAmount?: number
   totalAmount: number
+  /** Actually received so far — drives the paid / balance-due rows. */
+  amountPaid?: number
   notes?: string
   locale: 'ar' | 'en'
   settings: SiteSettings | null
@@ -185,6 +211,48 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     .summary-row.deposit label {
       color: #666;
     }
+    .booking-details {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      background: #fcfcfc;
+    }
+    .booking-details h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px 24px;
+    }
+    .detail-item .detail-label {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 2px;
+    }
+    .detail-item .detail-value {
+      font-size: 14px;
+      color: #1a1a1a;
+      font-weight: 600;
+    }
+    .item-meta {
+      display: block;
+      margin-top: 3px;
+      font-size: 11px;
+      color: #888;
+      font-weight: 400;
+    }
+    .summary-row.discount span:last-child {
+      color: #15803d;
+    }
+    .summary-row.balance {
+      font-weight: 700;
+    }
     .notes-section {
       background: #fef9f3;
       border-left: 4px solid #f0a000;
@@ -259,6 +327,10 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       .customer-section {
         grid-template-columns: 1fr;
         gap: 20px;
+      }
+      .detail-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 16px;
       }
       .summary {
         width: 100%;
@@ -336,6 +408,20 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       </div>
     </div>
 
+    ${data.details && data.details.length > 0 ? `
+    <div class="booking-details">
+      <h4>${isAr ? 'تفاصيل الحجز' : 'Booking Details'}</h4>
+      <div class="detail-grid">
+        ${data.details.map(d => `
+        <div class="detail-item">
+          <div class="detail-label">${isAr ? d.label_ar : d.label_en}</div>
+          <div class="detail-value">${isAr ? d.value_ar : d.value_en}</div>
+        </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+
     <table>
       <thead>
         <tr>
@@ -348,7 +434,12 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       <tbody>
         ${data.items.map(item => `
         <tr>
-          <td>${isAr ? item.description_ar : item.description_en}</td>
+          <td>
+            ${isAr ? item.description_ar : item.description_en}
+            ${(isAr ? item.meta_ar : item.meta_en)
+              ? `<span class="item-meta">${isAr ? item.meta_ar : item.meta_en}</span>`
+              : ''}
+          </td>
           <td class="qty">${item.quantity}</td>
           <td class="price">${item.unitPrice.toFixed(2)} EGP</td>
           <td class="price"><strong>${(item.quantity * item.unitPrice).toFixed(2)} EGP</strong></td>
@@ -368,6 +459,12 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         <span>${data.deliveryFee.toFixed(2)} EGP</span>
       </div>
       ` : ''}
+      ${data.discount && data.discount.amount > 0 ? `
+      <div class="summary-row discount">
+        <span>${isAr ? data.discount.label_ar : data.discount.label_en}:</span>
+        <span>− ${data.discount.amount.toFixed(2)} EGP</span>
+      </div>
+      ` : ''}
       ${data.type === 'confirmation' && data.depositAmount ? `
       <div class="summary-row deposit">
         <span>${isAr ? 'المبلغ المتفق عليه (مقدم)' : 'Agreed Amount (Deposit)'}:</span>
@@ -378,6 +475,16 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         <span>${data.type === 'request' ? (isAr ? 'الإجمالي المتوقع' : 'Expected Total') : (isAr ? 'المبلغ الواجب' : 'Amount Due')}:</span>
         <span>${data.totalAmount.toFixed(2)} EGP</span>
       </div>
+      ${data.amountPaid && data.amountPaid > 0 ? `
+      <div class="summary-row deposit">
+        <span>${isAr ? 'المدفوع' : 'Paid'}:</span>
+        <span>${data.amountPaid.toFixed(2)} EGP</span>
+      </div>
+      <div class="summary-row balance">
+        <span>${isAr ? 'المتبقي' : 'Balance Due'}:</span>
+        <span>${Math.max(0, data.totalAmount - data.amountPaid).toFixed(2)} EGP</span>
+      </div>
+      ` : ''}
     </div>
 
     ${data.notes ? `

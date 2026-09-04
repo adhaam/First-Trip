@@ -10,6 +10,7 @@ import { getSinaiTripById, getSinaiTrips, getSiteSettings } from '@/lib/data'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getTripIdFromRouteSlug, getTripRouteSlug } from '@/lib/trips'
+import { effectiveTripPrice } from '@/lib/pricing'
 
 export const revalidate = 60
 
@@ -167,11 +168,27 @@ export default async function SinaiTripDetailPage({ params }: PageProps) {
                   )}
                 </dl>
               )}
-              {Number.isFinite(Number(trip.price)) && Number(trip.price) > 0 && (
-                <p className="mt-4 text-sm font-semibold text-sea-900">
-                  {ar ? 'من' : 'From'} {Number(trip.price).toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')} {common('egp')} / {ar ? 'شخص' : 'person'}
-                </p>
-              )}
+              {(() => {
+                const priced = effectiveTripPrice(trip)
+                if (!(priced.final > 0)) return null
+                const num = (n: number) => n.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')
+                return (
+                  <p className="mt-4 flex flex-wrap items-baseline gap-2 text-sm font-semibold text-sea-900">
+                    <span>{ar ? 'من' : 'From'}</span>
+                    {priced.isDiscounted && (
+                      <span className="font-normal text-ink-subtle line-through">{num(priced.original)}</span>
+                    )}
+                    <span>{num(priced.final)} {common('egp')} / {ar ? 'شخص' : 'person'}</span>
+                    {priced.isDiscounted && (
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-semibold text-emerald-800">
+                        {priced.discountType === 'percentage'
+                          ? `−${num(priced.discountValue)}%`
+                          : (ar ? `وفّر ${num(priced.discountAmount)} ج.م` : `Save ${num(priced.discountAmount)} EGP`)}
+                      </span>
+                    )}
+                  </p>
+                )
+              })()}
               <div className="mt-6 border-t border-sand-200 pt-6">
                 <TripBookingForm
                   tripId={trip.id}

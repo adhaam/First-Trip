@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
 import { verifyTurnstile } from '@/lib/turnstile'
 import { getTripPackagesForPricing } from '@/lib/trip-packages'
+import { buildTripPriceSnapshot, effectiveTripPrice } from '@/lib/pricing'
 
 // Simple in-memory rate limit, consistent with /api/bookings.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { data: trip } = await supabase
         .from('sinai_trips')
-        .select('id, price, is_active')
+        .select('id, price, is_active, discount_type, discount_value, discount_starts_at, discount_ends_at')
         .eq('id', validated.data.trip_id)
         .maybeSingle()
       if (!trip || !trip.is_active) {
@@ -131,12 +132,17 @@ export async function POST(req: NextRequest) {
       }
 
       // Quoted price is always server-derived — never trusted from the client.
-      const quotedPrice = Number(trip.price) * validated.data.num_people
+      // Any active discount is applied here and FROZEN into price_snapshot:
+      // changing or ending the discount later must not move this booking's
+      // price (same contract as buildPriceSnapshot in lib/pricing.ts).
+      const priced = effectiveTripPrice(trip)
+      const quotedPrice = priced.final * validated.data.num_people
       insertRow = {
         ...insertBase,
         trip_id: validated.data.trip_id,
         context: 'standalone',
         quoted_price: quotedPrice,
+        price_snapshot: buildTripPriceSnapshot(priced, validated.data.num_people),
       }
     }
 

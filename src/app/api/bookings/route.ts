@@ -257,11 +257,19 @@ async function priceBooking(input: BookingInput): Promise<PricingResult> {
     if (extraIds.length > 0) {
       const { data: trips } = await supabase
         .from('sinai_trips')
-        .select('id, name_en, price')
+        .select('id, name_en, price, discount_type, discount_value, discount_starts_at, discount_ends_at')
         .in('id', extraIds)
-      extraTrips = (trips || []).map((t) => (
-        { id: t.id, name_en: t.name_en, price: Number(t.price) || 0 }
-      ))
+      // Discount fields ride along so extraTripCost() can apply an active
+      // discount, and buildPriceSnapshot() freezes the result.
+      extraTrips = (trips || []).map((t) => ({
+        id: t.id,
+        name_en: t.name_en,
+        price: Number(t.price) || 0,
+        discount_type: t.discount_type,
+        discount_value: t.discount_value,
+        discount_starts_at: t.discount_starts_at,
+        discount_ends_at: t.discount_ends_at,
+      }))
     }
 
     // Trip Packages — server-side authoritative pricing + duplicate protection.

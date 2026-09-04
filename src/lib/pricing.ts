@@ -19,6 +19,8 @@ import type {
   TransferPricing,
   TransferSettings,
   TransferType,
+  TripBookingPriceSnapshot,
+  TripDiscountType,
 } from './types'
 
 // ─── Day-of-week rules ───
@@ -358,6 +360,122 @@ export interface TripPriceInput {
   name_en: string
   price: number
   package_price?: number | null
+  /** Discount fields (migration 022). Absent = no discount. */
+  discount_type?: TripDiscountType | null
+  discount_value?: number | null
+  discount_starts_at?: string | null
+  discount_ends_at?: string | null
+}
+
+export type { TripDiscountType }
+
+export interface TripDiscountInput {
+  price: number
+  discount_type?: TripDiscountType | null
+  discount_value?: number | null
+  discount_starts_at?: string | null
+  discount_ends_at?: string | null
+}
+
+export interface EffectiveTripPrice {
+  /** The trip's undiscounted public price. */
+  original: number
+  /** How much came off. 0 when no discount applies. */
+  discountAmount: number
+  /** original - discountAmount, never below 0. */
+  final: number
+  isDiscounted: boolean
+  /**
+   * Echoed back so callers can freeze it into a snapshot without re-reading
+   * the trip. Null when no discount applied — NULL is the absence of a
+   * discount throughout, there is no 'none' sentinel.
+   */
+  discountType: TripDiscountType | null
+  discountValue: number
+}
+
+/**
+ * The ONLY place a Sinai Trip discount is resolved to a price.
+ *
+ * Applies to the public `price` only — `package_price` is never discounted
+ * (a Trip Package carries its own bundle pricing, and the free Dahab-package
+ * trips cost 0 either way). See migration 022 for the full contract.
+ *
+ * Invalid config is treated as "no discount" rather than throwing, so a bad
+ * row can never take a booking flow down: a percent outside 0-100, a
+ * negative value, or a flat amount larger than the price all clamp safely.
+ *
+ * `now` is injectable so callers can price against a booking date and so the
+ * window logic stays testable.
+ */
+export function effectiveTripPrice(
+  trip: TripDiscountInput,
+  now: Date = new Date(),
+): EffectiveTripPrice {
+  const original = Math.max(0, Number(trip.price) || 0)
+  const type = trip.discount_type ?? null
+  const rawValue = Number(trip.discount_value) || 0
+
+  const none: EffectiveTripPrice = {
+    original,
+    discountAmount: 0,
+    final: original,
+    isDiscounted: false,
+    discountType: null,
+    discountValue: 0,
+  }
+
+  if (type !== 'amount' && type !== 'percentage') return none
+  if (rawValue <= 0) return none
+  if (!isDiscountWindowOpen(trip, now)) return none
+
+  const value = type === 'percentage' ? Math.min(100, rawValue) : rawValue
+  const rawDiscount = type === 'percentage' ? (original * value) / 100 : value
+  // Round to piastres so a percentage can't produce sub-currency drift that
+  // makes an invoice's line items fail to sum to its total.
+  const discountAmount = Math.min(original, Math.round(rawDiscount * 100) / 100)
+
+  if (discountAmount <= 0) return none
+
+  return {
+    original,
+    discountAmount,
+    final: Math.max(0, Math.round((original - discountAmount) * 100) / 100),
+    isDiscounted: true,
+    discountType: type,
+    discountValue: value,
+  }
+}
+
+/**
+ * Freeze a resolved trip price into the shape stored on
+ * trip_bookings.price_snapshot, so the invoice can show the customer the
+ * per-person price, the discount, and the party size that produced the total.
+ */
+export function buildTripPriceSnapshot(
+  priced: EffectiveTripPrice,
+  numPeople: number,
+): TripBookingPriceSnapshot {
+  const people = Math.max(1, Math.floor(numPeople) || 1)
+  return {
+    unit_price_before_discount: priced.original,
+    discount_per_person: priced.discountAmount,
+    discount_type: priced.discountType,
+    discount_value: priced.discountValue,
+    unit_price: priced.final,
+    num_people: people,
+    total: priced.final * people,
+    computed_at: new Date().toISOString(),
+  }
+}
+
+/** Both bounds optional: NULL start = always started, NULL end = never expires. */
+function isDiscountWindowOpen(trip: TripDiscountInput, now: Date): boolean {
+  const startsAt = trip.discount_starts_at ? new Date(trip.discount_starts_at) : null
+  const endsAt = trip.discount_ends_at ? new Date(trip.discount_ends_at) : null
+  if (startsAt && !Number.isNaN(startsAt.getTime()) && now < startsAt) return false
+  if (endsAt && !Number.isNaN(endsAt.getTime()) && now > endsAt) return false
+  return true
 }
 
 /**
@@ -370,9 +488,13 @@ export function includedTripCost(_trip: TripPriceInput): number {
   return 0
 }
 
-/** Extra (customer-added) trips are always charged at the normal public price. */
-export function extraTripCost(trip: TripPriceInput): number {
-  return Number(trip.price) || 0
+/**
+ * Extra (customer-added) trips are charged at the public price, after any
+ * active discount. This is the single charging path for a trip that is not
+ * one of the free included ones.
+ */
+export function extraTripCost(trip: TripPriceInput, now?: Date): number {
+  return effectiveTripPrice(trip, now).final
 }
 
 // ─── Trip Package pricing ───
@@ -642,11 +764,22 @@ export function buildPriceSnapshot(
     ...(input.mealPlanKey ? { meal_plan_key: input.mealPlanKey } : {}),
     meal_plan_price_per_person_per_night: Number(input.mealPlanPricePerNight) || 0,
     meal_subtotal: quote.mealSubtotal,
-    extra_trips: input.extraTrips.map((t) => ({
-      trip_id: t.id,
-      name_en: t.name_en,
-      price: extraTripCost(t),
-    })),
+    extra_trips: input.extraTrips.map((t) => {
+      const priced = effectiveTripPrice(t)
+      return {
+        trip_id: t.id,
+        name_en: t.name_en,
+        price: priced.final,
+        // Only carried when a discount actually applied — an undiscounted
+        // trip must not render a redundant "was X, now X" on the invoice.
+        ...(priced.isDiscounted
+          ? {
+              price_before_discount: priced.original,
+              discount_per_person: priced.discountAmount,
+            }
+          : {}),
+      }
+    }),
     extra_trips_subtotal: quote.extraTripsSubtotal,
     num_people: quote.numPeople,
     total: quote.total,
@@ -695,7 +828,16 @@ export function buildStaySnapshot(
 
 // Keep the SinaiTrip type import in play for callers that pass whole trips.
 export function toTripPriceInput(trip: SinaiTrip): TripPriceInput {
-  return { id: trip.id, name_en: trip.name_en, price: trip.price, package_price: trip.package_price }
+  return {
+    id: trip.id,
+    name_en: trip.name_en,
+    price: trip.price,
+    package_price: trip.package_price,
+    discount_type: trip.discount_type,
+    discount_value: trip.discount_value,
+    discount_starts_at: trip.discount_starts_at,
+    discount_ends_at: trip.discount_ends_at,
+  }
 }
 
 export interface StayQuoteInput {

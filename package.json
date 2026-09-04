@@ -8,17 +8,18 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/pricing.test.ts src/lib/trips.test.ts src/lib/ai-contract.test.ts src/lib/room-upgrades.test.ts src/lib/customer.test.ts src/lib/rental-pricing.test.ts src/lib/cart.test.ts src/lib/search.test.ts src/lib/experience-pricing.test.ts src/lib/trip-packages.test.ts src/lib/format.test.ts src/lib/conversion.test.ts",
+    "test": "tsx --test src/lib/pricing.test.ts src/lib/trips.test.ts src/lib/ai-contract.test.ts src/lib/room-upgrades.test.ts src/lib/customer.test.ts src/lib/rental-pricing.test.ts src/lib/cart.test.ts src/lib/search.test.ts src/lib/experience-pricing.test.ts src/lib/trip-packages.test.ts src/lib/format.test.ts src/lib/conversion.test.ts src/lib/trip-discounts.test.ts src/lib/invoice.test.ts src/lib/invoice-items.test.ts",
     "test:upgrades": "tsx --test src/lib/room-upgrades.test.ts",
     "test:pricing": "tsx --test src/lib/pricing.test.ts",
     "test:trips": "tsx --test src/lib/trips.test.ts",
     "test:ai": "tsx --test src/lib/ai-contract.test.ts",
     "test:customer": "tsx --test src/lib/customer.test.ts",
     "test:rental-pricing": "tsx --test src/lib/rental-pricing.test.ts",
-    "test:invoice": "tsx --test src/lib/invoice.test.ts",
+    "test:invoice": "tsx --test src/lib/invoice.test.ts src/lib/invoice-items.test.ts",
     "check:translations": "tsx scripts/check-translations.ts",
     "test:format": "tsx --test src/lib/format.test.ts",
-    "test:conversion": "tsx --test src/lib/conversion.test.ts"
+    "test:conversion": "tsx --test src/lib/conversion.test.ts",
+    "test:discounts": "tsx --test src/lib/trip-discounts.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -1,38 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { getTransferPricing, getAccommodationById } from '@/lib/data'
-import { getSupabaseAdmin } from '@/lib/supabase'
-import {
-  quotePackageV2,
-  quoteTransfer,
-  upgradeSubtotal,
-  nightsForDuration,
-  baseNightlyRoomRate,
-  accommodationSubtotal,
-  resolveNightlyRates,
-  roomsForPeople,
-  includedTripCost,
-  extraTripCost,
-  validateAndPriceTripPackages,
-} from '@/lib/pricing'
-import type { MealPlan, RoomUpgrade } from '@/lib/types'
-import type { TripPriceInput } from '@/lib/pricing'
-import { getTripPackagesForPricing } from '@/lib/trip-packages'
+import { computeQuote, quoteSchema } from '@/lib/quote-service'
 
 // ─── calculate_package_quote ──────────────────────────────────────────────────
 //
-// Narrow server-side quote endpoint. Returns a fully-computed price breakdown
+// Narrow public quote endpoint. Returns a fully-computed price breakdown
 // WITHOUT creating a booking or touching any mutable state.
 //
 // Designed for:
 //   - Ask WEEMAP AI chat (n8n will wire this in a later pass)
 //   - Any other server-to-server price query
 //
+// The pricing itself lives in lib/quote-service.ts, shared with the admin
+// preview endpoint and the manual-booking creation route so a quote, the
+// number the dashboard shows an employee, and the amount actually stored on
+// a booking can never disagree.
+//
 // Security contract (same as /api/bookings):
 //   - Server fetches all prices from DB — client prices are IGNORED
 //   - upgrade_id is validated against the accommodation's upgrade list
 //   - Fake client supplements have zero effect
 //   - Internal pricing config (DB rows) is never returned
+//
+// This route responds with the quote's legacy body only — the normalised
+// line breakdown and the persistable snapshot stay server-side.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -56,59 +46,6 @@ function rateLimit(ip: string): boolean {
   return true
 }
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
-
-const quoteSchema = z.object({
-  booking_type: z.enum(['package', 'accommodation-only', 'transfer-only']),
-
-  // Accommodation (required for package and accommodation-only)
-  accommodation_id: z.string().uuid().optional(),
-
-  // Package-specific
-  duration: z.union([z.literal(4), z.literal(5)]).optional(),
-  extra_trip_ids: z.array(z.string().uuid()).optional(),
-  trip_package_ids: z.array(z.string().uuid()).optional(),
-
-  // Accommodation-only
-  nights: z.number().int().min(1).max(30).optional(),
-
-  // Shared dates
-  start_date: isoDate,
-
-  // Transfer
-  transfer_type: z.enum(['package_bus', 'hiace']).optional(),
-  transfer_direction: z.enum(['to_dahab', 'from_dahab', 'round_trip']).optional(),
-  governorate: z.string().max(40).optional(),
-
-  // Room (single room type OR multi-allocation)
-  room_type: z.enum(['double', 'single', 'triple']).optional(),
-  upgrade_id: z.string().uuid().optional(),
-  room_allocations: z.array(z.object({
-    type: z.enum(['single', 'double', 'triple']),
-    count: z.number().int().min(1).max(20),
-    upgrade_id: z.string().uuid().optional(),
-  })).optional(),
-
-  // Meal plan
-  meal_plan_key: z.string().optional(),
-
-  // Party size
-  num_people: z.number().int().min(1).max(50),
-})
-
-type QuoteInput = z.infer<typeof quoteSchema>
-
-function resolveUpgrade(
-  upgradeId: string | undefined,
-  accommodationId: string,
-  upgrades: RoomUpgrade[],
-): RoomUpgrade | null {
-  if (!upgradeId) return null
-  return upgrades.find(
-    (u) => u.id === upgradeId && u.accommodation_id === accommodationId && u.is_active,
-  ) ?? null
-}
-
 export async function POST(req: NextRequest) {
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0] ||
@@ -127,289 +64,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const input: QuoteInput = validated.data
-
   try {
-    // ─── transfer-only ───
-    if (input.booking_type === 'transfer-only') {
-      const pricing = await getTransferPricing()
-      const quote = quoteTransfer({
-        pricing,
-        type: input.transfer_type ?? 'hiace',
-        governorateCode: input.governorate,
-        direction: input.transfer_direction ?? 'to_dahab',
-        numPeople: input.num_people,
-      })
-      return NextResponse.json({
-        booking_type: 'transfer-only',
-        transfer_type: input.transfer_type ?? 'hiace',
-        direction: input.transfer_direction ?? 'to_dahab',
-        per_person: quote.perPerson,
-        num_people: quote.numPeople,
-        total: quote.total,
-        is_priced: quote.isPriced,
-        computed_at: new Date().toISOString(),
-      })
+    const result = await computeQuote(validated.data)
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: result.status })
     }
-
-    if (!input.accommodation_id) {
-      return NextResponse.json({ error: 'accommodation_id required' }, { status: 400 })
-    }
-
-    const acc = await getAccommodationById(input.accommodation_id)
-    if (!acc) {
-      return NextResponse.json({ error: 'Accommodation not found' }, { status: 404 })
-    }
-
-    const hasRoomPricing = Number(acc.price_double_room) > 0 || Number(acc.price_single_room) > 0
-    const mealPlans = (acc.meal_plans || []) as MealPlan[]
-    const mealPlan = mealPlans.find((m) => m.key === input.meal_plan_key && m.is_active)
-    const mealPlanPricePerNight = mealPlan?.price_per_person_per_night ?? 0
-    const accUpgrades: RoomUpgrade[] = acc.room_upgrades ?? []
-
-    // ─── accommodation-only ───
-    if (input.booking_type === 'accommodation-only') {
-      const nights = input.nights ?? 1
-
-      if (hasRoomPricing) {
-        if (input.room_allocations && input.room_allocations.length > 0) {
-          // Multi-room allocation
-          let roomTotal = 0
-          const allocBreakdown = []
-          for (const alloc of input.room_allocations) {
-            const baseRate = baseNightlyRoomRate(acc, alloc.type)
-            const upgrade = resolveUpgrade(alloc.upgrade_id, input.accommodation_id, accUpgrades)
-            const extra = upgrade ? upgrade.extra_price_per_night : 0
-            const finalRate = baseRate + extra
-            roomTotal += finalRate * alloc.count * nights
-            allocBreakdown.push({
-              room_type: alloc.type,
-              quantity: alloc.count,
-              base_nightly_rate: baseRate,
-              upgrade_name: upgrade?.name_en ?? null,
-              upgrade_extra_per_night: extra,
-              final_nightly_rate: finalRate,
-              subtotal: finalRate * alloc.count * nights,
-            })
-          }
-          const mealTotal = mealPlanPricePerNight * input.num_people * nights
-          const total = roomTotal + mealTotal
-          return NextResponse.json({
-            booking_type: 'accommodation-only',
-            accommodation_name: acc.name_en,
-            nights,
-            room_allocations: allocBreakdown,
-            meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
-            meal_subtotal: mealTotal,
-            accommodation_subtotal: roomTotal,
-            num_people: input.num_people,
-            per_person: total / input.num_people,
-            total,
-            computed_at: new Date().toISOString(),
-          })
-        }
-
-        // Single room type
-        const roomType = input.room_type ?? 'double'
-        const numRooms = roomsForPeople(roomType, input.num_people)
-        const upgrade = resolveUpgrade(input.upgrade_id, input.accommodation_id, accUpgrades)
-        const upgradeExtra = upgrade ? upgrade.extra_price_per_night : 0
-        const nightly = resolveNightlyRates(acc, roomType, input.start_date, nights)
-        const accSubtotal = accommodationSubtotal(nightly, numRooms)
-        const upgradeTotal = upgradeSubtotal(upgradeExtra, numRooms, nights)
-        const mealTotal = mealPlanPricePerNight * input.num_people * nights
-        const total = accSubtotal + upgradeTotal + mealTotal
-        return NextResponse.json({
-          booking_type: 'accommodation-only',
-          accommodation_name: acc.name_en,
-          room_type: roomType,
-          num_rooms: numRooms,
-          nights,
-          nightly_rates: nightly.map((n) => ({ date: n.date, rate: n.rate, source: n.source })),
-          accommodation_subtotal: accSubtotal,
-          upgrade: upgrade ? { name: upgrade.name_en, extra_per_night: upgrade.extra_price_per_night } : null,
-          upgrade_subtotal: upgradeTotal,
-          meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
-          meal_subtotal: mealTotal,
-          num_people: input.num_people,
-          per_person: total / input.num_people,
-          total,
-          computed_at: new Date().toISOString(),
-        })
-      }
-
-      // Legacy fallback
-      const legacyTotal = Number(acc.price_per_night) * nights * input.num_people
-      return NextResponse.json({
-        booking_type: 'accommodation-only',
-        accommodation_name: acc.name_en,
-        nights,
-        num_people: input.num_people,
-        per_person: Number(acc.price_per_night),
-        total: legacyTotal,
-        computed_at: new Date().toISOString(),
-      })
-    }
-
-    // ─── package ───
-    // The 2 free Sinai trips are a fixed marketing benefit shown alongside
-    // every package quote — not tied to specific trip records, so no
-    // "included trips" are ever fetched or priced here.
-    const [pricing] = await Promise.all([getTransferPricing()])
-
-    const supabase = getSupabaseAdmin()
-    const extraIds = Array.from(new Set(input.extra_trip_ids || []))
-
-    const includedTrips: TripPriceInput[] = []
-    let extraTrips: TripPriceInput[] = []
-    if (extraIds.length > 0) {
-      const { data: trips } = await supabase
-        .from('sinai_trips')
-        .select('id, name_en, price')
-        .in('id', extraIds)
-      extraTrips = (trips || []).map((t) => (
-        { id: t.id, name_en: t.name_en, price: Number(t.price) || 0 }
-      ))
-    }
-
-    // Trip Packages — server-side authoritative pricing + duplicate protection.
-    const packageIds = Array.from(new Set(input.trip_package_ids || []))
-    const selectedPackages = await getTripPackagesForPricing(packageIds)
-    if (selectedPackages.length !== packageIds.length) {
-      return NextResponse.json({ error: 'One or more selected Trip Packages are unavailable.' }, { status: 400 })
-    }
-    const { subtotal: packagesPerPersonSubtotal, error: packagesError } = validateAndPriceTripPackages(selectedPackages, extraIds)
-    if (packagesError) {
-      return NextResponse.json({ error: packagesError }, { status: 400 })
-    }
-    const packagesSubtotal = packagesPerPersonSubtotal * input.num_people
-    const tripPackagesResponse = selectedPackages.map((p) => ({
-      package_id: p.id,
-      name: p.name_en,
-      trip_names: (p.trips || []).map((t) => t.name_en),
-      total: (p.totals?.packageTotal ?? 0) * input.num_people,
-    }))
-
-    const transferType = input.transfer_type ?? 'hiace'
-    const direction = input.transfer_direction ?? 'round_trip'
-    const nights = nightsForDuration(input.duration === 5 ? 5 : 4)
-
-    if (!hasRoomPricing) {
-      // Legacy flat price fallback
-      const accommodationPrice = input.duration === 5 ? Number(acc.price_5day) : Number(acc.price_4day)
-      const transferQuote = quoteTransfer({ pricing, type: 'package_bus', governorateCode: input.governorate, direction, numPeople: input.num_people })
-      const total = (accommodationPrice + transferQuote.perPerson) * input.num_people
-      return NextResponse.json({
-        booking_type: 'package',
-        accommodation_name: acc.name_en,
-        duration: input.duration ?? 4,
-        nights,
-        per_person: total / input.num_people,
-        num_people: input.num_people,
-        total,
-        computed_at: new Date().toISOString(),
-      })
-    }
-
-    // Multi-room allocation path
-    if (input.room_allocations && input.room_allocations.length > 0) {
-      let roomTotal = 0
-      const allocBreakdown = []
-      for (const alloc of input.room_allocations) {
-        const baseRate = baseNightlyRoomRate(acc, alloc.type)
-        const upgrade = resolveUpgrade(alloc.upgrade_id, input.accommodation_id, accUpgrades)
-        const extra = upgrade ? upgrade.extra_price_per_night : 0
-        const finalRate = baseRate + extra
-        roomTotal += finalRate * alloc.count * nights
-        allocBreakdown.push({
-          room_type: alloc.type,
-          quantity: alloc.count,
-          base_nightly_rate: baseRate,
-          upgrade_name: upgrade?.name_en ?? null,
-          upgrade_extra_per_night: extra,
-          final_nightly_rate: finalRate,
-          subtotal: finalRate * alloc.count * nights,
-        })
-      }
-      const mealTotal = mealPlanPricePerNight * input.num_people * nights
-      const transferQuote = quoteTransfer({ pricing, type: transferType, governorateCode: input.governorate, direction, numPeople: input.num_people })
-      let tripsTotal = 0
-      for (const t of includedTrips) tripsTotal += includedTripCost(t) * input.num_people
-      for (const t of extraTrips) tripsTotal += extraTripCost(t) * input.num_people
-      const total = roomTotal + mealTotal + transferQuote.total + tripsTotal + packagesSubtotal
-      return NextResponse.json({
-        booking_type: 'package',
-        accommodation_name: acc.name_en,
-        duration: input.duration ?? 4,
-        nights,
-        room_allocations: allocBreakdown,
-        accommodation_subtotal: roomTotal,
-        transfer_type: transferType,
-        transfer_subtotal: transferQuote.total,
-        meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
-        meal_subtotal: mealTotal,
-        included_trips: includedTrips.map((t) => ({ name: t.name_en, cost: includedTripCost(t) })),
-        extra_trips: extraTrips.map((t) => ({ name: t.name_en, cost: extraTripCost(t) })),
-        trips_subtotal: tripsTotal,
-        trip_packages: tripPackagesResponse,
-        trip_packages_subtotal: packagesSubtotal,
-        num_people: input.num_people,
-        per_person: total / input.num_people,
-        total,
-        computed_at: new Date().toISOString(),
-      })
-    }
-
-    // Single room type path
-    const roomType = input.room_type ?? 'double'
-    const numRooms = roomsForPeople(roomType, input.num_people)
-    const upgrade = resolveUpgrade(input.upgrade_id, input.accommodation_id, accUpgrades)
-    const upgradeExtra = upgrade ? upgrade.extra_price_per_night : 0
-
-    const quote = quotePackageV2({
-      pricing,
-      accommodation: acc,
-      roomType,
-      checkIn: input.start_date,
-      nights,
-      numRooms,
-      mealPlanPricePerNight,
-      mealPlanKey: mealPlan?.key,
-      includedTrips,
-      extraTrips,
-      transferType,
-      governorateCode: input.governorate,
-      direction,
-      numPeople: input.num_people,
-    })
-    const upgradeTotal = upgradeSubtotal(upgradeExtra, numRooms, nights)
-    const total = quote.total + upgradeTotal + packagesSubtotal
-
-    return NextResponse.json({
-      booking_type: 'package',
-      accommodation_name: acc.name_en,
-      duration: input.duration ?? 4,
-      nights: quote.nights,
-      room_type: roomType,
-      num_rooms: quote.numRooms,
-      accommodation_subtotal: quote.accommodationSubtotal,
-      transfer_type: transferType,
-      transfer_subtotal: quote.transferSubtotal,
-      upgrade: upgrade ? { name: upgrade.name_en, extra_per_night: upgrade.extra_price_per_night } : null,
-      upgrade_subtotal: upgradeTotal,
-      meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
-      meal_subtotal: quote.mealSubtotal,
-      included_trips: includedTrips.map((t) => ({ name: t.name_en, cost: includedTripCost(t) })),
-      extra_trips: extraTrips.map((t) => ({ name: t.name_en, cost: extraTripCost(t) })),
-      included_trips_subtotal: quote.includedTripsSubtotal,
-      extra_trips_subtotal: quote.extraTripsSubtotal,
-      trip_packages: tripPackagesResponse,
-      trip_packages_subtotal: packagesSubtotal,
-      num_people: quote.numPeople,
-      per_person: total / quote.numPeople,
-      total,
-      computed_at: new Date().toISOString(),
-    })
+    return NextResponse.json(result.response)
   } catch (err) {
     console.error('Quote API error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

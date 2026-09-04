@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { tripDiscountFields, validateTripDiscount } from '@/lib/trip-discounts'
 
 const tripSchema = z.object({
   name_ar: z.string().min(1),
@@ -22,7 +23,8 @@ const tripSchema = z.object({
   includes_en: z.array(z.string()).optional().default([]),
   sort_order: z.number().int().min(0).optional().default(0),
   is_active: z.boolean().optional().default(true),
-})
+  ...tripDiscountFields,
+}).superRefine(validateTripDiscount)
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) {

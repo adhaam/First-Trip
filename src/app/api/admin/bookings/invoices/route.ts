@@ -3,8 +3,26 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { getSiteSettings } from '@/lib/data'
-import { generateInvoiceHTML, type InvoiceData } from '@/lib/invoice-generator'
+import { generateInvoiceHTML, type InvoiceData, type InvoiceDetail } from '@/lib/invoice-generator'
+import { buildAccommodationInvoice, buildTripInvoice } from '@/lib/invoice-items'
 import type { Booking } from '@/lib/types'
+
+// ─── Invoice generation ───
+//
+// Line items are built from the booking's OWN type and columns, not from a
+// generic fallback. The previous version derived everything from
+// price_snapshot and, when that was absent (every manually-entered booking,
+// because the admin route never built one), emitted a single line labelled
+// "Accommodation" with qty = num_people. A 5-person transfer-only booking
+// therefore printed as an accommodation charge for a hotel it had none of.
+//
+// Two rules hold here:
+//   1. A booking is described by its booking_type. A transfer-only invoice
+//      never names an accommodation; an accommodation-only one never invents
+//      a transfer.
+//   2. The snapshot is preferred when present (it is the frozen truth), but
+//      its absence degrades to the booking's own columns rather than to a
+//      misleading placeholder. Old rows still produce a correct invoice.
 
 const invoiceRequestSchema = z.object({
   bookingId: z.string().uuid(),
@@ -34,7 +52,10 @@ export async function POST(req: NextRequest) {
   let customerEmail: string | undefined
   let createdAt: string
   let items: InvoiceItem[]
+  let details: InvoiceDetail[]
   let totalAmount: number
+  let amountPaid = 0
+  let discount: InvoiceData['discount']
   let notes: string | undefined
   let invoicePrefix: string
 
@@ -52,81 +73,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
     }
 
-    const snapshot = booking.price_snapshot
-    const accommodationNameAr = booking.accommodations?.name_ar || 'إقامة'
-    const accommodationNameEn = booking.accommodations?.name_en || 'Accommodation'
-
-    items = []
-    if (snapshot?.accommodation_subtotal) {
-      const nights = snapshot.nights || booking.nights || 1
-      items.push({
-        description_ar: `${accommodationNameAr} (${nights} ${nights === 1 ? 'ليلة' : 'ليالي'})`,
-        description_en: `${accommodationNameEn} (${nights} night${nights === 1 ? '' : 's'})`,
-        quantity: 1,
-        unitPrice: snapshot.accommodation_subtotal,
-      })
-    }
-    if (snapshot?.transfer_subtotal) {
-      items.push({
-        description_ar: 'النقل',
-        description_en: 'Transfer',
-        quantity: 1,
-        unitPrice: snapshot.transfer_subtotal,
-      })
-    }
-    if (snapshot?.meal_subtotal) {
-      items.push({
-        description_ar: 'خطة الوجبات',
-        description_en: 'Meal Plan',
-        quantity: 1,
-        unitPrice: snapshot.meal_subtotal,
-      })
-    }
-    if (snapshot?.included_trips_subtotal) {
-      items.push({
-        description_ar: 'الرحلات المضمنة',
-        description_en: 'Included Trips',
-        quantity: 1,
-        unitPrice: snapshot.included_trips_subtotal,
-      })
-    }
-    if (snapshot?.extra_trips_subtotal) {
-      items.push({
-        description_ar: 'رحلات إضافية',
-        description_en: 'Extra Trips',
-        quantity: 1,
-        unitPrice: snapshot.extra_trips_subtotal,
-      })
-    }
-    if (snapshot?.trip_packages_subtotal) {
-      items.push({
-        description_ar: 'باقات الرحلات',
-        description_en: 'Trip Packages',
-        quantity: 1,
-        unitPrice: snapshot.trip_packages_subtotal,
-      })
-    }
-    if (items.length === 0) {
-      // No snapshot breakdown available — fall back to a single line from total_price.
-      items.push({
-        description_ar: accommodationNameAr,
-        description_en: accommodationNameEn,
-        quantity: booking.num_people || 1,
-        unitPrice: booking.num_people ? (booking.total_price || 0) / booking.num_people : (booking.total_price || 0),
-      })
-    }
+    const built = buildAccommodationInvoice(booking, locale)
+    items = built.items
+    details = built.details
+    discount = built.discount
 
     customerName = booking.customers?.name || booking.customer_name || 'Customer'
     customerPhone = booking.customers?.phone || booking.customer_phone || ''
     customerEmail = booking.customer_email || undefined
     createdAt = booking.created_at
     totalAmount = booking.total_price || 0
+    amountPaid = Number(booking.amount_paid) || 0
     notes = booking.notes || undefined
     invoicePrefix = 'BK'
   } else {
     const { data: tripBooking, error: tripBookingError } = await supabase
       .from('trip_bookings')
-      .select('*, customers(name, phone, whatsapp_phone, email), sinai_trips(name_ar, name_en)')
+      .select('*, customers(name, phone, whatsapp_phone, email), sinai_trips(name_ar, name_en), trip_packages(name_ar, name_en)')
       .eq('id', bookingId)
       .single()
 
@@ -134,23 +97,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Trip booking not found' }, { status: 404 })
     }
 
-    const tripNameAr = tripBooking.sinai_trips?.name_ar || 'رحلة سيناء'
-    const tripNameEn = tripBooking.sinai_trips?.name_en || 'Sinai Trip'
-    const price = tripBooking.final_price ?? tripBooking.quoted_price ?? 0
-    const numPeople = tripBooking.num_people || 1
-
-    items = [{
-      description_ar: tripNameAr,
-      description_en: tripNameEn,
-      quantity: numPeople,
-      unitPrice: numPeople ? price / numPeople : price,
-    }]
+    const built = buildTripInvoice(tripBooking, locale)
+    items = built.items
+    details = built.details
+    discount = built.discount
 
     customerName = tripBooking.customers?.name || tripBooking.customer_name || 'Customer'
     customerPhone = tripBooking.customers?.phone || tripBooking.customer_phone || ''
     customerEmail = tripBooking.customers?.email || undefined
     createdAt = tripBooking.created_at
-    totalAmount = price
+    totalAmount = tripBooking.final_price ?? tripBooking.quoted_price ?? 0
+    // trip_bookings tracks payments too, so a trip invoice gets the same
+    // paid / balance-due rows as an accommodation one.
+    amountPaid = Number(tripBooking.amount_paid) || 0
     notes = tripBooking.notes || undefined
     invoicePrefix = 'TB'
   }
@@ -167,10 +126,15 @@ export async function POST(req: NextRequest) {
     customerPhone,
     customerEmail,
     orderDate: new Date(createdAt).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US'),
+    details,
     items,
     subtotal,
     deliveryFee: undefined,
-    depositAmount: type === 'confirmation' ? totalAmount * 0.5 : undefined,
+    discount,
+    // The deposit row now reflects money actually received rather than a
+    // blanket 50% of the total, which was shown even on unpaid bookings.
+    depositAmount: undefined,
+    amountPaid,
     totalAmount,
     notes,
     locale,

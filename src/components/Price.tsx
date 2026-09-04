@@ -23,6 +23,11 @@ import { cn } from '@/lib/utils'
  *
  * It does NOT calculate, round business values, apply discounts, or convert
  * currency. It receives a number that pricing logic already produced.
+ *
+ * `originalAmount` is the one discount-adjacent affordance, and it stays
+ * consistent with that rule: the caller passes BOTH the pre-discount and the
+ * final number (from effectiveTripPrice in lib/pricing.ts) and this component
+ * only decides how to draw the pair. It never derives one from the other.
  */
 
 type PriceSize = 'sm' | 'md' | 'lg' | 'xl'
@@ -52,6 +57,12 @@ export function Price({
   className,
   /** Render the unavailable state instead of an amount (e.g. quote-on-request). */
   unavailable = false,
+  /**
+   * The pre-discount price, shown struck through beside the amount. Ignored
+   * unless it is genuinely higher than `amount`, so a caller can pass it
+   * unconditionally without having to branch on "is there a discount".
+   */
+  originalAmount,
 }: {
   amount: number | string | null | undefined
   label?: string
@@ -60,11 +71,14 @@ export function Price({
   tone?: 'ink' | 'light'
   className?: string
   unavailable?: boolean
+  originalAmount?: number | string | null
 }) {
   const locale = useLocale()
   const common = useTranslations('common')
   const n = Number(amount)
   const hasPrice = !unavailable && Number.isFinite(n) && n > 0
+  const original = Number(originalAmount)
+  const showOriginal = hasPrice && Number.isFinite(original) && original > n
 
   const labelTone = tone === 'light' ? 'text-white/75' : 'text-ink-subtle'
   const amountTone = tone === 'light' ? 'text-white' : 'text-ink'
@@ -87,6 +101,11 @@ export function Price({
         <div className={cn('text-[0.7rem] uppercase tracking-wider', labelTone)}>{label}</div>
       )}
       <div className={cn('font-display font-bold leading-tight', AMOUNT_SIZE[size], amountTone)}>
+        {showOriginal && (
+          <span className={cn('me-1.5 font-normal tabular-nums line-through', CURRENCY_SIZE[size], labelTone)}>
+            {formatAmount(original, locale)}
+          </span>
+        )}
         {/* tabular-nums keeps columns of prices aligned in carts and summaries */}
         <span className="tabular-nums">{formatAmount(n, locale)}</span>{' '}
         <span className={cn('font-semibold', CURRENCY_SIZE[size], currencyTone)}>

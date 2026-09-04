@@ -17,7 +17,8 @@ import {
   Download, RotateCcw, Phone, Mail, MapPin, Users, Calendar, Banknote,
   Package, Bed, Bus, PhoneCall, FileText,
 } from 'lucide-react'
-import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection } from '@/lib/types'
+import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection, SinaiTrip, MealPlan } from '@/lib/types'
+import { effectiveTripPrice } from '@/lib/pricing'
 import { cn } from '@/lib/utils'
 import { InvoiceViewer } from './InvoiceViewer'
 
@@ -79,6 +80,24 @@ const ALL_COLUMNS: { key: ColumnKey; label_ar: string; label_en: string }[] = [
 
 const DEFAULT_VISIBLE: ColumnKey[] = ['type', 'accommodation', 'dates', 'people', 'price', 'source']
 
+/** Shape returned by /api/admin/quote — the same lines the invoice will show. */
+interface AdminQuote {
+  lines: {
+    key: string
+    label_ar: string
+    label_en: string
+    detail_ar?: string
+    detail_en?: string
+    amount: number
+  }[]
+  num_people: number
+  per_person: number
+  total: number
+  is_priced: boolean
+}
+
+interface TripPackageOption { id: string; name_ar: string; name_en: string }
+
 const emptyManual = {
   customer_name: '',
   customer_phone: '',
@@ -93,10 +112,16 @@ const emptyManual = {
   transfer_type: 'hiace' as TransferType,
   transfer_direction: 'round_trip' as TransferDirection,
   room_type: '' as '' | 'double' | 'single' | 'triple',
+  meal_plan_key: '',
+  extra_trip_ids: [] as string[],
+  trip_package_ids: [] as string[],
   num_people: 2,
   notes: '',
   status: 'confirmed' as BookingStatus,
   total_price: undefined as number | undefined,
+  /** Employee took manual control of the price — stops auto-fill from overwriting it. */
+  price_override: false,
+  price_override_reason: '',
   source: 'manual',
   payment_status: 'unpaid',
   amount_paid: undefined as number | undefined,
@@ -133,6 +158,18 @@ export function BookingsManager() {
   const [savingManual, setSavingManual] = useState(false)
   const [manualError, setManualError] = useState('')
 
+  // ─── live price preview ───
+  //
+  // The result is stored WITH the input key that produced it. A result is
+  // only shown while it still matches the current inputs, so changing a
+  // field can never leave a stale total on screen looking authoritative
+  // during the debounce window.
+  const [quoteState, setQuoteState] = useState<
+    { key: string; data: AdminQuote | null; error: string } | null
+  >(null)
+  const [trips, setTrips] = useState<SinaiTrip[]>([])
+  const [tripPackages, setTripPackages] = useState<TripPackageOption[]>([])
+
   // ─── invoice viewer ───
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [invoiceBookingId, setInvoiceBookingId] = useState<string | null>(null)
@@ -142,9 +179,13 @@ export function BookingsManager() {
     setLoading(true)
     setLoadError('')
     try {
-      const [bRes, aRes] = await Promise.all([
+      // Trips and packages are needed by the manual-booking form so a package
+      // can be priced with everything the customer actually agreed to.
+      const [bRes, aRes, tRes, pRes] = await Promise.all([
         fetch('/api/admin/bookings'),
         fetch('/api/admin/accommodations'),
+        fetch('/api/admin/sinai-trips'),
+        fetch('/api/admin/trip-packages'),
       ])
       if (bRes.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const bData = await bRes.json()
@@ -153,6 +194,14 @@ export function BookingsManager() {
       if (aRes.ok) {
         const aData = await aRes.json()
         setAccommodations(aData.accommodations || [])
+      }
+      if (tRes.ok) {
+        const tData = await tRes.json()
+        setTrips((tData.trips || []).filter((t: SinaiTrip) => t.is_active))
+      }
+      if (pRes.ok) {
+        const pData = await pRes.json()
+        setTripPackages(pData.packages || [])
       }
     } catch {
       setLoadError(ar ? 'تعذر تحميل الحجوزات' : 'Failed to load bookings')
@@ -166,6 +215,95 @@ export function BookingsManager() {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ─── live price preview ───
+  //
+  // Only the fields that actually move the price go into this key, so typing
+  // a customer's name or a note never triggers a request. The key doubles as
+  // the effect dependency and as the "did anything meaningful change" test,
+  // which is what keeps this from recalculating on every keystroke.
+  const quoteKey = useMemo(() => {
+    if (!showAdd) return null
+    // A quote is priced against a date; without one there is nothing to ask.
+    if (!manual.trip_date) return null
+    if (manual.booking_type !== 'transfer-only' && !manual.accommodation_id) return null
+
+    const payload: Record<string, unknown> = {
+      booking_type: manual.booking_type,
+      start_date: manual.trip_date,
+      num_people: Number(manual.num_people) || 1,
+    }
+    if (manual.booking_type !== 'transfer-only') {
+      payload.accommodation_id = manual.accommodation_id
+      if (manual.room_type) payload.room_type = manual.room_type
+      if (manual.meal_plan_key) payload.meal_plan_key = manual.meal_plan_key
+    }
+    if (manual.booking_type === 'package') {
+      payload.duration = Number(manual.duration)
+      if (manual.extra_trip_ids.length) payload.extra_trip_ids = manual.extra_trip_ids
+      if (manual.trip_package_ids.length) payload.trip_package_ids = manual.trip_package_ids
+    }
+    if (manual.booking_type === 'accommodation-only') payload.nights = Number(manual.nights)
+    if (manual.booking_type === 'transfer-only' || manual.booking_type === 'package') {
+      payload.transfer_type = manual.transfer_type
+      payload.transfer_direction = manual.transfer_direction
+      if (manual.governorate) payload.governorate = manual.governorate
+    }
+    return JSON.stringify(payload)
+  }, [
+    showAdd, manual.booking_type, manual.trip_date, manual.num_people,
+    manual.accommodation_id, manual.room_type, manual.meal_plan_key,
+    manual.duration, manual.nights, manual.transfer_type,
+    manual.transfer_direction, manual.governorate,
+    manual.extra_trip_ids, manual.trip_package_ids,
+  ])
+
+  useEffect(() => {
+    if (!quoteKey) return
+    // Already have the answer for these exact inputs — nothing to recompute.
+    if (quoteState?.key === quoteKey) return
+
+    // Debounced so dragging a number input doesn't fire a request per tick.
+    const timer = setTimeout(async () => {
+      const failure = ar ? 'تعذر حساب السعر' : 'Could not calculate the price'
+      try {
+        const res = await fetch('/api/admin/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: quoteKey,
+        })
+        const data = await res.json()
+        setQuoteState(res.ok
+          ? { key: quoteKey, data, error: '' }
+          : { key: quoteKey, data: null, error: data.error || failure })
+      } catch {
+        setQuoteState({ key: quoteKey, data: null, error: failure })
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [quoteKey, quoteState?.key, ar])
+
+  const quoteMatches = quoteState !== null && quoteState.key === quoteKey
+  const quote = quoteMatches ? quoteState.data : null
+  const quoteError = quoteMatches ? quoteState.error : ''
+  const quoteLoading = quoteKey !== null && !quoteMatches
+
+  // The price is DERIVED, not mirrored into state: the quote is the total
+  // unless the employee has taken manual control. Copying it into `manual`
+  // on every quote would mean two sources of truth that have to be kept in
+  // sync, which is exactly how a stale total ends up on a booking.
+  const effectiveTotal = manual.price_override
+    ? manual.total_price
+    : quote?.total
+
+  const selectedAccommodation = useMemo(
+    () => accommodations.find(a => a.id === manual.accommodation_id) || null,
+    [accommodations, manual.accommodation_id],
+  )
+  const mealPlans = useMemo<MealPlan[]>(
+    () => (selectedAccommodation?.meal_plans || []).filter(m => m.is_active),
+    [selectedAccommodation],
+  )
 
   const accName = (id?: string | null, joined?: Booking['accommodations']) => {
     if (joined) return ar ? joined.name_ar : joined.name_en
@@ -314,7 +452,21 @@ export function BookingsManager() {
         payload.transfer_direction = manual.transfer_direction
       }
       if (manual.booking_type !== 'transfer-only' && manual.room_type) payload.room_type = manual.room_type
-      if (manual.total_price) payload.total_price = Number(manual.total_price)
+      if (manual.booking_type !== 'transfer-only' && manual.meal_plan_key) {
+        payload.meal_plan_key = manual.meal_plan_key
+      }
+      if (manual.booking_type === 'package') {
+        if (manual.extra_trip_ids.length) payload.extra_trip_ids = manual.extra_trip_ids
+        if (manual.trip_package_ids.length) payload.trip_package_ids = manual.trip_package_ids
+      }
+      // Only an explicit override sends a price; otherwise the server's own
+      // calculation is authoritative. effectiveTotal still covers the case
+      // where no quote was possible (no date) and the employee typed a total.
+      if (manual.price_override) {
+        payload.price_override = true
+        if (effectiveTotal !== undefined) payload.total_price = Number(effectiveTotal)
+        if (manual.price_override_reason) payload.price_override_reason = manual.price_override_reason
+      }
       payload.source = manual.source
       payload.payment_status = manual.payment_status
       if (manual.amount_paid) payload.amount_paid = Number(manual.amount_paid)
@@ -331,6 +483,13 @@ export function BookingsManager() {
         return
       }
       setBookings(prev => [data.booking, ...prev])
+      if (data.pricing_warning) {
+        // Saved, but the price could not be derived — say so rather than
+        // letting the employee assume the total was calculated.
+        alert(ar
+          ? `الحجز اتحفظ، بس تعذر حساب السعر تلقائياً: ${data.pricing_warning}`
+          : `Booking saved, but the price could not be calculated: ${data.pricing_warning}`)
+      }
       setShowAdd(false)
       setManual(emptyManual)
     } finally {
@@ -844,9 +1003,80 @@ export function BookingsManager() {
                     </Select>
                   </div>
                 )}
-                <div>
-                  <Label>{ar ? 'السعر الإجمالي (اختياري)' : 'Total price (optional)'}</Label>
-                  <Input type="number" min={0} value={manual.total_price ?? ''} onChange={e => setManual(m => ({ ...m, total_price: e.target.value ? Number(e.target.value) : undefined }))} className="mt-1" />
+                {manual.booking_type !== 'transfer-only' && mealPlans.length > 0 && (
+                  <div>
+                    <Label>{ar ? 'خطة الوجبات' : 'Meal plan'}</Label>
+                    <Select
+                      value={manual.meal_plan_key || 'none'}
+                      onValueChange={v => v && setManual(m => ({ ...m, meal_plan_key: v === 'none' ? '' : v }))}
+                    >
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{ar ? 'بدون' : 'None'}</SelectItem>
+                        {mealPlans.map(mp => (
+                          <SelectItem key={mp.key} value={mp.key}>
+                            {ar ? mp.label_ar : mp.label_en}
+                            {mp.price_per_person_per_night > 0
+                              ? ` (+${mp.price_per_person_per_night.toLocaleString()} ${ar ? 'ج.م/ليلة/فرد' : 'EGP/night/person'})`
+                              : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {manual.booking_type === 'package' && (
+                  <>
+                    <div className="md:col-span-2">
+                      <Label className="mb-2 block">{ar ? 'رحلات إضافية' : 'Extra trips'}</Label>
+                      <MultiSelectChips
+                        options={trips.map(t => {
+                          const priced = effectiveTripPrice(t)
+                          return {
+                            id: t.id,
+                            label: `${ar ? t.name_ar : t.name_en} · ${priced.final.toLocaleString()}${priced.isDiscounted ? ` (${ar ? 'كان' : 'was'} ${priced.original.toLocaleString()})` : ''}`,
+                          }
+                        })}
+                        selected={manual.extra_trip_ids}
+                        onChange={ids => setManual(m => ({ ...m, extra_trip_ids: ids }))}
+                        emptyLabel={ar ? 'مفيش رحلات متاحة' : 'No active trips'}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="mb-2 block">{ar ? 'باقات الرحلات' : 'Trip packages'}</Label>
+                      <MultiSelectChips
+                        options={tripPackages.map(p => ({ id: p.id, label: ar ? p.name_ar : p.name_en }))}
+                        selected={manual.trip_package_ids}
+                        onChange={ids => setManual(m => ({ ...m, trip_package_ids: ids }))}
+                        emptyLabel={ar ? 'مفيش باقات متاحة' : 'No packages available'}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ─── Auto-calculated price ─── */}
+                <div className="md:col-span-2">
+                  <PricePreview
+                    ar={ar}
+                    quote={quote}
+                    loading={quoteLoading}
+                    error={quoteError}
+                    needsDate={!manual.trip_date}
+                    override={manual.price_override}
+                    totalPrice={manual.total_price}
+                    onToggleOverride={on => setManual(m => ({
+                      ...m,
+                      price_override: on,
+                      // Seed the manual field from the calculated total so the
+                      // employee edits a real number rather than an empty box.
+                      total_price: on ? (m.total_price ?? quote?.total) : undefined,
+                      price_override_reason: on ? m.price_override_reason : '',
+                    }))}
+                    onTotalChange={v => setManual(m => ({ ...m, total_price: v }))}
+                    onReasonChange={v => setManual(m => ({ ...m, price_override_reason: v }))}
+                    reason={manual.price_override_reason}
+                  />
                 </div>
                 <div>
                   <Label>{ar ? 'الحالة' : 'Status'}</Label>
@@ -954,6 +1184,176 @@ function DetailField({
         {label}
       </div>
       <div className="text-sm text-gray-900" dir={dir}>{value}</div>
+    </div>
+  )
+}
+
+/** Toggleable chips — lighter than a multi-select for short, scannable lists. */
+function MultiSelectChips({
+  options, selected, onChange, emptyLabel,
+}: {
+  options: { id: string; label: string }[]
+  selected: string[]
+  onChange: (ids: string[]) => void
+  emptyLabel: string
+}) {
+  if (options.length === 0) {
+    return <p className="text-xs text-gray-400">{emptyLabel}</p>
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map(opt => {
+        const on = selected.includes(opt.id)
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(on ? selected.filter(id => id !== opt.id) : [...selected, opt.id])}
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs transition-colors',
+              on
+                ? 'border-amber-500 bg-amber-50 font-semibold text-amber-800'
+                : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50',
+            )}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * The auto-calculated price, itemised.
+ *
+ * The employee sees the same components the customer's invoice will list, so
+ * a wrong total is traceable to the field that caused it instead of being a
+ * bare number to argue with. The override exists for genuinely exceptional
+ * cases and is deliberately explicit: the computed figure stays on screen
+ * beside the manual one, and the reason travels with the booking.
+ */
+function PricePreview({
+  ar, quote, loading, error, needsDate, override, totalPrice, reason,
+  onToggleOverride, onTotalChange, onReasonChange,
+}: {
+  ar: boolean
+  quote: AdminQuote | null
+  loading: boolean
+  error: string
+  needsDate: boolean
+  override: boolean
+  totalPrice?: number
+  reason: string
+  onToggleOverride: (on: boolean) => void
+  onTotalChange: (v: number | undefined) => void
+  onReasonChange: (v: string) => void
+}) {
+  const egp = ar ? 'ج.م' : 'EGP'
+  const money = (n: number) => n.toLocaleString(ar ? 'ar-EG' : 'en-US')
+  const differs = override && quote != null && totalPrice != null && totalPrice !== quote.total
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <Label className="flex items-center gap-2 text-sm font-semibold">
+          <Banknote className="h-4 w-4" />
+          {ar ? 'السعر المحسوب تلقائياً' : 'Auto-calculated price'}
+          {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />}
+        </Label>
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={override}
+            onChange={e => onToggleOverride(e.target.checked)}
+            className="h-3.5 w-3.5 accent-amber-600"
+          />
+          {ar ? 'تعديل السعر يدوياً' : 'Set the price manually'}
+        </label>
+      </div>
+
+      {needsDate ? (
+        <p className="text-xs text-gray-500">
+          {ar
+            ? 'حدد تاريخ الذهاب (والفندق لو الحجز مش انتقالات بس) عشان السعر يتحسب.'
+            : 'Pick a trip date (and an accommodation unless this is transfer-only) to calculate the price.'}
+        </p>
+      ) : error ? (
+        <p className="text-xs text-red-600">{error}</p>
+      ) : quote ? (
+        <>
+          <div className="space-y-1.5">
+            {quote.lines.map(line => (
+              <div key={line.key} className="flex items-start justify-between gap-4 text-sm">
+                <div className="min-w-0">
+                  <div className="truncate text-gray-800">{ar ? line.label_ar : line.label_en}</div>
+                  {(ar ? line.detail_ar : line.detail_en) && (
+                    <div className="text-[11px] text-gray-500">{ar ? line.detail_ar : line.detail_en}</div>
+                  )}
+                </div>
+                <div className="shrink-0 tabular-nums text-gray-900">{money(line.amount)}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex items-baseline justify-between border-t border-gray-200 pt-2">
+            <span className="text-sm font-semibold text-gray-700">
+              {ar ? 'الإجمالي المحسوب' : 'Calculated total'}
+            </span>
+            <span className={cn('tabular-nums text-lg font-bold', differs ? 'text-gray-400 line-through' : 'text-gray-900')}>
+              {money(quote.total)} {egp}
+            </span>
+          </div>
+          <div className="mt-0.5 text-[11px] text-gray-500">
+            {ar
+              ? `${money(Math.round(quote.per_person))} ${egp} للفرد × ${quote.num_people}`
+              : `${money(Math.round(quote.per_person))} ${egp} per person × ${quote.num_people}`}
+          </div>
+
+          {!quote.is_priced && (
+            <p className="mt-2 text-[11px] text-amber-700">
+              {ar
+                ? 'تنبيه: أسعار الجزء ده لسه مش متظبطة في الإعدادات، فالإجمالي ممكن يكون ناقص.'
+                : 'Heads up: rates for this component are not configured yet, so the total may be incomplete.'}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-xs text-gray-500">
+          {ar ? 'جاري الحساب…' : 'Calculating…'}
+        </p>
+      )}
+
+      {override && (
+        <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
+          <div>
+            <Label className="text-xs">{ar ? 'السعر النهائي المتفق عليه' : 'Agreed final price'}</Label>
+            <Input
+              type="number" min={0}
+              value={totalPrice ?? ''}
+              onChange={e => onTotalChange(e.target.value ? Number(e.target.value) : undefined)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">{ar ? 'سبب التعديل (اختياري)' : 'Reason for the override (optional)'}</Label>
+            <Input
+              value={reason}
+              onChange={e => onReasonChange(e.target.value)}
+              placeholder={ar ? 'مثلاً: خصم لعميل دائم' : 'e.g. returning-customer discount'}
+              className="mt-1"
+            />
+          </div>
+          {differs && quote && (
+            <p className="text-[11px] text-amber-700">
+              {ar
+                ? `الفرق عن السعر المحسوب: ${money((totalPrice ?? 0) - quote.total)} ${egp}`
+                : `Difference from the calculated price: ${money((totalPrice ?? 0) - quote.total)} ${egp}`}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

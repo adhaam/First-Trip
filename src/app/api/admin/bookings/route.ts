@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { computeQuote } from '@/lib/quote-service'
+import type { PriceSnapshot } from '@/lib/types'
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) {
@@ -44,11 +46,21 @@ const manualBookingSchema = z.object({
   transfer_direction: z.enum(['to_dahab', 'from_dahab', 'round_trip']).optional(),
   room_type: z.enum(['double', 'single', 'triple']).optional(),
   meal_plan_key: z.string().optional().or(z.literal('')),
+  extra_trip_ids: z.array(z.string().uuid()).optional(),
+  trip_package_ids: z.array(z.string().uuid()).optional(),
   num_people: z.number().int().min(1).max(50),
   notes: z.string().max(1000).optional(),
   internal_notes: z.string().max(2000).optional(),
   status: z.enum(['new', 'pending', 'confirmed', 'cancelled', 'completed']).optional().default('confirmed'),
   total_price: z.number().min(0).optional(),
+  /**
+   * Set only when the employee deliberately overrode the computed price for
+   * an exceptional case. Without it a client-sent total_price is ignored in
+   * favour of the server's own calculation, so a stale or tampered form
+   * cannot decide what a customer is charged.
+   */
+  price_override: z.boolean().optional(),
+  price_override_reason: z.string().max(300).optional(),
   // Manual payment tracking — no gateway, just the owner's own records.
   payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
   amount_paid: z.number().min(0).optional(),
@@ -68,8 +80,64 @@ export async function POST(req: NextRequest) {
 
   const {
     customer_email, accommodation_id, governorate, trip_date, return_date,
-    meal_plan_key, ...rest
+    meal_plan_key, price_override, price_override_reason,
+    extra_trip_ids, trip_package_ids, ...rest
   } = validated.data
+
+  // ─── Authoritative pricing ───
+  //
+  // The dashboard shows the employee a preview from /api/admin/quote, but the
+  // amount that lands on the row is recomputed here from DB rates — a preview
+  // is never the source of a stored price. The resulting breakdown is frozen
+  // into price_snapshot so the invoice can show the customer what they are
+  // paying for; before this, manual bookings stored a bare number and every
+  // invoice fell back to a single misleading "Accommodation" line.
+  //
+  // A quote needs a start date. Manual bookings genuinely may not have one
+  // yet (a phone enquiry pencilled in), so pricing is best-effort: if it
+  // can't be computed the typed total is kept and the booking still saves.
+  let totalPrice = validated.data.total_price
+  let priceSnapshot: PriceSnapshot | null = null
+  let pricingNote: string | null = null
+
+  if (trip_date) {
+    const quoteResult = await computeQuote({
+      booking_type: validated.data.booking_type,
+      accommodation_id: accommodation_id || undefined,
+      duration: validated.data.duration,
+      nights: validated.data.nights,
+      start_date: trip_date,
+      transfer_type: validated.data.transfer_type,
+      transfer_direction: validated.data.transfer_direction,
+      governorate: governorate || undefined,
+      room_type: validated.data.room_type,
+      meal_plan_key: meal_plan_key || undefined,
+      extra_trip_ids,
+      trip_package_ids,
+      num_people: validated.data.num_people,
+    })
+
+    if (quoteResult.ok) {
+      priceSnapshot = quoteResult.snapshot
+      if (price_override && validated.data.total_price !== undefined) {
+        // Keep the computed breakdown alongside the overridden total so the
+        // invoice still itemises the booking, and the difference stays
+        // auditable rather than silently disappearing into one number.
+        totalPrice = validated.data.total_price
+        priceSnapshot = {
+          ...quoteResult.snapshot,
+          price_override: true,
+          computed_total: quoteResult.total,
+          ...(price_override_reason ? { price_override_reason } : {}),
+          total: validated.data.total_price,
+        }
+      } else {
+        totalPrice = quoteResult.total
+      }
+    } else {
+      pricingNote = quoteResult.error
+    }
+  }
 
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
@@ -82,6 +150,10 @@ export async function POST(req: NextRequest) {
       trip_date: trip_date || null,
       return_date: return_date || null,
       meal_plan_key: meal_plan_key || null,
+      extra_trip_ids: extra_trip_ids || [],
+      trip_package_ids: trip_package_ids || [],
+      total_price: totalPrice ?? null,
+      price_snapshot: priceSnapshot,
     })
     .select('*, accommodations(name_ar, name_en)')
     .single()
@@ -101,5 +173,10 @@ export async function POST(req: NextRequest) {
     { onConflict: 'phone', ignoreDuplicates: false },
   )
 
-  return NextResponse.json({ booking: data }, { status: 201 })
+  // Surfaced, not swallowed: the booking saved, but the dashboard should say
+  // so when the price could not be computed and the typed total was kept.
+  return NextResponse.json(
+    { booking: data, ...(pricingNote ? { pricing_warning: pricingNote } : {}) },
+    { status: 201 },
+  )
 }
