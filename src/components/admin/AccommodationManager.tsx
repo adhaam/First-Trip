@@ -508,9 +508,12 @@ export function AccommodationManager() {
                 <TableHead>{locale === 'ar' ? 'الاسم' : 'Name'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'النوع' : 'Type'}</TableHead>
                 <TableHead>{locale === 'ar' ? 'التقييم' : 'Rating'}</TableHead>
-                <TableHead>{locale === 'ar' ? 'السعر/ليلة' : 'Price/Night'}</TableHead>
-                <TableHead>{locale === 'ar' ? '4 أيام' : '4 Days'}</TableHead>
-                <TableHead>{locale === 'ar' ? '5 أيام' : '5 Days'}</TableHead>
+                {/* Room rates are what pricing actually uses. The old
+                    Price/Night + 4/5-day columns showed legacy fields that
+                    are 0 on every accommodation. */}
+                <TableHead>{locale === 'ar' ? 'سينجل' : 'Single'}</TableHead>
+                <TableHead>{locale === 'ar' ? 'دبل' : 'Double'}</TableHead>
+                <TableHead>{locale === 'ar' ? 'تريبل' : 'Triple'}</TableHead>
                 <TableHead className="text-right">{locale === 'ar' ? 'إجراءات' : 'Actions'}</TableHead>
               </TableRow>
             </TableHeader>
@@ -1068,9 +1071,11 @@ function AccommodationRow({
         </Badge>
       </TableCell>
       <TableCell>⭐ {acc.rating}</TableCell>
-      <TableCell>{acc.price_per_night?.toLocaleString()} ج.م</TableCell>
-      <TableCell>{acc.price_4day?.toLocaleString()} ج.م</TableCell>
-      <TableCell>{acc.price_5day?.toLocaleString()} ج.م</TableCell>
+      {/* An unset rate reads as "—", not "0 ج.م": zero looks like a real
+          price of nothing, which is how every row came to look free. */}
+      <RoomRateCell value={acc.price_single_room} />
+      <RoomRateCell value={acc.price_double_room} />
+      <RoomRateCell value={acc.price_triple_room} />
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">
           <Button variant="ghost" size="icon" onClick={() => onEdit(acc)}>
@@ -1099,4 +1104,17 @@ function AccommodationRow({
       {row}
     </Reorder.Item>
   )
+}
+
+/**
+ * One room rate in the list. A missing or zero rate is shown as an explicit
+ * "not set" dash rather than "0 ج.م" — a hotel with no configured rate is
+ * unpriced, not free, and the difference is what the owner needs to see.
+ */
+function RoomRateCell({ value }: { value?: number | null }) {
+  const rate = Number(value) || 0
+  if (rate <= 0) {
+    return <TableCell className="text-amber-600" title="Not set">—</TableCell>
+  }
+  return <TableCell>{rate.toLocaleString()} ج.م</TableCell>
 }

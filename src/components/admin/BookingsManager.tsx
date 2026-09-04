@@ -17,8 +17,7 @@ import {
   Download, RotateCcw, Phone, Mail, MapPin, Users, Calendar, Banknote,
   Package, Bed, Bus, PhoneCall, FileText,
 } from 'lucide-react'
-import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection, SinaiTrip, MealPlan } from '@/lib/types'
-import { effectiveTripPrice } from '@/lib/pricing'
+import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection, MealPlan } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { InvoiceViewer } from './InvoiceViewer'
 
@@ -96,8 +95,6 @@ interface AdminQuote {
   is_priced: boolean
 }
 
-interface TripPackageOption { id: string; name_ar: string; name_en: string }
-
 const emptyManual = {
   customer_name: '',
   customer_phone: '',
@@ -113,8 +110,6 @@ const emptyManual = {
   transfer_direction: 'round_trip' as TransferDirection,
   room_type: '' as '' | 'double' | 'single' | 'triple',
   meal_plan_key: '',
-  extra_trip_ids: [] as string[],
-  trip_package_ids: [] as string[],
   num_people: 2,
   notes: '',
   status: 'confirmed' as BookingStatus,
@@ -167,8 +162,6 @@ export function BookingsManager() {
   const [quoteState, setQuoteState] = useState<
     { key: string; data: AdminQuote | null; error: string } | null
   >(null)
-  const [trips, setTrips] = useState<SinaiTrip[]>([])
-  const [tripPackages, setTripPackages] = useState<TripPackageOption[]>([])
 
   // ─── invoice viewer ───
   const [invoiceOpen, setInvoiceOpen] = useState(false)
@@ -179,13 +172,9 @@ export function BookingsManager() {
     setLoading(true)
     setLoadError('')
     try {
-      // Trips and packages are needed by the manual-booking form so a package
-      // can be priced with everything the customer actually agreed to.
-      const [bRes, aRes, tRes, pRes] = await Promise.all([
+      const [bRes, aRes] = await Promise.all([
         fetch('/api/admin/bookings'),
         fetch('/api/admin/accommodations'),
-        fetch('/api/admin/sinai-trips'),
-        fetch('/api/admin/trip-packages'),
       ])
       if (bRes.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const bData = await bRes.json()
@@ -194,14 +183,6 @@ export function BookingsManager() {
       if (aRes.ok) {
         const aData = await aRes.json()
         setAccommodations(aData.accommodations || [])
-      }
-      if (tRes.ok) {
-        const tData = await tRes.json()
-        setTrips((tData.trips || []).filter((t: SinaiTrip) => t.is_active))
-      }
-      if (pRes.ok) {
-        const pData = await pRes.json()
-        setTripPackages(pData.packages || [])
       }
     } catch {
       setLoadError(ar ? 'تعذر تحميل الحجوزات' : 'Failed to load bookings')
@@ -238,11 +219,7 @@ export function BookingsManager() {
       if (manual.room_type) payload.room_type = manual.room_type
       if (manual.meal_plan_key) payload.meal_plan_key = manual.meal_plan_key
     }
-    if (manual.booking_type === 'package') {
-      payload.duration = Number(manual.duration)
-      if (manual.extra_trip_ids.length) payload.extra_trip_ids = manual.extra_trip_ids
-      if (manual.trip_package_ids.length) payload.trip_package_ids = manual.trip_package_ids
-    }
+    if (manual.booking_type === 'package') payload.duration = Number(manual.duration)
     if (manual.booking_type === 'accommodation-only') payload.nights = Number(manual.nights)
     if (manual.booking_type === 'transfer-only' || manual.booking_type === 'package') {
       payload.transfer_type = manual.transfer_type
@@ -255,7 +232,6 @@ export function BookingsManager() {
     manual.accommodation_id, manual.room_type, manual.meal_plan_key,
     manual.duration, manual.nights, manual.transfer_type,
     manual.transfer_direction, manual.governorate,
-    manual.extra_trip_ids, manual.trip_package_ids,
   ])
 
   useEffect(() => {
@@ -454,10 +430,6 @@ export function BookingsManager() {
       if (manual.booking_type !== 'transfer-only' && manual.room_type) payload.room_type = manual.room_type
       if (manual.booking_type !== 'transfer-only' && manual.meal_plan_key) {
         payload.meal_plan_key = manual.meal_plan_key
-      }
-      if (manual.booking_type === 'package') {
-        if (manual.extra_trip_ids.length) payload.extra_trip_ids = manual.extra_trip_ids
-        if (manual.trip_package_ids.length) payload.trip_package_ids = manual.trip_package_ids
       }
       // Only an explicit override sends a price; otherwise the server's own
       // calculation is authoritative. effectiveTotal still covers the case
@@ -1026,35 +998,6 @@ export function BookingsManager() {
                   </div>
                 )}
 
-                {manual.booking_type === 'package' && (
-                  <>
-                    <div className="md:col-span-2">
-                      <Label className="mb-2 block">{ar ? 'رحلات إضافية' : 'Extra trips'}</Label>
-                      <MultiSelectChips
-                        options={trips.map(t => {
-                          const priced = effectiveTripPrice(t)
-                          return {
-                            id: t.id,
-                            label: `${ar ? t.name_ar : t.name_en} · ${priced.final.toLocaleString()}${priced.isDiscounted ? ` (${ar ? 'كان' : 'was'} ${priced.original.toLocaleString()})` : ''}`,
-                          }
-                        })}
-                        selected={manual.extra_trip_ids}
-                        onChange={ids => setManual(m => ({ ...m, extra_trip_ids: ids }))}
-                        emptyLabel={ar ? 'مفيش رحلات متاحة' : 'No active trips'}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label className="mb-2 block">{ar ? 'باقات الرحلات' : 'Trip packages'}</Label>
-                      <MultiSelectChips
-                        options={tripPackages.map(p => ({ id: p.id, label: ar ? p.name_ar : p.name_en }))}
-                        selected={manual.trip_package_ids}
-                        onChange={ids => setManual(m => ({ ...m, trip_package_ids: ids }))}
-                        emptyLabel={ar ? 'مفيش باقات متاحة' : 'No packages available'}
-                      />
-                    </div>
-                  </>
-                )}
-
                 {/* ─── Auto-calculated price ─── */}
                 <div className="md:col-span-2">
                   <PricePreview
@@ -1184,43 +1127,6 @@ function DetailField({
         {label}
       </div>
       <div className="text-sm text-gray-900" dir={dir}>{value}</div>
-    </div>
-  )
-}
-
-/** Toggleable chips — lighter than a multi-select for short, scannable lists. */
-function MultiSelectChips({
-  options, selected, onChange, emptyLabel,
-}: {
-  options: { id: string; label: string }[]
-  selected: string[]
-  onChange: (ids: string[]) => void
-  emptyLabel: string
-}) {
-  if (options.length === 0) {
-    return <p className="text-xs text-gray-400">{emptyLabel}</p>
-  }
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map(opt => {
-        const on = selected.includes(opt.id)
-        return (
-          <button
-            key={opt.id}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onChange(on ? selected.filter(id => id !== opt.id) : [...selected, opt.id])}
-            className={cn(
-              'rounded-full border px-3 py-1 text-xs transition-colors',
-              on
-                ? 'border-amber-500 bg-amber-50 font-semibold text-amber-800'
-                : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50',
-            )}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
     </div>
   )
 }
