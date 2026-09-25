@@ -82,9 +82,14 @@ like once `001` has run.
   always **stored**, never inferred from the word "package": a Dahab **stay**
   package (`stay_package`) pays 50% after availability confirmation / 50% on arrival like a plain
   stay, while a Sinai **experience** package (`experience_package`, e.g.
-  yacht + safari + Blue Hole) pays 100% after confirmation like a standalone trip. A
-  trigger fills `payment_kind` on insert when the caller omits it, and the
-  same migration backfills it once on existing rows.
+  yacht + safari + Blue Hole) pays 100% after confirmation like a standalone trip. On
+  insert a trigger always derives `payment_kind` from the booking type or the
+  package catalogue — a caller-supplied value is ignored — and afterwards the
+  stored kind is immutable (only a deliberate maintenance transaction with
+  `set_config('weemap.payment_kind_maintenance', 'on', true)` can correct
+  one). The same migration backfills existing rows once.
+  `supabase/tests/payment_kind_invariants.sql`, run by the bootstrap check,
+  proves both rules.
 - **031 — request workflow, history, events.** Adds the
   `checking_availability` / `alternatives_required` / `awaiting_payment`
   states (allowed transitions enforced by `src/lib/request-workflow.ts`), the

@@ -42,6 +42,11 @@ for f in schema.sql migration_v2.sql migration_v3.sql migration_v4.sql; do apply
 echo "Applying numbered migrations"
 for f in "$ROOT"/supabase/migrations/[0-9][0-9][0-9]_*.sql; do apply "$f"; done
 
+if compgen -G "$ROOT/supabase/tests/*.sql" >/dev/null; then
+  echo "Running database regression checks"
+  for f in "$ROOT"/supabase/tests/*.sql; do apply "$f"; done
+fi
+
 if [ -n "${CHECK_SQL:-}" ]; then
   echo "Running $CHECK_SQL"; apply "$CHECK_SQL"
 fi

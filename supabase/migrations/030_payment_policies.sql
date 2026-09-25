@@ -28,10 +28,14 @@
 --       trip_bookings.payment_kind   set when the request is created; for a
 --                                    package request it is copied from the
 --                                    booked package's catalogue payment_kind.
---     A BEFORE INSERT trigger fills payment_kind when the caller does not, from
---     the explicit product classification (bookings.booking_type, whose
---     'package' value IS the Dahab stay package, or the package catalogue).
---     Existing rows are backfilled the same way once.
+--     A BEFORE INSERT trigger ALWAYS derives payment_kind from the explicit
+--     product classification (bookings.booking_type, whose 'package' value IS
+--     the Dahab stay package, or the package catalogue). Any value supplied by
+--     the caller is ignored. Existing rows are backfilled the same way once.
+--   * After insert, payment_kind is part of the booking's historical snapshot:
+--     a BEFORE UPDATE trigger rejects any change unless an operator runs a
+--     deliberate maintenance transaction with
+--     set_config('weemap.payment_kind_maintenance', 'on', true).
 --   * upfront_percent is the share requested at upfront_due; the remainder is
 --     due at balance_due. 100 means no balance.
 --   * upfront_due 'after_confirmation' = only once WEEMAP has confirmed
@@ -160,18 +164,18 @@ RETURNS TEXT LANGUAGE sql IMMUTABLE AS $$
   END
 $$;
 
+-- Derive the payment kind from the explicit classification. A value supplied
+-- by the caller is IGNORED — the database, not the client, is authoritative.
 CREATE OR REPLACE FUNCTION public.weemap_set_payment_kind()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.payment_kind IS NULL THEN
-    IF TG_TABLE_NAME = 'bookings' THEN
-      NEW.payment_kind := public.weemap_booking_payment_kind(NEW.booking_type);
-    ELSIF NEW.trip_package_id IS NOT NULL THEN
-      SELECT payment_kind INTO NEW.payment_kind
-        FROM public.trip_packages WHERE id = NEW.trip_package_id;
-    ELSE
-      NEW.payment_kind := 'trip';
-    END IF;
+  IF TG_TABLE_NAME = 'bookings' THEN
+    NEW.payment_kind := public.weemap_booking_payment_kind(NEW.booking_type);
+  ELSIF NEW.trip_package_id IS NOT NULL THEN
+    SELECT COALESCE(payment_kind, 'experience_package') INTO NEW.payment_kind
+      FROM public.trip_packages WHERE id = NEW.trip_package_id;
+  ELSE
+    NEW.payment_kind := 'trip';
   END IF;
   RETURN NEW;
 END
@@ -184,11 +188,43 @@ DROP TRIGGER IF EXISTS weemap_set_payment_kind ON public.trip_bookings;
 CREATE TRIGGER weemap_set_payment_kind BEFORE INSERT ON public.trip_bookings
   FOR EACH ROW EXECUTE FUNCTION public.weemap_set_payment_kind();
 
+-- Once stored, payment_kind is part of the booking's historical financial
+-- snapshot: an UPDATE may not change it. The only way to correct one is a
+-- deliberate maintenance transaction run by an operator in SQL:
+--   BEGIN;
+--   SELECT set_config('weemap.payment_kind_maintenance', 'on', true);
+--   UPDATE ... SET payment_kind = ... WHERE id = ...;
+--   COMMIT;
+-- The setting is transaction-local and cannot be set through the app's
+-- PostgREST calls, so no application path can change a stored kind.
+CREATE OR REPLACE FUNCTION public.weemap_guard_payment_kind()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.payment_kind IS DISTINCT FROM OLD.payment_kind
+     AND COALESCE(current_setting('weemap.payment_kind_maintenance', true), '') <> 'on' THEN
+    RAISE EXCEPTION 'payment_kind is immutable once a booking exists (% → %)',
+      OLD.payment_kind, NEW.payment_kind
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END
+$$;
+
+-- The guard is (re)attached only after the backfill below, which is the one
+-- sanctioned write that fills a previously empty kind.
+DROP TRIGGER IF EXISTS weemap_guard_payment_kind ON public.bookings;
+DROP TRIGGER IF EXISTS weemap_guard_payment_kind ON public.trip_bookings;
+
 -- One-time backfill of existing requests from the same explicit sources.
 UPDATE public.bookings SET payment_kind = public.weemap_booking_payment_kind(booking_type)
   WHERE payment_kind IS NULL;
-UPDATE public.trip_bookings tb SET payment_kind = tp.payment_kind
+UPDATE public.trip_bookings tb SET payment_kind = COALESCE(tp.payment_kind, 'experience_package')
   FROM public.trip_packages tp
   WHERE tb.payment_kind IS NULL AND tb.trip_package_id = tp.id;
 UPDATE public.trip_bookings SET payment_kind = 'trip'
   WHERE payment_kind IS NULL AND trip_package_id IS NULL;
+
+CREATE TRIGGER weemap_guard_payment_kind BEFORE UPDATE OF payment_kind ON public.bookings
+  FOR EACH ROW EXECUTE FUNCTION public.weemap_guard_payment_kind();
+CREATE TRIGGER weemap_guard_payment_kind BEFORE UPDATE OF payment_kind ON public.trip_bookings
+  FOR EACH ROW EXECUTE FUNCTION public.weemap_guard_payment_kind();
