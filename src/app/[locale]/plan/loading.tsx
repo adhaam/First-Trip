@@ -1,0 +1,1 @@
+export default function Loading() { return <main className="min-h-screen bg-sand-50"><div className="h-72 animate-pulse bg-sea-900"/><div className="container-main space-y-5 py-10"><div className="h-48 rounded-3xl bg-sand-200"/><div className="h-48 rounded-3xl bg-sand-200"/></div></main> }
