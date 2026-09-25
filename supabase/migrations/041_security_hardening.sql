@@ -42,24 +42,40 @@
 -- Additive for data; drops only the policies named above. Safe to re-run.
 
 -- ─── 1. Legacy policies ───
-DROP POLICY IF EXISTS "Admins can manage accommodations"              ON public.accommodations;
-DROP POLICY IF EXISTS "Admins can manage seasonal rates"              ON public.accommodation_seasonal_rates;
-DROP POLICY IF EXISTS "Admins can manage bookings"                    ON public.bookings;
-DROP POLICY IF EXISTS "Anyone can create a booking"                   ON public.bookings;
-DROP POLICY IF EXISTS "Admins can manage community posts"             ON public.community_posts;
-DROP POLICY IF EXISTS "Admins can manage customers"                   ON public.customers;
-DROP POLICY IF EXISTS "Anyone can create a customer"                  ON public.customers;
-DROP POLICY IF EXISTS "experience_bookings_public_insert"             ON public.experience_bookings;
-DROP POLICY IF EXISTS "Admins can manage governorate pricing"         ON public.governorate_pricing;
-DROP POLICY IF EXISTS "Anyone can subscribe"                          ON public.newsletter_subscribers;
-DROP POLICY IF EXISTS "public can subscribe"                          ON public.newsletter_subscribers;
-DROP POLICY IF EXISTS "partner_inquiries_public_insert"               ON public.partner_inquiries;
-DROP POLICY IF EXISTS "Admins can manage sinai trips"                 ON public.sinai_trips;
-DROP POLICY IF EXISTS "Admins can manage site settings"               ON public.site_settings;
-DROP POLICY IF EXISTS "Admins can manage testimonials"                ON public.testimonials;
-DROP POLICY IF EXISTS "Admins can manage transfer governorate pricing" ON public.transfer_governorate_pricing;
-DROP POLICY IF EXISTS "Admins can manage transfer settings"           ON public.transfer_settings;
-DROP POLICY IF EXISTS "Admins can manage trip dates"                  ON public.trip_dates;
+-- Production drift (M4 preflight): a table named here may not exist there
+-- (newsletter_subscribers was never created in production). DROP POLICY
+-- fails on a missing table even with IF EXISTS, so each drop runs only when
+-- its table exists. The set of policies removed is unchanged.
+DO $$
+DECLARE
+  spec TEXT[];
+BEGIN
+  FOREACH spec SLICE 1 IN ARRAY ARRAY[
+    ARRAY['accommodations', 'Admins can manage accommodations'],
+    ARRAY['accommodation_seasonal_rates', 'Admins can manage seasonal rates'],
+    ARRAY['bookings', 'Admins can manage bookings'],
+    ARRAY['bookings', 'Anyone can create a booking'],
+    ARRAY['community_posts', 'Admins can manage community posts'],
+    ARRAY['customers', 'Admins can manage customers'],
+    ARRAY['customers', 'Anyone can create a customer'],
+    ARRAY['experience_bookings', 'experience_bookings_public_insert'],
+    ARRAY['governorate_pricing', 'Admins can manage governorate pricing'],
+    ARRAY['newsletter_subscribers', 'Anyone can subscribe'],
+    ARRAY['newsletter_subscribers', 'public can subscribe'],
+    ARRAY['partner_inquiries', 'partner_inquiries_public_insert'],
+    ARRAY['sinai_trips', 'Admins can manage sinai trips'],
+    ARRAY['site_settings', 'Admins can manage site settings'],
+    ARRAY['testimonials', 'Admins can manage testimonials'],
+    ARRAY['transfer_governorate_pricing', 'Admins can manage transfer governorate pricing'],
+    ARRAY['transfer_settings', 'Admins can manage transfer settings'],
+    ARRAY['trip_dates', 'Admins can manage trip dates']
+  ] LOOP
+    IF to_regclass('public.' || spec[1]) IS NOT NULL THEN
+      EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', spec[2], spec[1]);
+    END IF;
+  END LOOP;
+END
+$$;
 
 -- Belt and braces for drift: any other policy on a public table that is not
 -- a plain read and names 'authenticated' or grants a write to anon/public

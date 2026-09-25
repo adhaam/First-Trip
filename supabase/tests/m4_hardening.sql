@@ -340,6 +340,16 @@ BEGIN
               AND (COALESCE(qual, '') || COALESCE(with_check, '')) LIKE '%authenticated%') THEN
     RAISE EXCEPTION 'a policy still grants to authenticated';
   END IF;
+  -- 042: on a database that had the table from 001 / schema.sql, only the
+  -- server policy is left and the public insert policies are gone.
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'newsletter_subscribers'
+              AND policyname <> 'newsletter_subscribers_service_role_all') THEN
+    RAISE EXCEPTION 'newsletter keeps a non-server policy';
+  END IF;
+  IF has_table_privilege('anon', 'public.newsletter_subscribers', 'INSERT')
+     OR has_table_privilege('authenticated', 'public.newsletter_subscribers', 'INSERT') THEN
+    RAISE EXCEPTION 'untrusted roles can insert newsletter rows';
+  END IF;
 END
 $$;
 

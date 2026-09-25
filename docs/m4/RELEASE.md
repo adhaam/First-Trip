@@ -10,7 +10,7 @@ each migration and of the SQL checks are in `supabase/migrations/README.md`
 | | |
 |---|---|
 | Release candidate | the commit tagged in the M4 report (`git log -1` on `main` after M4) |
-| Migrations to apply | `029` → `041` (production is on `028`: confirm first) |
+| Migrations to apply | `029` → `042`. Readiness is established from objects (README step 2), not from the migration list — production's history uses other names |
 | Current production deployment (rollback target) | `dpl_JCaQk7vmAk9vCYcZVqySX73TL24H` — `weemap-sinai-793zvo8p2-weemap-sinai.vercel.app`, 2026-09-05, aliased to weemapsinai.com |
 | Vercel project | `weemap-sinai` (team `weemap-sinai`), **git-connected to `adhaam/First-Trip` `main`** |
 | Production env (names) | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `WEEMAP_N8N_CHAT_WEBHOOK_URL`, `WEEMAP_N8N_CHAT_SECRET`, `NEXT_PUBLIC_WEEMAP_AI_ENABLED`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (unused by the code — remove after launch) |
@@ -32,13 +32,14 @@ served unoptimised (`images.unoptimized`, see below).
 
 1. `git status` clean, `HEAD` = release commit. `npm test`, `npm run typecheck`,
    `npm run lint`, `npm run check:migrations`, `npm run check:translations` pass.
-2. Production read-only check: `schema_migrations` ends at 028 (README step 2).
+2. Production read-only readiness (README step 2): release tables absent, catalog fingerprint equals
+   `supabase/tests/upgrade/production_inventory.txt`, `auth.users` count recorded.
 3. **Backup** and verify it (README step 3). Record the five row counts.
-4. Apply `029` → `041` (README step 4) and run the verification SQL (step 5).
+4. Apply `029` → `042` (README step 4) and run the verification SQL (step 5).
    Expected downtime: none for the public site; the pre-M4 admin may refuse
    payment edits between steps 4 and 6 (minutes).
 5. Note the time. If a migration fails: stop, fix forward, re-run from the
-   failed file (all of 029–041 are re-runnable). Do not deploy on a partial chain.
+   failed file (all of 029–042 are re-runnable). Do not deploy on a partial chain.
 6. Deploy: `git push origin main` (Vercel git integration builds `main`), or
    `npx vercel deploy --prod` from the clean checkout. Wait for Ready.
 7. `npx vercel inspect weemapsinai.com` → the new deployment id; record it below.
@@ -53,6 +54,8 @@ served unoptimised (`images.unoptimized`, see below).
 
 ## Production smoke (read-only; do not create customer bookings)
 
+- Newsletter: subscribe once from the footer with a test address you own, see it in Team →
+  Newsletter, then unsubscribe it there (the only write in the smoke).
 - `/`, `/en`, one stay, one Sinai trip, one package, `/plan` (get a quote, do
   not submit), `/signature`, `/community`, `/search?q=دهب`, `/merch`, `/rent`,
   `/policy#cookies` — all 200, no console errors, images load, AR is RTL.
@@ -66,7 +69,8 @@ served unoptimised (`images.unoptimized`, see below).
   Transport schedule visible; an operations account gets 403 on catalogue edits.
 - Security sanity from outside:
   `curl -s "$SUPABASE_URL/rest/v1/customers?select=id&limit=1" -H "apikey: <anon key>"` → error / `[]` with permission denied.
-- Database: `select max(version) from supabase_migrations.schema_migrations` shows 041's entry.
+- Database: `to_regclass('public.staff_login_throttle')` and `to_regclass('public.newsletter_subscribers')`
+  are not NULL (SQL-editor runs do not add `schema_migrations` entries; check objects).
 
 ## Rollback
 
@@ -81,12 +85,14 @@ security check in the smoke fails.
    admin writes payments into rows and sends pickup orders out for delivery;
    the M4 guards refuse both. Data, ledger and history are kept.
 3. Keep `ADMIN_PASSWORD` set — the pre-M4 admin signs in with it.
-4. Migrations are not reversed (additive; 041 only removed unsafe policies).
+4. Migrations are not reversed (additive; 041 only removed unsafe policies, 042 only replaced
+   newsletter policies).
    Full restore from the step-3 backup only if data is corrupted; it loses
    anything written since.
 
-Proven locally: `scripts/db-upgrade-check.sh` (028 → 041 on legacy-shaped
-data, double apply, then the rollback helper).
+Proven locally: `scripts/db-upgrade-check.sh` — production profile (the measured
+production schema, proven against its fingerprint, → 042, double apply, rollback
+helper) and legacy profile (legacy money / pickup data).
 
 ## Images
 
@@ -108,7 +114,7 @@ Recorded at release: owner created at ____ by ____; shared password refused
 |---|---|
 | Release commit | |
 | Backup | |
-| Migrations applied | 029–041 at ____ |
+| Migrations applied | 029–042 at ____ |
 | Deployment id | |
 | Smoke | |
 
