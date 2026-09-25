@@ -6,6 +6,7 @@ import { EditorialCard } from '@/components/brand/EditorialCard'
 import { Link } from '@/i18n/navigation'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
 import type { CommunityPost } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 const RAIL_LIMIT = 6
 
@@ -31,7 +32,7 @@ export function StayLocalGuides({ posts }: { posts: CommunityPost[] }) {
           <div key={post.id} className="rail-snap-item w-[78vw] shrink-0 sm:w-72">
             <EditorialCard
               href={`/community/${post.slug}`}
-              image={post.image_url || '/media/heroposter.webp'}
+              image={post.image_url || NEUTRAL_MEDIA}
               title={ar ? post.title_ar : post.title_en}
               size="sm"
             />

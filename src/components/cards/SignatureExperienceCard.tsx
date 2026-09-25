@@ -5,6 +5,7 @@ import { EditorialCard } from '@/components/brand/EditorialCard'
 import { discountedExperiencePrice } from '@/lib/experience-pricing'
 import { formatAmount } from '@/lib/format'
 import type { Experience } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * Signature's face of the shared `<EditorialCard>` — the same card shape
@@ -33,7 +34,7 @@ export function SignatureExperienceCard({
   const name = ar ? experience.title_ar : experience.title_en
   const badge = ar ? experience.badge_ar : experience.badge_en
   const category = ar ? experience.category_info?.label_ar : experience.category_info?.label_en
-  const cover = experience.hero_image || experience.gallery?.[0] || '/media/heroposter.webp'
+  const cover = experience.hero_image || experience.gallery?.[0] || NEUTRAL_MEDIA
   const price = discountedExperiencePrice(experience)
 
   return (

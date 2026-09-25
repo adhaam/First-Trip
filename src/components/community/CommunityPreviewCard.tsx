@@ -9,6 +9,7 @@ import { POST_CATEGORY_LABELS } from '@/lib/community'
 import { formatCount } from '@/lib/format'
 import { COMMUNITY_CATEGORY_ICONS } from './category-icons'
 import type { CommunityPost } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * The one legitimate use of a click-to-preview card instead of a real link:
@@ -47,7 +48,7 @@ export function CommunityPreviewCard({
       >
         <article className="hover-lift h-full overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
           <div className="slow-zoom relative aspect-[3/2]">
-            <Image src={post.image_url || '/media/heroposter.webp'} alt="" fill sizes="(max-width: 640px) 90vw, 33vw" className="object-cover" />
+            <Image src={post.image_url || NEUTRAL_MEDIA} alt="" fill sizes="(max-width: 640px) 90vw, 33vw" className="object-cover" />
             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-sea-900/80 via-sea-900/15 to-transparent" />
             {post.is_pinned && (
               <span className="absolute start-3 top-3 inline-flex items-center gap-1 rounded-full bg-sand-50/95 px-3 py-1 text-[0.7rem] font-semibold text-sea-900 backdrop-blur">

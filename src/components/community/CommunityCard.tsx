@@ -8,6 +8,7 @@ import { POST_CATEGORY_LABELS } from '@/lib/community'
 import { formatCount } from '@/lib/format'
 import { COMMUNITY_CATEGORY_ICONS } from './category-icons'
 import type { CommunityPost } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * The Community surface's face of the shared `<EditorialCard>`. Real
@@ -40,7 +41,7 @@ export function CommunityCard({
   return (
     <EditorialCard
       href={`/community/${post.slug}`}
-      image={post.image_url || '/media/heroposter.webp'}
+      image={post.image_url || NEUTRAL_MEDIA}
       title={title}
       kicker={
         <span className="inline-flex items-center gap-1.5">

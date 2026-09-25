@@ -12,6 +12,7 @@ import { discountedExperiencePrice } from '@/lib/experience-pricing'
 import { getTripRouteSlug } from '@/lib/trips'
 import { formatDateShort } from '@/lib/format'
 import { isFallbackCurated, type CuratedPick, type CuratedReason } from '@/lib/home-sections'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 const REASON_BADGE_KEY: Record<CuratedReason, string> = {
   featured: 'badgeFeatured',
@@ -27,9 +28,9 @@ function pickHref(pick: CuratedPick): string {
 }
 
 function pickImage(pick: CuratedPick): string {
-  if (pick.kind === 'trip') return pick.trip.images?.[0] || '/media/heroposter.webp'
-  if (pick.kind === 'package') return pick.pkg.image || pick.pkg.trips?.[0]?.image || '/media/heroposter.webp'
-  return pick.experience.hero_image || '/media/heroposter.webp'
+  if (pick.kind === 'trip') return pick.trip.images?.[0] || NEUTRAL_MEDIA
+  if (pick.kind === 'package') return pick.pkg.image || pick.pkg.trips?.[0]?.image || NEUTRAL_MEDIA
+  return pick.experience.hero_image || NEUTRAL_MEDIA
 }
 
 function pickTitle(pick: CuratedPick, ar: boolean): string {

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 import { getTranslations } from 'next-intl/server'
 import { getTripPackages } from '@/lib/trip-packages'
 import { EmptyState } from '@/components/EmptyState'
@@ -94,7 +95,7 @@ export default async function PackagesPage({ params }: Props) {
         <div className="space-y-6">
           <EditorialCard
             href={`/sinai-trips/packages/${hero.slug}`}
-            image={hero.image || hero.trips?.[0]?.image || '/media/heroposter.webp'}
+            image={hero.image || hero.trips?.[0]?.image || NEUTRAL_MEDIA}
             title={heroName}
             kicker={t('packageTripsCount', { count: heroTripCount, n: formatCount(heroTripCount, locale) })}
             meta={<PriceTag amount={hero.totals?.packageTotal ?? 0} unit="person" tone="light" size="sm" />}

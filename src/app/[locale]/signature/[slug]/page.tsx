@@ -15,6 +15,7 @@ import { PriceTag } from '@/components/brand/PriceTag'
 import { PaymentTerms } from '@/components/brand/PaymentTerms'
 import { ArrowBack } from '@/components/brand/DirectionalIcon'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 export const revalidate = 60
 
@@ -63,7 +64,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
   const notIncluded = (ar ? experience.not_included_ar : experience.not_included_en) || []
   const itinerary = experience.itinerary || []
   const gallery = (experience.gallery || []).filter(Boolean)
-  const cover = experience.hero_image || gallery[0] || '/media/heroposter.webp'
+  const cover = experience.hero_image || gallery[0] || NEUTRAL_MEDIA
   const price = discountedExperiencePrice(experience)
   const canonicalPath = `/signature/${experience.slug}`
 

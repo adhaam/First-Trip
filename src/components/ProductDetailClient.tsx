@@ -24,6 +24,7 @@ import { formatCount } from '@/lib/format'
 import { resolveTierKey, fromPricePerPersonPerNight } from '@/lib/stays'
 import type { Accommodation, CommunityPost, SinaiTrip } from '@/lib/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 const TIER_LABEL_KEY = {
   budget: 'tierBudget',
@@ -53,7 +54,7 @@ export function ProductDetailClient({
 
   const tag = ACCOMMODATION_TAGS[accommodation.type]
   const tierKey = resolveTierKey(accommodation.tier)
-  const images = accommodation.images?.length ? accommodation.images : [accommodation.image_url || '/media/heroposter.webp']
+  const images = accommodation.images?.length ? accommodation.images : [accommodation.image_url || NEUTRAL_MEDIA]
   const name = ar ? accommodation.name_ar : accommodation.name_en
   const amenities = (ar ? accommodation.amenities_ar : accommodation.amenities_en) ?? []
   const location = ar ? accommodation.location_ar || accommodation.location : accommodation.location_en || accommodation.location

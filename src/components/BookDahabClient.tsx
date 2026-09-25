@@ -23,6 +23,7 @@ import {
 } from '@/lib/stays'
 import type { Accommodation, AccommodationType } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 const TYPE_FILTERS: { key: StayFilterKey; labelKey: 'filterAll' | 'filterHotel' | 'filterChalet' | 'filterCamp' }[] = [
   { key: 'all', labelKey: 'filterAll' },
@@ -149,7 +150,7 @@ export function BookDahabClient({
             <Reveal className="h-full sm:col-span-2 xl:col-span-2" as="div">
               <EditorialCard
                 href={`/book-dahab/${first.id}`}
-                image={first.image_url || first.images?.[0] || '/media/heroposter.webp'}
+                image={first.image_url || first.images?.[0] || NEUTRAL_MEDIA}
                 title={ar ? first.name_ar : first.name_en}
                 kicker={ar ? ACCOMMODATION_TAGS[first.type]?.label_ar : ACCOMMODATION_TAGS[first.type]?.label_en}
                 meta={<PriceTag amount={fromPricePerPersonPerNight(first)} from unit="personNight" size="sm" tone="light" />}

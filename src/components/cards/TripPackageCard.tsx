@@ -9,6 +9,7 @@ import { PriceTag } from '@/components/brand'
 import { cn } from '@/lib/utils'
 import { formatCount } from '@/lib/format'
 import type { TripPackage } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * One consistent "Sinai trip package" card — a `TripPackage` is a single
@@ -25,7 +26,7 @@ export function TripPackageCard({ pkg, className }: { pkg: TripPackage; classNam
 
   const name = ar ? pkg.name_ar : pkg.name_en
   const badge = (ar ? pkg.badge_ar : pkg.badge_en) || t('packageBadge')
-  const cover = pkg.image || pkg.trips?.[0]?.image || '/media/heroposter.webp'
+  const cover = pkg.image || pkg.trips?.[0]?.image || NEUTRAL_MEDIA
   const tripNames = (pkg.trips || []).map((tr) => (ar ? tr.name_ar : tr.name_en))
   const total = pkg.totals?.packageTotal ?? 0
 

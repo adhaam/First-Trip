@@ -12,6 +12,7 @@ import type { CommerceProduct, CommerceProductVariant, DeliveryZone } from '@/li
 import type { CartMerchItem } from '@/lib/commerce-types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 import { formatAmount, formatCount } from '@/lib/format'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 export function ProductDetailClient({ product, deliveryZones, paymentPolicies }: {
   product: CommerceProduct
@@ -51,7 +52,7 @@ export function ProductDetailClient({ product, deliveryZones, paymentPolicies }:
   const productOutOfStock = isOutOfStock(product)
   const canAdd = (!hasOptions || matchedVariant) && !variantOutOfStock && !productOutOfStock
 
-  const images = product.images?.length ? product.images : ['/media/heroposter.webp']
+  const images = product.images?.length ? product.images : [NEUTRAL_MEDIA]
   const showDelivery = product.delivery_enabled && deliveryZones.length > 0
   const showPickup = product.pickup_enabled
 

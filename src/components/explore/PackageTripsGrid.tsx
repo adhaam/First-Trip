@@ -1,5 +1,6 @@
 import { SafeImage as Image } from '@/components/SafeImage'
 import type { TripPackageTrip } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /** The package detail page's "what's inside" grid — cover image plus name only; price stays server-side (`totals`). */
 export function PackageTripsGrid({ trips, locale }: { trips: TripPackageTrip[]; locale: string }) {
@@ -11,7 +12,7 @@ export function PackageTripsGrid({ trips, locale }: { trips: TripPackageTrip[]; 
         <article key={trip.id} className="overflow-hidden rounded-2xl border border-sand-300 bg-card">
           <div className="relative aspect-[16/9]">
             <Image
-              src={trip.image || '/media/heroposter.webp'}
+              src={trip.image || NEUTRAL_MEDIA}
               alt={ar ? trip.name_ar : trip.name_en}
               fill
               sizes="(max-width: 640px) 100vw, 45vw"

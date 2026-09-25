@@ -7,6 +7,7 @@ import { EditorialCard } from '@/components/brand/EditorialCard'
 import { PriceTag } from '@/components/brand/PriceTag'
 import { Reveal } from '@/components/motion/Reveal'
 import { stayFromPricePerPersonPerNight, type StaysLineup } from '@/lib/home-sections'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * Editorial stays layout: one hero-scale pick beside 2–3 smaller ones — never
@@ -43,7 +44,7 @@ export function Stays({ lineup }: { lineup: StaysLineup }) {
         <Reveal className="min-w-0 lg:col-span-7">
           <EditorialCard
             href={`/book-dahab/${lineup.hero.id}`}
-            image={lineup.hero.image_url || lineup.hero.images?.[0] || '/media/heroposter.webp'}
+            image={lineup.hero.image_url || lineup.hero.images?.[0] || NEUTRAL_MEDIA}
             title={ar ? lineup.hero.name_ar : lineup.hero.name_en}
             size="lg"
             meta={
@@ -63,7 +64,7 @@ export function Stays({ lineup }: { lineup: StaysLineup }) {
             <Reveal key={acc.id} delay={(i + 1) * 80}>
               <EditorialCard
                 href={`/book-dahab/${acc.id}`}
-                image={acc.image_url || acc.images?.[0] || '/media/heroposter.webp'}
+                image={acc.image_url || acc.images?.[0] || NEUTRAL_MEDIA}
                 title={ar ? acc.name_ar : acc.name_en}
                 size="sm"
                 meta={<PriceTag amount={stayFromPricePerPersonPerNight(acc)} from unit="personNight" size="sm" tone="light" />}

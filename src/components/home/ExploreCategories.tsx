@@ -6,6 +6,7 @@ import { Section, SectionHeading } from '@/components/brand/Section'
 import { EditorialCard } from '@/components/brand/EditorialCard'
 import { Reveal } from '@/components/motion/Reveal'
 import type { CategoryTile } from '@/lib/home-sections'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * The Sinai trip taxonomy, rendered as tiles — never a text list. Categories
@@ -40,7 +41,7 @@ export function ExploreCategories({ tiles }: { tiles: CategoryTile[] }) {
           <Reveal key={chip.id} delay={i * 60}>
             <EditorialCard
               href={`/sinai-trips?category=${encodeURIComponent(chip.id)}`}
-              image={image || '/media/heroposter.webp'}
+              image={image || NEUTRAL_MEDIA}
               title={ar ? chip.name_ar : chip.name_en}
               size="sm"
             />

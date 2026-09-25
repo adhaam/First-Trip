@@ -10,6 +10,7 @@ import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { PriceTag } from '@/components/brand'
 import { formatCount } from '@/lib/format'
 import type { TripPackage } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * A titled shelf of packages — the single package, a rail, or a grid,
@@ -67,7 +68,7 @@ function FeaturedPackage({ pkg }: { pkg: TripPackage }) {
 
   const name = ar ? pkg.name_ar : pkg.name_en
   const badge = (ar ? pkg.badge_ar : pkg.badge_en) || t('packageBadge')
-  const cover = pkg.image || pkg.trips?.[0]?.image || '/media/heroposter.webp'
+  const cover = pkg.image || pkg.trips?.[0]?.image || NEUTRAL_MEDIA
   const tripNames = (pkg.trips || []).map((tr) => (ar ? tr.name_ar : tr.name_en))
   const total = pkg.totals?.packageTotal ?? 0
 

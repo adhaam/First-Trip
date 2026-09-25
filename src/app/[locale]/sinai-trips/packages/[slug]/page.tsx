@@ -13,6 +13,7 @@ import { getSiteSettings } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 export const revalidate = 60
 
@@ -49,7 +50,7 @@ export default async function PackageDetail({ params }: Props) {
   const description = (ar ? pkg.description_ar : pkg.description_en) || ''
   const short = (ar ? pkg.short_description_ar : pkg.short_description_en) || ''
   const trips = pkg.trips || []
-  const cover = pkg.image || trips[0]?.image || '/media/heroposter.webp'
+  const cover = pkg.image || trips[0]?.image || NEUTRAL_MEDIA
   // Every trip_package is one public product, a Sinai trip package, paid
   // 100% after confirmation — never derived from the package's own
   // `payment_kind` here (see docs/m2/BRIEF.md "Package semantics").

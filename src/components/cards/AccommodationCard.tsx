@@ -11,6 +11,7 @@ import { PriceTag } from '@/components/brand/PriceTag'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
 import { cn } from '@/lib/utils'
 import type { Accommodation, AccommodationType } from '@/lib/types'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 // Lucide glyphs, not the ACCOMMODATION_TAGS emoji — emoji render inconsistently
 // across platforms and carry no brand colour; these do.
@@ -42,7 +43,7 @@ export function AccommodationCard({
 
   const tag = ACCOMMODATION_TAGS[acc.type]
   const TypeIcon = TYPE_ICON[acc.type]
-  const cover = acc.image_url || acc.images?.[0] || '/media/heroposter.webp'
+  const cover = acc.image_url || acc.images?.[0] || NEUTRAL_MEDIA
   const fromRate = fromPricePerPersonPerNight(acc)
   const name = ar ? acc.name_ar : acc.name_en
   const location = ar ? acc.location_ar || acc.location : acc.location_en || acc.location

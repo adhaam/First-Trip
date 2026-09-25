@@ -8,6 +8,7 @@ import { EditorialCard, Eyebrow, PageHero, Section, SectionHeading } from '@/com
 import { Link } from '@/i18n/navigation'
 import { buildAlternates } from '@/lib/seo'
 import { formatCount } from '@/lib/format'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 export const revalidate = 60
 
@@ -101,7 +102,7 @@ export default async function ExplorePage({ params }: Props) {
               title={surface.title}
               kicker={surface.kicker}
               meta={<SurfaceMeta icon={surface.icon} label={surface.count} />}
-              image={surface.image || '/media/heroposter.webp'}
+              image={surface.image || NEUTRAL_MEDIA}
               size={index === 0 ? 'lg' : 'md'}
               priority={index === 0}
             />

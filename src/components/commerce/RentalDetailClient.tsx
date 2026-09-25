@@ -14,6 +14,7 @@ import { Eyebrow, PaymentTerms, PriceTag, StickyActionBar } from '@/components/b
 import type { CommerceProduct, CommerceProductVariant, CartRentalItem, DeliveryZone } from '@/lib/commerce-types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 import { formatAmount, formatCount, formatDate } from '@/lib/format'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 const REQUIREMENT_KEYS: Record<string, string> = {
   id_required: 'requirementIdRequired',
@@ -111,7 +112,7 @@ export function RentalDetailClient({ product, deliveryZones, paymentPolicies }: 
   const showDelivery = product.delivery_enabled && deliveryZones.length > 0
   const showPickup = product.pickup_enabled
 
-  const images = product.images?.length ? product.images : ['/media/heroposter.webp']
+  const images = product.images?.length ? product.images : [NEUTRAL_MEDIA]
   const deliveryFee = fulfillment === 'delivery' ? deliveryZones.find((z) => z.id === zoneId) : null
   const deliveryFeeAmount = deliveryFee?.fee_type === 'fixed' ? Number(deliveryFee.fixed_fee) : 0
   const canAdd = quote != null && (!hasOptions || matchedVariant) && availability.available && (fulfillment === 'pickup' || !!zoneId || deliveryZones.length === 0)

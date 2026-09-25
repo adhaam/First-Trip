@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import type { CommerceProduct } from '@/lib/commerce-types'
 import { cheapestRentalTier, isOutOfStock, productMinPrice, rentalDurationLabel } from '@/lib/shop-view'
 import { formatAmount } from '@/lib/format'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 /**
  * The one card shape for Merch + Rent listings — visually a sibling of
@@ -35,7 +36,7 @@ export function ProductCard({ product, featured = false, priority = false, class
   const common = useTranslations('common')
 
   const name = ar ? product.name_ar : product.name_en
-  const cover = product.images?.[0] || '/media/heroposter.webp'
+  const cover = product.images?.[0] || NEUTRAL_MEDIA
   const category = product.commerce_categories ? (ar ? product.commerce_categories.name_ar : product.commerce_categories.name_en) : null
   const href = product.product_type === 'sale' ? `/merch/${product.slug}` : `/rent/${product.slug}`
 

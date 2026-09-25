@@ -11,6 +11,7 @@ import type { SinaiTrip } from '@/lib/types'
 import { effectiveTripPrice } from '@/lib/pricing'
 import { Price } from '@/components/Price'
 import { PickupNote } from '@/components/explore/PickupNote'
+import { NEUTRAL_MEDIA } from '@/lib/media'
 
 export function TripCard({
   trip,
@@ -29,7 +30,7 @@ export function TripCard({
   const ar = locale === 'ar'
 
   const name = ar ? trip.name_ar : trip.name_en
-  const cover = trip.images?.[0] || '/media/heroposter.webp'
+  const cover = trip.images?.[0] || NEUTRAL_MEDIA
   const duration = ar ? trip.duration : trip.duration_en || trip.duration
   const category = ar ? trip.category_ar : trip.category_en
   const href = `/sinai-trips/${getTripRouteSlug(trip)}`
