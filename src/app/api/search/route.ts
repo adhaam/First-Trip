@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { getTripRouteSlug } from '@/lib/trips'
+import { effectiveTripPrice } from '@/lib/pricing'
 
 export type SearchResultType = 'accommodation' | 'trip' | 'merch' | 'rental'
 
@@ -25,6 +26,12 @@ export interface SearchResponse {
 
 const MAX_RESULTS_PER_GROUP = 5
 
+/** Values interpolated into PostgREST's `.or()` grammar must not contain
+ * grammar tokens or LIKE wildcards. */
+export function sanitizeSearchFilter(value: string): string {
+  return value.replace(/[%_*,()]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 export async function GET(req: NextRequest) {
   const q = (new URL(req.url).searchParams.get('q') || '').trim()
 
@@ -37,7 +44,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Strip characters that corrupt PostgREST .or() filters
-  const safe = q.replace(/[,()]/g, ' ').trim()
+  const safe = sanitizeSearchFilter(q)
+  if (!safe) return NextResponse.json({ results: [], query: q })
 
   try {
     const supabase = getSupabaseAdmin()
@@ -53,7 +61,7 @@ export async function GET(req: NextRequest) {
 
       supabase
         .from('sinai_trips')
-        .select('id, name_ar, name_en, category_ar, category_en, images, price, duration, duration_en, description_ar, description_en')
+        .select('id, name_ar, name_en, category_ar, category_en, images, price, discount_type, discount_value, discount_starts_at, discount_ends_at, duration, duration_en, description_ar, description_en')
         .eq('is_active', true)
         .or(`name_ar.ilike.%${safe}%,name_en.ilike.%${safe}%,category_ar.ilike.%${safe}%,category_en.ilike.%${safe}%,description_ar.ilike.%${safe}%,description_en.ilike.%${safe}%`)
         .order('sort_order', { ascending: true })
@@ -61,8 +69,9 @@ export async function GET(req: NextRequest) {
 
       supabase
         .from('commerce_products')
-        .select('id, slug, name_ar, name_en, type, images, description_ar, description_en')
-        .eq('is_archived', false)
+        .select('id, slug, name_ar, name_en, product_type, images, description_ar, description_en')
+        .eq('is_active', true)
+        .is('archived_at', null)
         .or(`name_ar.ilike.%${safe}%,name_en.ilike.%${safe}%,description_ar.ilike.%${safe}%,description_en.ilike.%${safe}%`)
         .order('sort_order', { ascending: true })
         .limit(MAX_RESULTS_PER_GROUP * 2),
@@ -106,7 +115,7 @@ export async function GET(req: NextRequest) {
           url: `/sinai-trips/${slug}`,
           category_ar: trip.category_ar || undefined,
           category_en: trip.category_en || undefined,
-          price: trip.price || undefined,
+          price: effectiveTripPrice(trip).final || undefined,
         })
       }
     }
@@ -115,7 +124,7 @@ export async function GET(req: NextRequest) {
     if (prodRes.status === 'fulfilled' && prodRes.value.data) {
       for (const prod of prodRes.value.data) {
         const image = Array.isArray(prod.images) && prod.images.length > 0 ? prod.images[0] : undefined
-        const isMerch = prod.type === 'sale'
+        const isMerch = prod.product_type === 'sale'
         results.push({
           type: isMerch ? 'merch' : 'rental',
           id: prod.id,

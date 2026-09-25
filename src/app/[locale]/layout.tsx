@@ -18,6 +18,7 @@ import { CartDrawer } from '@/components/commerce/CartDrawer'
 import { Analytics } from '@vercel/analytics/next'
 import { AnalyticsScripts } from '@/components/analytics/AnalyticsScripts'
 import { AnalyticsNoScript } from '@/components/analytics/AnalyticsNoScript'
+import { jsonLdScript } from '@/lib/safe-html'
 import '../globals.css'
 
 // ─── Typeface pairing ───
@@ -112,7 +113,7 @@ export default async function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(getSchemaOrg(settings)) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(getSchemaOrg(settings)) }}
         />
       </head>
       <body

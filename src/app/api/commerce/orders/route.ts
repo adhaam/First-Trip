@@ -95,7 +95,13 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, orderId: result.orderId, orderNumber: result.orderNumber, totalPrice: result.totalPrice },
+      {
+        success: true,
+        orderId: result.orderId,
+        orderNumber: result.orderNumber,
+        totalPrice: result.totalPrice,
+        depositTotal: result.depositTotal,
+      },
       { status: 201 },
     )
   } catch (err) {

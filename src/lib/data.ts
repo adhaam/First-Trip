@@ -9,6 +9,7 @@ import type {
   AccommodationSeasonalRate,
   RoomUpgrade,
   SinaiTrip,
+  TripCategory,
   CommunityPost,
   SiteSettings,
   TripDate,
@@ -19,6 +20,12 @@ import type {
   TransferSettings,
 } from './types'
 import type { CommerceCategory, CommerceCollection, CommerceProduct, CommerceProductType, DeliveryZone } from './commerce-types'
+import {
+  isMissingTripCategoryTagsTable,
+  resolveTripCategory,
+  tripCategoryTags,
+  type SinaiTripCategoryTag,
+} from './trip-categories'
 
 export async function getAccommodations(): Promise<Accommodation[]> {
   if (!isSupabaseConfigured()) return []
@@ -127,6 +134,51 @@ function stripPackagePrice(trip: SinaiTrip): SinaiTrip {
   return { ...trip, package_price: null }
 }
 
+/**
+ * Adds the controlled category taxonomy in two shared queries. The tag table
+ * arrived after the primary-category migration, so an unapplied migration must
+ * not make a public trip page fail.
+ */
+async function attachTripCategories(trips: SinaiTrip[]): Promise<SinaiTrip[]> {
+  if (trips.length === 0) return trips
+  const supabase = getSupabaseAdmin()
+  const { data: categoryRows, error: categoryError } = await supabase
+    .from('trip_categories')
+    .select('*')
+    .eq('is_active', true)
+
+  if (categoryError) {
+    console.error('attachTripCategories categories error:', categoryError)
+    return trips.map((trip) => ({
+      ...trip,
+      category: resolveTripCategory(trip, new Map()),
+      category_tags: [],
+    }))
+  }
+
+  const categories = (categoryRows ?? []) as TripCategory[]
+  const categoriesById = new Map(categories.map((category) => [category.id, category]))
+  const { data: tagRows, error: tagError } = await supabase
+    .from('sinai_trip_category_tags')
+    .select('trip_id, category_id')
+    .in('trip_id', trips.map((trip) => trip.id))
+
+  let tags: SinaiTripCategoryTag[] = []
+  if (tagError) {
+    if (!isMissingTripCategoryTagsTable(tagError)) {
+      console.error('attachTripCategories tags error:', tagError)
+    }
+  } else {
+    tags = (tagRows ?? []) as SinaiTripCategoryTag[]
+  }
+
+  return trips.map((trip) => ({
+    ...trip,
+    category: resolveTripCategory(trip, categoriesById),
+    category_tags: tripCategoryTags(trip, tags, categoriesById),
+  }))
+}
+
 export async function getSinaiTrips(): Promise<SinaiTrip[]> {
   if (!isSupabaseConfigured()) return []
   const supabase = getSupabaseAdmin()
@@ -147,12 +199,12 @@ export async function getSinaiTrips(): Promise<SinaiTrip[]> {
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: true })
-      return ((fallback ?? []) as SinaiTrip[]).map(stripPackagePrice)
+      return attachTripCategories(((fallback ?? []) as SinaiTrip[]).map(stripPackagePrice))
     }
     console.error('getSinaiTrips error:', error)
     return []
   }
-  return ((data ?? []) as SinaiTrip[]).map(stripPackagePrice)
+  return attachTripCategories(((data ?? []) as SinaiTrip[]).map(stripPackagePrice))
 }
 
 export async function getSinaiTripById(id: string): Promise<SinaiTrip | null> {
@@ -169,7 +221,9 @@ export async function getSinaiTripById(id: string): Promise<SinaiTrip | null> {
     console.error('getSinaiTripById error:', error)
     return null
   }
-  return data ? stripPackagePrice(data as SinaiTrip) : null
+  if (!data) return null
+  const [trip] = await attachTripCategories([stripPackagePrice(data as SinaiTrip)])
+  return trip
 }
 
 export async function getCommunityPosts(): Promise<CommunityPost[]> {

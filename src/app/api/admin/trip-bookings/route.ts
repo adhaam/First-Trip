@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { buildTripPriceSnapshot, effectiveTripPrice } from '@/lib/pricing'
+import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
+import {
+  adminTripBookingSchema,
+  bookingCustomerInput,
+  buildAdminTripBookingRow,
+} from '@/lib/admin-booking-rows'
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) {
@@ -21,29 +26,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ tripBookings: data })
 }
 
-const createSchema = z.object({
-  customer_name: z.string().min(1),
-  customer_phone: z.string().min(5),
-  trip_id: z.string().uuid(),
-  preferred_date: z.string().optional().nullable(),
-  num_people: z.number().int().min(1).default(1),
-  quoted_price: z.number().optional().nullable(),
-  /**
-   * Honour the client-sent quoted_price only when the employee explicitly
-   * overrode the calculated one. Otherwise the server prices the booking
-   * itself — this route previously trusted whatever number arrived.
-   */
-  price_override: z.boolean().optional(),
-  price_override_reason: z.string().max(300).optional(),
-  notes: z.string().optional().nullable(),
-})
-
 export async function POST(req: NextRequest) {
   if (!(await requireAdmin(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const body = await req.json().catch(() => null)
-  const parsed = createSchema.safeParse(body)
+  const parsed = adminTripBookingSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten() }, { status: 400 })
   }
@@ -61,42 +49,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
   }
 
-  const priced = effectiveTripPrice(trip)
-  const snapshot = buildTripPriceSnapshot(priced, parsed.data.num_people)
-  const useOverride = parsed.data.price_override && parsed.data.quoted_price != null
-  const quotedPrice = useOverride ? parsed.data.quoted_price! : snapshot.total
+  const snapshot = buildTripPriceSnapshot(effectiveTripPrice(trip), parsed.data.num_people)
 
+  // Link to the canonical customer (same resolver as the public trip-booking
+  // route) — this path previously stored no customer_id at all, so staff-
+  // created trip bookings never appeared on the Customer 360 page.
+  let customerId: string
+  try {
+    customerId = (await findOrCreateCustomerByPhone(bookingCustomerInput(parsed.data))).id
+  } catch (err) {
+    console.error('POST trip_booking customer resolution error:', err)
+    return NextResponse.json({ error: 'Failed to resolve customer' }, { status: 500 })
+  }
+
+  // source is a validated STAFF_BOOKING_SOURCES value (default 'manual') —
+  // the old hardcoded 'admin' violated trip_bookings_source_check and made
+  // every staff-created trip booking fail.
   const { data, error } = await supabase
     .from('trip_bookings')
-    .insert({
-      customer_name: parsed.data.customer_name,
-      customer_phone: parsed.data.customer_phone,
-      trip_id: parsed.data.trip_id,
-      preferred_date: parsed.data.preferred_date || null,
-      num_people: parsed.data.num_people,
-      quoted_price: quotedPrice,
-      price_snapshot: useOverride
-        ? {
-            ...snapshot,
-            price_override: true,
-            computed_total: snapshot.total,
-            ...(parsed.data.price_override_reason
-              ? { price_override_reason: parsed.data.price_override_reason }
-              : {}),
-            total: quotedPrice,
-          }
-        : snapshot,
-      notes: parsed.data.notes || null,
-      status: 'new',
-      context: 'standalone',
-      source: 'admin',
-      selected_options: {},
-    })
+    .insert(buildAdminTripBookingRow(parsed.data, snapshot, customerId))
     .select('*, sinai_trips(name_ar, name_en)')
     .single()
   if (error) {
     console.error('POST trip_booking error:', error)
     return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 })
+  }
+
+  // Saved already — a failed counter bump must not become an error response.
+  try {
+    await recordCustomerActivity(customerId)
+  } catch (err) {
+    console.error('POST trip_booking recordCustomerActivity error:', err)
   }
   return NextResponse.json({ tripBooking: data }, { status: 201 })
 }

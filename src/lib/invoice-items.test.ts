@@ -13,7 +13,7 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildAccommodationInvoice, buildTripInvoice } from './invoice-items'
+import { buildAccommodationInvoice, buildInvoiceNumber, buildTripInvoice } from './invoice-items'
 import type { Booking } from './types'
 
 type AccBooking = Parameters<typeof buildAccommodationInvoice>[0]
@@ -102,8 +102,8 @@ test('transfer-only booking with NO snapshot still avoids the accommodation fall
   assert.equal(built.items.length, 1)
   assert.match(built.items[0].description_en, /Transfer/)
   assert.doesNotMatch(built.items[0].description_en, /Accommodation/)
-  assert.equal(built.items[0].quantity, 5)
-  assert.equal(built.items[0].unitPrice, 1900)
+  assert.equal(built.items[0].quantity, 1)
+  assert.equal(built.items[0].unitPrice, 9500)
 })
 
 // ─── Accommodation and package bookings ───
@@ -209,8 +209,8 @@ test('a discounted extra trip is itemised with its pre-discount price and a disc
   const tripLine = built.items.find(i => /Blue Hole/.test(i.description_en))
   assert.ok(tripLine, 'the extra trip should be its own line')
   assert.equal(tripLine.quantity, 2)
-  assert.equal(tripLine.unitPrice, 900)
-  assert.match(tripLine.meta_en!, /Was 1,000 EGP/)
+  assert.equal(tripLine.unitPrice, 1000)
+  assert.match(tripLine.meta_en!, /2 people/)
 
   assert.equal(built.discount?.amount, 200)
 })
@@ -291,8 +291,8 @@ test('an undiscounted trip booking has no discount row', () => {
   }, 'en')
 
   assert.equal(built.discount, undefined)
-  assert.equal(built.items[0].quantity, 3)
-  assert.equal(built.items[0].unitPrice, 1000)
+  assert.equal(built.items[0].quantity, 1)
+  assert.equal(built.items[0].unitPrice, 3000)
 })
 
 test('a trip-PACKAGE booking uses the package name, not the generic "Sinai Trip" label', () => {
@@ -338,5 +338,77 @@ test('final_price wins over quoted_price when an admin has settled the amount', 
     trip_packages: null,
   }, 'en')
 
-  assert.equal(built.items[0].unitPrice, 1250)
+  assert.equal(built.items[0].unitPrice, 2500)
+})
+
+const assertReconciles = (built: ReturnType<typeof buildAccommodationInvoice> | ReturnType<typeof buildTripInvoice>) => {
+  const lines = built.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+  const adjustments = built.adjustments.reduce((sum, adjustment) => sum + adjustment.amount, 0)
+  assert.equal(Math.round((lines + adjustments) * 100) / 100, built.totalAmount)
+}
+
+test('public-shape room upgrade is added as a frozen line and reconciles to total', () => {
+  const built = buildAccommodationInvoice(booking({
+    booking_type: 'accommodation-only', total_price: 3300,
+    price_snapshot: {
+      accommodation_subtotal: 3000, nights: 3, num_people: 2, total: 3300,
+      room_allocations: [{ room_type: 'double', quantity: 1, base_nightly_rate: 1000, final_nightly_rate: 1100, upgrade_name: 'Sea view', upgrade_extra_per_night: 100 }],
+      computed_at: '2026-09-01T00:00:00Z',
+    },
+  }), 'en')
+  assert.equal(built.items.find((item) => item.description_en === 'Room upgrade — Sea view')?.unitPrice, 300)
+  assertReconciles(built)
+})
+
+test('computeQuote-shape room upgrade is not charged twice', () => {
+  const built = buildAccommodationInvoice(booking({
+    booking_type: 'accommodation-only', total_price: 3300,
+    price_snapshot: {
+      accommodation_subtotal: 3300, nights: 3, num_people: 2, total: 3300,
+      room_allocations: [{ room_type: 'double', quantity: 1, base_nightly_rate: 1000, final_nightly_rate: 1100, upgrade_name: 'Sea view', upgrade_extra_per_night: 100 }],
+      computed_at: '2026-09-01T00:00:00Z',
+    },
+  }), 'en')
+  assert.equal(built.items.some((item) => item.description_en.startsWith('Room upgrade')), false)
+  assertReconciles(built)
+})
+
+test('upward and downward staff totals produce visible signed adjustments', () => {
+  for (const [total, amount] of [[1200, 200], [800, -200]] as const) {
+    const built = buildAccommodationInvoice(booking({
+      booking_type: 'transfer-only', total_price: total,
+      price_snapshot: { transfer_subtotal: 1000, num_people: 1, total: 1000, computed_at: '2026-09-01T00:00:00Z' },
+    }), 'en')
+    assert.equal(built.adjustments.at(-1)?.amount, amount)
+    assert.match(built.adjustments.at(-1)?.label_en ?? '', /Agreed price adjustment/)
+    assertReconciles(built)
+  }
+})
+
+test('package final_price becomes an adjustment to frozen package price', () => {
+  const built = buildTripInvoice({
+    num_people: 2, preferred_date: null, quoted_price: 3000, final_price: 2500,
+    trip_package_id: 'pkg1', price_snapshot: null,
+    package_snapshot: { name_en: 'Adventure Bundle', package_total: 1500 },
+    sinai_trips: null, trip_packages: { name_ar: 'pkg', name_en: 'Adventure Bundle' },
+  }, 'en')
+  assert.equal(built.adjustments[0]?.amount, -500)
+  assertReconciles(built)
+})
+
+test('invoice number is stable and based only on immutable booking data', () => {
+  const first = buildInvoiceNumber('BK', 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', '2026-09-01T12:34:56.000Z', 'request')
+  const second = buildInvoiceNumber('BK', 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', '2026-09-01T12:34:56.000Z', 'request')
+  assert.equal(first, 'BK-20260901-AAAAAAAA-REQ')
+  assert.equal(second, first)
+})
+
+test('frozen invoice output does not change when a joined catalogue price changes', () => {
+  const base = booking({
+    booking_type: 'accommodation-only', total_price: 3000,
+    price_snapshot: { accommodation_subtotal: 3000, num_people: 2, total: 3000, computed_at: '2026-09-01T00:00:00Z' },
+  })
+  const oldCatalogue = { ...base, accommodations: { name_ar: 'Nayla', name_en: 'Nayla', price_per_night: 1000 } } as AccBooking
+  const changedCatalogue = { ...base, accommodations: { name_ar: 'Nayla', name_en: 'Nayla', price_per_night: 99999 } } as AccBooking
+  assert.deepEqual(buildAccommodationInvoice(oldCatalogue, 'en'), buildAccommodationInvoice(changedCatalogue, 'en'))
 })

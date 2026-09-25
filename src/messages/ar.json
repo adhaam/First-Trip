@@ -414,6 +414,7 @@
     "delivery": "توصيل لعندي",
     "pickupInstructions": "تفاصيل الاستلام",
     "deposit": "تأمين قابل للاسترداد",
+    "refundableAtHandover": "مسترد، يُدفع عند الاستلام",
     "requirements": "هتحتاج",
     "requirement_id_required": "بطاقة رقم قومي سارية",
     "requirement_license_required": "رخصة قيادة",

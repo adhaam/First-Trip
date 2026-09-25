@@ -1,4 +1,5 @@
 import type { SiteSettings } from '@/lib/types'
+import { escapeHtml as esc, escapeHtmlMultiline as escLines } from '@/lib/safe-html'
 
 /**
  * One "what did I book" fact, shown above the charges table. Bilingual pairs
@@ -12,6 +13,26 @@ export interface InvoiceDetail {
   value_en: string
 }
 
+export interface InvoiceAdjustment {
+  label_ar: string
+  label_en: string
+  /** Signed: negative = deducted, positive = added. */
+  amount: number
+}
+
+/** A money amount as rendered — Number() first so a stray string can't inject. */
+function money(value: unknown): string {
+  const n = Number(value)
+  return `${(Number.isFinite(n) ? n : 0).toFixed(2)} EGP`
+}
+
+/**
+ * Every value interpolated below that is not a literal of this template is
+ * escaped: customer name/phone/email/notes come straight from the public
+ * booking form, names and labels from the database, terms from
+ * site_settings. The rendered HTML is shown in the admin dashboard, so an
+ * unescaped `<img onerror>` in a booking name would run with admin rights.
+ */
 export interface InvoiceData {
   type: 'request' | 'confirmation'
   invoiceNumber: string
@@ -39,6 +60,13 @@ export interface InvoiceData {
   deliveryFee?: number
   /** Shown as its own deducted row when a discount applied to this booking. */
   discount?: { label_ar: string; label_en: string; amount: number }
+  /**
+   * Signed summary rows between the subtotal and the total — a negative
+   * amount is a deduction (a discount), a positive one a surcharge (an agreed
+   * price above the itemised one). Built by lib/invoice-items so that
+   * subtotal + Σ adjustments === totalAmount, always.
+   */
+  adjustments?: InvoiceAdjustment[]
   depositAmount?: number
   totalAmount: number
   /** Actually received so far — drives the paid / balance-due rows. */
@@ -57,9 +85,9 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     ? (isAr ? 'فاتورة طلب' : 'Request Invoice')
     : (isAr ? 'فاتورة تأكيد' : 'Confirmation Invoice')
 
-  const policyText = isAr
-    ? `${data.settings?.terms_ar || 'شروط وأحكام الاستخدام'}`
-    : `${data.settings?.terms_en || 'Terms and Conditions'}`
+  const policyText = escLines(isAr
+    ? (data.settings?.terms_ar || 'شروط وأحكام الاستخدام')
+    : (data.settings?.terms_en || 'Terms and Conditions'))
 
   const html = `
 <!DOCTYPE html>
@@ -366,8 +394,8 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       <div class="invoice-info">
         <div class="invoice-type">${invoiceTypeLabel}</div>
         <div class="invoice-details">
-          <div class="invoice-number">#${data.invoiceNumber}</div>
-          <div>${isAr ? 'التاريخ' : 'Date'}: ${data.orderDate}</div>
+          <div class="invoice-number">#${esc(data.invoiceNumber)}</div>
+          <div>${isAr ? 'التاريخ' : 'Date'}: ${esc(data.orderDate)}</div>
         </div>
       </div>
     </div>
@@ -389,12 +417,12 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       <div>
         <h3>${isAr ? 'بيانات العميل' : 'Customer Information'}</h3>
         <p class="label">${isAr ? 'الاسم' : 'Name'}:</p>
-        <p>${data.customerName}</p>
+        <p>${esc(data.customerName)}</p>
         <p class="label">${isAr ? 'الهاتف' : 'Phone'}:</p>
-        <p dir="ltr">${data.customerPhone}</p>
+        <p dir="ltr">${esc(data.customerPhone)}</p>
         ${data.customerEmail ? `
         <p class="label">${isAr ? 'البريد الإلكتروني' : 'Email'}:</p>
-        <p dir="ltr">${data.customerEmail}</p>
+        <p dir="ltr">${esc(data.customerEmail)}</p>
         ` : ''}
       </div>
       <div>
@@ -402,9 +430,9 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         <p class="label">${isAr ? 'نوع الفاتورة' : 'Invoice Type'}:</p>
         <p>${invoiceTypeLabel}</p>
         <p class="label">${isAr ? 'رقم الفاتورة' : 'Invoice Number'}:</p>
-        <p dir="ltr">#${data.invoiceNumber}</p>
+        <p dir="ltr">#${esc(data.invoiceNumber)}</p>
         <p class="label">${isAr ? 'التاريخ' : 'Date'}:</p>
-        <p>${data.orderDate}</p>
+        <p>${esc(data.orderDate)}</p>
       </div>
     </div>
 
@@ -414,8 +442,8 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       <div class="detail-grid">
         ${data.details.map(d => `
         <div class="detail-item">
-          <div class="detail-label">${isAr ? d.label_ar : d.label_en}</div>
-          <div class="detail-value">${isAr ? d.value_ar : d.value_en}</div>
+          <div class="detail-label">${esc(isAr ? d.label_ar : d.label_en)}</div>
+          <div class="detail-value">${esc(isAr ? d.value_ar : d.value_en)}</div>
         </div>
         `).join('')}
       </div>
@@ -435,14 +463,14 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         ${data.items.map(item => `
         <tr>
           <td>
-            ${isAr ? item.description_ar : item.description_en}
+            ${esc(isAr ? item.description_ar : item.description_en)}
             ${(isAr ? item.meta_ar : item.meta_en)
-              ? `<span class="item-meta">${isAr ? item.meta_ar : item.meta_en}</span>`
+              ? `<span class="item-meta">${esc(isAr ? item.meta_ar : item.meta_en)}</span>`
               : ''}
           </td>
-          <td class="qty">${item.quantity}</td>
-          <td class="price">${item.unitPrice.toFixed(2)} EGP</td>
-          <td class="price"><strong>${(item.quantity * item.unitPrice).toFixed(2)} EGP</strong></td>
+          <td class="qty">${esc(item.quantity)}</td>
+          <td class="price">${money(item.unitPrice)}</td>
+          <td class="price"><strong>${money(Number(item.quantity) * Number(item.unitPrice))}</strong></td>
         </tr>
         `).join('')}
       </tbody>
@@ -451,38 +479,44 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     <div class="summary">
       <div class="summary-row subtotal">
         <span>${isAr ? 'الإجمالي الفرعي' : 'Subtotal'}:</span>
-        <span>${data.subtotal.toFixed(2)} EGP</span>
+        <span>${money(data.subtotal)}</span>
       </div>
       ${data.deliveryFee ? `
       <div class="summary-row delivery">
         <span>${isAr ? 'رسوم التوصيل' : 'Delivery Fee'}:</span>
-        <span>${data.deliveryFee.toFixed(2)} EGP</span>
+        <span>${money(data.deliveryFee)}</span>
       </div>
       ` : ''}
-      ${data.discount && data.discount.amount > 0 ? `
+      ${data.discount && data.discount.amount > 0 && !(data.adjustments?.length) ? `
       <div class="summary-row discount">
-        <span>${isAr ? data.discount.label_ar : data.discount.label_en}:</span>
-        <span>− ${data.discount.amount.toFixed(2)} EGP</span>
+        <span>${esc(isAr ? data.discount.label_ar : data.discount.label_en)}:</span>
+        <span>− ${money(data.discount.amount)}</span>
       </div>
       ` : ''}
+      ${(data.adjustments ?? []).filter(a => Math.abs(Number(a.amount)) >= 0.005).map(a => `
+      <div class="summary-row ${Number(a.amount) < 0 ? 'discount' : 'adjustment'}">
+        <span>${esc(isAr ? a.label_ar : a.label_en)}:</span>
+        <span>${Number(a.amount) < 0 ? '−' : '+'} ${money(Math.abs(Number(a.amount)))}</span>
+      </div>
+      `).join('')}
       ${data.type === 'confirmation' && data.depositAmount ? `
       <div class="summary-row deposit">
         <span>${isAr ? 'المبلغ المتفق عليه (مقدم)' : 'Agreed Amount (Deposit)'}:</span>
-        <span>${data.depositAmount.toFixed(2)} EGP</span>
+        <span>${money(data.depositAmount)}</span>
       </div>
       ` : ''}
       <div class="summary-row total">
         <span>${data.type === 'request' ? (isAr ? 'الإجمالي المتوقع' : 'Expected Total') : (isAr ? 'المبلغ الواجب' : 'Amount Due')}:</span>
-        <span>${data.totalAmount.toFixed(2)} EGP</span>
+        <span>${money(data.totalAmount)}</span>
       </div>
       ${data.amountPaid && data.amountPaid > 0 ? `
       <div class="summary-row deposit">
         <span>${isAr ? 'المدفوع' : 'Paid'}:</span>
-        <span>${data.amountPaid.toFixed(2)} EGP</span>
+        <span>${money(data.amountPaid)}</span>
       </div>
       <div class="summary-row balance">
         <span>${isAr ? 'المتبقي' : 'Balance Due'}:</span>
-        <span>${Math.max(0, data.totalAmount - data.amountPaid).toFixed(2)} EGP</span>
+        <span>${money(Math.max(0, data.totalAmount - data.amountPaid))}</span>
       </div>
       ` : ''}
     </div>
@@ -490,7 +524,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     ${data.notes ? `
     <div class="notes-section">
       <h4>${isAr ? 'ملاحظات إضافية' : 'Additional Notes'}</h4>
-      <p>${data.notes}</p>
+      <p>${escLines(data.notes)}</p>
     </div>
     ` : ''}
 
@@ -510,11 +544,6 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         : '<p>Email: info@weemapsinai.com | Phone: +201005744083</p>'}
     </div>
   </div>
-
-  <script>
-    // Auto-print dialog (optional - user can close without printing)
-    // window.addEventListener('load', () => setTimeout(() => window.print(), 500));
-  </script>
 </body>
 </html>
   `.trim()

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { getTripRouteSlug } from './trips'
 
@@ -79,14 +80,31 @@ test('search: rental URL uses /rent/[slug]', () => {
 
 // ── Search query sanitization ─────────────────────────────────────────────
 
-test('search sanitizer strips PostgREST-breaking characters', () => {
-  const sanitize = (q: string) => q.replace(/[,()]/g, ' ').trim()
+test('search sanitizer removes PostgREST filter grammar and LIKE wildcards', () => {
+  const sanitize = (q: string) => q.replace(/[%_*,()]/g, ' ').replace(/\s+/g, ' ').trim()
   // These characters can corrupt PostgREST .or() filters
   assert.equal(sanitize('Blue Hole'), 'Blue Hole')
   assert.equal(sanitize('a,b'), 'a b')
   // parens replaced with spaces, then trimmed at the edges
   assert.equal(sanitize('(test)'), 'test')
   assert.equal(sanitize('name(bad,query)'), 'name bad query')
+  assert.equal(sanitize('a%,or(name.ilike.*)'), 'a or name.ilike.')
+})
+
+test('search commerce product columns exist in the authoritative migration', () => {
+  const migration = readFileSync('supabase/migrations/013_unified_commerce_foundation.sql', 'utf8')
+  const table = migration.match(/CREATE TABLE IF NOT EXISTS public\.commerce_products \(([\s\S]*?)\n\);/)
+  assert.ok(table, 'commerce_products table exists')
+  const columns = new Set(
+    [...table![1].matchAll(/^\s*([a-z_]+)\s+/gm)].map((match) => match[1]),
+  )
+  const route = readFileSync('src/app/api/search/route.ts', 'utf8')
+  const select = route.match(/from\('commerce_products'\)\s*\.select\('([^']+)'\)/)?.[1] || ''
+  const selected = select.split(',').map((column) => column.trim())
+  const filtered = [...route.matchAll(/(?:\.eq|\.is)\('([a-z_]+)'/g)].map((match) => match[1])
+  for (const column of [...selected, ...filtered]) {
+    assert.ok(columns.has(column), `commerce_products.${column} exists in migration 013`)
+  }
 })
 
 test('search: empty or short queries return no results without hitting DB', () => {

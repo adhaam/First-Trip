@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { BOOKING_SOURCES } from '@/lib/booking-sources'
 
 const updateSchema = z.object({
   status: z.enum(['new', 'pending', 'confirmed', 'cancelled', 'completed']).optional(),
@@ -18,7 +19,7 @@ const updateSchema = z.object({
   // (computed in the UI — never stored, so it can't drift).
   payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
   amount_paid: z.number().min(0).optional(),
-  source: z.enum(['website', 'manual', 'whatsapp', 'instagram', 'facebook', 'referral', 'other']).optional(),
+  source: z.enum(BOOKING_SOURCES).optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -29,7 +29,7 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState<{ orderNumber: string; totalPrice: number } | null>(null)
+  const [success, setSuccess] = useState<{ orderNumber: string; totalPrice: number; depositTotal: number } | null>(null)
   const [honeypot, setHoneypot] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
@@ -91,7 +91,11 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
         currency: 'EGP',
         source: 'cart_checkout',
       })
-      setSuccess({ orderNumber: data.orderNumber, totalPrice: data.totalPrice })
+      setSuccess({
+        orderNumber: data.orderNumber,
+        totalPrice: Number(data.totalPrice) || 0,
+        depositTotal: Number(data.depositTotal) || 0,
+      })
       cart.clear()
     } catch {
       trackRequestFailure('product', 'network')
@@ -103,8 +107,8 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
 
   if (success) {
     const waMessage = ar
-      ? `مرحباً WEEMAP، لسه بعتّ طلب ${success.orderNumber}`
-      : `Hi WEEMAP, I just sent request ${success.orderNumber}`
+      ? `مرحباً WEEMAP، لسه بعتّ طلب ${success.orderNumber}${success.depositTotal > 0 ? `\nالتأمين المسترد عند الاستلام: ${formatAmount(success.depositTotal, locale)} ${common('egp')}` : ''}`
+      : `Hi WEEMAP, I just sent request ${success.orderNumber}${success.depositTotal > 0 ? `\nRefundable deposit due at handover: ${formatAmount(success.depositTotal, locale)} ${common('egp')}` : ''}`
     return (
       <div className="container-main flex min-h-[60svh] flex-col items-center justify-center py-16 text-center">
         <PartyPopper className="mb-4 h-12 w-12 text-sun-700" />
@@ -113,7 +117,10 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
         <div className="mt-6 rounded-xl border border-sand-200 bg-white px-6 py-4">
           <p className="text-xs text-ink-subtle">{commerce('orderReference')}</p>
           <p className="font-mono text-lg font-bold text-sea-900" dir="ltr">{success.orderNumber}</p>
-          <p className="mt-1 text-sm text-ink-muted">{formatAmount(total, locale)} {common('egp')} <span className="text-xs">({commerce('estimate')})</span></p>
+          <p className="mt-1 text-sm text-ink-muted">{formatAmount(success.totalPrice, locale)} {common('egp')}</p>
+          {success.depositTotal > 0 && (
+            <p className="mt-1 text-sm font-medium text-sea-900">{commerce('deposit')}: {formatAmount(success.depositTotal, locale)} {common('egp')} <span className="text-xs font-normal text-ink-muted">({commerce('refundableAtHandover')})</span></p>
+          )}
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <a

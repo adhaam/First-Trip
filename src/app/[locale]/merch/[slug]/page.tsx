@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { ProductDetailClient } from '@/components/commerce/ProductDetailClient'
 import { getCommerceProductBySlug } from '@/lib/data'
+import { jsonLdScript } from '@/lib/safe-html'
 
 export async function generateMetadata({ params }: {
   params: Promise<{ locale: string; slug: string }>
@@ -52,7 +53,7 @@ export default async function MerchProductPage({ params }: { params: Promise<{ l
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       <ProductDetailClient product={product} />
     </>
   )

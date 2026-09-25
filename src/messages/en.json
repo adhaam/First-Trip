@@ -414,6 +414,7 @@
     "delivery": "Deliver to me",
     "pickupInstructions": "Pickup details",
     "deposit": "Refundable deposit",
+    "refundableAtHandover": "refundable, due at handover",
     "requirements": "What you'll need",
     "requirement_id_required": "Valid ID",
     "requirement_license_required": "Driver's license",

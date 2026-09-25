@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await computeQuote(validated.data)
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status })
+      return NextResponse.json({ error: result.error, ...(result.code ? { code: result.code } : {}) }, { status: result.status })
     }
     return NextResponse.json(result.response)
   } catch (err) {

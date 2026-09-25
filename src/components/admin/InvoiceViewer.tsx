@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Download, X, FileText } from 'lucide-react'
@@ -18,6 +18,7 @@ export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, o
   const [loading, setLoading] = useState(false)
   const [invoiceHtml, setInvoiceHtml] = useState<string | null>(null)
   const [invoiceType, setInvoiceType] = useState<'request' | 'confirmation'>('request')
+  const previewFrameRef = useRef<HTMLIFrameElement>(null)
   const ar = locale === 'ar'
 
   const generateInvoice = async (type: 'request' | 'confirmation') => {
@@ -58,12 +59,7 @@ export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, o
   }
 
   const printInvoice = () => {
-    if (!invoiceHtml) return
-    const printWindow = window.open('', '', 'height=750,width=1000')
-    if (!printWindow) return
-    printWindow.document.write(invoiceHtml)
-    printWindow.document.close()
-    setTimeout(() => printWindow.print(), 250)
+    previewFrameRef.current?.contentWindow?.print()
   }
 
   return (
@@ -141,10 +137,12 @@ export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, o
               </Button>
             </div>
 
-            {/* Invoice preview */}
-            <div
-              className="border border-gray-200 rounded-lg p-4 bg-white max-h-[500px] overflow-y-auto"
-              dangerouslySetInnerHTML={{ __html: invoiceHtml }}
+            <iframe
+              ref={previewFrameRef}
+              title={ar ? 'معاينة الفاتورة' : 'Invoice preview'}
+              srcDoc={invoiceHtml}
+              sandbox="allow-same-origin allow-modals"
+              className="h-[500px] w-full rounded-lg border border-gray-200 bg-white"
             />
           </div>
         )}

@@ -197,6 +197,12 @@ export interface SinaiTrip {
   category_en: string
   /** FK to trip_categories (migration 016). Nullable for trips created before the taxonomy existed. */
   trip_category_id?: string | null
+  /** Resolved active primary category for public consumers; legacy free text is used only as a fallback. */
+  category?: ResolvedTripCategory | null
+  /** Resolved active category tags, with the primary category first when present. */
+  category_tags?: TripCategory[]
+  /** Admin transport field for editing structured tags; never persisted on sinai_trips itself. */
+  category_ids?: string[]
   images: string[]
   duration: string   // e.g. "نصف يوم", "Full Day"
   duration_en: string
@@ -235,6 +241,11 @@ export interface TripCategory {
   name_en: string
   is_active: boolean
   sort_order: number
+}
+
+/** A public trip category, including whether it came from the structured taxonomy or legacy text. */
+export interface ResolvedTripCategory extends TripCategory {
+  source: 'structured' | 'legacy'
 }
 
 /** Package Categories (migration 017) — owner-managed, unlike the fixed TripCategory taxonomy. */

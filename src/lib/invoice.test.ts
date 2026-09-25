@@ -291,3 +291,31 @@ test('Arabic invoice renders the detail labels and line meta in Arabic', () => {
   assert.match(html, /5 أفراد × 950/)
   assert.doesNotMatch(html, /5 people/)
 })
+
+test('invoice escapes every customer-controlled text field before adding safe line breaks', () => {
+  const payload = '<img src=x onerror=alert(1)> </script><script>alert(1)</script> "\' & مرحبا'
+  const html = generateInvoiceHTML({
+    ...baseData,
+    customerName: payload,
+    customerPhone: payload,
+    customerEmail: payload,
+    invoiceNumber: payload,
+    orderDate: payload,
+    notes: `${payload}\nsecond line`,
+    settings: { terms_en: payload } as InvoiceData['settings'],
+    type: 'confirmation',
+    details: [{ label_ar: payload, label_en: payload, value_ar: payload, value_en: payload }],
+    items: [{ description_ar: payload, description_en: payload, meta_ar: payload, meta_en: payload, quantity: 1, unitPrice: 10 }],
+    subtotal: 10,
+    adjustments: [{ label_ar: payload, label_en: payload, amount: -1 }],
+    totalAmount: 9,
+  })
+
+  assert.doesNotMatch(html, /<img src=x onerror=alert\(1\)>/)
+  assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/)
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/)
+  assert.match(html, /&lt;\/script&gt;&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
+  assert.match(html, /&quot;&#39; &amp; مرحبا/)
+  assert.match(html, /second line/)
+  assert.match(html, /<br>/)
+})

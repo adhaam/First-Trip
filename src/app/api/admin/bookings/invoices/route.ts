@@ -3,9 +3,8 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { getSiteSettings } from '@/lib/data'
-import { generateInvoiceHTML, type InvoiceData, type InvoiceDetail } from '@/lib/invoice-generator'
-import { buildAccommodationInvoice, buildTripInvoice } from '@/lib/invoice-items'
-import type { Booking } from '@/lib/types'
+import { generateInvoiceHTML } from '@/lib/invoice-generator'
+import { buildInvoiceData, type InvoiceSource } from '@/lib/invoice-items'
 
 // ─── Invoice generation ───
 //
@@ -20,9 +19,10 @@ import type { Booking } from '@/lib/types'
 //   1. A booking is described by its booking_type. A transfer-only invoice
 //      never names an accommodation; an accommodation-only one never invents
 //      a transfer.
-//   2. The snapshot is preferred when present (it is the frozen truth), but
-//      its absence degrades to the booking's own columns rather than to a
-//      misleading placeholder. Old rows still produce a correct invoice.
+//   2. The frozen snapshot is the base truth for the lines; the displayed
+//      total is the booking's live agreed total, and any gap between the two
+//      is an explicit adjustment row. A row with no snapshot gets one honest
+//      line for its stored total. See lib/invoice-items for the details.
 
 const invoiceRequestSchema = z.object({
   bookingId: z.string().uuid(),
@@ -30,8 +30,6 @@ const invoiceRequestSchema = z.object({
   type: z.enum(['request', 'confirmation']),
   locale: z.enum(['ar', 'en']),
 })
-
-type InvoiceItem = InvoiceData['items'][number]
 
 export async function POST(req: NextRequest) {
   if (!(await requireAdmin(req))) {
@@ -47,45 +45,22 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabaseAdmin()
 
-  let customerName = 'Customer'
-  let customerPhone = ''
-  let customerEmail: string | undefined
-  let createdAt: string
-  let items: InvoiceItem[]
-  let details: InvoiceDetail[]
-  let totalAmount: number
-  let amountPaid = 0
-  let discount: InvoiceData['discount']
-  let notes: string | undefined
-  let invoicePrefix: string
-
+  // Only names are embedded from accommodations / sinai_trips / trip_packages
+  // — never their price columns. Lines come from the booking's own frozen
+  // snapshot (see lib/invoice-items), so a catalogue price change cannot
+  // rewrite an invoice for a booking already made.
+  let source: InvoiceSource
   if (bookingType === 'accommodation') {
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('*, customers(name, phone, whatsapp_phone), accommodations(name_ar, name_en)')
       .eq('id', bookingId)
-      .single<Booking & {
-        customers: { name: string; phone: string; whatsapp_phone: string } | null
-        accommodations: { name_ar: string; name_en: string } | null
-      }>()
+      .single()
 
     if (bookingError || !booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
     }
-
-    const built = buildAccommodationInvoice(booking, locale)
-    items = built.items
-    details = built.details
-    discount = built.discount
-
-    customerName = booking.customers?.name || booking.customer_name || 'Customer'
-    customerPhone = booking.customers?.phone || booking.customer_phone || ''
-    customerEmail = booking.customer_email || undefined
-    createdAt = booking.created_at
-    totalAmount = booking.total_price || 0
-    amountPaid = Number(booking.amount_paid) || 0
-    notes = booking.notes || undefined
-    invoicePrefix = 'BK'
+    source = { kind: 'accommodation', booking }
   } else {
     const { data: tripBooking, error: tripBookingError } = await supabase
       .from('trip_bookings')
@@ -96,50 +71,15 @@ export async function POST(req: NextRequest) {
     if (tripBookingError || !tripBooking) {
       return NextResponse.json({ error: 'Trip booking not found' }, { status: 404 })
     }
-
-    const built = buildTripInvoice(tripBooking, locale)
-    items = built.items
-    details = built.details
-    discount = built.discount
-
-    customerName = tripBooking.customers?.name || tripBooking.customer_name || 'Customer'
-    customerPhone = tripBooking.customers?.phone || tripBooking.customer_phone || ''
-    customerEmail = tripBooking.customers?.email || undefined
-    createdAt = tripBooking.created_at
-    totalAmount = tripBooking.final_price ?? tripBooking.quoted_price ?? 0
-    // trip_bookings tracks payments too, so a trip invoice gets the same
-    // paid / balance-due rows as an accommodation one.
-    amountPaid = Number(tripBooking.amount_paid) || 0
-    notes = tripBooking.notes || undefined
-    invoicePrefix = 'TB'
+    source = { kind: 'trip', booking: tripBooking }
   }
 
   const settings = await getSiteSettings()
-  const now = new Date()
-  const invoiceNumber = `${invoicePrefix}-${bookingId.slice(0, 8).toUpperCase()}-${type === 'request' ? 'REQ' : 'CONF'}-${now.getTime().toString().slice(-6)}`
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-
-  const html = generateInvoiceHTML({
-    type,
-    invoiceNumber,
-    customerName,
-    customerPhone,
-    customerEmail,
-    orderDate: new Date(createdAt).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US'),
-    details,
-    items,
-    subtotal,
-    deliveryFee: undefined,
-    discount,
-    // The deposit row now reflects money actually received rather than a
-    // blanket 50% of the total, which was shown even on unpaid bookings.
-    depositAmount: undefined,
-    amountPaid,
-    totalAmount,
-    notes,
-    locale,
-    settings,
-  })
+  // Pure function of the row: stable invoice number, lines that reconcile to
+  // the total, every dynamic value escaped by the generator.
+  const invoice = buildInvoiceData(source, { type, locale, settings })
+  const invoiceNumber = invoice.invoiceNumber
+  const html = generateInvoiceHTML(invoice)
 
   return NextResponse.json(
     {

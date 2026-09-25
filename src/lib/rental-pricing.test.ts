@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { quoteRental, resolveDeliveryFee, type RentalPricingTier } from './rental-pricing'
+import { quoteRental, rentalDepositFor, resolveDeliveryFee, type RentalPricingTier } from './rental-pricing'
 
 const scooterTiers: RentalPricingTier[] = [
   { id: '1', product_id: 'p1', variant_id: null, duration_days: 1, price: 500, is_active: true },
@@ -40,6 +40,20 @@ test('quoteRental scopes tiers to the requested variant', () => {
 
 test('quoteRental returns null when no active tier is configured', () => {
   assert.equal(quoteRental({ tiers: [], requestedDays: 3, quantity: 1 }), null)
+})
+
+test('quoteRental pro-rates beyond the longest tier and reserves every requested day', () => {
+  const quote = quoteRental({ tiers: scooterTiers, requestedDays: 45, quantity: 2 })
+  assert.ok(quote)
+  assert.equal(quote!.rule, 'pro_rata')
+  assert.equal(quote!.durationDays, 45)
+  assert.equal(quote!.unitPrice, 12750)
+  assert.equal(quote!.subtotal, 25500)
+})
+
+test('rentalDepositFor is separate from price and scales only by quantity', () => {
+  assert.deepEqual(rentalDepositFor(750, 2), { perUnit: 750, total: 1500 })
+  assert.deepEqual(rentalDepositFor(-100, 2), { perUnit: 0, total: 0 })
 })
 
 test('resolveDeliveryFee returns 0 for pickup, the fixed fee for a fixed zone, and 0 for quote zones', () => {

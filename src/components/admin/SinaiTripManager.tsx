@@ -30,7 +30,7 @@ function toLocalInputValue(iso?: string | null): string {
 const emptyTrip: Partial<SinaiTrip> = {
   name_ar: '', name_en: '',
   description_ar: '', description_en: '',
-  category_ar: '', category_en: '', trip_category_id: null,
+  category_ar: '', category_en: '', trip_category_id: null, category_ids: [],
   images: [],
   duration: '', duration_en: '',
   price: 0,
@@ -127,7 +127,25 @@ export function SinaiTripManager() {
   const selectCategory = (categoryId: string | null) => {
     const cat = categories.find(c => c.id === categoryId)
     if (!cat) return
-    setForm(prev => ({ ...prev, trip_category_id: cat.id, category_ar: cat.name_ar, category_en: cat.name_en }))
+    setForm(prev => ({
+      ...prev,
+      trip_category_id: cat.id,
+      category_ar: cat.name_ar,
+      category_en: cat.name_en,
+      category_ids: Array.from(new Set([...(prev.category_ids || []), cat.id])),
+    }))
+  }
+
+  const toggleCategoryTag = (categoryId: string, checked: boolean) => {
+    setForm(prev => {
+      const selected = new Set(prev.category_ids || [])
+      if (checked) selected.add(categoryId)
+      else selected.delete(categoryId)
+      // The primary tag is a database invariant; retain it in the submitted
+      // set even though its checkbox is intentionally not shown as an extra.
+      if (prev.trip_category_id) selected.add(prev.trip_category_id)
+      return { ...prev, category_ids: [...selected] }
+    })
   }
 
   const filtered = trips.filter(t =>
@@ -297,6 +315,24 @@ export function SinaiTripManager() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {categories.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                      <span className="w-full text-xs text-gray-500">
+                        {locale === 'ar' ? 'فئات إضافية (اختياري)' : 'Extra categories (optional)'}
+                      </span>
+                      {categories.filter(c => c.id !== form.trip_category_id).map(c => (
+                        <label key={c.id} className="flex items-center gap-1.5 text-xs text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={(form.category_ids || []).includes(c.id)}
+                            onChange={e => toggleCategoryTag(c.id, e.target.checked)}
+                            className="h-3.5 w-3.5"
+                          />
+                          {locale === 'ar' ? c.name_ar : c.name_en}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div><Label>{locale === 'ar' ? 'المدة (عربي)' : 'Duration (Arabic)'}</Label><Input value={form.duration || ''} onChange={e => updateField('duration', e.target.value)} className="mt-1" /></div>
                 <div><Label>{locale === 'ar' ? 'المدة (إنجليزي)' : 'Duration (English)'}</Label><Input value={form.duration_en || ''} onChange={e => updateField('duration_en', e.target.value)} className="mt-1" /></div>
