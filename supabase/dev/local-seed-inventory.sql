@@ -160,6 +160,13 @@ INSERT INTO public.rental_pricing_tiers (id, product_id, variant_id, duration_da
   ('36000000-0000-4000-8000-000000000007', '32000000-0000-4000-8000-000000000003', NULL, 1, 'يوم واحد', '1 Day', 300, 0, true),
   ('36000000-0000-4000-8000-000000000008', '32000000-0000-4000-8000-000000000003', NULL, 3, '٣ أيام', '3 Days', 800, 1, true);
 
+-- Rental units: rental availability counts variant inventory
+-- (src/lib/rental-availability.ts), so each rental needs a stocked variant.
+INSERT INTO public.commerce_product_variants (id, product_id, sku, option_value_ids, price_override, inventory_quantity, is_active, sort_order) VALUES
+  ('35000000-0000-4000-8000-000000000101', '32000000-0000-4000-8000-000000000001', 'WM-RENT-SCUBA', ARRAY[]::uuid[], NULL, 4, true, 0),
+  ('35000000-0000-4000-8000-000000000102', '32000000-0000-4000-8000-000000000002', 'WM-RENT-BIKE',  ARRAY[]::uuid[], NULL, 6, true, 0),
+  ('35000000-0000-4000-8000-000000000103', '32000000-0000-4000-8000-000000000003', 'WM-RENT-KAYAK', ARRAY[]::uuid[], NULL, 3, true, 0);
+
 COMMIT;
 
 NOTIFY pgrst, 'reload schema';

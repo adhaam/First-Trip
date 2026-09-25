@@ -296,7 +296,7 @@ export function RentalDetailClient({ product, deliveryZones, paymentPolicies }: 
           )}
           {!availability.checking && !availability.available && (
             <p className="mt-3 text-xs font-semibold text-red-600">
-              {availability.remaining != null ? shop('fewLeftForDates', { count: formatCount(availability.remaining, locale) }) : shop('unavailableForDates')}
+              {availability.remaining != null && availability.remaining > 0 ? shop('fewLeftForDates', { count: formatCount(availability.remaining, locale) }) : shop('unavailableForDates')}
             </p>
           )}
           {!availability.checking && availability.available && availability.remaining != null && availability.remaining <= 3 && (
