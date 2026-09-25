@@ -30,10 +30,9 @@ export function useQuote(state: BuilderState, locale: 'ar' | 'en') {
   const readiness = quoteReadiness(state)
 
   useEffect(() => {
-    if (!readiness.ready) {
-      setRefreshing(false)
-      return
-    }
+    // Not ready: nothing to fetch. `refreshing` is masked by readiness below
+    // rather than reset here, so the effect never sets state synchronously.
+    if (!readiness.ready) return
 
     const controller = new AbortController()
     const myId = ++requestId.current
@@ -63,10 +62,7 @@ export function useQuote(state: BuilderState, locale: 'ar' | 'en') {
       window.clearTimeout(timer)
       controller.abort()
     }
-    // `readiness.ready` is derived from `state`; re-running on `state` alone
-    // covers both and avoids a redundant dependency on a freshly-computed object.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, locale, readiness.ready])
 
-  return { quote, refreshing, errorKey, ready: readiness.ready, missing: readiness.missing }
+  return { quote, refreshing: refreshing && readiness.ready, errorKey, ready: readiness.ready, missing: readiness.missing }
 }
