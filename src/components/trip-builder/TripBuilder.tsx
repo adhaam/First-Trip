@@ -202,8 +202,8 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
       </Section>
 
       <Section size="md">
-        <div className="container-main grid gap-7 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="space-y-4">
+        <div className="container-main grid grid-cols-[minmax(0,1fr)] gap-7 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="min-w-0 space-y-4">
             {visibleSteps.map((id, index) => (
               <div key={id} ref={(el) => { sectionRefs.current[id] = el }}>
                 <JourneySection

@@ -39,8 +39,8 @@ export function Stays({ lineup }: { lineup: StaysLineup }) {
           stretch makes the hero cell match the stacked secondaries column's
           (taller) height, leaving blank card background below the hero
           image instead of the image filling the card. */}
-      <div className="grid items-start gap-5 lg:grid-cols-12">
-        <Reveal className="lg:col-span-7">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+        <Reveal className="min-w-0 lg:col-span-7">
           <EditorialCard
             href={`/book-dahab/${lineup.hero.id}`}
             image={lineup.hero.image_url || lineup.hero.images?.[0] || '/media/heroposter.webp'}

@@ -95,8 +95,8 @@ export function Curated({ picks }: { picks: CuratedPick[] }) {
 
       {/* items-start: cards size to their own content instead of stretching
           to match whichever column is taller (see the same fix in Stays.tsx). */}
-      <div className="grid items-start gap-5 lg:grid-cols-12">
-        <Reveal className="lg:col-span-7">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+        <Reveal className="min-w-0 lg:col-span-7">
           <EditorialCard
             href={pickHref(hero)}
             image={pickImage(hero)}
@@ -107,7 +107,7 @@ export function Curated({ picks }: { picks: CuratedPick[] }) {
           />
         </Reveal>
 
-        <div className="lg:col-span-5">
+        <div className="min-w-0 lg:col-span-5">
           <Rail label={fallback ? t('eyebrowFallback') : t('eyebrow')}>
             {rest.map((pick) => (
               <div key={`${pick.kind}:${pick.id}`} className="w-[78vw] shrink-0 sm:w-72">
