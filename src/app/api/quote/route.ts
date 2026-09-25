@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { paymentKindFor, paymentPlan } from '@/lib/payment-rules'
+import { getPaymentRules } from '@/lib/payment-rules-load'
 import { computeQuote, quoteSchema } from '@/lib/quote-service'
 
 // ─── calculate_package_quote ──────────────────────────────────────────────────
@@ -69,7 +71,12 @@ export async function POST(req: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ error: result.error, ...(result.code ? { code: result.code } : {}) }, { status: result.status })
     }
-    return NextResponse.json(result.response)
+    // Additive: payment terms for this quote's stored payment kind (migration
+    // 030), so a caller can show them without creating a booking.
+    const rules = await getPaymentRules()
+    const kind = paymentKindFor({ booking_type: validated.data.booking_type })
+    const plan = paymentPlan(kind, result.total, rules.policies)
+    return NextResponse.json({ ...result.response, payment_plan: plan })
   } catch (err) {
     console.error('Quote API error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
