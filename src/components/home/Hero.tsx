@@ -72,13 +72,13 @@ export function Hero({ settings }: { settings: SiteSettings | null }) {
   const playVideo = useHeroVideoEnabled()
   const revealVideo = () => setVideoReady(true)
 
-  // Owner-editable hero copy (Site Settings → Homepage). Empty = brand default.
-  const headingAr = settings?.hero_heading_ar || undefined
-  const headingEn = settings?.hero_heading_en || undefined
-  const subAr = settings?.hero_subheading_ar || undefined
-  const subEn = settings?.hero_subheading_en || undefined
-  const heading = (ar ? headingAr : headingEn) || t('heading')
-  const sub = (ar ? subAr : subEn) || t('subheading')
+  // The headline is the brand line and never changes. Owner-editable hero copy
+  // (Site Settings → Homepage) still has a home: it becomes the lede.
+  const ownerLede = [
+    ar ? settings?.hero_heading_ar : settings?.hero_heading_en,
+    ar ? settings?.hero_subheading_ar : settings?.hero_subheading_en,
+  ].filter(Boolean).join(' — ')
+  const lede = ownerLede || t('lede')
 
   const primaryLabel = (ar ? settings?.primary_cta_label_ar : settings?.primary_cta_label_en) || t('primaryCta')
   const secondaryLabel = (ar ? settings?.secondary_cta_label_ar : settings?.secondary_cta_label_en) || t('secondaryCta')
@@ -132,14 +132,14 @@ export function Hero({ settings }: { settings: SiteSettings | null }) {
 
           <Reveal always>
             <h1 className="mt-6 font-display text-[2.6rem] font-bold uppercase leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-              <span className="block">{heading}</span>
-              <span className="mt-2 block text-sun-300">{sub}</span>
+              <span className="block">{t('heading')}</span>
+              <span className="mt-2 block text-sun-300">{t('subheading')}</span>
             </h1>
           </Reveal>
 
           <Reveal always>
             <p className="mt-7 max-w-xl text-base leading-relaxed text-sand-100/85 sm:text-lg">
-              {t('lede')}
+              {lede}
             </p>
           </Reveal>
 

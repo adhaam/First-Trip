@@ -9,15 +9,24 @@ import { cn } from '@/lib/utils'
 import { useCart } from './CartProvider'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import type { DeliveryZone } from '@/lib/commerce-types'
+import type { PaymentPolicy } from '@/lib/payment-rules'
 import { HoneypotField } from '@/components/HoneypotField'
 import { Turnstile } from '@/components/Turnstile'
 import { trackConversion, trackRequestFailure } from '@/lib/conversion'
 import { formatAmount } from '@/lib/format'
+import { rentalDurationLabel } from '@/lib/shop-view'
+import { EmptyState } from '@/components/EmptyState'
+import { ButtonLink } from '@/components/ButtonLink'
+import { PaymentTerms, PriceTag, StickyActionBar } from '@/components/brand'
 
-export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones: DeliveryZone[]; whatsapp?: string | null }) {
+export function CartCheckoutClient({ deliveryZones, whatsapp, paymentPolicies }: {
+  deliveryZones: DeliveryZone[]
+  whatsapp?: string | null
+  paymentPolicies: PaymentPolicy[]
+}) {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const commerce = useTranslations('commerce')
+  const shop = useTranslations('shopV2')
   const forms = useTranslations('forms')
   const common = useTranslations('common')
   const cart = useCart()
@@ -38,14 +47,17 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
   const total = cart.subtotal + deliveryFee
   const number = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
 
+  const hasRental = cart.items.some((item) => item.kind === 'rental')
+  const hasSale = cart.items.some((item) => item.kind !== 'rental')
+
   const submit = async () => {
     setError('')
     if (honeypot) return // silently drop — bot filled the hidden field
-    if (name.trim().length < 3) { setError(commerce('nameRequired')); return }
-    if (phone.trim().length < 8) { setError(commerce('phoneRequired')); return }
+    if (name.trim().length < 3) { setError(shop('nameRequired')); return }
+    if (phone.trim().length < 8) { setError(shop('phoneRequired')); return }
     if (cart.fulfillmentMethod === 'delivery') {
-      if (deliveryZones.length > 0 && !cart.deliveryZoneId) { setError(commerce('zoneRequired')); return }
-      if (!address.trim()) { setError(commerce('addressRequired')); return }
+      if (deliveryZones.length > 0 && !cart.deliveryZoneId) { setError(shop('zoneRequired')); return }
+      if (!address.trim()) { setError(shop('addressRequired')); return }
     }
 
     setSubmitting(true)
@@ -75,12 +87,10 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data.error || commerce('checkoutError'))
+        setError(data.error || shop('checkoutError'))
         trackRequestFailure('product', 'server')
         return
       }
-      const hasRental = cart.items.some((item) => item.kind === 'rental')
-      const hasSale = cart.items.some((item) => item.kind !== 'rental')
       const orderType = hasRental && hasSale ? 'mixed' : hasRental ? 'rental' : 'merch'
       trackConversion('order_request_submitted', {
         content_type: hasRental ? 'rental' : 'product',
@@ -99,7 +109,7 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
       cart.clear()
     } catch {
       trackRequestFailure('product', 'network')
-      setError(commerce('checkoutError'))
+      setError(shop('checkoutError'))
     } finally {
       setSubmitting(false)
     }
@@ -111,15 +121,15 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
       : `Hi WEEMAP, I just sent request ${success.orderNumber}${success.depositTotal > 0 ? `\nRefundable deposit due at handover: ${formatAmount(success.depositTotal, locale)} ${common('egp')}` : ''}`
     return (
       <div className="container-main flex min-h-[60svh] flex-col items-center justify-center py-16 text-center">
-        <PartyPopper className="mb-4 h-12 w-12 text-sun-700" />
-        <h1 className="font-display text-2xl font-extrabold text-sea-900">{commerce('requestSentTitle')}</h1>
-        <p className="mt-2 max-w-sm text-sm text-ink-muted">{commerce('requestSentText')}</p>
+        <PartyPopper className="mb-4 h-12 w-12 text-sun-700" aria-hidden />
+        <h1 className="font-display text-2xl font-extrabold text-sea-900">{shop('requestSentTitle')}</h1>
+        <p className="mt-2 max-w-sm text-sm text-ink-muted">{shop('requestSentText')}</p>
         <div className="mt-6 rounded-xl border border-sand-200 bg-white px-6 py-4">
-          <p className="text-xs text-ink-subtle">{commerce('orderReference')}</p>
+          <p className="text-xs text-ink-subtle">{shop('orderReference')}</p>
           <p className="font-mono text-lg font-bold text-sea-900" dir="ltr">{success.orderNumber}</p>
           <p className="mt-1 text-sm text-ink-muted">{formatAmount(success.totalPrice, locale)} {common('egp')}</p>
           {success.depositTotal > 0 && (
-            <p className="mt-1 text-sm font-medium text-sea-900">{commerce('deposit')}: {formatAmount(success.depositTotal, locale)} {common('egp')} <span className="text-xs font-normal text-ink-muted">({commerce('refundableAtHandover')})</span></p>
+            <p className="mt-1 text-sm font-medium text-sea-900">{shop('depositLabel')}: {formatAmount(success.depositTotal, locale)} {common('egp')} <span className="text-xs font-normal text-ink-muted">({shop('depositDueAtHandover')})</span></p>
           )}
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -130,11 +140,11 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
             onClick={() => trackConversion('whatsapp_click', { source: 'cart_checkout' }, { once: false })}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 text-sm font-semibold text-white hover:bg-emerald-700"
           >
-            <MessageCircle className="h-4 w-4" />
-            {commerce('whatsappCta')}
+            <MessageCircle className="h-4 w-4" aria-hidden />
+            {shop('whatsappCta')}
           </a>
           <Link href="/merch" className="inline-flex h-12 items-center justify-center rounded-full border border-sand-300 px-6 text-sm font-semibold text-sea-900 hover:bg-sand-100">
-            {commerce('continueShopping')}
+            {shop('continueShopping')}
           </Link>
         </div>
       </div>
@@ -143,22 +153,40 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
 
   if (cart.hydrated && cart.items.length === 0) {
     return (
-      <div className="container-main flex min-h-[60svh] flex-col items-center justify-center py-16 text-center">
-        <ShoppingBag className="mb-4 h-10 w-10 text-sand-400" />
-        <h1 className="font-display text-xl font-bold text-sea-900">{commerce('cartEmpty')}</h1>
-        <p className="mt-1 text-sm text-ink-subtle">{commerce('cartEmptyText')}</p>
-        <div className="mt-6 flex gap-3">
-          <Link href="/merch" className="inline-flex h-11 items-center justify-center rounded-full bg-sun-500 px-5 text-sm font-semibold text-on-accent hover:bg-sun-600">{commerce('browseMerch')}</Link>
-          <Link href="/rent" className="inline-flex h-11 items-center justify-center rounded-full border border-sand-300 px-5 text-sm font-semibold text-sea-900 hover:bg-sand-100">{commerce('browseRentals')}</Link>
-        </div>
+      <div className="container-main py-10 sm:py-16">
+        <EmptyState
+          variant="curating"
+          icon={<ShoppingBag className="h-9 w-9" aria-hidden />}
+          title={shop('cartEmptyTitle')}
+          hint={shop('cartEmptyHint')}
+          action={
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <ButtonLink href="/merch" variant="sun" size="lg">{shop('browseMerch')}</ButtonLink>
+              <ButtonLink href="/rent" variant="outline-ink" size="lg">{shop('browseRentals')}</ButtonLink>
+            </div>
+          }
+        />
       </div>
     )
   }
 
+  const submitDisabled = submitting || cart.items.length === 0
+
+  const submitButton = (
+    <button
+      type="button"
+      onClick={submit}
+      disabled={submitDisabled}
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-sun-500 text-sm font-semibold text-on-accent transition-colors hover:bg-sun-600 disabled:opacity-50"
+    >
+      {submitting ? shop('submitting') : shop('submitRequest')}
+    </button>
+  )
+
   return (
     <div className="container-main grid gap-8 py-8 md:grid-cols-[1.3fr_1fr] md:py-12">
       <div>
-        <h1 className="mb-5 font-display text-2xl font-extrabold text-sea-900">{commerce('cartTitle')}</h1>
+        <h1 className="mb-5 font-display text-2xl font-extrabold text-sea-900">{shop('cartTitle')}</h1>
         <div className="space-y-3">
           {cart.items.map((item) => (
             <div key={item.lineId} className="flex gap-3 rounded-xl border border-sand-200 bg-white p-3">
@@ -172,8 +200,8 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
                       ? 'mb-1 inline-flex items-center gap-1 rounded-full bg-sea-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sea-700'
                       : 'mb-1 inline-flex items-center gap-1 rounded-full bg-sun-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sun-700'}
                     >
-                      {item.kind === 'rental' ? <KeyRound className="h-2.5 w-2.5" /> : <ShoppingBag className="h-2.5 w-2.5" />}
-                      {item.kind === 'rental' ? (ar ? 'إيجار' : 'Rent') : (ar ? 'شراء' : 'Buy')}
+                      {item.kind === 'rental' ? <KeyRound className="h-2.5 w-2.5" aria-hidden /> : <ShoppingBag className="h-2.5 w-2.5" aria-hidden />}
+                      {item.kind === 'rental' ? shop('kindRent') : shop('kindBuy')}
                     </span>
                     <p className="text-sm font-semibold text-sea-900">{ar ? item.nameAr : item.nameEn}</p>
                     {(item.optionSummaryAr || item.optionSummaryEn) && (
@@ -181,19 +209,19 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
                     )}
                     {item.kind === 'rental' && (
                       <p className="mt-0.5 text-xs text-sea-700">
-                        {ar ? item.durationLabelAr || `${item.durationDays} يوم` : item.durationLabelEn || `${item.durationDays}d`} · <span dir="ltr">{item.startDate} → {item.endDate}</span>
+                        {rentalDurationLabel({ durationDays: item.durationDays, labelAr: item.durationLabelAr, labelEn: item.durationLabelEn }, ar)} · <span dir="ltr">{item.startDate} → {item.endDate}</span>
                       </p>
                     )}
                   </div>
-                  <button type="button" onClick={() => cart.remove(item.lineId)} className="shrink-0 text-ink-subtle hover:text-red-500" aria-label={commerce('remove')}>
-                    <Trash2 className="h-4 w-4" />
+                  <button type="button" onClick={() => cart.remove(item.lineId)} className="shrink-0 text-ink-subtle hover:text-red-500" aria-label={shop('cartRemove')}>
+                    <Trash2 className="h-4 w-4" aria-hidden />
                   </button>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => cart.setQuantity(item.lineId, item.quantity - 1)} className="flex h-7 w-7 items-center justify-center rounded border border-sand-300 hover:bg-sand-100"><Minus className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => cart.setQuantity(item.lineId, item.quantity - 1)} aria-label={shop('decreaseQuantity')} className="flex h-7 w-7 items-center justify-center rounded border border-sand-300 hover:bg-sand-100"><Minus className="h-3 w-3" aria-hidden /></button>
                     <span className="w-6 text-center text-sm font-bold tabular-nums">{item.quantity}</span>
-                    <button type="button" onClick={() => cart.setQuantity(item.lineId, item.quantity + 1)} className="flex h-7 w-7 items-center justify-center rounded border border-sea-500 text-sea-700 hover:bg-sea-50"><Plus className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => cart.setQuantity(item.lineId, item.quantity + 1)} aria-label={shop('increaseQuantity')} className="flex h-7 w-7 items-center justify-center rounded border border-sea-500 text-sea-700 hover:bg-sea-50"><Plus className="h-3 w-3" aria-hidden /></button>
                   </div>
                   <span className="text-sm font-bold text-sea-900 tabular-nums">{formatAmount(item.unitPriceEstimate * item.quantity, locale)} {common('egp')}</span>
                 </div>
@@ -205,34 +233,34 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
 
       {/* Checkout panel */}
       <div className="h-fit rounded-2xl border border-sand-200 bg-white p-5">
-        <h2 className="font-display text-lg font-bold text-sea-900">{commerce('checkoutTitle')}</h2>
-        <p className="mt-1 text-xs text-ink-subtle">{commerce('checkoutSubtitle')}</p>
+        <h2 className="font-display text-lg font-bold text-sea-900">{shop('checkoutTitle')}</h2>
+        <p className="mt-1 text-xs text-ink-subtle">{shop('checkoutSubtitle')}</p>
 
         {/* Fulfillment */}
         <div className="mt-4">
           <div className="flex gap-2">
             <button type="button" onClick={() => cart.setFulfillmentMethod('pickup')} className={cn('flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', cart.fulfillmentMethod === 'pickup' ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 text-ink-muted')}>
-              <MapPin className="h-4 w-4" />{commerce('pickup')}
+              <MapPin className="h-4 w-4" aria-hidden />{shop('pickupLabel')}
             </button>
             <button type="button" onClick={() => cart.setFulfillmentMethod('delivery')} className={cn('flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', cart.fulfillmentMethod === 'delivery' ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 text-ink-muted')}>
-              <Truck className="h-4 w-4" />{commerce('delivery')}
+              <Truck className="h-4 w-4" aria-hidden />{shop('deliveryLabel')}
             </button>
           </div>
           {cart.fulfillmentMethod === 'delivery' && (
             <div className="mt-3 space-y-3">
               {deliveryZones.length > 0 && (
                 <div>
-                <label htmlFor="checkout-zone" className="mb-1.5 block text-xs font-semibold text-sea-900">{commerce('deliveryZone')}</label>
+                <label htmlFor="checkout-zone" className="mb-1.5 block text-xs font-semibold text-sea-900">{shop('deliveryZoneLabel')}</label>
                 <select id="checkout-zone" value={cart.deliveryZoneId || ''} onChange={(e) => cart.setDeliveryZoneId(e.target.value || null)} className="h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700">
-                  <option value="">{commerce('selectZone')}</option>
+                  <option value="">{shop('selectZonePlaceholder')}</option>
                   {deliveryZones.map((z) => (
-                    <option key={z.id} value={z.id}>{ar ? z.name_ar : z.name_en} {z.fee_type === 'fixed' ? `(+${z.fixed_fee} ${common('egp')})` : z.fee_type === 'free' ? `(${common('egp')} 0)` : `(${commerce('deliveryFeeConfirm')})`}</option>
+                    <option key={z.id} value={z.id}>{ar ? z.name_ar : z.name_en} {z.fee_type === 'fixed' ? `(+${z.fixed_fee} ${common('egp')})` : z.fee_type === 'free' ? `(${common('egp')} 0)` : `(${shop('deliveryFeeConfirm')})`}</option>
                   ))}
                 </select>
                 </div>
               )}
               <div>
-                <label htmlFor="checkout-address" className="mb-1.5 block text-xs font-semibold text-sea-900">{commerce('deliveryAddress')}</label>
+                <label htmlFor="checkout-address" className="mb-1.5 block text-xs font-semibold text-sea-900">{shop('deliveryAddressLabel')}</label>
                 <textarea id="checkout-address" autoComplete="street-address" value={address} onChange={(e) => { setAddress(e.target.value); cart.setDeliveryAddress(e.target.value) }} rows={2} className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700" />
               </div>
             </div>
@@ -246,38 +274,44 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
         <div className="mt-4 space-y-3">
           <div>
             <label htmlFor="checkout-name" className="mb-1.5 block text-xs font-semibold text-sea-900">
-              {commerce('fullName')} <span className="text-sun-700" aria-hidden>*</span>
+              {shop('fullNameLabel')} <span className="text-sun-700" aria-hidden>*</span>
               <span className="sr-only">({forms('required')})</span>
             </label>
             <input id="checkout-name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} className="h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700" />
           </div>
           <div>
             <label htmlFor="checkout-phone" className="mb-1.5 block text-xs font-semibold text-sea-900">
-              {commerce('phoneNumber')} <span className="text-sun-700" aria-hidden>*</span>
+              {shop('phoneLabel')} <span className="text-sun-700" aria-hidden>*</span>
               <span className="sr-only">({forms('required')})</span>
             </label>
             <input id="checkout-phone" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" inputMode="tel" className="h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700" />
           </div>
           <div>
             <label htmlFor="checkout-email" className="mb-1.5 block text-xs font-semibold text-sea-900">
-              {commerce('email')} <span className="font-normal text-ink-subtle">({commerce('optional')})</span>
+              {shop('emailLabel')} <span className="font-normal text-ink-subtle">({shop('optionalLabel')})</span>
             </label>
             <input id="checkout-email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" inputMode="email" className="h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700" />
           </div>
           <div>
-            <label htmlFor="checkout-notes" className="mb-1.5 block text-xs font-semibold text-sea-900">{commerce('notes')}</label>
-            <textarea id="checkout-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={commerce('notesPlaceholder')} rows={2} className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700" />
+            <label htmlFor="checkout-notes" className="mb-1.5 block text-xs font-semibold text-sea-900">{shop('notesLabel')}</label>
+            <textarea id="checkout-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={shop('notesPlaceholder')} rows={2} className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700" />
           </div>
         </div>
 
         {/* Totals */}
         <div className="mt-4 space-y-1.5 border-t border-sand-200 pt-4 text-sm">
-          <div className="flex justify-between text-ink-muted"><span>{commerce('subtotal')}</span><span className="tabular-nums text-sea-900">{formatAmount(cart.subtotal, locale)} {common('egp')}</span></div>
+          <div className="flex justify-between text-ink-muted"><span>{shop('subtotalLabel')}</span><span className="tabular-nums text-sea-900">{formatAmount(cart.subtotal, locale)} {common('egp')}</span></div>
           <div className="flex justify-between text-ink-muted">
-            <span>{commerce('deliveryFee')}</span>
-            <span className="tabular-nums text-sea-900">{cart.fulfillmentMethod === 'pickup' ? '—' : zone?.fee_type === 'quote' ? commerce('deliveryFeeConfirm') : `${formatAmount(deliveryFee, locale)} ${common('egp')}`}</span>
+            <span>{shop('deliveryFeeLabel')}</span>
+            <span className="tabular-nums text-sea-900">{cart.fulfillmentMethod === 'pickup' ? '—' : zone?.fee_type === 'quote' ? shop('deliveryFeeConfirm') : `${formatAmount(deliveryFee, locale)} ${common('egp')}`}</span>
           </div>
-          <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{commerce('total')}</span><span className="tabular-nums">{formatAmount(total, locale)} {common('egp')}</span></div>
+          <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{shop('totalLabel')}</span><span className="tabular-nums">{formatAmount(total, locale)} {common('egp')}</span></div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-sand-200 bg-sand-50 p-3">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">{shop('paymentTermsLabel')}</p>
+          {hasSale && <PaymentTerms kind="commerce" policies={paymentPolicies} compact />}
+          {hasRental && <PaymentTerms kind="rental" policies={paymentPolicies} compact className={hasSale ? 'mt-1.5' : undefined} />}
         </div>
 
         <HoneypotField value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
@@ -285,15 +319,13 @@ export function CartCheckoutClient({ deliveryZones, whatsapp }: { deliveryZones:
 
         {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
 
-        <button
-          type="button"
-          onClick={submit}
-          disabled={submitting || cart.items.length === 0}
-          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-sun-500 text-sm font-semibold text-on-accent transition-colors hover:bg-sun-600 disabled:opacity-50"
-        >
-          {submitting ? commerce('submitting') : commerce('submitRequest')}
-        </button>
+        <div className="mt-4 hidden md:block">{submitButton}</div>
       </div>
+
+      <StickyActionBar
+        summary={<PriceTag amount={total} size="md" />}
+        action={<div className="w-40 sm:w-48">{submitButton}</div>}
+      />
     </div>
   )
 }

@@ -7,22 +7,35 @@ import { Minus, Plus, KeyRound, Check, ShieldCheck, Truck, MapPin } from 'lucide
 import { cn } from '@/lib/utils'
 import { useCart } from './CartProvider'
 import { quoteRental } from '@/lib/rental-pricing'
-import { addRentalDays, todayIso } from '@/lib/cart'
+import { addRentalDays } from '@/lib/cart'
+import { todayInCairo } from '@/lib/transport'
+import { rentalDurationLabel } from '@/lib/shop-view'
+import { Eyebrow, PaymentTerms, PriceTag, StickyActionBar } from '@/components/brand'
 import type { CommerceProduct, CommerceProductVariant, CartRentalItem, DeliveryZone } from '@/lib/commerce-types'
-import { formatAmount } from '@/lib/format'
+import type { PaymentPolicy } from '@/lib/payment-rules'
+import { formatAmount, formatDate } from '@/lib/format'
 
 const REQUIREMENT_KEYS: Record<string, string> = {
-  id_required: 'requirement_id_required',
-  license_required: 'requirement_license_required',
-  deposit_required: 'requirement_deposit_required',
+  id_required: 'requirementIdRequired',
+  license_required: 'requirementLicenseRequired',
+  deposit_required: 'requirementDepositRequired',
 }
 
-export function RentalDetailClient({ product, deliveryZones }: { product: CommerceProduct; deliveryZones: DeliveryZone[] }) {
+export function RentalDetailClient({ product, deliveryZones, paymentPolicies }: {
+  product: CommerceProduct
+  deliveryZones: DeliveryZone[]
+  paymentPolicies: PaymentPolicy[]
+}) {
   const locale = useLocale()
   const ar = locale === 'ar'
-  const commerce = useTranslations('commerce')
+  const shop = useTranslations('shopV2')
   const common = useTranslations('common')
   const cart = useCart()
+
+  // "Today" for a rental start date is a Cairo calendar date, not the
+  // visitor's local/UTC date — otherwise the minimum date can silently be
+  // yesterday for anyone browsing from west of Egypt (see docs/m2/BRIEF.md).
+  const today = useMemo(() => todayInCairo(), [])
 
   const options = product.commerce_product_options || []
   const variants = useMemo(() => product.commerce_product_variants || [], [product.commerce_product_variants])
@@ -30,7 +43,7 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
 
   const [selected, setSelected] = useState<Record<string, string>>({})
   const [activeImage, setActiveImage] = useState(0)
-  const [startDate, setStartDate] = useState(todayIso())
+  const [startDate, setStartDate] = useState(today)
   const [durationDays, setDurationDays] = useState<number | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [fulfillment, setFulfillment] = useState<'pickup' | 'delivery'>(product.pickup_enabled ? 'pickup' : 'delivery')
@@ -111,7 +124,6 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
 
     const item: CartRentalItem = {
       kind: 'rental',
-      // eslint-disable-next-line react-hooks/purity -- runs inside a click handler, never during render
       lineId: `${product.id}:${matchedVariant?.id || 'default'}:${startDate}:${Date.now()}`,
       productId: product.id,
       variantId: matchedVariant?.id || null,
@@ -136,6 +148,21 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
     setTimeout(() => setJustAdded(false), 1800)
   }
 
+  const addButton = (
+    <button
+      type="button"
+      onClick={addToCart}
+      disabled={!canAdd}
+      className={cn(
+        'flex min-h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-on-accent transition-colors disabled:cursor-not-allowed disabled:bg-sand-300 disabled:text-ink-subtle',
+        justAdded ? 'bg-emerald-600' : 'bg-sun-500 hover:bg-sun-600',
+      )}
+    >
+      {justAdded ? <Check className="h-4 w-4" aria-hidden /> : <KeyRound className="h-4 w-4" aria-hidden />}
+      {justAdded ? shop('addedToCart') : shop('addToCart')}
+    </button>
+  )
+
   return (
     <div className="bg-sand-50">
       <div className="container-main grid gap-8 py-8 md:grid-cols-2 md:py-12">
@@ -147,9 +174,9 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
             )}
           </div>
           {images.length > 1 && (
-            <div className="mt-3 flex gap-2 overflow-x-auto">
+            <div className="mt-3 flex gap-2 overflow-x-auto" role="group" aria-label={shop('gallery')}>
               {images.map((img, i) => (
-                <button key={img + i} type="button" onClick={() => setActiveImage(i)} className={cn('relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2', activeImage === i ? 'border-sun-600' : 'border-transparent')}>
+                <button key={img + i} type="button" onClick={() => setActiveImage(i)} aria-label={`${shop('gallery')} ${i + 1}`} aria-pressed={activeImage === i} className={cn('relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2', activeImage === i ? 'border-sun-600' : 'border-transparent')}>
                   <Image src={img} alt="" fill sizes="64px" className="object-cover" />
                 </button>
               ))}
@@ -162,24 +189,29 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
 
           {product.rental_requirements?.length > 0 && (
             <div className="mt-5 rounded-xl border border-sand-200 bg-white p-4">
-              <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-sea-900"><ShieldCheck className="h-4 w-4 text-sea-600" />{commerce('requirements')}</p>
+              <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-sea-900"><ShieldCheck className="h-4 w-4 text-sea-600" aria-hidden />{shop('requirementsLabel')}</p>
               <ul className="space-y-1 text-sm text-ink-muted">
                 {product.rental_requirements.map((req) => (
-                  <li key={req}>• {REQUIREMENT_KEYS[req] ? commerce(REQUIREMENT_KEYS[req]) : req}</li>
+                  <li key={req}>• {REQUIREMENT_KEYS[req] ? shop(REQUIREMENT_KEYS[req]) : req}</li>
                 ))}
               </ul>
               {product.deposit_amount > 0 && (
-                <p className="mt-2 text-sm font-semibold text-sea-900">{commerce('deposit')}: {formatAmount(Number(product.deposit_amount), locale)} {common('egp')}</p>
+                <p className="mt-2 text-sm font-semibold text-sea-900">{shop('depositLabel')}: {formatAmount(Number(product.deposit_amount), locale)} {common('egp')} <span className="text-xs font-normal text-ink-muted">({shop('depositNote')})</span></p>
               )}
             </div>
           )}
+
+          <div className="mt-5 rounded-xl border border-sand-200 bg-white p-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-subtle">{shop('paymentTermsLabel')}</p>
+            <PaymentTerms kind="rental" policies={paymentPolicies} />
+          </div>
         </div>
 
         <div>
           {product.commerce_categories && (
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">{ar ? product.commerce_categories.name_ar : product.commerce_categories.name_en}</p>
+            <Eyebrow>{ar ? product.commerce_categories.name_ar : product.commerce_categories.name_en}</Eyebrow>
           )}
-          <h1 className="mt-2 font-display text-3xl font-extrabold text-sea-900">{ar ? product.name_ar : product.name_en}</h1>
+          <h1 className="mt-3 font-display text-3xl font-extrabold text-sea-900">{ar ? product.name_ar : product.name_en}</h1>
 
           {/* Options */}
           {options.map((option) => (
@@ -203,13 +235,13 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
 
           {/* Start date */}
           <div className="mt-5">
-            <p className="mb-2 text-sm font-semibold text-sea-900">{commerce('startDate')}</p>
+            <label htmlFor="rental-start-date" className="mb-2 block text-sm font-semibold text-sea-900">{shop('startDateLabel')}</label>
             <input
+              id="rental-start-date"
               type="date"
-              aria-label={commerce('startDate')}
               value={startDate}
-              min={todayIso()}
-              onChange={(e) => setStartDate(e.target.value < todayIso() ? todayIso() : e.target.value)}
+              min={today}
+              onChange={(e) => setStartDate(e.target.value < today ? today : e.target.value)}
               className="h-11 w-full max-w-[220px] rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
               dir="ltr"
             />
@@ -217,10 +249,10 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
 
           {/* Duration tiers */}
           <div className="mt-5">
-            <p className="mb-2 text-sm font-semibold text-sea-900">{commerce('duration')}</p>
+            <p className="mb-2 text-sm font-semibold text-sea-900">{shop('durationLabel')}</p>
             {tiers.length === 0 ? (
               <p className="text-xs text-ink-subtle">
-                {hasOptions && !allOptionsSelected ? commerce('selectOptions') : commerce('noPricingConfigured')}
+                {hasOptions && !allOptionsSelected ? shop('selectOptionsHint') : shop('noPricingConfigured')}
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -232,60 +264,65 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
                     aria-pressed={durationDays === t.duration_days}
                     className={cn('min-h-10 rounded-lg border px-4 text-sm font-medium transition-colors', durationDays === t.duration_days ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 bg-white text-ink-muted hover:border-sea-400')}
                   >
-                    {ar ? (t.label_ar || `${t.duration_days} يوم`) : (t.label_en || `${t.duration_days}d`)}
+                    {rentalDurationLabel({ durationDays: t.duration_days, labelAr: t.label_ar, labelEn: t.label_en }, ar)}
                   </button>
                 ))}
               </div>
             )}
             {endDate && (
-              <p className="mt-2 text-xs text-ink-subtle">{commerce('returnsOn')}: <span dir="ltr" className="font-medium text-sea-900">{endDate}</span></p>
+              <p className="mt-2 text-xs text-ink-subtle">
+                {shop('returnsOn', { date: formatDate(endDate, locale, { day: 'numeric', month: 'short' }) })}
+              </p>
             )}
           </div>
 
           {/* Quantity */}
           <div className="mt-5 flex items-center gap-3">
-            <span className="text-sm font-semibold text-sea-900">{commerce('quantity')}</span>
+            <span className="text-sm font-semibold text-sea-900">{shop('quantityLabel')}</span>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="flex h-9 w-9 items-center justify-center rounded-lg border border-sand-300 hover:bg-sand-100">
-                <Minus className="h-3.5 w-3.5" />
+              <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label={shop('decreaseQuantity')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-sand-300 hover:bg-sand-100">
+                <Minus className="h-3.5 w-3.5" aria-hidden />
               </button>
               <span className="w-6 text-center font-bold tabular-nums">{quantity}</span>
-              <button type="button" onClick={() => setQuantity((q) => q + 1)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-sea-500 text-sea-700 hover:bg-sea-50">
-                <Plus className="h-3.5 w-3.5" />
+              <button type="button" onClick={() => setQuantity((q) => q + 1)} aria-label={shop('increaseQuantity')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-sea-500 text-sea-700 hover:bg-sea-50">
+                <Plus className="h-3.5 w-3.5" aria-hidden />
               </button>
             </div>
           </div>
 
+          {availability.checking && (
+            <p className="mt-3 text-xs text-ink-subtle">{shop('checkingAvailability')}</p>
+          )}
           {!availability.checking && !availability.available && (
             <p className="mt-3 text-xs font-semibold text-red-600">
-              {availability.remaining != null ? commerce('unavailableDates', { count: availability.remaining }) : commerce('outOfStock')}
+              {availability.remaining != null ? shop('fewLeftForDates', { count: availability.remaining }) : shop('unavailableForDates')}
             </p>
           )}
           {!availability.checking && availability.available && availability.remaining != null && availability.remaining <= 3 && (
-            <p className="mt-3 text-xs font-medium text-sun-700">{commerce('unitsLeft', { count: availability.remaining })}</p>
+            <p className="mt-3 text-xs font-medium text-sun-700">{shop('lowStock', { count: availability.remaining })}</p>
           )}
 
           {/* Fulfillment */}
           {(showPickup || showDelivery) && (
             <div className="mt-6">
-              <p className="mb-2 text-sm font-semibold text-sea-900">{commerce('fulfillment')}</p>
+              <p className="mb-2 text-sm font-semibold text-sea-900">{shop('fulfillmentLabel')}</p>
               <div className="flex gap-2">
                 {showPickup && (
                   <button type="button" onClick={() => setFulfillment('pickup')} className={cn('flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', fulfillment === 'pickup' ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 bg-white text-ink-muted')}>
-                    <MapPin className="h-4 w-4" />{commerce('pickup')}
+                    <MapPin className="h-4 w-4" aria-hidden />{shop('pickupLabel')}
                   </button>
                 )}
                 {showDelivery && (
                   <button type="button" onClick={() => setFulfillment('delivery')} className={cn('flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium', fulfillment === 'delivery' ? 'border-sun-600 bg-sun-500 text-on-accent' : 'border-sand-300 bg-white text-ink-muted')}>
-                    <Truck className="h-4 w-4" />{commerce('delivery')}
+                    <Truck className="h-4 w-4" aria-hidden />{shop('deliveryLabel')}
                   </button>
                 )}
               </div>
               {fulfillment === 'delivery' && showDelivery && (
-                <select aria-label={commerce('deliveryZone')} value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="mt-2 h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700">
+                <select aria-label={shop('deliveryZoneLabel')} value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="mt-2 h-11 w-full rounded-lg border border-sand-300 bg-white px-3 text-sm text-sea-900 focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700">
                   {deliveryZones.map((z) => (
                     <option key={z.id} value={z.id}>
-                      {ar ? z.name_ar : z.name_en} {z.fee_type === 'fixed' ? `(+${z.fixed_fee} ${common('egp')})` : z.fee_type === 'free' ? `(${common('egp')} 0)` : `(${commerce('deliveryFeeConfirm')})`}
+                      {ar ? z.name_ar : z.name_en} {z.fee_type === 'fixed' ? `(+${z.fixed_fee} ${common('egp')})` : z.fee_type === 'free' ? `(${common('egp')} 0)` : `(${shop('deliveryFeeConfirm')})`}
                     </option>
                   ))}
                 </select>
@@ -299,28 +336,25 @@ export function RentalDetailClient({ product, deliveryZones }: { product: Commer
           {/* Price summary */}
           {quote && (
             <div className="mt-6 space-y-1.5 rounded-xl border border-sand-200 bg-white p-4 text-sm">
-              <div className="flex justify-between text-ink-muted"><span>{commerce('itemSubtotal')}</span><span className="tabular-nums text-sea-900">{formatAmount(quote.subtotal, locale)} {common('egp')}</span></div>
+              <div className="flex justify-between text-ink-muted"><span>{shop('itemSubtotal')}</span><span className="tabular-nums text-sea-900">{formatAmount(quote.subtotal, locale)} {common('egp')}</span></div>
               <div className="flex justify-between text-ink-muted">
-                <span>{commerce('deliveryFee')}</span>
+                <span>{shop('deliveryFeeLabel')}</span>
                 <span className="tabular-nums text-sea-900">
-                  {fulfillment === 'pickup' ? '—' : deliveryFee?.fee_type === 'quote' ? commerce('deliveryFeeConfirm') : `${formatAmount(deliveryFeeAmount, locale)} ${common('egp')}`}
+                  {fulfillment === 'pickup' ? '—' : deliveryFee?.fee_type === 'quote' ? shop('deliveryFeeConfirm') : `${formatAmount(deliveryFeeAmount, locale)} ${common('egp')}`}
                 </span>
               </div>
-              <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{commerce('estimatedTotal')}</span><span className="tabular-nums">{formatAmount(quote.subtotal + deliveryFeeAmount, locale)} {common('egp')}</span></div>
+              <div className="flex justify-between border-t border-sand-200 pt-1.5 font-bold text-sea-900"><span>{shop('estimatedTotal')}</span><span className="tabular-nums">{formatAmount(quote.subtotal + deliveryFeeAmount, locale)} {common('egp')}</span></div>
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={addToCart}
-            disabled={!canAdd}
-            className={cn('mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-on-accent transition-colors disabled:cursor-not-allowed disabled:bg-sand-300 disabled:text-ink-subtle', justAdded ? 'bg-emerald-600' : 'bg-sun-500 hover:bg-sun-600')}
-          >
-            {justAdded ? <Check className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
-            {justAdded ? commerce('addedToCart') : commerce('addToCart')}
-          </button>
+          <div className="mt-6 hidden md:block">{addButton}</div>
         </div>
       </div>
+
+      <StickyActionBar
+        summary={quote ? <PriceTag amount={quote.subtotal + deliveryFeeAmount} size="md" /> : undefined}
+        action={<div className="w-40 sm:w-48">{addButton}</div>}
+      />
     </div>
   )
 }

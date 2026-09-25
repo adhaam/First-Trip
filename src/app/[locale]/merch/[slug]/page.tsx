@@ -2,8 +2,13 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { ProductDetailClient } from '@/components/commerce/ProductDetailClient'
-import { getCommerceProductBySlug } from '@/lib/data'
+import { getCommerceProductBySlug, getDeliveryZones } from '@/lib/data'
+import { getPaymentRules } from '@/lib/payment-rules-load'
 import { jsonLdScript } from '@/lib/safe-html'
+
+// Admin-activated inventory must appear with no redeploy: matches the
+// revalidate window used by /book-dahab/[id] and /sinai-trips/[slug].
+export const revalidate = 60
 
 export async function generateMetadata({ params }: {
   params: Promise<{ locale: string; slug: string }>
@@ -26,7 +31,11 @@ export async function generateMetadata({ params }: {
 
 export default async function MerchProductPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
   const { locale, slug } = await params
-  const product = await getCommerceProductBySlug(slug)
+  const [product, deliveryZones, paymentRules] = await Promise.all([
+    getCommerceProductBySlug(slug),
+    getDeliveryZones(),
+    getPaymentRules(),
+  ])
   if (!product || product.product_type !== 'sale') notFound()
 
   const variants = product.commerce_product_variants || []
@@ -54,7 +63,7 @@ export default async function MerchProductPage({ params }: { params: Promise<{ l
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
-      <ProductDetailClient product={product} />
+      <ProductDetailClient product={product} deliveryZones={deliveryZones} paymentPolicies={paymentRules.policies} />
     </>
   )
 }

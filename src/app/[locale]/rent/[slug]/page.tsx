@@ -3,6 +3,11 @@ import { notFound } from 'next/navigation'
 import { buildAlternates } from '@/lib/seo'
 import { RentalDetailClient } from '@/components/commerce/RentalDetailClient'
 import { getCommerceProductBySlug, getDeliveryZones } from '@/lib/data'
+import { getPaymentRules } from '@/lib/payment-rules-load'
+
+// Admin-activated inventory must appear with no redeploy: matches the
+// revalidate window used by /book-dahab/[id] and /sinai-trips/[slug].
+export const revalidate = 60
 
 export async function generateMetadata({ params }: {
   params: Promise<{ locale: string; slug: string }>
@@ -25,7 +30,11 @@ export async function generateMetadata({ params }: {
 
 export default async function RentalProductPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
   const { slug } = await params
-  const [product, deliveryZones] = await Promise.all([getCommerceProductBySlug(slug), getDeliveryZones()])
+  const [product, deliveryZones, paymentRules] = await Promise.all([
+    getCommerceProductBySlug(slug),
+    getDeliveryZones(),
+    getPaymentRules(),
+  ])
   if (!product || product.product_type !== 'rental') notFound()
-  return <RentalDetailClient product={product} deliveryZones={deliveryZones} />
+  return <RentalDetailClient product={product} deliveryZones={deliveryZones} paymentPolicies={paymentRules.policies} />
 }
