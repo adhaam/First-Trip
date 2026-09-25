@@ -31,11 +31,8 @@ export function getSchemaOrg(settings?: SiteSettings | null) {
       addressRegion: 'South Sinai',
       addressCountry: 'EG',
     },
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: 28.5092,
-      longitude: 34.5185,
-    },
+    // No `geo`: WEEMAP has no verified business coordinates on record, and a
+    // town-centre point would claim a precise location that isn't real.
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',

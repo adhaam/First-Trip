@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatAmount, formatCount, formatDateShort, formatReference } from '@/lib/format'
 import type { WorkItem } from '@/lib/ops/types'
 import { customerHref, opsItemHref } from '@/components/admin/ops/nav'
-import { AttentionChips, EntityTypeLabel, NextActionLabel, PaymentPill, StatusPill, WaitingLabel, itemTitle } from '@/components/admin/ops/pills'
+import { AttentionChips, EntityTypeLabel, NextActionLabel, PaymentPill, StatusPill, WaitingLabel, useItemTitle } from '@/components/admin/ops/pills'
 
 /** Shared row list for the work queue, today view sections and a customer profile. */
 export function WorkItemTable({
@@ -19,6 +19,7 @@ export function WorkItemTable({
   showType?: boolean
 }) {
   const locale = useLocale()
+  const titleOf = useItemTitle()
   const t = useTranslations('ops.queue.columns')
   const tCommon = useTranslations('ops.common')
 
@@ -78,7 +79,7 @@ export function WorkItemTable({
                   {item.start_date ? formatDateShort(item.start_date, locale) : tCommon('none')}
                   {item.people ? <span className="ms-1 text-muted-foreground">· {formatCount(item.people, locale)}</span> : null}
                 </TableCell>
-                <TableCell className="max-w-[220px] truncate text-sm">{itemTitle(item, locale)}</TableCell>
+                <TableCell className="min-w-[160px] max-w-[220px] whitespace-normal text-sm">{titleOf(item)}</TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
                     <StatusPill status={item.status} />
@@ -95,7 +96,7 @@ export function WorkItemTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="relative z-10 text-sm">
+                <TableCell className="relative z-10 min-w-[130px] whitespace-normal text-sm">
                   {item.next_action !== 'none' ? (
                     <Link
                       href={opsItemHref(item.entity_type, item.entity_id)}
@@ -123,12 +124,12 @@ export function WorkItemTable({
             <Link
               href={opsItemHref(item.entity_type, item.entity_id)}
               className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
-              aria-label={`${formatReference(item.reference)} — ${itemTitle(item, locale)}`}
+              aria-label={`${formatReference(item.reference)} — ${titleOf(item)}`}
             />
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-medium">{formatReference(item.reference)}</p>
-                <p className="truncate text-sm text-muted-foreground">{itemTitle(item, locale)}</p>
+                <p className="truncate text-sm text-muted-foreground">{titleOf(item)}</p>
               </div>
               <StatusPill status={item.status} />
             </div>

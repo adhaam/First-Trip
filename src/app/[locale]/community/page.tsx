@@ -17,7 +17,8 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'communityV2' })
-  return pageMetadata({ locale, path: '/community', title: t('title'), description: t('subtitle') })
+  const tMeta = await getTranslations({ locale, namespace: 'discovery' })
+  return pageMetadata({ locale, path: '/community', title: tMeta('metaTitles.community'), description: t('subtitle') })
 }
 
 export default async function CommunityPage({ params }: { params: Promise<{ locale: string }> }) {

@@ -390,5 +390,42 @@
     "owner": "Owner",
     "admin": "Admin",
     "operations": "Operations"
+  },
+  "transferTypes": {
+    "package_bus": "Shared bus transfer",
+    "hiace": "Private Hiace transfer"
+  },
+  "journey": {
+    "frozenNote": "Prices and payment split are the quote frozen when the customer submitted. Changes happen on the converted bookings.",
+    "noOrigin": "No transport (stay only)",
+    "transport": {
+      "package_bus": "Shared bus",
+      "hiace": "Private Hiace",
+      "stay_only": "Stay only"
+    },
+    "stayPattern": "Stay length",
+    "travellers": "{adults} adults · {children} children",
+    "room": "{type} × {count}",
+    "roomTypes": {
+      "double": "Double room",
+      "single": "Single room",
+      "triple": "Triple room"
+    },
+    "kind": {
+      "trip": "Sinai trip",
+      "trip_package": "Sinai package"
+    },
+    "quote": {
+      "accommodation": "Accommodation",
+      "meals": "Meals",
+      "transfer": "Transport",
+      "trips": "Sinai trips",
+      "packages": "Sinai packages",
+      "total": "Quoted total"
+    },
+    "payment": {
+      "afterConfirmation": "Due after confirmation",
+      "onArrival": "Due on arrival"
+    }
   }
 }

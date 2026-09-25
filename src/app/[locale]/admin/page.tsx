@@ -72,7 +72,16 @@ export default function AdminLoginPage() {
               {!useShared && (
                 <div>
                   <Label htmlFor="email"><Mail className="me-1 inline h-4 w-4" />{t('email')}</Label>
-                  <Input id="email" name="email" type="email" required={!useShared} className="mt-1" dir="ltr" autoComplete="username" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required={!useShared}
+                    className="mt-1"
+                    dir="ltr"
+                    autoComplete="username"
+                    autoFocus={!useShared}
+                  />
                 </div>
               )}
               <div>
@@ -84,7 +93,7 @@ export default function AdminLoginPage() {
                   required
                   className="mt-1"
                   dir="ltr"
-                  autoFocus
+                  autoFocus={useShared}
                   autoComplete="current-password"
                 />
               </div>

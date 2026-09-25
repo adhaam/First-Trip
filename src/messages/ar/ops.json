@@ -390,5 +390,42 @@
     "owner": "مالك",
     "admin": "مدير",
     "operations": "عمليات"
+  },
+  "transferTypes": {
+    "package_bus": "انتقال بالأتوبيس المشترك",
+    "hiace": "انتقال خاص بالهايس"
+  },
+  "journey": {
+    "frozenNote": "الأسعار وتقسيم الدفع هي عرض السعر المُثبَّت لحظة إرسال العميل للطلب. أي تعديل يتم على الحجوزات بعد التحويل.",
+    "noOrigin": "بدون انتقال (إقامة فقط)",
+    "transport": {
+      "package_bus": "أتوبيس مشترك",
+      "hiace": "هايس خاص",
+      "stay_only": "إقامة فقط"
+    },
+    "stayPattern": "مدة الإقامة",
+    "travellers": "{adults} بالغ · {children} طفل",
+    "room": "{type} — العدد {count}",
+    "roomTypes": {
+      "double": "غرفة مزدوجة",
+      "single": "غرفة فردية",
+      "triple": "غرفة ثلاثية"
+    },
+    "kind": {
+      "trip": "رحلة في سيناء",
+      "trip_package": "باقة رحلات سيناء"
+    },
+    "quote": {
+      "accommodation": "الإقامة",
+      "meals": "الوجبات",
+      "transfer": "الانتقال",
+      "trips": "رحلات سيناء",
+      "packages": "باقات سيناء",
+      "total": "إجمالي عرض السعر"
+    },
+    "payment": {
+      "afterConfirmation": "مستحق بعد التأكيد",
+      "onArrival": "مستحق عند الوصول"
+    }
   }
 }

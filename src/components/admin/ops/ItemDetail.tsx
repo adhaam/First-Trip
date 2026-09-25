@@ -13,7 +13,7 @@ import { formatDate } from '@/lib/format'
 import type { OpsEntityType, WorkItem } from '@/lib/ops/types'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
 import { customerHref, opsItemHref } from '@/components/admin/ops/nav'
-import { EntityTypeLabel, NextActionLabel, PaymentPill, StatusPill, itemTitle } from '@/components/admin/ops/pills'
+import { EntityTypeLabel, NextActionLabel, PaymentPill, StatusPill, useItemTitle } from '@/components/admin/ops/pills'
 import { TripRequestPanel } from '@/components/admin/ops/TripRequestPanel'
 import { PaymentsPanel, type PaymentExpectation, type PaymentRecord } from '@/components/admin/ops/PaymentsPanel'
 import { HistoryTimeline } from '@/components/admin/ops/HistoryTimeline'
@@ -35,6 +35,7 @@ type ItemResponse = {
 
 export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
   const locale = useLocale()
+  const titleOf = useItemTitle()
   const t = useTranslations('ops.item')
   const tCommon = useTranslations('ops.common')
   const fetchJson = useOpsFetch()
@@ -80,7 +81,10 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
         method: 'POST',
         body: JSON.stringify({ status, expected_status: data.item.status }),
       })
+      // Reload everything: allowed transitions, history, convert/payment
+      // availability and the record's updated_at all follow the status.
       setData((current) => current ? { ...current, item: res.item } : current)
+      await load()
       setNotice(t('statusChanged'))
     } catch (err) {
       const code = err instanceof Error ? (err as Error & { code?: string; payload?: { allowed?: string[]; current_status?: string } }).code : undefined
@@ -114,7 +118,9 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
         method: 'POST',
         body: JSON.stringify({ internal_notes: notes, expected_updated_at: updatedAt }),
       })
-      setData((current) => current ? { ...current, record: { ...current.record, internal_notes: res.internal_notes, updated_at: res.updated_at } } : current)
+      setData((current) => current
+        ? { ...current, record: { ...current.record, internal_notes: res.internal_notes, updated_at: res.updated_at } }
+        : current)
       setNotesMessage(t('staffNotesSaved'))
     } catch (err) {
       const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined
@@ -178,7 +184,7 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground"><EntityTypeLabel type={item.entity_type} /></p>
             <h1 className="text-xl font-semibold text-gray-900" dir="ltr">{item.reference}</h1>
-            <p className="text-sm text-muted-foreground">{itemTitle(item, locale)}</p>
+            <p className="text-sm text-muted-foreground">{titleOf(item)}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="flex gap-2"><StatusPill status={item.status} /><PaymentPill paymentStatus={item.payment_status} /></div>
@@ -217,6 +223,8 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
               key={status}
               size="sm"
               variant={status === 'cancelled' ? 'destructive' : 'outline'}
+              // Darker red keeps the destructive label at WCAG AA contrast on its tinted background.
+              className={status === 'cancelled' ? 'text-red-800' : undefined}
               disabled={statusPending}
               onClick={() => requestStatusChange(status)}
             >

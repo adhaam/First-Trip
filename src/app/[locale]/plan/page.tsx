@@ -16,10 +16,11 @@ export async function generateMetadata({ params, searchParams }: {
   // distinct piece of content worth indexing — so only that variant is
   // marked noindex,follow.
   const hasPrefill = Object.keys(prefill).length > 0
+  const tMeta = await getTranslations({ locale, namespace: 'discovery' })
   return pageMetadata({
     locale,
     path: '/plan',
-    title: t('metaTitle'),
+    title: tMeta('metaTitles.plan'),
     description: t('metaDescription'),
     ...(hasPrefill ? { robots: { index: false, follow: true } } : {}),
   })

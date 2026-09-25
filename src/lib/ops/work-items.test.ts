@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DEFAULT_PAYMENT_POLICIES } from '@/lib/payment-rules'
-import { deriveWorkItem, filterByView, type WorkItemRow } from './work-items'
+import { deriveWorkItem, filterByView, isJourneyItem, isTripItem, todayCounts, type WorkItemRow } from './work-items'
 import type { AttentionCode } from './types'
 
 const NOW = new Date('2026-09-25T12:00:00Z')
@@ -161,4 +161,19 @@ test('filters each queue view', () => {
 test('upcoming excludes cancelled rows even inside the window', () => {
   const items = [derive({ status: 'cancelled', start_date: '2026-09-27' })]
   assert.equal(filterByView(items, 'upcoming', TODAY).length, 0)
+})
+
+test('arrivals are stays/transfers and unconverted requests; trips are never arrivals', () => {
+  const stay = derive({ status: 'confirmed', start_date: '2026-09-25' })
+  const trip = derive({ entity_type: 'trip_booking', status: 'confirmed', start_date: '2026-09-25' })
+  const converted = derive({ entity_type: 'trip_request', status: 'confirmed', payment_status: 'converted' })
+  const cancelled = derive({ status: 'cancelled', start_date: '2026-09-25' })
+  assert.equal(isJourneyItem(stay), true)
+  assert.equal(isJourneyItem(trip), false)
+  assert.equal(isJourneyItem(converted), false)
+  assert.equal(isJourneyItem(cancelled), false)
+  assert.equal(isTripItem(trip), true)
+  const counts = todayCounts([stay, trip, cancelled], '2026-09-25')
+  assert.equal(counts.arrivals_today, 1)
+  assert.equal(counts.trips_today, 1)
 })

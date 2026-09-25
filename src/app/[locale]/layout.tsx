@@ -14,7 +14,7 @@ import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat'
 import { WeemapAI } from '@/components/ai/WeemapAI'
 import { getSchemaOrg, getWebSiteSchema } from '@/lib/schema-org'
 import { getSiteSettings } from '@/lib/data'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, siteSeo } from '@/lib/seo'
 import { getPathname } from '@/i18n/navigation'
 import { CartProvider } from '@/components/commerce/CartProvider'
 import { CartDrawer } from '@/components/commerce/CartDrawer'
@@ -64,9 +64,6 @@ const alexandria = Alexandria({
   display: 'swap',
 })
 
-const DEFAULT_TITLE = 'WEEMAP SINAI — We map Sinai. You live it.'
-const DEFAULT_DESC_AR = 'WEEMAP SINAI — باقات، إقامة، انتقالات، ورحلات سيناء. بنرسم لك الطريق لدهب وجنوب سيناء — إنت بس تعيشها.'
-const DEFAULT_DESC_EN = 'WEEMAP SINAI — packages, stays, transfers, and Sinai trips. We map the way; you live it.'
 
 // SEO fields are owner-editable from the dashboard (Site Settings → SEO);
 // anything left empty falls back to the WEEMAP defaults here.
@@ -75,10 +72,7 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const settings = await getSiteSettings().catch(() => null)
-  const title = settings?.seo_title || DEFAULT_TITLE
-  const description =
-    (locale === 'ar' ? settings?.seo_description_ar : settings?.seo_description_en) ||
-    (locale === 'ar' ? DEFAULT_DESC_AR : DEFAULT_DESC_EN)
+  const { title, description } = siteSeo(settings, locale)
   const socialImage = settings?.social_share_image || '/media/og-cover.jpg'
   const organizationName = settings?.organization_name || 'WEEMAP SINAI'
   return {

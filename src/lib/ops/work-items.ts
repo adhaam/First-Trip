@@ -139,6 +139,21 @@ export function sortForView(items: WorkItem[], view: OpsView): WorkItem[] {
   })
 }
 
+/**
+ * Arrivals / departures are stays and transfers (and requests not yet
+ * converted — a converted request is represented by its bookings). Trips and
+ * Signature experiences are "trips today", never arrivals.
+ */
+export function isJourneyItem(item: WorkItem): boolean {
+  if (item.status === 'cancelled') return false
+  if (item.entity_type === 'accommodation_booking') return true
+  return item.entity_type === 'trip_request' && item.payment_status !== 'converted'
+}
+
+export function isTripItem(item: WorkItem): boolean {
+  return item.status !== 'cancelled' && ['trip_booking', 'signature_request'].includes(item.entity_type)
+}
+
 export function todayCounts(items: WorkItem[], today: string) {
   return {
     needs_action: filterByView(items, 'needs_action', today).length,
@@ -146,11 +161,9 @@ export function todayCounts(items: WorkItem[], today: string) {
     awaiting_availability: items.filter((item) => item.status === 'checking_availability').length,
     alternatives_required: items.filter((item) => item.status === 'alternatives_required').length,
     awaiting_payment: filterByView(items, 'awaiting_payment', today).length,
-    arrivals_today: items.filter((item) => item.start_date === today && item.status !== 'cancelled').length,
-    departures_today: items.filter((item) => item.end_date === today && item.status !== 'cancelled').length,
-    trips_today: items.filter((item) => (
-      ['trip_booking', 'signature_request'].includes(item.entity_type) && item.start_date === today
-    )).length,
+    arrivals_today: items.filter((item) => isJourneyItem(item) && item.start_date === today).length,
+    departures_today: items.filter((item) => isJourneyItem(item) && item.end_date === today).length,
+    trips_today: items.filter((item) => isTripItem(item) && item.start_date === today).length,
     transfers_attention: items.filter((item) => item.attention.includes('transfer_unconfirmed')).length,
     stale: filterByView(items, 'stale', today).length,
     exceptions: filterByView(items, 'exceptions', today).length,

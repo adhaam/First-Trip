@@ -31,5 +31,15 @@
       "rental": "Rental Gear",
       "community_post": "Community Guides"
     }
+  },
+  "metaTitles": {
+    "explore": "Explore Sinai from Dahab — trips, packages and local guides",
+    "packages": "Sinai trip packages from Dahab",
+    "signature": "WEEMAP Signature — tailor-made Sinai experiences",
+    "community": "Dahab & Sinai local guides and stories",
+    "merch": "WEEMAP shop — Sinai-made merch",
+    "rent": "Gear rental in Dahab",
+    "policy": "Booking, payment and cancellation policies",
+    "plan": "Build your Dahab trip — transport, stay and Sinai experiences"
   }
 }

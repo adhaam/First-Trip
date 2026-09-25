@@ -90,7 +90,17 @@ export function Rail({
           </button>
         </div>
       </div>
-      <div ref={trackRef} className="rail-snap -mx-4 gap-4 px-4 sm:mx-0 sm:px-0">
+      {/* Focusable + labelled so keyboard users can scroll the rail (WCAG scrollable-region-focusable). */}
+      <div
+        ref={trackRef}
+        role="region"
+        aria-label={label}
+        tabIndex={0}
+        className={cn(
+          'rail-snap -mx-4 gap-4 px-4 sm:mx-0 sm:px-0',
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500',
+        )}
+      >
         {children}
       </div>
     </div>

@@ -16,7 +16,8 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'shopV2' })
-  return pageMetadata({ locale, path: '/rent', title: t('rentTitle'), description: t('rentLede') })
+  const tMeta = await getTranslations({ locale, namespace: 'discovery' })
+  return pageMetadata({ locale, path: '/rent', title: tMeta('metaTitles.rent'), description: t('rentLede') })
 }
 
 export default async function RentPage({ params }: { params: Promise<{ locale: string }> }) {

@@ -6,7 +6,7 @@ import { paymentPlan, type PaymentKind } from '@/lib/payment-rules'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { resolveActorNames } from '@/lib/staff'
 import { allowedNextStatuses, type RequestStatus } from '@/lib/request-workflow'
-import { isMissingOpsRelation, loadWorkItemByEntity, loadWorkItemsByTripRequest } from '@/lib/ops/server'
+import { isMissingOpsRelation, loadWorkItemByEntity, loadWorkItemsByTripRequest, loadRequestJourney } from '@/lib/ops/server'
 import { OPS_ENTITY_TABLES, type OpsEntityType, type WorkItem } from '@/lib/ops/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 
@@ -174,6 +174,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       .filter((status) => status !== item.status)
 
     const record = recordResult.data as unknown as Record<string, unknown>
+    if (entityType === 'trip_request') record.journey = await loadRequestJourney(supabase, record)
 
     return NextResponse.json({
       item,

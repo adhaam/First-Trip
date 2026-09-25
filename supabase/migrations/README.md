@@ -157,6 +157,30 @@ like once `001` has run.
   write RLS, same pattern as `033`. 035 and 036 are reserved for the Ops
   Center track and intentionally skipped here.
 
+- **038 — public search documents.** `weemap_search_normalize()` folds the
+  Arabic spelling variants people type (hamza forms, ى/ي, ة/ه, diacritics,
+  tatweel) and lower-cases. `public_search_documents` is a view over public
+  rows only (active stays, trips, Sinai packages and products; published
+  community posts), and public search requires every query token in its
+  normalised text. It must stay identical to `normalizeSearchText()`, which
+  `supabase/tests/public_search.sql` checks.
+
+## Production preflight for 035–038 (M3)
+
+Apply after 029–034 and before deploying the M3 code (the admin API needs the
+staff table and RPCs). After applying, create the first owner by signing in
+with the shared `ADMIN_PASSWORD` (email left empty) and adding the owner in
+Team → Staff; from then on, the shared password is refused. See
+`docs/m3/OPERATIONS.md`. Verify with:
+
+```sql
+select count(*) from staff_users where role = 'owner' and is_active;
+select proname from pg_proc where proname in
+  ('weemap_record_payment', 'weemap_convert_trip_request', 'weemap_current_actor', 'weemap_search_normalize');
+select count(*) from ops_work_items;
+select doc_type, count(*) from public_search_documents group by 1;
+```
+
 ## Production preflight for 029–034
 
 Before deploying the M1 code (payment kinds, new workflow states, transport

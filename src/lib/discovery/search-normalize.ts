@@ -48,3 +48,26 @@ export function searchQueryVariants(safeQuery: string): string[] {
   if (!normalized || normalized === safeQuery) return [safeQuery]
   return [safeQuery, normalized]
 }
+
+/**
+ * MUST match public.weemap_search_normalize() (migration 038): lower-case,
+ * no diacritics/tatweel, أإآٱ→ا, ى→ي, ة→ه. The database normalises the
+ * searchable text the same way, so both sides meet in the middle.
+ */
+export function normalizeSearchText(value: string): string {
+  return normalizeArabicLetters(stripArabicDiacritics(value.toLowerCase()))
+}
+
+const MAX_TOKENS = 5
+
+/**
+ * The query as normalised tokens; every token must appear in a document.
+ * Tokens are already stripped of PostgREST/LIKE grammar by the caller
+ * (sanitizeSearchFilter). Single characters are dropped unless the whole
+ * query is one token, so "a" in "a blue hole" does not match everything.
+ */
+export function searchTokens(safeQuery: string): string[] {
+  const tokens = normalizeSearchText(safeQuery).split(/\s+/).filter(Boolean)
+  const meaningful = tokens.length > 1 ? tokens.filter((token) => token.length > 1) : tokens
+  return [...new Set(meaningful)].slice(0, MAX_TOKENS)
+}

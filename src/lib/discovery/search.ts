@@ -1,7 +1,7 @@
 import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { getTripRouteSlug } from '@/lib/trips'
 import { effectiveTripPrice } from '@/lib/pricing'
-import { searchQueryVariants } from './search-normalize'
+import { searchTokens } from './search-normalize'
 
 export type SearchResultType = 'accommodation' | 'trip' | 'trip_package' | 'merch' | 'rental' | 'community_post'
 
@@ -32,13 +32,35 @@ export function sanitizeSearchFilter(value: string): string {
   return value.replace(/[%_*,()]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+type DocType = 'accommodation' | 'trip' | 'trip_package' | 'product' | 'community_post'
+
 /**
- * Builds a PostgREST `.or()` filter string: every column ilike every query
- * variant (original + Arabic-normalised, see ./search-normalize.ts), OR'd
- * together. Never returns more than `columns.length * 2` clauses.
+ * Ids of public documents containing EVERY query token, per type, in
+ * catalogue order. Matching runs on the normalised view from migration 038,
+ * so Arabic spelling variants (hamza, taa marbuta, alef maqsura, diacritics)
+ * and split/joined words ("بلو هول" vs "البلوهول") still meet.
  */
-function buildOrFilter(columns: string[], variants: string[]): string {
-  return columns.flatMap((col) => variants.map((variant) => `${col}.ilike.%${variant}%`)).join(',')
+async function matchingIds(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  tokens: string[],
+): Promise<Record<DocType, string[]>> {
+  let query = supabase
+    .from('public_search_documents')
+    .select('doc_type, id')
+    .order('sort_order', { ascending: true })
+    .limit(200)
+  for (const token of tokens) query = query.ilike('search_text', `%${token}%`)
+  const { data, error } = await query
+  if (error) throw error
+  const ids: Record<DocType, string[]> = {
+    accommodation: [], trip: [], trip_package: [], product: [], community_post: [],
+  }
+  for (const row of (data ?? []) as { doc_type: DocType; id: string }[]) {
+    const bucket = ids[row.doc_type]
+    const cap = row.doc_type === 'product' ? MAX_RESULTS_PER_GROUP * 2 : MAX_RESULTS_PER_GROUP
+    if (bucket && bucket.length < cap) bucket.push(row.id)
+  }
+  return ids
 }
 
 /**
@@ -46,8 +68,8 @@ function buildOrFilter(columns: string[], variants: string[]): string {
  * GlobalSearch overlay) AND the /[locale]/search results page, so both
  * surfaces search the exact same public catalog with the exact same
  * active/published filters. Never returns inactive, draft, or
- * admin/customer/booking data — every table is filtered to its public
- * visibility column before the text match runs.
+ * admin/customer/booking data: the view only contains public rows, and the
+ * detail loads below repeat the visibility filters.
  */
 export async function runSearch(rawQuery: string): Promise<SearchResponse> {
   const q = rawQuery.trim()
@@ -57,56 +79,67 @@ export async function runSearch(rawQuery: string): Promise<SearchResponse> {
   }
 
   const safe = sanitizeSearchFilter(q)
-  if (!safe) return { results: [], query: q }
-  const variants = searchQueryVariants(safe)
+  const tokens = safe ? searchTokens(safe) : []
+  if (!tokens.length) return { results: [], query: q }
 
   try {
     const supabase = getSupabaseAdmin()
+    const ids = await matchingIds(supabase, tokens)
+    const none = Promise.resolve({ data: [] as never[], error: null })
+    const inOrder = <T extends { id: string }>(rows: T[] | null, order: string[]) =>
+      [...(rows ?? [])].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
 
     const [accRes, tripRes, packageRes, prodRes, postRes] = await Promise.allSettled([
-      supabase
-        .from('accommodations')
-        .select('id, name_ar, name_en, type, images, price_per_night, description_ar, description_en')
-        .eq('is_active', true)
-        .or(buildOrFilter(['name_ar', 'name_en', 'description_ar', 'description_en'], variants))
-        .order('sort_order', { ascending: true })
-        .limit(MAX_RESULTS_PER_GROUP),
+      ids.accommodation.length
+        ? supabase
+          .from('accommodations')
+          .select('id, name_ar, name_en, type, images, price_per_night, description_ar, description_en')
+          .eq('is_active', true)
+          .in('id', ids.accommodation)
+        : none,
 
-      supabase
-        .from('sinai_trips')
-        .select('id, name_ar, name_en, category_ar, category_en, images, price, discount_type, discount_value, discount_starts_at, discount_ends_at, duration, duration_en, description_ar, description_en')
-        .eq('is_active', true)
-        .or(buildOrFilter(['name_ar', 'name_en', 'category_ar', 'category_en', 'description_ar', 'description_en'], variants))
-        .order('sort_order', { ascending: true })
-        .limit(MAX_RESULTS_PER_GROUP),
+      ids.trip.length
+        ? supabase
+          .from('sinai_trips')
+          // One literal so supabase-js can type the row.
+          .select('id, name_ar, name_en, category_ar, category_en, images, price, discount_type, discount_value, discount_starts_at, discount_ends_at, duration, duration_en, description_ar, description_en')
+          .eq('is_active', true)
+          .in('id', ids.trip)
+        : none,
 
-      supabase
-        .from('trip_packages')
-        .select('id, slug, name_ar, name_en, short_description_ar, short_description_en, image')
-        .eq('is_active', true)
-        .or(buildOrFilter(['name_ar', 'name_en', 'short_description_ar', 'short_description_en'], variants))
-        .order('sort_order', { ascending: true })
-        .limit(MAX_RESULTS_PER_GROUP),
+      ids.trip_package.length
+        ? supabase
+          .from('trip_packages')
+          .select('id, slug, name_ar, name_en, short_description_ar, short_description_en, image')
+          .eq('is_active', true)
+          .in('id', ids.trip_package)
+        : none,
 
-      supabase
-        .from('commerce_products')
-        .select('id, slug, name_ar, name_en, product_type, images, description_ar, description_en')
-        .eq('is_active', true)
-        .is('archived_at', null)
-        .or(buildOrFilter(['name_ar', 'name_en', 'description_ar', 'description_en'], variants))
-        .order('sort_order', { ascending: true })
-        .limit(MAX_RESULTS_PER_GROUP * 2),
+      ids.product.length
+        ? supabase
+          .from('commerce_products')
+          .select('id, slug, name_ar, name_en, product_type, images, description_ar, description_en')
+          .eq('is_active', true)
+          .is('archived_at', null)
+          .in('id', ids.product)
+        : none,
 
       // Community guides — published only. Never a draft, never an
       // admin/internal field.
-      supabase
-        .from('community_posts')
-        .select('id, slug, title_ar, title_en, content_ar, content_en, category, image_url')
-        .eq('is_published', true)
-        .or(buildOrFilter(['title_ar', 'title_en', 'content_ar', 'content_en'], variants))
-        .order('sort_order', { ascending: true })
-        .limit(MAX_RESULTS_PER_GROUP),
+      ids.community_post.length
+        ? supabase
+          .from('community_posts')
+          .select('id, slug, title_ar, title_en, content_ar, content_en, category, image_url')
+          .eq('is_published', true)
+          .in('id', ids.community_post)
+        : none,
     ])
+
+    if (accRes.status === 'fulfilled') accRes.value.data = inOrder(accRes.value.data, ids.accommodation)
+    if (tripRes.status === 'fulfilled') tripRes.value.data = inOrder(tripRes.value.data, ids.trip)
+    if (packageRes.status === 'fulfilled') packageRes.value.data = inOrder(packageRes.value.data, ids.trip_package)
+    if (prodRes.status === 'fulfilled') prodRes.value.data = inOrder(prodRes.value.data, ids.product)
+    if (postRes.status === 'fulfilled') postRes.value.data = inOrder(postRes.value.data, ids.community_post)
 
     const results: SearchResult[] = []
 

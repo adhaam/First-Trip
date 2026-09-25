@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import { getTranslations } from 'next-intl/server'
 import { HomeClient } from '@/components/home/HomeClient'
-import { pageMetadata } from '@/lib/seo'
+import { pageMetadata, siteSeo } from '@/lib/seo'
 import {
   getAccommodations,
   getSinaiTrips,
@@ -31,13 +30,13 @@ export async function generateMetadata({ params }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'discovery' })
-  return pageMetadata({
-    locale,
-    path: '/',
-    title: t('pages.home.title'),
-    description: t('pages.home.description'),
-  })
+  // The home page carries the owner-editable sitewide SEO (Site Settings → SEO).
+  const settings = await getSiteSettings().catch(() => null)
+  const { title, description } = siteSeo(settings, locale)
+  return {
+    ...pageMetadata({ locale, path: '/', title, description }),
+    title: { absolute: title },
+  }
 }
 
 // Server Component: everything the home page shows comes from Supabase and is

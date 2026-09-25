@@ -5,6 +5,7 @@
 
 import { useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { formatDateShort } from '@/lib/format'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -301,8 +302,8 @@ export function TransportOperatingSchedule({
                     {entry && entry.dates.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {entry.dates.map((date) => (
-                          <span key={date} dir="ltr" className="rounded bg-sea-900/5 px-1.5 py-0.5 text-[11px] text-sea-900">
-                            {date}
+                          <span key={date} className="rounded bg-sea-900/5 px-1.5 py-0.5 text-[11px] text-sea-900">
+                            {formatDateShort(date, locale)}
                           </span>
                         ))}
                       </div>

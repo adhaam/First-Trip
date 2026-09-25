@@ -3,7 +3,7 @@ import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { todayInCairo } from '@/lib/transport/today'
 import { loadActivity, loadWorkItems, isMissingOpsRelation } from '@/lib/ops/server'
-import { filterByView, sortForView, todayCounts } from '@/lib/ops/work-items'
+import { filterByView, sortForView, todayCounts, isJourneyItem, isTripItem } from '@/lib/ops/work-items'
 
 export async function GET(req: NextRequest) {
   const gate = await requireStaff(req)
@@ -26,11 +26,9 @@ export async function GET(req: NextRequest) {
       counts: todayCounts(items, date),
       sections: {
         needs_action: sortForView(filterByView(items, 'needs_action', date), 'needs_action').slice(0, 50),
-        arrivals: active.filter((item) => item.start_date === date),
-        departures: active.filter((item) => item.end_date === date),
-        trips: active.filter((item) => (
-          ['trip_booking', 'signature_request'].includes(item.entity_type) && item.start_date === date
-        )),
+        arrivals: active.filter((item) => isJourneyItem(item) && item.start_date === date),
+        departures: active.filter((item) => isJourneyItem(item) && item.end_date === date),
+        trips: active.filter((item) => isTripItem(item) && item.start_date === date),
         transfers: active.filter((item) => (
           !!item.transfer_type && !!item.start_date && item.start_date >= date && item.start_date <= addDays(date, 3)
         )),

@@ -97,6 +97,20 @@ export function itemTitle(item: Pick<WorkItem, 'title_en' | 'title_ar' | 'refere
   return primary || secondary || item.reference
 }
 
+type TitledItem = Pick<WorkItem, 'title_en' | 'title_ar' | 'reference' | 'transfer_type'>
+
+/** Like itemTitle, but a transfer-only booking (no stay/trip name) is named by its transport. */
+export function useItemTitle(): (item: TitledItem) => string {
+  const locale = useLocale()
+  const t = useTranslations('ops.transferTypes')
+  return (item) => {
+    if (!item.title_en && !item.title_ar && item.transfer_type && t.has(item.transfer_type)) {
+      return t(item.transfer_type)
+    }
+    return itemTitle(item, locale)
+  }
+}
+
 /** Waiting duration as a compact, translated string — hours under a day, days after. */
 export function WaitingLabel({ hours, stale }: { hours: number; stale: boolean }) {
   const t = useTranslations('ops.queue.waiting')

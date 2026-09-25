@@ -9,10 +9,11 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'policy' })
+  const tMeta = await getTranslations({ locale, namespace: 'discovery' })
   return pageMetadata({
     locale,
     path: '/policy',
-    title: t('title'),
+    title: tMeta('metaTitles.policy'),
     description: t('subtitle'),
   })
 }

@@ -99,3 +99,22 @@ export function pageMetadata(opts: {
     },
   }
 }
+
+export const DEFAULT_SITE_TITLE = 'WEEMAP SINAI — We map Sinai. You live it.'
+const DEFAULT_SITE_DESC_AR =
+  'WEEMAP SINAI — باقات، إقامة، انتقالات، ورحلات سيناء. بنرسم لك الطريق لدهب وجنوب سيناء — إنت بس تعيشها.'
+const DEFAULT_SITE_DESC_EN =
+  'WEEMAP SINAI — packages, stays, transfers, and Sinai trips. We map the way; you live it.'
+
+/** Sitewide title/description: the owner's Site Settings → SEO values, else the WEEMAP defaults. */
+export function siteSeo(
+  settings: { seo_title?: string | null; seo_description_ar?: string | null; seo_description_en?: string | null } | null,
+  locale: string,
+): { title: string; description: string } {
+  const ar = locale === 'ar'
+  return {
+    title: settings?.seo_title || DEFAULT_SITE_TITLE,
+    description: (ar ? settings?.seo_description_ar : settings?.seo_description_en)
+      || (ar ? DEFAULT_SITE_DESC_AR : DEFAULT_SITE_DESC_EN),
+  }
+}

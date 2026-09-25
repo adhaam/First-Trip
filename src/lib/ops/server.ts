@@ -1,4 +1,5 @@
 import 'server-only'
+import { requestJourney, type JourneyLookups } from './request-journey'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getPaymentRules } from '@/lib/payment-rules-load'
@@ -184,5 +185,37 @@ export async function loadActivity(
       ...(row.amount !== undefined ? { amount: row.amount, method: row.method } : {}),
       actor: row.actor ?? null, actor_name: row.actor ? names[row.actor] ?? null : null, at: row.at,
     } as Activity
+  })
+}
+
+/** Readable names for a submitted request's journey; prices stay those in its frozen snapshot. */
+export async function loadRequestJourney(supabase: SupabaseClient, record: Record<string, unknown>) {
+  const experiences = Array.isArray(record.experiences) ? record.experiences as { kind?: string; id?: string }[] : []
+  const tripIds = experiences.filter((e) => e.kind === 'trip' && e.id).map((e) => e.id as string)
+  const packageIds = experiences.filter((e) => e.kind === 'trip_package' && e.id).map((e) => e.id as string)
+  const origin = typeof record.origin_governorate_code === 'string' ? record.origin_governorate_code : null
+  const accommodationId = typeof record.accommodation_id === 'string' ? record.accommodation_id : null
+  const none = Promise.resolve({ data: [] as Record<string, unknown>[], error: null })
+
+  const [origins, trips, packages, accommodation] = await Promise.all([
+    origin
+      ? supabase.from('transfer_governorate_pricing').select('governorate_code, name_ar, name_en')
+        .eq('governorate_code', origin).limit(1)
+      : none,
+    tripIds.length ? supabase.from('sinai_trips').select('id, name_ar, name_en').in('id', tripIds) : none,
+    packageIds.length ? supabase.from('trip_packages').select('id, name_ar, name_en').in('id', packageIds) : none,
+    accommodationId
+      ? supabase.from('accommodations').select('meal_plans').eq('id', accommodationId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ])
+  const byId = (rows: Record<string, unknown>[] | null, key: string) => Object.fromEntries((rows ?? []).map((row) => [
+    String(row[key]), { name_ar: String(row.name_ar ?? ''), name_en: String(row.name_en ?? '') },
+  ]))
+  const mealPlans = (accommodation.data as { meal_plans?: unknown } | null)?.meal_plans
+  return requestJourney(record, {
+    origins: byId(origins.data as Record<string, unknown>[] | null, 'governorate_code'),
+    trips: byId(trips.data as Record<string, unknown>[] | null, 'id'),
+    packages: byId(packages.data as Record<string, unknown>[] | null, 'id'),
+    mealPlans: Array.isArray(mealPlans) ? mealPlans as JourneyLookups['mealPlans'] : [],
   })
 }

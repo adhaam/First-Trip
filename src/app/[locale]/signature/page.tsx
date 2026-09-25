@@ -18,7 +18,8 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'signatureV2' })
-  return pageMetadata({ locale, path: '/signature', title: t('title'), description: t('subtitle') })
+  const tMeta = await getTranslations({ locale, namespace: 'discovery' })
+  return pageMetadata({ locale, path: '/signature', title: tMeta('metaTitles.signature'), description: t('subtitle') })
 }
 
 export default async function SignaturePage({ params }: { params: Promise<{ locale: string }> }) {
