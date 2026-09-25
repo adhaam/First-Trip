@@ -315,6 +315,8 @@ export function upgradeSubtotal(
 export interface TripPriceInput {
   id: string
   name_en: string
+  /** Used for the Arabic price-line detail; falls back to name_en. */
+  name_ar?: string | null
   price: number
   package_price?: number | null
   /** Discount fields (migration 022). Absent = no discount. */

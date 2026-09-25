@@ -240,7 +240,7 @@ function experienceLines(experiences: PricedExperiences, numPeople: number, now?
       label_en: 'Extra trips',
       detail_ar: extraTrips.map((trip) => {
         const price = effectiveTripPrice(trip, now)
-        return `${trip.name_en} (${price.isDiscounted ? `${price.original.toLocaleString('en-US')} ← ` : ''}${price.final.toLocaleString('en-US')} ج.م)`
+        return `${trip.name_ar || trip.name_en} (${price.isDiscounted ? `${price.original.toLocaleString('en-US')} ← ` : ''}${price.final.toLocaleString('en-US')} ج.م)`
       }).join(' + ') + ` × ${people(true, numPeople)}`,
       detail_en: extraTrips.map((trip) => {
         const price = effectiveTripPrice(trip, now)
@@ -698,7 +698,7 @@ export async function computeQuote(
       label_en: 'Extra trips',
       detail_ar: extraTrips.map((t) => {
         const p = effectiveTripPrice(t)
-        return `${t.name_en} (${p.isDiscounted ? `${p.original.toLocaleString('en-US')} ← ` : ''}${p.final.toLocaleString('en-US')} ج.م)`
+        return `${t.name_ar || t.name_en} (${p.isDiscounted ? `${p.original.toLocaleString('en-US')} ← ` : ''}${p.final.toLocaleString('en-US')} ج.م)`
       }).join(' + ') + ` × ${people(true, numPeople)}`,
       detail_en: extraTrips.map((t) => {
         const p = effectiveTripPrice(t)

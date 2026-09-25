@@ -26,6 +26,7 @@ export const supabaseQuoteDataSource: QuoteDataSource = {
     return (trips || []).map((trip) => ({
       id: trip.id,
       name_en: trip.name_en,
+      name_ar: trip.name_ar,
       price: Number(trip.price) || 0,
       discount_type: trip.discount_type,
       discount_value: trip.discount_value,

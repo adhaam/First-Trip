@@ -102,7 +102,7 @@ const legacyAcc = {
 } as unknown as Accommodation
 
 const trips: (TripPriceInput & { is_active: boolean })[] = [
-  { id: T1, name_en: 'Blue Hole', price: 1000, is_active: true },
+  { id: T1, name_en: 'Blue Hole', name_ar: 'البلو هول', price: 1000, is_active: true },
   {
     id: T2, name_en: 'Colored Canyon', price: 2000, is_active: true,
     discount_type: 'percentage', discount_value: 10,
@@ -235,6 +235,11 @@ test('transfer-only: selected extra trips are charged per person and frozen in t
   assert.deepEqual(r.snapshot.extra_trips, [{ trip_id: T1, name_en: 'Blue Hole', price: 1000 }])
   assert.equal(r.snapshot.extra_trips_subtotal, 2000)
   assert.deepEqual(r.lines.map((line) => [line.key, line.amount]), [['transfer', 1400], ['extra_trips', 2000]])
+  // The Arabic line names the trip in Arabic; the English line in English.
+  const tripsLine = r.lines.find((line) => line.key === 'extra_trips')!
+  assert.match(tripsLine.detail_ar ?? '', /البلو هول/)
+  assert.doesNotMatch(tripsLine.detail_ar ?? '', /Blue Hole/)
+  assert.match(tripsLine.detail_en ?? '', /Blue Hole/)
   assertSnapshotSumsToTotal(r)
 })
 
