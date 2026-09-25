@@ -49,6 +49,17 @@ export interface QuoteDataSource {
   getTripPackages(ids: string[]): Promise<TripPackage[]>
 }
 
+type PricedExperiences = {
+  extraTrips: TripPriceInput[]
+  selectedPackages: TripPackage[]
+  extraTripsSubtotal: number
+  packagesSubtotal: number
+}
+
+type PricedExperiencesResult =
+  | { ok: true; experiences: PricedExperiences }
+  | { ok: false; error: string; code?: string }
+
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
 /**
@@ -187,6 +198,110 @@ function allocationCapacity(allocations: NonNullable<QuoteInput['room_allocation
   ), 0)
 }
 
+/** Validates and prices customer-selected experiences for every booking type. */
+async function priceSelectedExperiences(
+  input: QuoteInput,
+  source: QuoteDataSource,
+  numPeople: number,
+  now?: Date,
+): Promise<PricedExperiencesResult> {
+  const extraIds = Array.from(new Set(input.extra_trip_ids || []))
+  const extraTrips = extraIds.length > 0 ? await source.getExtraTrips(extraIds) : []
+  if (extraTrips.length !== extraIds.length) {
+    return { ok: false, error: 'One or more extra trips are unavailable.', code: 'EXTRA_TRIP_UNAVAILABLE' }
+  }
+
+  const packageIds = Array.from(new Set(input.trip_package_ids || []))
+  const selectedPackages = packageIds.length > 0 ? await source.getTripPackages(packageIds) : []
+  if (selectedPackages.length !== packageIds.length) {
+    return { ok: false, error: 'One or more selected Trip Packages are unavailable.' }
+  }
+  const { subtotal: packagesPerPersonSubtotal, error: packagesError } =
+    validateAndPriceTripPackages(selectedPackages, extraIds)
+  if (packagesError) return { ok: false, error: packagesError }
+
+  return {
+    ok: true,
+    experiences: {
+      extraTrips,
+      selectedPackages,
+      extraTripsSubtotal: extraTrips.reduce((sum, trip) => sum + extraTripCost(trip, now), 0) * numPeople,
+      packagesSubtotal: packagesPerPersonSubtotal * numPeople,
+    },
+  }
+}
+
+function experienceLines(experiences: PricedExperiences, numPeople: number, now?: Date): (QuoteLine | null)[] {
+  const { extraTrips, selectedPackages, extraTripsSubtotal, packagesSubtotal } = experiences
+  return [
+    extraTrips.length > 0 ? {
+      key: 'extra_trips' as const,
+      label_ar: 'رحلات إضافية',
+      label_en: 'Extra trips',
+      detail_ar: extraTrips.map((trip) => {
+        const price = effectiveTripPrice(trip, now)
+        return `${trip.name_en} (${price.isDiscounted ? `${price.original.toLocaleString('en-US')} ← ` : ''}${price.final.toLocaleString('en-US')} ج.م)`
+      }).join(' + ') + ` × ${people(true, numPeople)}`,
+      detail_en: extraTrips.map((trip) => {
+        const price = effectiveTripPrice(trip, now)
+        return `${trip.name_en} (${price.isDiscounted ? `${price.original.toLocaleString('en-US')} → ` : ''}${price.final.toLocaleString('en-US')} EGP)`
+      }).join(' + ') + ` × ${people(false, numPeople)}`,
+      amount: extraTripsSubtotal,
+    } : null,
+    packagesSubtotal > 0 ? {
+      key: 'trip_packages' as const,
+      label_ar: 'باقات الرحلات',
+      label_en: 'Trip packages',
+      detail_ar: `${selectedPackages.map((pkg) => pkg.name_ar).join(' + ')} × ${people(true, numPeople)}`,
+      detail_en: `${selectedPackages.map((pkg) => pkg.name_en).join(' + ')} × ${people(false, numPeople)}`,
+      amount: packagesSubtotal,
+    } : null,
+  ]
+}
+
+function experienceSnapshot(experiences: PricedExperiences, numPeople: number, now?: Date): Pick<
+  PriceSnapshot,
+  'extra_trips' | 'extra_trips_subtotal' | 'trip_packages' | 'trip_packages_subtotal'
+> {
+  const { extraTrips, selectedPackages, extraTripsSubtotal, packagesSubtotal } = experiences
+  if (extraTrips.length === 0 && selectedPackages.length === 0) return {}
+  return {
+    extra_trips: extraTrips.map((trip) => {
+      const price = effectiveTripPrice(trip, now)
+      return {
+        trip_id: trip.id,
+        name_en: trip.name_en,
+        price: price.final,
+        ...(price.isDiscounted ? { price_before_discount: price.original, discount_per_person: price.discountAmount } : {}),
+      }
+    }),
+    extra_trips_subtotal: extraTripsSubtotal,
+    trip_packages: selectedPackages.map((pkg) => ({
+      package_id: pkg.id,
+      name_en: pkg.name_en,
+      trip_names_en: (pkg.trips || []).map((trip) => trip.name_en),
+      total: (pkg.totals?.packageTotal ?? 0) * numPeople,
+    })),
+    trip_packages_subtotal: packagesSubtotal,
+  }
+}
+
+function experienceResponse(experiences: PricedExperiences, numPeople: number, now?: Date): Record<string, unknown> {
+  const { extraTrips, selectedPackages, extraTripsSubtotal, packagesSubtotal } = experiences
+  if (extraTrips.length === 0 && selectedPackages.length === 0) return {}
+  return {
+    extra_trips: extraTrips.map((trip) => ({ name: trip.name_en, cost: extraTripCost(trip, now) })),
+    extra_trips_subtotal: extraTripsSubtotal,
+    trip_packages: selectedPackages.map((pkg) => ({
+      package_id: pkg.id,
+      name: pkg.name_en,
+      trip_names: (pkg.trips || []).map((trip) => trip.name_en),
+      total: (pkg.totals?.packageTotal ?? 0) * numPeople,
+    })),
+    trip_packages_subtotal: packagesSubtotal,
+  }
+}
+
 export async function computeQuote(
   input: QuoteInput,
   opts: { source: QuoteDataSource; now?: Date },
@@ -197,6 +312,11 @@ export async function computeQuote(
 
   // ─── transfer-only ───
   if (input.booking_type === 'transfer-only') {
+    const pricedExperiences = await priceSelectedExperiences(input, source, numPeople, opts.now)
+    if (!pricedExperiences.ok) {
+      return { ok: false, status: 400, error: pricedExperiences.error, ...(pricedExperiences.code ? { code: pricedExperiences.code } : {}) }
+    }
+    const experiences = pricedExperiences.experiences
     const pricing = await source.getTransferPricing()
     const type = input.transfer_type ?? 'hiace'
     const direction = input.transfer_direction ?? 'to_dahab'
@@ -217,14 +337,18 @@ export async function computeQuote(
       numPeople,
     })
 
-    const lines: QuoteLine[] = compact([{
-      key: 'transfer',
-      label_ar: `انتقالات — ${TRANSFER_LABELS[type].ar}`,
-      label_en: `Transfer — ${TRANSFER_LABELS[type].en}`,
-      detail_ar: `${people(true, quote.numPeople)} × ${quote.perPersonPerLeg.toLocaleString('en-US')} ج.م × ${quote.legs === 2 ? 'اتجاهين' : 'اتجاه واحد'} (${DIRECTION_LABELS[direction].ar})`,
-      detail_en: `${people(false, quote.numPeople)} × ${quote.perPersonPerLeg.toLocaleString('en-US')} EGP × ${quote.legs} leg${quote.legs === 1 ? '' : 's'} (${DIRECTION_LABELS[direction].en})`,
-      amount: quote.total,
-    }])
+    const total = quote.total + experiences.extraTripsSubtotal + experiences.packagesSubtotal
+    const lines: QuoteLine[] = compact([
+      {
+        key: 'transfer',
+        label_ar: `انتقالات — ${TRANSFER_LABELS[type].ar}`,
+        label_en: `Transfer — ${TRANSFER_LABELS[type].en}`,
+        detail_ar: `${people(true, quote.numPeople)} × ${quote.perPersonPerLeg.toLocaleString('en-US')} ج.م × ${quote.legs === 2 ? 'اتجاهين' : 'اتجاه واحد'} (${DIRECTION_LABELS[direction].ar})`,
+        detail_en: `${people(false, quote.numPeople)} × ${quote.perPersonPerLeg.toLocaleString('en-US')} EGP × ${quote.legs} leg${quote.legs === 1 ? '' : 's'} (${DIRECTION_LABELS[direction].en})`,
+        amount: quote.total,
+      },
+      ...experienceLines(experiences, numPeople, opts.now),
+    ])
 
     return {
       ok: true,
@@ -232,22 +356,24 @@ export async function computeQuote(
         booking_type: 'transfer-only',
         transfer_type: type,
         direction,
-        per_person: quote.perPerson,
+        per_person: total / quote.numPeople,
         num_people: quote.numPeople,
-        total: quote.total,
+        total,
         is_priced: quote.isPriced,
+        ...experienceResponse(experiences, numPeople, opts.now),
         computed_at: computedAt,
       },
       lines,
       numPeople: quote.numPeople,
-      perPerson: quote.perPerson,
-      total: quote.total,
+      perPerson: total / quote.numPeople,
+      total,
       isPriced: quote.isPriced,
       snapshot: {
         transfer_rate_used: quote.perPerson,
         transfer_subtotal: quote.total,
+        ...experienceSnapshot(experiences, numPeople, opts.now),
         num_people: quote.numPeople,
-        total: quote.total,
+        total,
         computed_at: computedAt,
       },
     }
@@ -293,6 +419,11 @@ export async function computeQuote(
   // ─── accommodation-only ───
   if (input.booking_type === 'accommodation-only') {
     const nights = input.nights ?? 1
+    const pricedExperiences = await priceSelectedExperiences(input, source, numPeople, opts.now)
+    if (!pricedExperiences.ok) {
+      return { ok: false, status: 400, error: pricedExperiences.error, ...(pricedExperiences.code ? { code: pricedExperiences.code } : {}) }
+    }
+    const experiences = pricedExperiences.experiences
 
     if (hasRoomPricing) {
       if (input.room_allocations && input.room_allocations.length > 0) {
@@ -330,7 +461,7 @@ export async function computeQuote(
           })
         }
         const mealTotal = mealPlanPricePerNight * numPeople * nights
-        const total = roomTotal + mealTotal
+        const total = roomTotal + mealTotal + experiences.extraTripsSubtotal + experiences.packagesSubtotal
         const lines = compact([
           {
             key: 'accommodation' as const,
@@ -341,6 +472,7 @@ export async function computeQuote(
             amount: roomTotal,
           },
           mealLine(nights, mealTotal),
+          ...experienceLines(experiences, numPeople, opts.now),
         ])
         return {
           ok: true,
@@ -351,6 +483,7 @@ export async function computeQuote(
             room_allocations: allocBreakdown,
             meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
             meal_subtotal: mealTotal,
+            ...experienceResponse(experiences, numPeople, opts.now),
             accommodation_subtotal: roomTotal,
             num_people: numPeople,
             per_person: total / numPeople,
@@ -369,6 +502,7 @@ export async function computeQuote(
             ...(mealPlan ? { meal_plan_key: mealPlan.key } : {}),
             meal_plan_price_per_person_per_night: mealPlanPricePerNight,
             meal_subtotal: mealTotal,
+            ...experienceSnapshot(experiences, numPeople, opts.now),
             num_people: numPeople,
             total,
             computed_at: computedAt,
@@ -384,7 +518,7 @@ export async function computeQuote(
       const accSubtotal = accommodationSubtotal(nightly, numRooms)
       const upgradeTotal = upgradeSubtotal(upgradeExtra, numRooms, nights)
       const mealTotal = mealPlanPricePerNight * numPeople * nights
-      const total = accSubtotal + upgradeTotal + mealTotal
+      const total = accSubtotal + upgradeTotal + mealTotal + experiences.extraTripsSubtotal + experiences.packagesSubtotal
       const lines = compact([
         {
           key: 'accommodation' as const,
@@ -403,6 +537,7 @@ export async function computeQuote(
           amount: upgradeTotal,
         } : null,
         mealLine(nights, mealTotal),
+        ...experienceLines(experiences, numPeople, opts.now),
       ])
       return {
         ok: true,
@@ -418,6 +553,7 @@ export async function computeQuote(
           upgrade_subtotal: upgradeTotal,
           meal_plan: mealPlan ? { key: mealPlan.key, label: mealPlan.label_en, price_per_person_per_night: mealPlanPricePerNight } : null,
           meal_subtotal: mealTotal,
+          ...experienceResponse(experiences, numPeople, opts.now),
           num_people: numPeople,
           per_person: total / numPeople,
           total,
@@ -440,6 +576,7 @@ export async function computeQuote(
           ...(mealPlan ? { meal_plan_key: mealPlan.key } : {}),
           meal_plan_price_per_person_per_night: mealPlanPricePerNight,
           meal_subtotal: mealTotal,
+          ...experienceSnapshot(experiences, numPeople, opts.now),
           num_people: numPeople,
           total,
           computed_at: computedAt,
@@ -449,6 +586,7 @@ export async function computeQuote(
 
     // Legacy flat nightly rate — accommodation predates room-based pricing.
     const legacyTotal = Number(acc.price_per_night) * nights * numPeople
+    const total = legacyTotal + experiences.extraTripsSubtotal + experiences.packagesSubtotal
     return {
       ok: true,
       response: {
@@ -456,28 +594,35 @@ export async function computeQuote(
         accommodation_name: acc.name_en,
         nights,
         num_people: numPeople,
-        per_person: Number(acc.price_per_night),
-        total: legacyTotal,
+        per_person: experiences.extraTrips.length || experiences.selectedPackages.length
+          ? total / numPeople
+          : Number(acc.price_per_night),
+        total,
+        ...experienceResponse(experiences, numPeople, opts.now),
         computed_at: computedAt,
       },
-      lines: compact([{
-        key: 'accommodation',
-        label_ar: `${acc.name_ar} — الإقامة`,
-        label_en: `${acc.name_en} — Accommodation`,
-        detail_ar: `${people(true, numPeople)} × ${nightsLabel(true, nights)} × ${Number(acc.price_per_night).toLocaleString('en-US')} ج.م`,
-        detail_en: `${people(false, numPeople)} × ${nightsLabel(false, nights)} × ${Number(acc.price_per_night).toLocaleString('en-US')} EGP`,
-        amount: legacyTotal,
-      }]),
+      lines: compact([
+        {
+          key: 'accommodation',
+          label_ar: `${acc.name_ar} — الإقامة`,
+          label_en: `${acc.name_en} — Accommodation`,
+          detail_ar: `${people(true, numPeople)} × ${nightsLabel(true, nights)} × ${Number(acc.price_per_night).toLocaleString('en-US')} ج.م`,
+          detail_en: `${people(false, numPeople)} × ${nightsLabel(false, nights)} × ${Number(acc.price_per_night).toLocaleString('en-US')} EGP`,
+          amount: legacyTotal,
+        },
+        ...experienceLines(experiences, numPeople, opts.now),
+      ]),
       numPeople,
-      perPerson: legacyTotal / numPeople,
-      total: legacyTotal,
+      perPerson: total / numPeople,
+      total,
       isPriced: legacyTotal > 0,
       snapshot: {
         nights,
         ...({ pricing_model: 'legacy' } as object),
         accommodation_subtotal: legacyTotal,
+        ...experienceSnapshot(experiences, numPeople, opts.now),
         num_people: numPeople,
-        total: legacyTotal,
+        total,
         computed_at: computedAt,
       },
     }

@@ -219,6 +219,36 @@ test('stay_only uses the stay payment kind for the whole total', () => {
   assert.deepEqual(parts, [{ kind: 'stay', total: 3000 }])
 })
 
+test('stay_only separates trips and experience packages from the 50/50 stay payment part', () => {
+  const input = parseInput({
+    locale: 'en', transport_mode: 'stay_only', arrival_date: '2026-10-10', departure_date: '2026-10-13',
+    adults: 2, accommodation_id: '11111111-1111-1111-1111-111111111111',
+    experiences: [
+      { kind: 'trip', id: '22222222-2222-2222-2222-222222222222' },
+      { kind: 'trip_package', id: '33333333-3333-3333-3333-333333333333' },
+    ],
+  })
+  const snapshot: PriceSnapshot = {
+    total: 6800,
+    num_people: 2,
+    computed_at: '2026-09-25T00:00:00.000Z',
+    extra_trips: [{ trip_id: '22222222-2222-2222-2222-222222222222', name_en: 'Blue Hole', price: 500 }],
+    trip_packages: [{ package_id: '33333333-3333-3333-3333-333333333333', name_en: 'Sinai Bundle', trip_names_en: [], total: 1800 }],
+  }
+
+  const parts = tripRequestPaymentParts(input, { total: 6800, snapshot })
+  assert.deepEqual(parts, [
+    { kind: 'stay', total: 4000 },
+    { kind: 'trip', total: 1000 },
+    { kind: 'experience_package', total: 1800 },
+  ])
+
+  const plan = paymentPlanForParts(parts, DEFAULT_PAYMENT_POLICIES)
+  assert.equal(plan.upfrontAmount, 4800) // 50% of stay + all experiences
+  assert.equal(plan.balanceAmount, 2000)
+  assert.equal(plan.upfrontDue, 'after_confirmation')
+})
+
 test('a transport mode with no accommodation uses the transfer payment kind', () => {
   const input = parseInput({
     locale: 'ar', transport_mode: 'hiace', origin_governorate_code: 'CAI', stay_pattern_code: 'hiace_4d3n',
@@ -227,4 +257,29 @@ test('a transport mode with no accommodation uses the transfer payment kind', ()
   const snapshot: PriceSnapshot = { total: 1500, num_people: 3, computed_at: '2026-09-25T00:00:00.000Z' }
   const parts = tripRequestPaymentParts(input, { total: 1500, snapshot })
   assert.deepEqual(parts, [{ kind: 'transfer', total: 1500 }])
+})
+
+test('transport without a stay separates the trip from the 100% transfer payment part', () => {
+  const input = parseInput({
+    locale: 'ar', transport_mode: 'hiace', origin_governorate_code: 'CAI', stay_pattern_code: 'hiace_4d3n',
+    arrival_date: '2026-10-08', adults: 2,
+    experiences: [{ kind: 'trip', id: '22222222-2222-2222-2222-222222222222' }],
+  })
+  const snapshot: PriceSnapshot = {
+    total: 3000,
+    num_people: 2,
+    computed_at: '2026-09-25T00:00:00.000Z',
+    extra_trips: [{ trip_id: '22222222-2222-2222-2222-222222222222', name_en: 'Blue Hole', price: 500 }],
+  }
+
+  const parts = tripRequestPaymentParts(input, { total: 3000, snapshot })
+  assert.deepEqual(parts, [
+    { kind: 'transfer', total: 2000 },
+    { kind: 'trip', total: 1000 },
+  ])
+
+  const plan = paymentPlanForParts(parts, DEFAULT_PAYMENT_POLICIES)
+  assert.equal(plan.upfrontAmount, 3000)
+  assert.equal(plan.balanceAmount, 0)
+  assert.equal(plan.upfrontDue, 'after_confirmation')
 })

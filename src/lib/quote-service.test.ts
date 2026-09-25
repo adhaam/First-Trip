@@ -225,6 +225,19 @@ test('transfer-only: defaults to hiace, to_dahab; missing governorate prices at 
   assert.equal(r.response.direction, 'to_dahab')
 })
 
+test('transfer-only: selected extra trips are charged per person and frozen in the snapshot', async () => {
+  const r = ok(await quote({
+    booking_type: 'transfer-only', transfer_type: 'hiace', transfer_direction: 'to_dahab',
+    governorate: 'cairo', extra_trip_ids: [T1], num_people: 2,
+  }))
+  // transfer 700 × 2; trip 1000 × 2
+  assert.equal(r.total, 3400)
+  assert.deepEqual(r.snapshot.extra_trips, [{ trip_id: T1, name_en: 'Blue Hole', price: 1000 }])
+  assert.equal(r.snapshot.extra_trips_subtotal, 2000)
+  assert.deepEqual(r.lines.map((line) => [line.key, line.amount]), [['transfer', 1400], ['extra_trips', 2000]])
+  assertSnapshotSumsToTotal(r)
+})
+
 // ─── accommodation-only ───
 
 test('stay-only: double room, meal plan, no season', async () => {
@@ -301,6 +314,27 @@ test('stay-only legacy: no room pricing ("0.00" strings) uses price_per_night ×
   }))
   assert.equal(r.total, 4800)
   assert.equal(r.snapshot.accommodation_subtotal, 4800)
+  assertSnapshotSumsToTotal(r)
+})
+
+test('stay-only: discounted extra trips and trip packages are charged and itemised', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 2, room_type: 'double', extra_trip_ids: [T2], trip_package_ids: [P1], num_people: 2,
+  }))
+  // stay 2000 × 2; discounted trip 1800 × 2; package 1500 × 2
+  assert.equal(r.total, 10600)
+  assert.deepEqual(r.snapshot.extra_trips, [{
+    trip_id: T2, name_en: 'Colored Canyon', price: 1800, price_before_discount: 2000, discount_per_person: 200,
+  }])
+  assert.equal(r.snapshot.extra_trips_subtotal, 3600)
+  assert.deepEqual(r.snapshot.trip_packages, [{
+    package_id: P1, name_en: 'Coast Combo', trip_names_en: ['Ras Abu Galum', 'Three Pools'], total: 3000,
+  }])
+  assert.equal(r.snapshot.trip_packages_subtotal, 3000)
+  assert.deepEqual(r.lines.map((line) => [line.key, line.amount]), [
+    ['accommodation', 4000], ['extra_trips', 3600], ['trip_packages', 3000],
+  ])
   assertSnapshotSumsToTotal(r)
 })
 
@@ -497,6 +531,12 @@ test('rejects unavailable upgrades and extra trips', async () => {
   })
   assert.equal(b.ok, false)
   assert.equal(!b.ok && b.code, 'EXTRA_TRIP_UNAVAILABLE')
+  const c = await quote({
+    booking_type: 'transfer-only', transfer_type: 'hiace', governorate: 'cairo', num_people: 1,
+    extra_trip_ids: [T_INACTIVE],
+  })
+  assert.equal(c.ok, false)
+  assert.equal(!c.ok && c.code, 'EXTRA_TRIP_UNAVAILABLE')
 })
 
 test('public booking row freezes the quote total and canonical snapshot unchanged', async () => {

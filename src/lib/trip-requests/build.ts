@@ -186,11 +186,11 @@ export function tripRequestPaymentParts(
 
   const parts: PaymentPart[] = []
   if (input.transport_mode === 'stay_only') {
-    parts.push({ kind: 'stay', total: quote.total })
+    parts.push({ kind: 'stay', total: quote.total - tripsTotal - packagesTotal })
   } else if (input.accommodation_id) {
     parts.push({ kind: 'stay_package', total: quote.total - tripsTotal - packagesTotal })
   } else {
-    parts.push({ kind: 'transfer', total: quote.total })
+    parts.push({ kind: 'transfer', total: quote.total - tripsTotal - packagesTotal })
   }
 
   for (const trip of extraTrips) {
