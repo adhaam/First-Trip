@@ -46,7 +46,7 @@ export function WhatsAppFloat({ number }: { number?: string | null }) {
       aria-label={ui('whatsappFloatAriaLabel')}
       onClick={() => trackConversion('whatsapp_click', { source: 'floating_button' }, { once: false })}
       className={cn(
-        'group fixed z-50 flex min-h-12 items-center gap-2 rounded-full bg-[#25D366] py-3 text-on-accent shadow-[0_6px_24px_-6px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-[#1FBE59]',
+        'whatsapp-float group fixed z-50 flex min-h-12 items-center gap-2 rounded-full bg-[#25D366] py-3 text-on-accent shadow-[0_6px_24px_-6px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-[#1FBE59]',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sea-900',
         compact ? 'px-3.5' : 'px-4',
         mounted ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',

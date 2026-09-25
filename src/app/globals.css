@@ -614,3 +614,11 @@ html[dir="rtl"] .eyebrow {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* A page with a mobile StickyActionBar owns the bottom edge: lift the floating
+   WhatsApp button above it instead of letting the two overlap. */
+@media (max-width: 767px) {
+  body:has([data-sticky-action-bar]) .whatsapp-float {
+    bottom: calc(6.25rem + env(safe-area-inset-bottom)) !important;
+  }
+}

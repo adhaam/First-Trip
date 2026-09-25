@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { PaymentTerms } from '@/components/brand'
-import { formatAmount } from '@/lib/format'
+import { formatAmount, localizeDigits } from '@/lib/format'
 import type { PaymentKind } from '@/lib/payment-rules'
 import { paymentRows, type QuoteView } from '@/lib/trip-builder/view'
 import { cn } from '@/lib/utils'
@@ -73,9 +73,9 @@ export function PriceSummary({
             {quote.lines.map((line) => (
               <div key={line.key} className="flex items-start justify-between gap-3 text-sm">
                 <span className="min-w-0">
-                  <span className="block text-sea-900">{locale === 'ar' ? line.label_ar : line.label_en}</span>
+                  <span className="block text-sea-900">{localizeDigits(locale === 'ar' ? line.label_ar : line.label_en, locale)}</span>
                   {(line.detail_ar || line.detail_en) && (
-                    <span className="block text-xs text-ink-subtle">{locale === 'ar' ? line.detail_ar : line.detail_en}</span>
+                    <span className="block text-xs text-ink-subtle">{localizeDigits((locale === 'ar' ? line.detail_ar : line.detail_en) ?? '', locale)}</span>
                   )}
                 </span>
                 <span className="shrink-0 font-semibold tabular-nums text-sea-900">{formatAmount(line.amount, locale)} {common('egp')}</span>

@@ -88,7 +88,7 @@
   "return": "العودة · {date}",
   "confirmNextTitle": "بعد كده WEEMAP بتأكد",
   "confirmNextStay": "توافر {stay} والغرف",
-  "confirmNextTransport": "مقاعد الـ {mode}",
+  "confirmNextTransport": "مقاعدك في {mode}",
   "confirmNextExperiences": "مواعيد تجاربك، معاك",
   "confirmNextGeneric": "هنتواصل معاك بالخطوات الجاية",
   "addDates": "أضف التواريخ عشان تشوف السعر",

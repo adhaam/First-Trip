@@ -88,7 +88,7 @@
   "return": "Return · {date}",
   "confirmNextTitle": "What WEEMAP confirms next",
   "confirmNextStay": "Availability of {stay} and your rooms",
-  "confirmNextTransport": "Seats on the {mode}",
+  "confirmNextTransport": "Your seats on the {mode}",
   "confirmNextExperiences": "Dates for your experiences, with you",
   "confirmNextGeneric": "We'll get back to you with the next steps",
   "addDates": "Add dates to see the price",

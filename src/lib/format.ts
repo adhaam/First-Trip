@@ -135,3 +135,18 @@ export function formatDateShort(value: string | Date | null | undefined, locale:
 export function formatReference(value: string | number | null | undefined): string {
   return value == null ? '' : String(value)
 }
+
+const ARABIC_INDIC_DIGITS = '٠١٢٣٤٥٦٧٨٩'
+
+/**
+ * Localises the digits inside an already-rendered string — e.g. a server
+ * price-line detail like "1 × Double room × 4 nights" — for display only.
+ * In Arabic, Latin digits become Arabic-Indic and a comma between digits
+ * becomes the Arabic thousands separator. English text is returned as is.
+ */
+export function localizeDigits(text: string, locale: string): string {
+  if (resolveLocale(locale) !== 'ar') return text
+  return text
+    .replace(/(\d),(?=\d{3}\b)/g, '$1٬')
+    .replace(/\d/g, (digit) => ARABIC_INDIC_DIGITS[Number(digit)])
+}

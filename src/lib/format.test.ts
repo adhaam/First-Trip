@@ -151,3 +151,10 @@ test('references are never localised — they must stay byte-stable', () => {
   assert.equal(formatReference(null), '')
   assert.equal(formatReference(undefined), '')
 })
+
+test('localizeDigits turns Latin digits and thousands commas Arabic-Indic in Arabic only', async () => {
+  const { localizeDigits } = await import('./format')
+  assert.equal(localizeDigits('1 × غرفة مزدوجة × 4 ليالي', 'ar'), '١ × غرفة مزدوجة × ٤ ليالي')
+  assert.equal(localizeDigits('2 × 1,200 ج.م', 'ar'), '٢ × ١٬٢٠٠ ج.م')
+  assert.equal(localizeDigits('1 × Double room × 4 nights', 'en'), '1 × Double room × 4 nights')
+})

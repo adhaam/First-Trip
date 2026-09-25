@@ -274,6 +274,7 @@ export function Header() {
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
+              aria-label={t('menu')}
               className={cn(
                 'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors lg:hidden',
                 'text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300',

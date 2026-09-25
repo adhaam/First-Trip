@@ -23,6 +23,7 @@ export function StickyActionBar({
     <>
       <div aria-hidden className="h-24 md:hidden" />
       <div
+        data-sticky-action-bar=""
         className={cn(
           'safe-bottom fixed inset-x-0 bottom-0 z-40 flex items-center gap-4 border-t border-sand-300 bg-sand-50/95 px-4 pt-3 shadow-[0_-8px_24px_-12px_rgba(26,27,24,0.25)] backdrop-blur-sm supports-backdrop-filter:bg-sand-50/85 md:hidden',
           className,
