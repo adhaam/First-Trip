@@ -17,6 +17,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Accommodation, TransferPricing, SinaiTrip, TripPackage } from '@/lib/types'
+import type { TransportScheduleConfig } from '@/lib/transport/schedule'
 
 const amenityIcons = buildAmenityIconMap()
 
@@ -26,12 +27,14 @@ export function ProductDetailClient({
   whatsapp,
   sinaiTrips = [],
   tripPackages = [],
+  transportSchedule,
 }: {
   accommodation: Accommodation
   pricing: TransferPricing
   whatsapp?: string | null
   sinaiTrips?: SinaiTrip[]
   tripPackages?: TripPackage[]
+  transportSchedule: TransportScheduleConfig
 }) {
   const t = useTranslations('book')
   const common = useTranslations('common')
@@ -257,6 +260,7 @@ export function ProductDetailClient({
                   whatsapp={whatsapp}
                   sinaiTrips={sinaiTrips}
                   tripPackages={tripPackages}
+                  transportSchedule={transportSchedule}
                 />
               </div>
             </div>

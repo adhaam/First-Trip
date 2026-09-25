@@ -124,7 +124,7 @@ export function TripBookingsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
-      if (res.status === 401) { window.location.href = ar ? '/admin' : '/en/admin'; return }
+      if (res.status === 401) { window.location.assign(ar ? '/admin' : '/en/admin'); return }
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { window.alert(data.error || (ar ? 'فشل تحديث الحالة' : 'Failed to update status')); return }
       setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)))

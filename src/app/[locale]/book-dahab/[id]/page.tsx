@@ -6,6 +6,7 @@ import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getProductSchema } from '@/lib/schema-org'
+import { getTransportSchedule } from '@/lib/transport/load'
 
 export const revalidate = 60
 
@@ -32,12 +33,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const [all, pricing, settings, sinaiTrips, tripPackages] = await Promise.all([
+  const [all, pricing, settings, sinaiTrips, tripPackages, transportSchedule] = await Promise.all([
     getAccommodations(),
     getTransferPricing(),
     getSiteSettings(),
     getSinaiTrips(),
     getTripPackages(),
+    getTransportSchedule(),
   ])
   const related = getRelatedAccommodations(accommodation, all)
 
@@ -64,6 +66,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         whatsapp={settings?.whatsapp_number}
         sinaiTrips={sinaiTrips}
         tripPackages={tripPackages}
+        transportSchedule={transportSchedule}
       />
       <RelatedPlaces related={related} />
     </div>

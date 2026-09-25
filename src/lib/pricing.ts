@@ -24,57 +24,14 @@ import type {
 } from './types'
 
 // ─── Day-of-week rules ───
-// JS Date#getDay(): 0 = Sunday … 6 = Saturday
-export const SUNDAY = 0
-export const MONDAY = 1
-export const THURSDAY = 4
-export const FRIDAY = 5
-
-/** A package bus leaves for Dahab only on Sunday or Thursday. */
-export const PACKAGE_DEPARTURE_DAYS: readonly number[] = [SUNDAY, THURSDAY]
-/** A package bus comes back from Dahab only on Monday or Friday. */
-export const PACKAGE_RETURN_DAYS: readonly number[] = [MONDAY, FRIDAY]
-
-/** Hiace transfers run every day — no day restriction at all. */
-export const HIACE_DAYS: readonly number[] | null = null
-
-export function isPackageDepartureDay(date: Date | string): boolean {
-  return PACKAGE_DEPARTURE_DAYS.includes(toDate(date).getDay())
-}
-
-export function isPackageReturnDay(date: Date | string): boolean {
-  return PACKAGE_RETURN_DAYS.includes(toDate(date).getDay())
-}
-
-function toDate(d: Date | string): Date {
-  return d instanceof Date ? d : new Date(`${d}T00:00:00`)
-}
-
 /** ISO `YYYY-MM-DD` in local time (avoids the UTC off-by-one of toISOString). */
 export function toISODate(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/**
- * The next `count` dates matching `allowedDays`, starting from `from` (inclusive).
- * Used to build the date pickers so the customer can only pick a valid day.
- */
-export function upcomingDatesFor(
-  allowedDays: readonly number[] | null,
-  count = 12,
-  from: Date = new Date(),
-): string[] {
-  const out: string[] = []
-  const cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate())
-  // look at most ~6 months ahead so a bad `allowedDays` can never spin forever
-  for (let i = 0; i < 190 && out.length < count; i++) {
-    if (!allowedDays || allowedDays.includes(cursor.getDay())) {
-      out.push(toISODate(cursor))
-    }
-    cursor.setDate(cursor.getDate() + 1)
-  }
-  return out
+function toDate(d: Date | string): Date {
+  return d instanceof Date ? d : new Date(`${d}T00:00:00`)
 }
 
 // ─── Lookups ───

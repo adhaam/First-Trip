@@ -12,8 +12,6 @@ import {
   extraTripCost,
   quotePackageV2,
   buildPriceSnapshot,
-  isPackageDepartureDay,
-  isPackageReturnDay,
   roomsForPeople,
   quoteStay,
 } from './pricing'
@@ -174,13 +172,6 @@ test('transport change (Bus → Hiace) changes the total', () => {
   const bus = quotePackageV2({ ...base, transferType: 'package_bus' })
   const hiace = quotePackageV2({ ...base, transferType: 'hiace' })
   assert.equal(hiace.total - bus.total, 100 * 2 * 2)
-})
-
-test('bus schedule: Sun/Thu out, Mon/Fri back; Hiace unrestricted', () => {
-  assert.equal(isPackageDepartureDay('2026-10-04'), true)  // Sunday
-  assert.equal(isPackageDepartureDay('2026-10-06'), false) // Tuesday
-  assert.equal(isPackageReturnDay('2026-10-05'), true)     // Monday
-  assert.equal(isPackageReturnDay('2026-10-07'), false)    // Wednesday
 })
 
 test('meal plan adds price × people × nights', () => {

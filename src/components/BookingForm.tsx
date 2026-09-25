@@ -15,10 +15,15 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import {
-  PACKAGE_DEPARTURE_DAYS, PACKAGE_RETURN_DAYS,
   governoratesFor, quotePackageV2, quoteStay, quoteTransfer,
-  nightsForDuration, upcomingDatesFor, formatEGP, roomsForPeople, upgradeSubtotal,
+  nightsForDuration, formatEGP, roomsForPeople, upgradeSubtotal,
 } from '@/lib/pricing'
+import {
+  resolveStayPattern,
+  returnOptions,
+  upcomingServiceDates,
+  type TransportScheduleConfig,
+} from '@/lib/transport/schedule'
 import type {
   Accommodation, MealPlan, SinaiTrip, TransferDirection, TransferGovernoratePrice,
   TransferPricing, TransferType, TripPackage,
@@ -36,9 +41,8 @@ import { formatAmount } from '@/lib/format'
 
 // ─── The one form to rule them all ───
 // Adham's brief: no more separate /transfers page. Whether the user wants a
-// full Dahab package, just the stay, or just the ride — same form. And packages
-// have a fixed schedule (Sun/Thu out, Mon/Fri back), so we don't ask the user
-// to pick dates for that mode — we just tell them the next departure.
+// full Dahab package, just the stay, or just the ride — same form. Package
+// dates are selected from the active transport schedule.
 
 type Mode = 'package' | 'stay-only' | 'transfer-only'
 
@@ -95,10 +99,16 @@ interface Props {
   whatsapp?: string | null
   sinaiTrips?: SinaiTrip[]
   tripPackages?: TripPackage[]
+  transportSchedule: TransportScheduleConfig
 }
 
 export function BookingForm({
-  accommodation, pricing, whatsapp, sinaiTrips = [], tripPackages = [],
+  accommodation,
+  pricing,
+  whatsapp,
+  sinaiTrips = [],
+  tripPackages = [],
+  transportSchedule,
 }: Props) {
   const t = useTranslations('book')
   const common = useTranslations('common')
@@ -183,6 +193,7 @@ export function BookingForm({
   const transferType = (watch('transfer_type') ?? 'hiace') as TransferType
   const transferGov = watch('transfer_governorate')
   const transferDirection = (watch('transfer_direction') ?? 'round_trip') as TransferDirection
+  const transferDate = watch('transfer_date')
   const numPeople = Math.max(1, parseInt(watch('num_people') || '1') || 1)
   const roomType = (watch('room_type') ?? 'double') as 'double' | 'single' | 'triple'
   const allocationComplete = useAllocator ? totalAllocated === numPeople : true
@@ -281,39 +292,69 @@ export function BookingForm({
   }, [pricing])
 
   // ─── date options for standalone transfers ───
-  // Bus: only Sun/Thu (out) or Mon/Fri (back). Hiace: any day.
-  const busDepartureDates = useMemo(() => upcomingDatesFor(PACKAGE_DEPARTURE_DAYS, 10), [])
-  const busReturnDates = useMemo(() => upcomingDatesFor(PACKAGE_RETURN_DAYS, 10), [])
-  const anyDates = useMemo(() => upcomingDatesFor(null, 14), [])
+  // Both transport types respect the active schedule, including exceptions.
+  const scheduleToday = useMemo(() => new Date().toISOString().slice(0, 10), [])
 
-  const transferDateOptions =
-    transferType === 'package_bus'
-      ? transferDirection === 'from_dahab' ? busReturnDates : busDepartureDates
-      : anyDates
+  const transferDateOptions = useMemo(() => {
+    const direction = transferDirection === 'from_dahab' ? 'return' : 'outbound'
+    return upcomingServiceDates(transportSchedule, {
+      transferType,
+      direction,
+      originCode: transferGov,
+      from: scheduleToday,
+      count: transferType === 'package_bus' ? 10 : 14,
+    })
+  }, [scheduleToday, transferDirection, transferGov, transferType, transportSchedule])
 
-  const transferReturnDateOptions =
-    transferType === 'package_bus' ? busReturnDates : anyDates
+  const transferReturnDateOptions = useMemo(() => {
+    const outboundDate = transferDate || transferDateOptions[0]
+    if (!outboundDate) return []
+
+    return returnOptions(transportSchedule, {
+      transferType,
+      outboundDate,
+      originCode: transferGov,
+      count: transferType === 'package_bus' ? 10 : 14,
+    })
+  }, [transferDate, transferDateOptions, transferGov, transferType, transportSchedule])
 
   // ─── upcoming departure dates for packages (user picks which one) ───
   // 4-day: departs Thu, returns Mon | 5-day: departs Sun, returns Fri
   const packageDepartureDates = useMemo(() => {
-    if (packageTransferType === 'hiace') return upcomingDatesFor(null, 14)
-    const departDay = duration === '5' ? 0 : 4 // Sun(0) or Thu(4)
-    return upcomingDatesFor([departDay], 8) // next 8 options
-  }, [duration, packageTransferType])
+    const packageDuration = duration === '5' ? 5 : 4
+    const patternCode = `${packageTransferType === 'package_bus' ? 'bus' : 'hiace'}_${packageDuration}d${packageDuration - 1}n`
+    const count = packageTransferType === 'hiace' ? 14 : 8
+
+    return upcomingServiceDates(transportSchedule, {
+      transferType: packageTransferType,
+      direction: 'outbound',
+      originCode: packageGov,
+      from: scheduleToday,
+      count: 190,
+    })
+      .filter((outboundDate) => resolveStayPattern(transportSchedule, {
+        patternCode,
+        transferType: packageTransferType,
+        outboundDate,
+        originCode: packageGov,
+      }).ok)
+      .slice(0, count)
+  }, [duration, packageGov, packageTransferType, scheduleToday, transportSchedule])
 
   const packageReturnDate = useMemo(() => {
     const base = packageDepartureDate || packageDepartureDates[0]
     if (!base) return ''
-    if (packageTransferType === 'hiace') {
-      const date = new Date(`${base}T00:00:00`)
-      date.setDate(date.getDate() + (duration === '5' ? 5 : 4))
-      return date.toISOString().slice(0, 10)
-    }
-    const returnDay = duration === '5' ? 5 : 1 // Fri(5) or Mon(1)
-    const [ret] = upcomingDatesFor([returnDay], 1, new Date(`${base}T00:00:00`))
-    return ret
-  }, [duration, packageDepartureDate, packageDepartureDates, packageTransferType])
+    const packageDuration = duration === '5' ? 5 : 4
+    const patternCode = `${packageTransferType === 'package_bus' ? 'bus' : 'hiace'}_${packageDuration}d${packageDuration - 1}n`
+    const pattern = resolveStayPattern(transportSchedule, {
+      patternCode,
+      transferType: packageTransferType,
+      outboundDate: base,
+      originCode: packageGov,
+    })
+
+    return pattern.ok ? pattern.returnDate : ''
+  }, [duration, packageDepartureDate, packageDepartureDates, packageGov, packageTransferType, transportSchedule])
 
   // ─── live price preview (server recomputes on submit) ───
   // Room + meal-plan pricing when this property has room prices configured;
@@ -1203,27 +1244,19 @@ export function BookingForm({
                     ? (ar ? 'تاريخ العودة' : 'Return date')
                     : (ar ? 'تاريخ الذهاب' : 'Departure date')}
                 </Label>
-                {transferType === 'package_bus' ? (
-                  <Select
-                    value={watch('transfer_date') ?? ''}
-                    onValueChange={(v) => v && setValue('transfer_date', v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={t('selectDate')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {transferDateOptions.map((d) => (
-                        <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    type="date"
-                    {...register('transfer_date')}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                )}
+                <Select
+                  value={watch('transfer_date') ?? ''}
+                  onValueChange={(v) => v && setValue('transfer_date', v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t('selectDate')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {transferDateOptions.map((d) => (
+                      <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {transferType === 'package_bus' && (
                   <p className="mt-1.5 text-xs text-ink-subtle">
                     {transferDirection === 'from_dahab' ? t('returnDaysNote') : t('departureDaysNote')}
@@ -1234,27 +1267,19 @@ export function BookingForm({
               {transferDirection === 'round_trip' && (
                 <div>
                   <Label className="mb-1.5 block">{t('returnDate')}</Label>
-                  {transferType === 'package_bus' ? (
-                    <Select
-                      value={watch('transfer_return_date') ?? ''}
-                      onValueChange={(v) => v && setValue('transfer_return_date', v)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t('selectDate')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {transferReturnDateOptions.map((d) => (
-                          <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      type="date"
-                      {...register('transfer_return_date')}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  )}
+                  <Select
+                    value={watch('transfer_return_date') ?? ''}
+                    onValueChange={(v) => v && setValue('transfer_return_date', v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t('selectDate')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {transferReturnDateOptions.map((d) => (
+                        <SelectItem key={d} value={d}>{formatDate(d)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
