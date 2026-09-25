@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
 import { verifyTurnstile } from '@/lib/turnstile'
 import { getTripPackagesForPricing } from '@/lib/trip-packages'
-import { buildTripPriceSnapshot, effectiveTripPrice } from '@/lib/pricing'
+import { buildPublicTripBookingRow, tripBookingSchema } from '@/lib/public-trip-booking'
 
 // Simple in-memory rate limit, consistent with /api/bookings.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -22,24 +21,6 @@ function rateLimit(ip: string): boolean {
   entry.count += 1
   return true
 }
-
-const tripBookingSchema = z.object({
-  trip_id: z.string().uuid().optional(),
-  trip_package_id: z.string().uuid().optional(),
-  customer_name: z.string().min(3).max(100),
-  customer_phone: z.string().min(10).max(20),
-  customer_email: z.string().email().optional().or(z.literal('')),
-  preferred_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  num_people: z.number().int().min(1).max(50),
-  adults: z.number().int().min(0).max(50).optional(),
-  children: z.number().int().min(0).max(50).optional(),
-  selected_options: z.record(z.string(), z.unknown()).optional().default({}),
-  notes: z.string().max(500).optional(),
-  website: z.string().max(200).optional(),
-  turnstile_token: z.string().optional(),
-}).refine((d) => Boolean(d.trip_id) !== Boolean(d.trip_package_id), {
-  message: 'Provide exactly one of trip_id or trip_package_id',
-})
 
 /**
  * Public endpoint for a standalone Sinai Trip request (not bundled into an
@@ -76,19 +57,6 @@ export async function POST(req: NextRequest) {
 
     const supabase = getSupabaseAdmin()
 
-    const insertBase = {
-      customer_name: validated.data.customer_name,
-      customer_phone: validated.data.customer_phone,
-      preferred_date: validated.data.preferred_date || null,
-      num_people: validated.data.num_people,
-      adults: validated.data.adults ?? null,
-      children: validated.data.children ?? null,
-      selected_options: validated.data.selected_options || {},
-      notes: validated.data.notes || '',
-      source: 'website',
-      status: 'new',
-    }
-
     let insertRow: Record<string, unknown>
 
     if (validated.data.trip_package_id) {
@@ -99,28 +67,7 @@ export async function POST(req: NextRequest) {
       if (!pkg || !pkg.totals?.isValid) {
         return NextResponse.json({ error: 'Package not found' }, { status: 404 })
       }
-      const quotedPrice = pkg.totals.packageTotal * validated.data.num_people
-      insertRow = {
-        ...insertBase,
-        trip_id: null,
-        trip_package_id: pkg.id,
-        context: 'package',
-        quoted_price: quotedPrice,
-        package_snapshot: {
-          name_ar: pkg.name_ar,
-          name_en: pkg.name_en,
-          package_total: pkg.totals.packageTotal,
-          public_total: pkg.totals.publicTotal,
-          savings: pkg.totals.savings,
-          trips: (pkg.trips || []).map((t) => ({
-            id: t.id,
-            name_ar: t.name_ar,
-            name_en: t.name_en,
-            price: t.price,
-            package_price: t.package_price,
-          })),
-        },
-      }
+      insertRow = buildPublicTripBookingRow(validated.data, { kind: 'package', pkg })
     } else {
       const { data: trip } = await supabase
         .from('sinai_trips')
@@ -131,19 +78,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
       }
 
-      // Quoted price is always server-derived — never trusted from the client.
-      // Any active discount is applied here and FROZEN into price_snapshot:
-      // changing or ending the discount later must not move this booking's
-      // price (same contract as buildPriceSnapshot in lib/pricing.ts).
-      const priced = effectiveTripPrice(trip)
-      const quotedPrice = priced.final * validated.data.num_people
-      insertRow = {
-        ...insertBase,
-        trip_id: validated.data.trip_id,
-        context: 'standalone',
-        quoted_price: quotedPrice,
-        price_snapshot: buildTripPriceSnapshot(priced, validated.data.num_people),
-      }
+      insertRow = buildPublicTripBookingRow(validated.data, { kind: 'standalone', trip })
     }
 
     const customer = await findOrCreateCustomerByPhone({

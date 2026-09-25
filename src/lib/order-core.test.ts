@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import { applyOrderPatchWithClient, createCommerceOrderWithClient, type OrderItemSnapshot } from './order-core'
 import { createOrderStatusFake } from './testing/order-core-fake'
 
@@ -47,7 +47,7 @@ test('reopen after partial restock reserves only the lines whose cancellation re
   for (const item of state.items) assert.equal((item.variant_snapshot as OrderItemSnapshot).inventory_restocked_at, undefined)
 })
 
-function creationRollbackClient(state: { orders: Row[]; items: Row[]; deleteOrderFails: boolean; itemInsertCount: number; failFirstItem: boolean; restockCalls: { variantId: string; qty: number }[] }) {
+function creationRollbackClient(state: { orders: Row[]; items: Row[]; deleteOrderFails: boolean; itemInsertCount: number; failFirstItem: boolean; restockCalls: { variantId: string; qty: number }[]; failRestockVariantIds?: Set<string> }) {
   class Query {
     private operation = 'select'; private values: Row = {}
     constructor(private table: string) {}
@@ -78,6 +78,9 @@ function creationRollbackClient(state: { orders: Row[]; items: Row[]; deleteOrde
       if (name === 'decrement_variant_inventory') return { data: true, error: null }
       if (name === 'restock_variant_inventory' && args) {
         state.restockCalls.push({ variantId: args.p_variant_id, qty: args.p_qty })
+        if (state.failRestockVariantIds?.has(args.p_variant_id)) {
+          return { data: null, error: { message: 'forced restock failure' } }
+        }
         return { data: true, error: null }
       }
       return { data: null, error: null }
@@ -117,4 +120,36 @@ test('creation rollback deletes the order first and cascades already-created ite
   assert.equal(result.success, false)
   assert.deepEqual(state.orders, [])
   assert.deepEqual(state.items, [])
+})
+
+test('creation rollback that cannot restock a variant reports failure and logs it for manual reconciliation', async () => {
+  // Regression: when an item insert fails after v1's stock was already
+  // decremented, and the compensating restock of v1 ALSO fails, the caller
+  // must still see a clean failure (never a false success) while the
+  // otherwise-silent inventory drift is surfaced for a human to fix.
+  const state = {
+    orders: [] as Row[],
+    items: [] as Row[],
+    deleteOrderFails: false,
+    itemInsertCount: 0,
+    failFirstItem: true,
+    restockCalls: [] as { variantId: string; qty: number }[],
+    failRestockVariantIds: new Set(['v1']),
+  }
+  const errorMock = mock.method(console, 'error', () => {})
+  try {
+    const result = await createFailingOrder(creationRollbackClient(state), [{ productId: 'p1', variantId: 'v1', quantity: 1 }])
+    assert.deepEqual(result, { success: false, error: 'Failed to create order' })
+    assert.deepEqual(state.orders, [])
+
+    const rollbackCall = errorMock.mock.calls.find((call) => String(call.arguments[0]).includes('rollback incomplete'))
+    assert.ok(rollbackCall, `expected a console.error call reporting rollback incomplete, got: ${JSON.stringify(errorMock.mock.calls.map((c) => c.arguments))}`)
+    const problems = (rollbackCall!.arguments[1] as { problems: string[] }).problems
+    assert.ok(
+      problems.some((problem) => problem.includes('variant v1 not restocked')),
+      `expected a problem entry mentioning "variant v1 not restocked", got: ${JSON.stringify(problems)}`,
+    )
+  } finally {
+    errorMock.mock.restore()
+  }
 })
