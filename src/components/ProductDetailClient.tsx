@@ -18,22 +18,33 @@ import { StayAmenities } from '@/components/stays/StayAmenities'
 import { StayTripsRail } from '@/components/stays/StayTripsRail'
 import { StayLocalGuides } from '@/components/stays/StayLocalGuides'
 import { MapPreview } from '@/components/MapPreview'
+import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
-import { startingRoomRate } from '@/lib/stays'
+import { formatCount } from '@/lib/format'
+import { resolveTierKey, startingRoomRate } from '@/lib/stays'
 import type { Accommodation, CommunityPost, SinaiTrip } from '@/lib/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
+
+const TIER_LABEL_KEY = {
+  budget: 'tierBudget',
+  standard: 'tierStandard',
+  premium: 'tierPremium',
+  lagoon: 'tierLagoon',
+} as const
 
 export function ProductDetailClient({
   accommodation,
   whatsapp,
   sinaiTrips = [],
   communityPosts = [],
+  related = [],
   policies,
 }: {
   accommodation: Accommodation
   whatsapp?: string | null
   sinaiTrips?: SinaiTrip[]
   communityPosts?: CommunityPost[]
+  related?: Accommodation[]
   policies: PaymentPolicy[]
 }) {
   const t = useTranslations('stays')
@@ -41,6 +52,7 @@ export function ProductDetailClient({
   const ar = locale === 'ar'
 
   const tag = ACCOMMODATION_TAGS[accommodation.type]
+  const tierKey = resolveTierKey(accommodation.tier)
   const images = accommodation.images?.length ? accommodation.images : [accommodation.image_url || '/media/heroposter.webp']
   const name = ar ? accommodation.name_ar : accommodation.name_en
   const amenities = (ar ? accommodation.amenities_ar : accommodation.amenities_en) ?? []
@@ -92,15 +104,18 @@ export function ProductDetailClient({
                   </span>
                 )}
                 {accommodation.type === 'hotel' && accommodation.rating > 0 && (
-                  <span className="inline-flex items-center gap-1" aria-label={t('detail.ratingLabel', { rating: accommodation.rating })}>
+                  <span
+                    className="inline-flex items-center gap-1"
+                    aria-label={t('detail.ratingLabel', { rating: formatCount(accommodation.rating, locale) })}
+                  >
                     {Array.from({ length: accommodation.rating }).map((_, i) => (
                       <Star key={i} className="h-4 w-4 fill-sun-500 text-sun-500" aria-hidden />
                     ))}
                   </span>
                 )}
-                {accommodation.tier && (
-                  <span className="rounded-full border border-sand-300 bg-sand-100 px-3 py-1 text-xs font-semibold capitalize text-ink-muted">
-                    {accommodation.tier}
+                {tierKey && (
+                  <span className="rounded-full border border-sand-300 bg-sand-100 px-3 py-1 text-xs font-semibold text-ink-muted">
+                    {t(`detail.${TIER_LABEL_KEY[tierKey]}`)}
                   </span>
                 )}
               </div>
@@ -151,15 +166,16 @@ export function ProductDetailClient({
             <h2 className="font-display text-xl font-bold text-sea-900">{t('detail.paymentTitle')}</h2>
             <div className="mt-5 space-y-4">
               <div className="border-[1.5px] border-sand-300 bg-card px-5 py-4 pin-card">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-subtle">
-                  {t('detail.paymentStayNote')}
-                </p>
+                {/* `.eyebrow` (not manual uppercase/tracking) — that utility
+                    already drops the Latin uppercase+tracking treatment in
+                    RTL (see globals.css), which matters here since this is a
+                    label inside otherwise-Arabic body copy, not a standalone
+                    Latin kicker. */}
+                <p className="eyebrow mb-2 text-ink-subtle">{t('detail.paymentStayNote')}</p>
                 <PaymentTerms kind="stay" policies={policies} />
               </div>
               <div className="border-[1.5px] border-sun-300 bg-sun-50 px-5 py-4 pin-card">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-sun-700">
-                  {t('detail.paymentPackageNote')}
-                </p>
+                <p className="eyebrow mb-2 text-sun-700">{t('detail.paymentPackageNote')}</p>
                 <PaymentTerms kind="stay_package" policies={policies} compact />
               </div>
             </div>
@@ -181,6 +197,16 @@ export function ProductDetailClient({
         </Section>
       )}
 
+      <RelatedPlaces related={related} />
+
+      {/*
+        StickyActionBar must be the LAST thing rendered: it ships its own
+        in-flow spacer immediately before the fixed bar (see
+        brand/StickyActionBar.tsx), and that spacer only protects whatever
+        content comes before it in the DOM. Rendering RelatedPlaces above
+        (not as a sibling after this component, as the page used to do) is
+        what keeps its cards from ending up under the fixed bar on mobile.
+      */}
       <StickyActionBar
         summary={<PriceTag amount={fromPrice} from unit="night" size="sm" />}
         action={

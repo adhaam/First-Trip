@@ -3,14 +3,22 @@
 import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Star, MapPin } from 'lucide-react'
+import { Star, MapPin, Hotel, Home, Tent, type LucideIcon } from 'lucide-react'
 import { ACCOMMODATION_TAGS } from '@/lib/constants'
 import { startingRoomRate } from '@/lib/stays'
 import { GlowCard } from '@/components/motion/Reveal'
 import { PriceTag } from '@/components/brand/PriceTag'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
 import { cn } from '@/lib/utils'
-import type { Accommodation } from '@/lib/types'
+import type { Accommodation, AccommodationType } from '@/lib/types'
+
+// Lucide glyphs, not the ACCOMMODATION_TAGS emoji — emoji render inconsistently
+// across platforms and carry no brand colour; these do.
+const TYPE_ICON: Record<AccommodationType, LucideIcon> = {
+  hotel: Hotel,
+  chalet: Home,
+  camp: Tent,
+}
 
 /**
  * The one card shape used for accommodations everywhere they're browsed
@@ -33,6 +41,7 @@ export function AccommodationCard({
   const ar = locale === 'ar'
 
   const tag = ACCOMMODATION_TAGS[acc.type]
+  const TypeIcon = TYPE_ICON[acc.type]
   const cover = acc.image_url || acc.images?.[0] || '/media/heroposter.webp'
   const fromRate = startingRoomRate(acc)
   const name = ar ? acc.name_ar : acc.name_en
@@ -57,7 +66,7 @@ export function AccommodationCard({
           <div className="absolute inset-0 bg-gradient-to-t from-sea-900/60 via-transparent to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-95" />
 
           <span className="absolute start-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-sand-50/95 px-3 py-1 text-[0.7rem] font-semibold text-sea-900 backdrop-blur">
-            <span aria-hidden>{tag?.emoji}</span>
+            <TypeIcon className="h-3.5 w-3.5" aria-hidden />
             {ar ? tag?.label_ar : tag?.label_en}
           </span>
 

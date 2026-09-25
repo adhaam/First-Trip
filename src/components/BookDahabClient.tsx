@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { BedDouble } from 'lucide-react'
+import { BedDouble, Hotel, Home, Tent, type LucideIcon } from 'lucide-react'
 import { Reveal } from '@/components/motion/Reveal'
 import { AccommodationCard } from '@/components/cards/AccommodationCard'
 import { EmptyState, ResultCount } from '@/components/EmptyState'
@@ -11,6 +11,7 @@ import { Chip, ChipRail } from '@/components/brand/Chip'
 import { FilterSheet } from '@/components/brand/FilterSheet'
 import { PriceTag } from '@/components/brand/PriceTag'
 import { ButtonLink } from '@/components/ButtonLink'
+import { formatCount } from '@/lib/format'
 import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
 import {
   accommodationTypeCounts,
@@ -20,7 +21,8 @@ import {
   type StayFilterKey,
   type StaySortKey,
 } from '@/lib/stays'
-import type { Accommodation } from '@/lib/types'
+import type { Accommodation, AccommodationType } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 const TYPE_FILTERS: { key: StayFilterKey; labelKey: 'filterAll' | 'filterHotel' | 'filterChalet' | 'filterCamp' }[] = [
   { key: 'all', labelKey: 'filterAll' },
@@ -28,6 +30,14 @@ const TYPE_FILTERS: { key: StayFilterKey; labelKey: 'filterAll' | 'filterHotel' 
   { key: 'chalet', labelKey: 'filterChalet' },
   { key: 'camp', labelKey: 'filterCamp' },
 ]
+
+// Lucide glyphs, not the ACCOMMODATION_TAGS emoji — emoji render inconsistently
+// across platforms and carry no brand colour; these do.
+const TYPE_ICON: Record<AccommodationType, LucideIcon> = {
+  hotel: Hotel,
+  chalet: Home,
+  camp: Tent,
+}
 
 const SORT_OPTIONS: { key: StaySortKey; labelKey: 'sortDefault' | 'sortPriceAsc' | 'sortPriceDesc' }[] = [
   { key: 'default', labelKey: 'sortDefault' },
@@ -62,17 +72,38 @@ export function BookDahabClient({
     <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <ChipRail>
-          {TYPE_FILTERS.map((f) => (
-            <Chip
-              key={f.key}
-              selected={filterType === f.key}
-              onClick={() => setFilterType(f.key)}
-              count={f.key === 'all' ? undefined : counts[f.key]}
-              icon={f.key !== 'all' ? <span aria-hidden>{ACCOMMODATION_TAGS[f.key]?.emoji}</span> : undefined}
-            >
-              {t(`list.${f.labelKey}`)}
-            </Chip>
-          ))}
+          {TYPE_FILTERS.map((f) => {
+            const Icon = f.key === 'all' ? null : TYPE_ICON[f.key]
+            const selected = filterType === f.key
+            return (
+              <Chip
+                key={f.key}
+                selected={selected}
+                onClick={() => setFilterType(f.key)}
+                icon={Icon ? <Icon className="h-3.5 w-3.5" /> : undefined}
+              >
+                {/*
+                  Chip's own `count` prop renders a raw number with no locale
+                  formatting — that badge is rebuilt here, inside a flex span
+                  of our own, so it shows Arabic-Indic digits on the Arabic
+                  page instead of "3"/"1".
+                */}
+                <span className="inline-flex items-center gap-1.5">
+                  {t(`list.${f.labelKey}`)}
+                  {f.key !== 'all' && (
+                    <span
+                      className={cn(
+                        'rounded-full px-1.5 text-xs font-bold tabular-nums',
+                        selected ? 'bg-white/20' : 'bg-sand-200 text-ink-subtle',
+                      )}
+                    >
+                      {formatCount(counts[f.key], locale)}
+                    </span>
+                  )}
+                </span>
+              </Chip>
+            )
+          })}
         </ChipRail>
 
         <FilterSheet
@@ -91,7 +122,11 @@ export function BookDahabClient({
         </FilterSheet>
       </div>
 
-      <ResultCount count={sorted.length} label={t('list.resultCount', { count: sorted.length })} className="mb-5" />
+      <ResultCount
+        count={sorted.length}
+        label={t('list.resultCount', { count: sorted.length, n: formatCount(sorted.length, locale) })}
+        className="mb-5"
+      />
 
       {sorted.length === 0 ? (
         <EmptyState

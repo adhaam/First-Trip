@@ -5,6 +5,7 @@ import {
   activeMealPlans,
   filterAccommodationsByType,
   groupAmenities,
+  resolveTierKey,
   roomRateRows,
   sortAccommodations,
   startingRoomRate,
@@ -196,4 +197,22 @@ test('groupAmenities omits empty groups entirely', () => {
 
 test('groupAmenities returns [] for an empty list', () => {
   assert.deepEqual(groupAmenities([]), [])
+})
+
+// ─── resolveTierKey ───
+
+test('resolveTierKey recognises the four known codes, case- and whitespace-insensitively', () => {
+  assert.equal(resolveTierKey('budget'), 'budget')
+  assert.equal(resolveTierKey('Budget'), 'budget')
+  assert.equal(resolveTierKey('  Premium '), 'premium')
+  assert.equal(resolveTierKey('LAGOON'), 'lagoon')
+  assert.equal(resolveTierKey('standard'), 'standard')
+})
+
+test('resolveTierKey hides (returns null for) anything not in the known list', () => {
+  assert.equal(resolveTierKey('deluxe'), null)
+  assert.equal(resolveTierKey(''), null)
+  assert.equal(resolveTierKey('   '), null)
+  assert.equal(resolveTierKey(undefined), null)
+  assert.equal(resolveTierKey(null), null)
 })

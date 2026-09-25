@@ -147,6 +147,27 @@ export interface AmenityGroup {
   items: string[]
 }
 
+// ─── Tier ───
+
+/** The only tier codes stays.json has a translation for (see the field comment on Accommodation.tier). */
+export type StayTierKey = 'budget' | 'standard' | 'premium' | 'lagoon'
+
+const TIER_KEYS: readonly StayTierKey[] = ['budget', 'standard', 'premium', 'lagoon']
+
+/**
+ * `accommodation.tier` is free admin text, not a real enum in the DB — so an
+ * unrecognised or blank value must never render raw to a customer (especially
+ * on the Arabic page, where a stray English word breaks the sentence). Only a
+ * value that matches one of the four known codes (case/whitespace-insensitive)
+ * resolves to a translatable key; anything else is `null`, and the caller
+ * hides the badge rather than showing the raw string.
+ */
+export function resolveTierKey(tier: string | null | undefined): StayTierKey | null {
+  const normalized = tier?.trim().toLowerCase()
+  if (!normalized) return null
+  return (TIER_KEYS as readonly string[]).includes(normalized) ? (normalized as StayTierKey) : null
+}
+
 /**
  * Groups a locale-resolved amenity list (already `amenities_ar` OR
  * `amenities_en`, picked by the caller) for display. Empty groups are

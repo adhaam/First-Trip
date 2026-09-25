@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Expand } from 'lucide-react'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { ArrowBack, ChevronForward } from '@/components/brand/DirectionalIcon'
+import { formatCount } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const SWIPE_THRESHOLD = 40
@@ -19,6 +20,7 @@ const SWIPE_THRESHOLD = 40
  */
 export function StayGallery({ images, name }: { images: string[]; name: string }) {
   const t = useTranslations('stays')
+  const locale = useLocale()
   const [index, setIndex] = useState(0)
   const [open, setOpen] = useState(false)
   const touchStartX = useRef<number | null>(null)
@@ -50,7 +52,10 @@ export function StayGallery({ images, name }: { images: string[]; name: string }
 
   if (images.length === 0) return null
 
-  const counter = t('gallery.counter', { current: index + 1, total: images.length })
+  const counter = t('gallery.counter', {
+    current: formatCount(index + 1, locale),
+    total: formatCount(images.length, locale),
+  })
 
   return (
     <section aria-label={t('gallery.label')} className="relative bg-sea-900">

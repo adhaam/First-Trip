@@ -11,7 +11,6 @@ import {
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { startingRoomRate } from '@/lib/stays'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
-import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getProductSchema } from '@/lib/schema-org'
 
@@ -67,9 +66,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         whatsapp={settings?.whatsapp_number}
         sinaiTrips={sinaiTrips}
         communityPosts={communityPosts}
+        related={related}
         policies={paymentRules.policies}
       />
-      <RelatedPlaces related={related} />
     </div>
   )
 }
