@@ -1,5 +1,6 @@
 'use client'
 
+import { todayInCairo } from '@/lib/transport/today'
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { MessageCircle, Check, Loader2 } from 'lucide-react'
@@ -46,7 +47,7 @@ export function TripPackageBookingForm({ packageId, packageNameAr, packageNameEn
   const [honeypot, setHoneypot] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
-  const todayIso = new Date().toISOString().slice(0, 10)
+  const todayIso = todayInCairo()
 
   const validate = (): boolean => {
     const next: Partial<Record<keyof FormState, string>> = {}

@@ -26,3 +26,9 @@ test('journeyNights follows the stay pattern for transport, not the calendar gap
   assert.equal(journeyNights(DEFAULT_TRANSPORT_SCHEDULE, { mode: 'stay_only', arrivalDate: '2026-10-01', departureDate: '2026-10-04' }), 3)
   assert.equal(journeyNights(DEFAULT_TRANSPORT_SCHEDULE, { mode: 'package_bus' }), null)
 })
+
+test('isoFromLocalDate keeps the picked calendar day (no UTC shift)', async () => {
+  const { isoFromLocalDate } = await import('./dates')
+  assert.equal(isoFromLocalDate(new Date(2026, 9, 8)), '2026-10-08')
+  assert.equal(isoFromLocalDate(new Date(2026, 0, 1, 0, 0, 0)), '2026-01-01')
+})

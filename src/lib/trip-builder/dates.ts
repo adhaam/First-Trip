@@ -66,3 +66,14 @@ export function journeyNights(
   })
   return result.ok ? result.nights : null
 }
+
+/**
+ * The calendar day a date picker's local Date represents, as YYYY-MM-DD.
+ * Never use toISOString() for this: it converts to UTC, so midnight in Cairo
+ * (UTC+2/+3) becomes the previous day.
+ */
+export function isoFromLocalDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}

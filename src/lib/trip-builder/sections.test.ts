@@ -24,3 +24,11 @@ test('quote readiness reports each required missing section', () => {
   assert.deepEqual(quoteReadiness({ adults: 0, children: 0, experiences: [], contact: {} }).missing, ['transport', 'origin', 'dates', 'travelers'])
   assert.deepEqual(quoteReadiness({ transport_mode: 'stay_only', adults: 1, children: 0, experiences: [], contact: {} }).missing, ['dates', 'stay'])
 })
+
+test('a stay-only range is not ready until check-out is after check-in', async () => {
+  const { quoteReadiness } = await import('./sections')
+  const base = { transport_mode: 'stay_only' as const, accommodation_id: '00000000-0000-4000-8000-000000000001', adults: 1, children: 0, experiences: [] }
+  assert.deepEqual(quoteReadiness({ ...base, arrival_date: '2026-10-08', departure_date: '2026-10-08' }).missing, ['dates'])
+  assert.deepEqual(quoteReadiness({ ...base, arrival_date: '2026-10-08' }).missing, ['dates'])
+  assert.equal(quoteReadiness({ ...base, arrival_date: '2026-10-08', departure_date: '2026-10-11' }).ready, true)
+})

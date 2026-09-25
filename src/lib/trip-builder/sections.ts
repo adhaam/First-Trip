@@ -19,7 +19,7 @@ export function sectionStatus(state: BuilderState, catalog: BuilderCatalog): Rec
     dates: !transport
       ? { status: 'needs_input', reason: 'mode_required' }
       : stayOnly
-        ? state.arrival_date && state.departure_date ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'stay_dates_required' }
+        ? hasValidStayRange(state) ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'stay_dates_required' }
         : state.stay_pattern_code && state.arrival_date ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'transport_dates_required' },
     travelers: (state.adults ?? 0) >= 1 ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'adult_required' },
     stay: hasStay
@@ -38,7 +38,7 @@ export function quoteReadiness(state: BuilderState): { ready: boolean; missing: 
   const missing: SectionId[] = []
   if (!state.transport_mode) missing.push('transport')
   if (state.transport_mode === 'stay_only') {
-    if (!state.arrival_date || !state.departure_date) missing.push('dates')
+    if (!hasValidStayRange(state)) missing.push('dates')
     if (!state.accommodation_id) missing.push('stay')
   } else {
     if (!state.origin_governorate_code) missing.push('origin')
@@ -90,4 +90,9 @@ export function toSubmitPayload(state: BuilderState, contact: ContactInput, loca
     ...(extras.website ? { website: extras.website } : {}),
     ...(extras.turnstile_token ? { turnstile_token: extras.turnstile_token } : {}),
   }
+}
+
+/** A stay-only range is usable only once check-out is strictly after check-in. */
+function hasValidStayRange(state: BuilderState): boolean {
+  return Boolean(state.arrival_date && state.departure_date && state.departure_date > state.arrival_date)
 }

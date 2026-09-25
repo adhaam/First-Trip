@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Calendar } from '@/components/ui/calendar'
 import { ChipRail, Chip } from '@/components/brand'
 import { formatCount, formatDate } from '@/lib/format'
-import { arrivalOptions, earliestArrival, journeyNights, patternsForMode, returnDateFor, stayNights } from '@/lib/trip-builder/dates'
+import { arrivalOptions, earliestArrival, isoFromLocalDate, journeyNights, patternsForMode, returnDateFor, stayNights } from '@/lib/trip-builder/dates'
 import type { BuilderAction } from '@/lib/trip-builder/state'
 import { recommendedCheckInWeekdayNames } from '@/lib/trip-builder/summaries'
 import type { BuilderCatalog, BuilderState } from '@/lib/trip-builder/types'
@@ -148,9 +148,12 @@ function StayOnlyDates({
           mode="range"
           selected={selected}
           onSelect={(range) => {
-            if (range?.from) dispatch({ type: 'setArrival', arrival: range.from.toISOString().slice(0, 10) })
-            if (range?.to) dispatch({ type: 'setDeparture', departure: range.to.toISOString().slice(0, 10) })
-            else if (range?.from) dispatch({ type: 'setDeparture', departure: undefined })
+            const arrival = range?.from ? isoFromLocalDate(range.from) : undefined
+            const departure = range?.to ? isoFromLocalDate(range.to) : undefined
+            dispatch({ type: 'setArrival', arrival })
+            // The picker reports a one-day range (from === to) after the first
+            // tap; only a later check-out day is a real departure.
+            dispatch({ type: 'setDeparture', departure: arrival && departure && departure > arrival ? departure : undefined })
           }}
           disabled={{ before: new Date(`${min}T00:00:00`) }}
           modifiers={{ recommended: (date) => catalog.schedule.recommendedCheckInWeekdays.includes(date.getDay()) }}
