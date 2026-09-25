@@ -28,7 +28,16 @@ export function PackageLanes({ lanes, policies }: Props) {
 
   return (
     <Section tone="paper">
-      <SectionHeading eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} />
+      <SectionHeading
+        eyebrow={t('eyebrow')}
+        title={t('title')}
+        subtitle={t('subtitle')}
+        action={
+          <ButtonLink href="/sinai-trips/packages" variant="outline-ink" size="lg">
+            {t('cta')}
+          </ButtonLink>
+        }
+      />
 
       <div className="space-y-10">
         {lanes.stayPackages.length > 0 && (
@@ -82,12 +91,6 @@ function PackageLane({
           </Reveal>
         ))}
       </Rail>
-
-      <div className="mt-4">
-        <ButtonLink href="/sinai-trips/packages" variant="outline-ink" size="sm">
-          {t('cta')}
-        </ButtonLink>
-      </div>
     </div>
   )
 }

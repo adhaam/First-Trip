@@ -16,6 +16,7 @@ import {
   selectCategoryTiles,
   selectCuratedPicks,
   selectShopRentVisibility,
+  selectSignatureImage,
   selectStaysLineup,
   splitPackageLanes,
 } from '@/lib/home-sections'
@@ -72,6 +73,9 @@ export default async function HomePage() {
   const categoryTiles = selectCategoryTiles(trips)
   const packageLanes = splitPackageLanes(packages)
   const shopRentVisibility = selectShopRentVisibility(merchProducts.length, rentalProducts.length)
+  // Never the homepage hero's own poster — a real Signature Experience photo
+  // when one exists, otherwise a different existing brand asset.
+  const signatureImage = selectSignatureImage(experiences, '/media/og-cover.jpg')
 
   return (
     <HomeClient
@@ -84,6 +88,7 @@ export default async function HomePage() {
       categoryTiles={categoryTiles}
       packageLanes={packageLanes}
       shopRentVisibility={shopRentVisibility}
+      signatureImage={signatureImage}
     />
   )
 }

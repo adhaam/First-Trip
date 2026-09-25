@@ -19,10 +19,17 @@ const INTENTS = [
 
 /**
  * "What do you want to do in Sinai?" — the six routes a visitor can be
- * heading for, each one tap from the homepage. `plan` gets the emphasis
- * treatment (dark tile, spans two columns) since it's the one path that
- * covers everyone else — the rest are equal-weight entry points, not a
- * ranked list.
+ * heading for, each one tap from the homepage.
+ *
+ * Composes intentionally at every width, never an orphaned last tile:
+ *  - below `sm` (390px etc.): a plain 2-column grid — 6 tiles / 2 cols = 3
+ *    even rows, `plan` NOT spanning (a 2-col-wide tile above 5 others in 2
+ *    cols leaves a lone 6th tile on its own row).
+ *  - `sm` and up (768/1024/1280): 3 columns, `plan` spans a 2×2 block
+ *    (`sm:col-span-2 sm:row-span-2`). CSS Grid's normal (non-dense)
+ *    auto-placement then lays the other 5 tiles into exactly the 5
+ *    remaining cells of the resulting 3×3 grid — no gaps, no orphans, at
+ *    any width once 3 columns are in play.
  */
 export function IntentGateway() {
   const t = useTranslations('homeV2.gateway')
@@ -33,12 +40,12 @@ export function IntentGateway() {
       <div className="relative">
         <SectionHeading eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} />
 
-        <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5">
           {INTENTS.map((intent, i) => (
             <Reveal
               key={intent.key}
               delay={i * 60}
-              className={cn('h-full', intent.emphasis && 'col-span-2 lg:col-span-2')}
+              className={cn('h-full', intent.emphasis && 'sm:col-span-2 sm:row-span-2')}
             >
               <GlowCard className="h-full">
                 <Link

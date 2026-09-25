@@ -9,9 +9,12 @@ import { Reveal } from '@/components/motion/Reveal'
 /**
  * The dark, high-touch Signature moment — deliberately the one full-bleed
  * photographic section on the page besides the hero, so it reads as a
- * distinct register rather than another content block.
+ * distinct register rather than another content block. `image` comes from
+ * `selectSignatureImage` (lib/home-sections.ts): a real Signature Experience
+ * photo when one is published, otherwise a different brand asset — never the
+ * homepage hero's own poster, or the two sections read as the same moment.
  */
-export function SignatureMoment() {
+export function SignatureMoment({ image }: { image: string }) {
   const t = useTranslations('homeV2.signature')
   const locale = useLocale()
   const ar = locale === 'ar'
@@ -19,7 +22,7 @@ export function SignatureMoment() {
   return (
     <section className="relative isolate min-h-[32rem] overflow-hidden bg-sea-900 text-white md:min-h-[38rem]">
       <Image
-        src="/media/heroposter.webp"
+        src={image}
         alt={ar ? 'تجربة Signature في سيناء' : 'A Signature experience in Sinai'}
         fill
         sizes="100vw"

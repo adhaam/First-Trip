@@ -34,7 +34,12 @@ export function Stays({ lineup }: { lineup: StaysLineup }) {
         }
       />
 
-      <div className="grid gap-5 lg:grid-cols-12">
+      {/* items-start: EditorialCard sizes itself to its image's aspect ratio,
+          not to the tallest grid cell. Without this, the default grid
+          stretch makes the hero cell match the stacked secondaries column's
+          (taller) height, leaving blank card background below the hero
+          image instead of the image filling the card. */}
+      <div className="grid items-start gap-5 lg:grid-cols-12">
         <Reveal className="lg:col-span-7">
           <EditorialCard
             href={`/book-dahab/${lineup.hero.id}`}

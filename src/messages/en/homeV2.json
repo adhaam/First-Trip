@@ -38,9 +38,9 @@
     }
   },
   "curated": {
-    "eyebrow": "Happening now",
+    "eyebrow": "Curated now",
     "title": "Curated for the days ahead",
-    "subtitle": "What's featured, on offer or coming up soon in Sinai right now.",
+    "subtitle": "What's featured, on offer or coming up soon in Sinai.",
     "eyebrowFallback": "Curated by WEEMAP",
     "titleFallback": "Hand-picked to start with",
     "badgeFeatured": "Featured",
@@ -75,21 +75,21 @@
     "title": "Find your kind of Sinai",
     "subtitle": "Sea, desert, mountains, culture, nights out — every trip is tagged by what it actually is.",
     "truthLine": "Every trip picks up and drops off at your accommodation in Dahab.",
-    "cta": "See this category"
+    "cta": "All Sinai trips"
   },
   "packages": {
     "eyebrow": "Packages",
     "title": "Two kinds of package, never one generic bundle",
-    "subtitle": "A Dahab Stay Package centres your accommodation; a Sinai Experience Package bundles trips and experiences. Payment terms differ, so we never blur the two.",
+    "subtitle": "A Dahab Stay Package and a Sinai Experience Package are paid on different terms, so we always show them as two separate lanes — never one generic bundle.",
     "stayLane": {
       "title": "Dahab Stay Packages",
-      "body": "Your stay, transfer and included trips in one booking."
+      "body": "A bundle of Sinai trips built around your stay in Dahab."
     },
     "experienceLane": {
       "title": "Sinai Experience Packages",
-      "body": "Several Sinai experiences bundled at a better total than booking each alone."
+      "body": "Several Sinai experiences bundled together at a better total than booking each apart — paid after confirmation."
     },
-    "cta": "View package"
+    "cta": "All packages"
   },
   "signature": {
     "eyebrow": "WEEMAP Signature",

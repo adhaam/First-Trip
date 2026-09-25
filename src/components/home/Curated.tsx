@@ -43,7 +43,10 @@ function PickMeta({ pick, locale }: { pick: CuratedPick; locale: string }) {
     return <PriceTag amount={effectiveTripPrice(pick.trip).final} from unit="person" size="sm" tone="light" />
   }
   if (pick.kind === 'package') {
-    return <PriceTag amount={pick.pkg.totals?.packageTotal ?? 0} unit="trip" size="sm" tone="light" />
+    // totals.packageTotal is SUM(package_price) of the bundled trips, each of
+    // which is itself a per-person price — so the aggregate is per person too,
+    // never a flat "per trip" total.
+    return <PriceTag amount={pick.pkg.totals?.packageTotal ?? 0} unit="person" size="sm" tone="light" />
   }
   return (
     <>
@@ -90,7 +93,9 @@ export function Curated({ picks }: { picks: CuratedPick[] }) {
         }
       />
 
-      <div className="grid gap-5 lg:grid-cols-12">
+      {/* items-start: cards size to their own content instead of stretching
+          to match whichever column is taller (see the same fix in Stays.tsx). */}
+      <div className="grid items-start gap-5 lg:grid-cols-12">
         <Reveal className="lg:col-span-7">
           <EditorialCard
             href={pickHref(hero)}

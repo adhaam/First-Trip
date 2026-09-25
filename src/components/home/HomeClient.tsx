@@ -32,6 +32,7 @@ interface Props {
   categoryTiles: CategoryTile[]
   packageLanes: PackageLanesData
   shopRentVisibility: ShopRentVisibility
+  signatureImage: string
 }
 
 /**
@@ -51,6 +52,7 @@ export function HomeClient({
   categoryTiles,
   packageLanes,
   shopRentVisibility,
+  signatureImage,
 }: Props) {
   return (
     <div className="overflow-x-clip">
@@ -61,7 +63,7 @@ export function HomeClient({
       <Stays lineup={staysLineup} />
       <ExploreCategories tiles={categoryTiles} />
       <PackageLanes lanes={packageLanes} policies={policies} />
-      <SignatureMoment />
+      <SignatureMoment image={signatureImage} />
       <CommunitySpread posts={posts} />
       <ShopRent visibility={shopRentVisibility} />
       <TrustSpread testimonials={testimonials} />

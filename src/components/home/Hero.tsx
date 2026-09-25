@@ -131,7 +131,16 @@ export function Hero({ settings }: { settings: SiteSettings | null }) {
           </Reveal>
 
           <Reveal always>
-            <h1 className="mt-6 font-display text-[2.6rem] font-bold uppercase leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
+            <h1
+              className={cn(
+                'mt-6 font-display text-[2.6rem] font-bold text-white sm:text-6xl lg:text-7xl',
+                // Latin gets the brand's tight, uppercase display treatment;
+                // Arabic never gets letter-spacing or uppercase (no case to
+                // begin with) and needs more headline line-height instead —
+                // see "Type" in docs/m2/BRIEF.md.
+                ar ? 'leading-[1.4]' : 'uppercase leading-[1.05] tracking-tight',
+              )}
+            >
               <span className="block">{t('heading')}</span>
               <span className="mt-2 block text-sun-300">{t('subheading')}</span>
             </h1>

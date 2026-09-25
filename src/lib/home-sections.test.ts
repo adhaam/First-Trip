@@ -6,6 +6,7 @@ import {
   selectCategoryTiles,
   selectCuratedPicks,
   selectShopRentVisibility,
+  selectSignatureImage,
   selectStaysLineup,
   selectUpcomingExperienceDates,
   splitPackageLanes,
@@ -281,6 +282,16 @@ test('stayFromPricePerPersonPerNight picks the cheapest configured room type', (
 
 test('stayFromPricePerPersonPerNight returns 0 when nothing is priced', () => {
   assert.equal(stayFromPricePerPersonPerNight({ price_double_room: 0, price_single_room: 0 }), 0)
+})
+
+// ─── signature image ───
+
+test('selectSignatureImage prefers the first experience with a hero image, and never the hero poster', () => {
+  const withoutImage = experience({ id: 'e1', hero_image: '' })
+  const withImage = experience({ id: 'e2', hero_image: '/media/signature-e2.jpg' })
+  assert.equal(selectSignatureImage([withoutImage, withImage], '/media/og-cover.jpg'), '/media/signature-e2.jpg')
+  assert.equal(selectSignatureImage([withoutImage], '/media/og-cover.jpg'), '/media/og-cover.jpg')
+  assert.equal(selectSignatureImage([], '/media/og-cover.jpg'), '/media/og-cover.jpg')
 })
 
 // ─── shop/rent visibility ───

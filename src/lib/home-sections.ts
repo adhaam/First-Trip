@@ -200,6 +200,19 @@ export function stayFromPricePerPersonPerNight(acc: {
   return prices.length ? Math.min(...prices) : 0
 }
 
+// ─── Signature moment — never reuse the hero photo ───
+
+/**
+ * The Signature section's backdrop photo. Prefers the first published
+ * Signature Experience's own hero image (real, checkable content) over a
+ * generic fallback — and the fallback must never be the homepage hero's own
+ * poster, or the two full-bleed photo sections on the page read as the same
+ * moment twice.
+ */
+export function selectSignatureImage(experiences: readonly Experience[], fallback: string): string {
+  return experiences.find((experience) => Boolean(experience.hero_image))?.hero_image || fallback
+}
+
 // ─── Shop & Rent — only when there's real inventory ───
 
 export interface ShopRentVisibility {

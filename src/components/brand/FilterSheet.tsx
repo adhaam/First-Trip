@@ -4,13 +4,19 @@ import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import { SlidersHorizontal } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
+const triggerClass = cn(
+  'inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] border-sea-900 px-4 text-sm font-semibold text-sea-900 transition-colors hover:bg-sea-900 hover:text-sand-50',
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500',
+)
+
 /**
- * Filter surface that is two different UIs behind one API: a bottom sheet
- * on mobile (secondary config belongs in a sheet, not on-canvas — see
- * "Mobile first" in docs/m2/BRIEF.md) and an always-open inline panel from
- * `md` up, where there's room for filters to just sit beside the results.
+ * Filter surface that is two different UIs behind one API and one trigger:
+ * a bottom sheet on mobile (secondary config belongs in a sheet, not
+ * on-canvas — see "Mobile first" in docs/m2/BRIEF.md) and a compact popover
+ * from `md` up, so sorting never pushes a tall panel beside the results.
  */
 export function FilterSheet({
   title,
@@ -29,26 +35,25 @@ export function FilterSheet({
 }) {
   const ui = useTranslations('ui')
   const [open, setOpen] = useState(false)
+  const [desktopOpen, setDesktopOpen] = useState(false)
+
+  const triggerContent = (
+    <>
+      <SlidersHorizontal className="h-4 w-4" aria-hidden />
+      {triggerLabel}
+      {!!activeCount && (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sun-500 px-1 text-xs font-bold tabular-nums text-on-accent">
+          {activeCount}
+        </span>
+      )}
+    </>
+  )
 
   return (
     <>
       <div className="md:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger
-            className={cn(
-              'inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] border-sea-900 px-4 text-sm font-semibold text-sea-900 transition-colors hover:bg-sea-900 hover:text-sand-50',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500',
-              className,
-            )}
-          >
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            {triggerLabel}
-            {!!activeCount && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sun-500 px-1 text-xs font-bold tabular-nums text-on-accent">
-                {activeCount}
-              </span>
-            )}
-          </SheetTrigger>
+          <SheetTrigger className={cn(triggerClass, className)}>{triggerContent}</SheetTrigger>
           <SheetContent
             side="bottom"
             closeLabel={ui('close')}
@@ -80,20 +85,25 @@ export function FilterSheet({
         </Sheet>
       </div>
 
-      <div className={cn('hidden md:block', className)}>
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-display text-base font-bold text-sea-900">{title}</h3>
-          {onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="text-xs font-semibold text-ink-subtle underline-offset-4 transition-colors hover:text-sea-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500"
-            >
-              {ui('clear')}
-            </button>
-          )}
-        </div>
-        <div className="mt-4">{children}</div>
+      <div className="hidden md:block">
+        <Popover open={desktopOpen} onOpenChange={setDesktopOpen}>
+          <PopoverTrigger className={cn(triggerClass, className)}>{triggerContent}</PopoverTrigger>
+          <PopoverContent align="end" className="w-72 rounded-2xl border-sand-300 bg-sand-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <PopoverTitle className="font-display text-base font-bold text-sea-900">{title}</PopoverTitle>
+              {onReset && (
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="text-xs font-semibold text-ink-subtle underline-offset-4 transition-colors hover:text-sea-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500"
+                >
+                  {ui('clear')}
+                </button>
+              )}
+            </div>
+            <div className="mt-3">{children}</div>
+          </PopoverContent>
+        </Popover>
       </div>
     </>
   )
