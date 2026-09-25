@@ -1,0 +1,41 @@
+# Quality gate for every push and pull request. It never deploys — Vercel's
+# git integration still owns deployment.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: Translation parity
+        run: npm run check:translations
+      - name: Migration numbering
+        run: npm run check:migrations
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      # Builds without Supabase secrets: data loaders treat a missing
+      # configuration as "no data", so this proves the app compiles and
+      # prerenders, not that production data is healthy.
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1

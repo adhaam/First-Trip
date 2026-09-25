@@ -19,7 +19,8 @@
     "check:translations": "tsx scripts/check-translations.ts",
     "test:format": "tsx --test src/lib/format.test.ts",
     "test:conversion": "tsx --test src/lib/conversion.test.ts",
-    "test:discounts": "tsx --test src/lib/trip-discounts.test.ts"
+    "test:discounts": "tsx --test src/lib/trip-discounts.test.ts",
+    "check:migrations": "tsx scripts/check-migrations.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
