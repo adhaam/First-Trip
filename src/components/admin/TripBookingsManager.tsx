@@ -12,9 +12,10 @@ import { Loader2, Plus, ChevronUp, FileText, Banknote } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { effectiveTripPrice } from '@/lib/pricing'
 import type { TripDiscountType } from '@/lib/types'
+import { allowedNextStatuses, STATUSES } from '@/lib/request-workflow'
 import { InvoiceViewer } from './InvoiceViewer'
 
-type TripBookingStatus = 'new' | 'contacted' | 'confirmed' | 'completed' | 'cancelled'
+type TripBookingStatus = (typeof STATUSES.trip_booking)[number]
 
 interface SinaiTrip {
   id: string
@@ -46,16 +47,19 @@ interface TripBooking {
 const STATUS_STYLES: Record<TripBookingStatus, string> = {
   new: 'bg-blue-100 text-blue-800',
   contacted: 'bg-amber-100 text-amber-800',
+  checking_availability: 'bg-sky-100 text-sky-800',
+  alternatives_required: 'bg-orange-100 text-orange-800',
+  awaiting_payment: 'bg-violet-100 text-violet-800',
   confirmed: 'bg-green-100 text-green-800',
   completed: 'bg-gray-200 text-gray-700',
   cancelled: 'bg-red-100 text-red-800',
 }
 
 const STATUS_LABELS_AR: Record<TripBookingStatus, string> = {
-  new: 'جديد', contacted: 'تم التواصل', confirmed: 'مؤكد', completed: 'مكتمل', cancelled: 'ملغي',
+  new: 'جديد', contacted: 'تم التواصل', checking_availability: 'جار التحقق من التوفر', alternatives_required: 'بدائل مطلوبة', awaiting_payment: 'في انتظار الدفع', confirmed: 'مؤكد', completed: 'مكتمل', cancelled: 'ملغي',
 }
 const STATUS_LABELS_EN: Record<TripBookingStatus, string> = {
-  new: 'New', contacted: 'Contacted', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
+  new: 'New', contacted: 'Contacted', checking_availability: 'Checking availability', alternatives_required: 'Alternatives required', awaiting_payment: 'Awaiting payment', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
 }
 
 const EMPTY_FORM = {
@@ -114,12 +118,19 @@ export function TripBookingsManager() {
   }, [load])
 
   const updateStatus = async (id: string, status: TripBookingStatus) => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)))
-    await fetch(`/api/admin/trip-bookings/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    })
+    try {
+      const res = await fetch(`/api/admin/trip-bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (res.status === 401) { window.location.href = ar ? '/admin' : '/en/admin'; return }
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { window.alert(data.error || (ar ? 'فشل تحديث الحالة' : 'Failed to update status')); return }
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)))
+    } catch {
+      window.alert(ar ? 'فشل تحديث الحالة' : 'Failed to update status')
+    }
   }
 
   // The trips list is already in state, so the price is derived synchronously
@@ -416,7 +427,7 @@ export function TripBookingsManager() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(Object.keys(STATUS_STYLES) as TripBookingStatus[]).map((s) => (
+                        {allowedNextStatuses('trip_booking', b.status).map((s) => (
                           <SelectItem key={s} value={s}>{ar ? STATUS_LABELS_AR[s] : STATUS_LABELS_EN[s]}</SelectItem>
                         ))}
                       </SelectContent>

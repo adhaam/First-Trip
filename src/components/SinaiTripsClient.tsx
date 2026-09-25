@@ -8,6 +8,7 @@ import { TripPackageRail } from '@/components/TripPackageRail'
 import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { Filter, Mountain } from 'lucide-react'
 import { EmptyState, ResultCount } from '@/components/EmptyState'
+import { deriveTripCategoryChips, tripMatchesCategoryChip } from '@/lib/trip-categories'
 import { cn } from '@/lib/utils'
 import type { SinaiTrip, TripPackage } from '@/lib/types'
 
@@ -33,13 +34,15 @@ export function SinaiTripsClient({
 
   const categories = [
     { id: 'all', label_ar: 'كل الرحلات', label_en: 'All Trips' },
-    ...Array.from(new Set(trips.map((tr) => (ar ? tr.category_ar : tr.category_en))))
-      .filter(Boolean)
-      .map((c) => ({ id: c, label_ar: c, label_en: c })),
+    ...deriveTripCategoryChips(trips).map((category) => ({
+      id: category.id,
+      label_ar: category.name_ar,
+      label_en: category.name_en,
+    })),
   ]
 
   const filtered =
-    filter === 'all' ? trips : trips.filter((trip) => (ar ? trip.category_ar : trip.category_en) === filter)
+    filter === 'all' ? trips : trips.filter((trip) => tripMatchesCategoryChip(trip, filter))
 
   if (trips.length === 0 && packages.length === 0) {
     return (
@@ -99,7 +102,7 @@ export function SinaiTripsClient({
                   : 'border border-sand-300 bg-white text-ink-muted hover:text-sea-900',
               )}
             >
-              {cat.id === 'all' ? (ar ? cat.label_ar : cat.label_en) : cat.id}
+              {ar ? cat.label_ar : cat.label_en}
             </button>
           ))}
         </div>

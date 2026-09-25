@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { STATUSES } from '@/lib/request-workflow'
+import { updateAdminStatus } from '@/lib/admin-status-update'
 
 const updateSchema = z.object({
-  status: z.enum(['new', 'contacted', 'planning', 'confirmed', 'completed', 'cancelled']).optional(),
+  status: z.enum(STATUSES.signature_request).optional(),
   quoted_price: z.number().min(0).nullable().optional(),
   notes: z.string().optional(),
   payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
@@ -22,12 +24,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
   }
   const supabase = getSupabaseAdmin()
-  const { data, error } = await supabase
-    .from('experience_bookings')
-    .update(validated.data)
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) return NextResponse.json({ error: 'Failed to update request' }, { status: 500 })
-  return NextResponse.json({ request: data })
+  const result = await updateAdminStatus({
+    readStatus: async (bookingId) => supabase.from('experience_bookings').select('status').eq('id', bookingId).maybeSingle(),
+    update: async (bookingId, patch, currentStatus) => {
+      let query = supabase.from('experience_bookings').update(patch).eq('id', bookingId)
+      if (currentStatus !== undefined) query = query.eq('status', currentStatus)
+      return query.select().maybeSingle()
+    },
+  }, 'signature_request', id, validated.data)
+
+  if (result.kind === 'invalid_transition') {
+    return NextResponse.json({ error: 'Invalid status transition', code: result.kind, allowed: result.allowed }, { status: 409 })
+  }
+  if (result.kind === 'stale_status') {
+    return NextResponse.json({ error: 'Request status changed by another admin', code: result.kind }, { status: 409 })
+  }
+  if (result.kind === 'not_found') return NextResponse.json({ error: 'Request not found' }, { status: 404 })
+  if (result.kind === 'error') return NextResponse.json({ error: 'Failed to update request' }, { status: 500 })
+  return NextResponse.json({ request: result.data })
 }

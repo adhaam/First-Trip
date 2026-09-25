@@ -19,19 +19,29 @@ import {
 } from 'lucide-react'
 import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection, MealPlan } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { allowedNextStatuses, STATUSES } from '@/lib/request-workflow'
 import { InvoiceViewer } from './InvoiceViewer'
 
-const STATUS_STYLES: Record<BookingStatus, string> = {
+type BookingWorkflowStatus = (typeof STATUSES.accommodation_booking)[number]
+type ManagedBooking = Omit<Booking, 'status'> & { status: BookingWorkflowStatus }
+
+const STATUS_STYLES: Record<BookingWorkflowStatus, string> = {
   new: 'bg-purple-100 text-purple-700',
   pending: 'bg-yellow-100 text-yellow-700',
+  checking_availability: 'bg-sky-100 text-sky-700',
+  alternatives_required: 'bg-orange-100 text-orange-700',
+  awaiting_payment: 'bg-violet-100 text-violet-700',
   confirmed: 'bg-green-100 text-green-700',
   cancelled: 'bg-red-100 text-red-700',
   completed: 'bg-blue-100 text-blue-700',
 }
 
-const STATUS_LABELS: Record<BookingStatus, { ar: string; en: string }> = {
+const STATUS_LABELS: Record<BookingWorkflowStatus, { ar: string; en: string }> = {
   new: { ar: 'جديد', en: 'New' },
   pending: { ar: 'معلق', en: 'Pending' },
+  checking_availability: { ar: 'جار التحقق من التوفر', en: 'Checking availability' },
+  alternatives_required: { ar: 'بدائل مطلوبة', en: 'Alternatives required' },
+  awaiting_payment: { ar: 'في انتظار الدفع', en: 'Awaiting payment' },
   confirmed: { ar: 'مؤكد', en: 'Confirmed' },
   cancelled: { ar: 'ملغي', en: 'Cancelled' },
   completed: { ar: 'مكتمل', en: 'Completed' },
@@ -126,7 +136,7 @@ export function BookingsManager() {
   const locale = useLocale()
   const ar = locale === 'ar'
 
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<ManagedBooking[]>([])
   const [accommodations, setAccommodations] = useState<Accommodation[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -309,7 +319,7 @@ export function BookingsManager() {
     }
   }
 
-  const updateStatus = (id: string, status: BookingStatus) => patchBooking(id, { status })
+  const updateStatus = (id: string, status: BookingWorkflowStatus) => patchBooking(id, { status })
 
   const deleteBooking = async (id: string) => {
     if (!confirm(ar ? 'متأكد من حذف الحجز؟' : 'Delete this booking?')) return
@@ -512,7 +522,7 @@ export function BookingsManager() {
           <SelectTrigger className="w-[130px]"><SelectValue placeholder={ar ? 'الحالة' : 'Status'} /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{ar ? 'كل الحالات' : 'All statuses'}</SelectItem>
-            {(Object.keys(STATUS_LABELS) as BookingStatus[]).map(s => (
+            {(Object.keys(STATUS_LABELS) as BookingWorkflowStatus[]).map(s => (
               <SelectItem key={s} value={s}>{ar ? STATUS_LABELS[s].ar : STATUS_LABELS[s].en}</SelectItem>
             ))}
           </SelectContent>
@@ -673,14 +683,14 @@ export function BookingsManager() {
                       <TableCell onClick={e => e.stopPropagation()}>
                         <Select
                           value={b.status}
-                          onValueChange={(v) => v && updateStatus(b.id, v as BookingStatus)}
+                          onValueChange={(v) => v && updateStatus(b.id, v as BookingWorkflowStatus)}
                           disabled={updatingId === b.id}
                         >
                           <SelectTrigger className={cn('w-[120px] h-8 text-xs border-0', STATUS_STYLES[b.status])}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(Object.keys(STATUS_LABELS) as BookingStatus[]).map(s => (
+                            {allowedNextStatuses('accommodation_booking', b.status).map(s => (
                               <SelectItem key={s} value={s}>{ar ? STATUS_LABELS[s].ar : STATUS_LABELS[s].en}</SelectItem>
                             ))}
                           </SelectContent>

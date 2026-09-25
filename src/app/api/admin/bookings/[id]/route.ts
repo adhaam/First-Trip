@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { BOOKING_SOURCES } from '@/lib/booking-sources'
+import { STATUSES } from '@/lib/request-workflow'
+import { updateAdminStatus } from '@/lib/admin-status-update'
 
 const updateSchema = z.object({
-  status: z.enum(['new', 'pending', 'confirmed', 'cancelled', 'completed']).optional(),
+  status: z.enum(STATUSES.accommodation_booking).optional(),
   customer_name: z.string().min(2).max(100).optional(),
   customer_phone: z.string().min(6).max(20).optional(),
   customer_email: z.string().email().optional().or(z.literal('')),
@@ -39,17 +41,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (return_date !== undefined) patch.return_date = return_date || null
 
   const supabase = getSupabaseAdmin()
-  const { data, error } = await supabase
-    .from('bookings')
-    .update(patch)
-    .eq('id', id)
-    .select('*, accommodations(name_ar, name_en)')
-    .single()
-  if (error) {
-    console.error('PATCH booking error:', error)
+  const result = await updateAdminStatus({
+    readStatus: async (bookingId) => supabase.from('bookings').select('status').eq('id', bookingId).maybeSingle(),
+    update: async (bookingId, updatePatch, currentStatus) => {
+      let query = supabase.from('bookings').update(updatePatch).eq('id', bookingId)
+      if (currentStatus !== undefined) query = query.eq('status', currentStatus)
+      return query.select('*, accommodations(name_ar, name_en)').maybeSingle()
+    },
+  }, 'accommodation_booking', id, patch)
+
+  if (result.kind === 'invalid_transition') {
+    return NextResponse.json({ error: 'Invalid status transition', code: result.kind, allowed: result.allowed }, { status: 409 })
+  }
+  if (result.kind === 'stale_status') {
+    return NextResponse.json({ error: 'Booking status changed by another admin', code: result.kind }, { status: 409 })
+  }
+  if (result.kind === 'not_found') return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+  if (result.kind === 'error') {
+    console.error('PATCH booking error:', result.error)
     return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 })
   }
-  return NextResponse.json({ booking: data })
+  return NextResponse.json({ booking: result.data })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

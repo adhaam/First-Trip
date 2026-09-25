@@ -7,7 +7,11 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Loader2 } from 'lucide-react'
-import type { ExperienceBooking, ExperienceRequestStatus } from '@/lib/types'
+import type { ExperienceBooking } from '@/lib/types'
+import { allowedNextStatuses, STATUSES } from '@/lib/request-workflow'
+
+type ExperienceWorkflowStatus = (typeof STATUSES.signature_request)[number]
+type ManagedExperienceBooking = Omit<ExperienceBooking, 'status'> & { status: ExperienceWorkflowStatus }
 
 function useAdminFetch() {
   const locale = useLocale()
@@ -23,10 +27,12 @@ function useAdminFetch() {
   }, [locale])
 }
 
-const STATUS_LABEL: Record<ExperienceRequestStatus, { ar: string; en: string; cls: string }> = {
+const STATUS_LABEL: Record<ExperienceWorkflowStatus, { ar: string; en: string; cls: string }> = {
   new: { ar: 'جديد', en: 'New', cls: 'bg-purple-100 text-purple-700' },
   contacted: { ar: 'تم التواصل', en: 'Contacted', cls: 'bg-blue-100 text-blue-700' },
   planning: { ar: 'قيد التجهيز', en: 'Planning', cls: 'bg-amber-100 text-amber-700' },
+  alternatives_required: { ar: 'بدائل مطلوبة', en: 'Alternatives required', cls: 'bg-orange-100 text-orange-700' },
+  awaiting_payment: { ar: 'في انتظار الدفع', en: 'Awaiting payment', cls: 'bg-violet-100 text-violet-700' },
   confirmed: { ar: 'مؤكد', en: 'Confirmed', cls: 'bg-green-100 text-green-700' },
   completed: { ar: 'مكتمل', en: 'Completed', cls: 'bg-gray-200 text-gray-700' },
   cancelled: { ar: 'ملغي', en: 'Cancelled', cls: 'bg-red-100 text-red-700' },
@@ -36,7 +42,7 @@ export function ExperienceRequestsManager() {
   const locale = useLocale()
   const ar = locale === 'ar'
   const api = useAdminFetch()
-  const [requests, setRequests] = useState<ExperienceBooking[]>([])
+  const [requests, setRequests] = useState<ManagedExperienceBooking[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -58,9 +64,13 @@ export function ExperienceRequestsManager() {
     load()
   }, [load])
 
-  const updateStatus = async (id: string, status: ExperienceRequestStatus) => {
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
-    await api(`/api/admin/experience-bookings/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+  const updateStatus = async (id: string, status: ExperienceWorkflowStatus) => {
+    try {
+      await api(`/api/admin/experience-bookings/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : (ar ? 'فشل تحديث الحالة' : 'Failed to update status'))
+    }
   }
 
   return (
@@ -95,14 +105,14 @@ export function ExperienceRequestsManager() {
                   <TableCell dir="ltr" className="text-gray-500">{r.phone}</TableCell>
                   <TableCell className="max-w-[220px] truncate text-gray-500">{r.interests || '—'}</TableCell>
                   <TableCell>
-                    <Select value={r.status} onValueChange={(v) => v && updateStatus(r.id, v as ExperienceRequestStatus)}>
+                    <Select value={r.status} onValueChange={(v) => v && updateStatus(r.id, v as ExperienceWorkflowStatus)}>
                       <SelectTrigger className="w-36">
                         <SelectValue>
                           <Badge className={STATUS_LABEL[r.status].cls} variant="default">{ar ? STATUS_LABEL[r.status].ar : STATUS_LABEL[r.status].en}</Badge>
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {(Object.keys(STATUS_LABEL) as ExperienceRequestStatus[]).map((s) => (
+                        {allowedNextStatuses('signature_request', r.status).map((s) => (
                           <SelectItem key={s} value={s}>{ar ? STATUS_LABEL[s].ar : STATUS_LABEL[s].en}</SelectItem>
                         ))}
                       </SelectContent>
