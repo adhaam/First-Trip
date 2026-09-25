@@ -4,22 +4,20 @@ import type { ReactNode } from 'react'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { ArrowUpRight, BedDouble, Route } from 'lucide-react'
+import { ArrowUpRight, Route } from 'lucide-react'
 import { GlowCard } from '@/components/motion/Reveal'
 import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { PriceTag } from '@/components/brand'
-import { packageLane } from '@/lib/explore'
 import { formatCount } from '@/lib/format'
 import type { TripPackage } from '@/lib/types'
-
-const LANE_ICON = { stay: BedDouble, experience: Route } as const
 
 /**
  * A titled shelf of packages — the single package, a rail, or a grid,
  * whichever fits `packages.length`. `title`/`lede` default to the generic
- * "two ways to bundle Sinai" copy, but a caller with a more specific reason
- * to show these particular packages (e.g. the trip detail cross-sell,
- * `packagesIncludingTrip`) can override both.
+ * "Sinai trip packages" copy, but a caller with a more specific reason to
+ * show these particular packages (e.g. the trip detail cross-sell,
+ * `packagesIncludingTrip`) can override both. One consistent treatment —
+ * see `TripPackageCard` on why there is no "stay" vs "experience" variant.
  */
 export function TripPackageRail({
   packages,
@@ -67,10 +65,8 @@ function FeaturedPackage({ pkg }: { pkg: TripPackage }) {
   const locale = useLocale()
   const ar = locale === 'ar'
 
-  const lane = packageLane(pkg)
-  const LaneIcon = LANE_ICON[lane]
   const name = ar ? pkg.name_ar : pkg.name_en
-  const badge = (ar ? pkg.badge_ar : pkg.badge_en) || t(lane === 'stay' ? 'kindStay' : 'kindExperience')
+  const badge = (ar ? pkg.badge_ar : pkg.badge_en) || t('packageBadge')
   const cover = pkg.image || pkg.trips?.[0]?.image || '/media/heroposter.webp'
   const tripNames = (pkg.trips || []).map((tr) => (ar ? tr.name_ar : tr.name_en))
   const total = pkg.totals?.packageTotal ?? 0
@@ -93,10 +89,8 @@ function FeaturedPackage({ pkg }: { pkg: TripPackage }) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-sea-900/60 to-transparent" />
 
-            <span
-              className={`absolute start-3 top-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[0.7rem] font-semibold text-on-accent shadow ${lane === 'stay' ? 'bg-sea-700' : 'bg-sun-500'}`}
-            >
-              <LaneIcon className="h-3 w-3" aria-hidden />
+            <span className="absolute start-3 top-3 inline-flex items-center gap-1 rounded-full bg-sun-500 px-3 py-1 text-[0.7rem] font-semibold text-on-accent shadow">
+              <Route className="h-3 w-3" aria-hidden />
               {badge}
             </span>
 

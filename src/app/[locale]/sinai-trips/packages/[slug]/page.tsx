@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { BedDouble, Route } from 'lucide-react'
+import { Route } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { TripPackageBookingForm } from '@/components/sinai-trips/TripPackageBookingForm'
 import { PackageTripsGrid } from '@/components/explore/PackageTripsGrid'
@@ -11,7 +11,6 @@ import { Eyebrow, PageHero, Section, SectionHeading, StickyActionBar } from '@/c
 import { getTripPackageBySlugForDetail } from '@/lib/trip-packages'
 import { getSiteSettings } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
-import { paymentKindFor } from '@/lib/payment-rules'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 
@@ -51,8 +50,10 @@ export default async function PackageDetail({ params }: Props) {
   const short = (ar ? pkg.short_description_ar : pkg.short_description_en) || ''
   const trips = pkg.trips || []
   const cover = pkg.image || trips[0]?.image || '/media/heroposter.webp'
-  const kind = paymentKindFor({ trip_package_id: pkg.id, trip_package_payment_kind: pkg.payment_kind })
-  const stay = kind === 'stay_package'
+  // Every trip_package is one public product, a Sinai trip package, paid
+  // 100% after confirmation — never derived from the package's own
+  // `payment_kind` here (see docs/m2/BRIEF.md "Package semantics").
+  const kind = 'experience_package' as const
   const totals = pkg.totals!
 
   const schema = {
@@ -72,7 +73,7 @@ export default async function PackageDetail({ params }: Props) {
         image={cover}
         eyebrow={
           <Eyebrow tone="light">
-            {stay ? <BedDouble className="h-4 w-4" /> : <Route className="h-4 w-4" />} {stay ? t('kindStay') : t('kindExperience')}
+            <Route className="h-4 w-4" /> {t('packageBadge')}
           </Eyebrow>
         }
         title={name}
@@ -87,7 +88,7 @@ export default async function PackageDetail({ params }: Props) {
         }
       />
 
-      <Section tone={stay ? 'sand' : 'paper'}>
+      <Section tone="sand">
         <div className="grid gap-10 lg:grid-cols-[1fr_22rem]">
           <div className="space-y-12">
             {description && (
@@ -143,7 +144,7 @@ export default async function PackageDetail({ params }: Props) {
       </Section>
 
       <StickyActionBar
-        summary={<span>{stay ? t('kindStay') : t('kindExperience')}</span>}
+        summary={<span>{t('packageBadge')}</span>}
         action={
           <a href="#request" className="inline-flex min-h-11 items-center rounded-full bg-sun-500 px-5 font-semibold text-on-accent">
             {t('request')}

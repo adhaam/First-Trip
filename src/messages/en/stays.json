@@ -79,7 +79,7 @@
     "locationTitle": "Location",
     "paymentTitle": "How payment works",
     "paymentStayNote": "Booking this stay on its own.",
-    "paymentPackageNote": "Add WEEMAP transport in the trip builder and this becomes a Dahab Stay Package — same payment source, priced like this:",
+    "paymentTransportNote": "Adding WEEMAP transport in Build your trip keeps these same stay terms — it's one request, one payment source.",
     "tripsTitle": "Popular trips from Dahab",
     "tripsHint": "Sinai trips that pick you up from your stay in Dahab — add any of them in the trip builder.",
     "guidesTitle": "Local guides",

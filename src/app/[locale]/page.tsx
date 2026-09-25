@@ -15,10 +15,10 @@ import { getPaymentRules } from '@/lib/payment-rules-load'
 import {
   selectCategoryTiles,
   selectCuratedPicks,
+  selectHomePackages,
   selectShopRentVisibility,
   selectSignatureImage,
   selectStaysLineup,
-  splitPackageLanes,
 } from '@/lib/home-sections'
 
 // Dashboard edits (featured picks, discounts, new packages, new products) must
@@ -35,8 +35,8 @@ export async function generateMetadata({ params }: {
 
 // Server Component: everything the home page shows comes from Supabase and is
 // editable from the dashboard. Section-selection decisions (what's curated,
-// which package lane something belongs to, whether Shop/Rent has real
-// inventory) are resolved here with the pure, unit-tested helpers in
+// which packages lead the rail, whether Shop/Rent has real inventory) are
+// resolved here with the pure, unit-tested helpers in
 // lib/home-sections.ts — the client half only renders what was decided.
 export default async function HomePage() {
   const [
@@ -71,7 +71,7 @@ export default async function HomePage() {
   })
   const staysLineup = selectStaysLineup(accommodations, settings?.featured_accommodation_ids || [])
   const categoryTiles = selectCategoryTiles(trips)
-  const packageLanes = splitPackageLanes(packages)
+  const homePackages = selectHomePackages(packages)
   const shopRentVisibility = selectShopRentVisibility(merchProducts.length, rentalProducts.length)
   // Never the homepage hero's own poster — a real Signature Experience photo
   // when one exists, otherwise a different existing brand asset.
@@ -86,7 +86,7 @@ export default async function HomePage() {
       curatedPicks={curatedPicks}
       staysLineup={staysLineup}
       categoryTiles={categoryTiles}
-      packageLanes={packageLanes}
+      packages={homePackages}
       shopRentVisibility={shopRentVisibility}
       signatureImage={signatureImage}
     />

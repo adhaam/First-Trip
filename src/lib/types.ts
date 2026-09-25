@@ -275,8 +275,8 @@ export interface TripPackage {
   description_ar: string
   description_en: string
   image: string
-  /** Explicit catalogue classification used to set payment terms (migration 030). */
-  payment_kind?: 'experience_package' | 'stay_package'
+  /** Always 'experience_package' (migration 034): a Sinai trip package is paid like a trip. */
+  payment_kind?: 'experience_package'
   badge_ar?: string | null
   badge_en?: string | null
   package_category_id?: string | null

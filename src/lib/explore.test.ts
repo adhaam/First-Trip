@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { categoryFromSearchParam, groupPackagesByLane, packageLane, packagesIncludingTrip, tripsForCategory } from './explore'
+import { categoryFromSearchParam, packagesIncludingTrip, tripsForCategory } from './explore'
 import type { SinaiTrip, TripCategory, TripPackage } from './types'
 
 const category = (id: string, slug = id): TripCategory => ({
@@ -78,22 +78,6 @@ test('tripsForCategory returns every trip for "all" and filters otherwise', () =
   const trips = [trip('1', hike), trip('2', dive)]
   assert.deepEqual(tripsForCategory(trips, 'all').map((t) => t.id), ['1', '2'])
   assert.deepEqual(tripsForCategory(trips, 'dive-id').map((t) => t.id), ['2'])
-})
-
-test('packageLane classifies by stored payment_kind and applies the M1 experience default', () => {
-  assert.equal(packageLane(pkg('a', 'stay_package')), 'stay')
-  assert.equal(packageLane(pkg('b', 'experience_package')), 'experience')
-  assert.equal(packageLane(pkg('c')), 'experience')
-})
-
-test('groupPackagesByLane groups packages by stored kind and applies the M1 experience default', () => {
-  const groups = groupPackagesByLane([pkg('stay', 'stay_package'), pkg('experience', 'experience_package'), pkg('legacy')])
-  assert.deepEqual(groups.stay.map((item) => item.id), ['stay'])
-  assert.deepEqual(groups.experience.map((item) => item.id), ['experience', 'legacy'])
-})
-
-test('groupPackagesByLane returns empty arrays, never omits a lane, for an empty catalogue', () => {
-  assert.deepEqual(groupPackagesByLane([]), { stay: [], experience: [] })
 })
 
 test('packagesIncludingTrip finds only packages whose joined trips contain the given trip id', () => {

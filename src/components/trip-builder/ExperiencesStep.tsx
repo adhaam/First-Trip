@@ -106,8 +106,8 @@ function PackageCard({ pkg, locale, selected, onToggle }: { pkg: CatalogPackage;
         {pkg.image && <SafeImage src={pkg.image} alt="" fill sizes="64px" className="object-cover" />}
       </div>
       <div className="min-w-0 flex-1">
-        <span className={cn('inline-block rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide', pkg.payment_kind === 'stay_package' ? 'bg-sea-100 text-sea-800' : 'bg-sun-100 text-sun-800')}>
-          {pkg.payment_kind === 'stay_package' ? t('stayPackage') : t('experiencePackage')}
+        <span className="inline-block rounded-full bg-sun-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-sun-800">
+          {t('packageCardBadge')}
         </span>
         <p className="mt-1 truncate font-display text-sm font-bold text-sea-900">{locale === 'ar' ? pkg.name_ar : pkg.name_en}</p>
         <p className="text-xs text-ink-subtle">{total != null ? `${formatAmount(total, locale)} ${common('egp')}` : ''}</p>

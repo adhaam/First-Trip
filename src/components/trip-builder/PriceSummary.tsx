@@ -13,6 +13,12 @@ import { cn } from '@/lib/utils'
  * (the server's response / `quoteErrorKey()`), so every branch here is
  * spelled out as its own `t('literal')` call.
  */
+/**
+ * `stay_package` is never labelled "Stay package" here — it is the Trip
+ * Builder's internal classification for "WEEMAP transport + a stay",
+ * produced once a visitor combines the two (see docs/m2/BRIEF.md "Package
+ * semantics"). It is labelled as what the customer actually bought.
+ */
 function usePaymentKindLabel(kind: PaymentKind): string {
   const t = useTranslations('builder')
   switch (kind) {

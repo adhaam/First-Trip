@@ -164,7 +164,7 @@ export function ProductDetailClient({
           </Reveal>
           <Reveal delay={100}>
             <h2 className="font-display text-xl font-bold text-sea-900">{t('detail.paymentTitle')}</h2>
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 space-y-3">
               <div className="border-[1.5px] border-sand-300 bg-card px-5 py-4 pin-card">
                 {/* `.eyebrow` (not manual uppercase/tracking) — that utility
                     already drops the Latin uppercase+tracking treatment in
@@ -174,10 +174,12 @@ export function ProductDetailClient({
                 <p className="eyebrow mb-2 text-ink-subtle">{t('detail.paymentStayNote')}</p>
                 <PaymentTerms kind="stay" policies={policies} />
               </div>
-              <div className="border-[1.5px] border-sun-300 bg-sun-50 px-5 py-4 pin-card">
-                <p className="eyebrow mb-2 text-sun-700">{t('detail.paymentPackageNote')}</p>
-                <PaymentTerms kind="stay_package" policies={policies} compact />
-              </div>
+              {/* Adding WEEMAP transport in Build your trip does not change
+                  these terms — it is the same stay, on the same payment
+                  source, never a separate "Dahab Stay Package" product (see
+                  docs/m2/BRIEF.md "Package semantics"). No percentages here:
+                  the policy above is the single source of truth for those. */}
+              <p className="text-sm text-ink-subtle">{t('detail.paymentTransportNote')}</p>
             </div>
           </Reveal>
         </div>

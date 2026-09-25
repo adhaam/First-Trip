@@ -1,15 +1,18 @@
 // ─── Explore surface logic — pure, server- and client-safe ───
 //
-// Category-chip URL matching, package-lane classification, and the trip↔
-// package cross-sell relationship all live here so /explore, /sinai-trips
-// and /sinai-trips/packages (and anyone linking into them) share exactly one
-// definition of each — see src/lib/explore.test.ts.
+// Category-chip URL matching and the trip↔package cross-sell relationship
+// live here so /explore, /sinai-trips and /sinai-trips/packages (and anyone
+// linking into them) share exactly one definition of each — see
+// src/lib/explore.test.ts.
+//
+// There is no package "lane" here: a trip_package is always one public
+// product, a Sinai trip package (see docs/m2/BRIEF.md "Package semantics").
+// `payment_kind` on a package is being narrowed to always be
+// 'experience_package' (migration 034) and is never read here to classify
+// a package for display.
 
-import { paymentKindFor } from './payment-rules'
 import { tripMatchesCategoryChip } from './trip-categories'
 import type { SinaiTrip, TripCategory, TripPackage } from './types'
-
-export type PackageLane = 'stay' | 'experience'
 
 /** Every resolved category a trip carries — its primary category plus its tags, deduplicated by id. */
 function tripCategories(trip: SinaiTrip): TripCategory[] {
@@ -48,24 +51,6 @@ export function categoryFromSearchParam(value: string | string[] | undefined, tr
 
 export function tripsForCategory(trips: readonly SinaiTrip[], categoryId: string): SinaiTrip[] {
   return categoryId === 'all' ? [...trips] : trips.filter((trip) => tripMatchesCategoryChip(trip, categoryId))
-}
-
-/**
- * Resolves which display lane a package belongs to, from its authoritative
- * `payment_kind` (see `paymentKindFor` — the M1 default for a package with no
- * stored kind is `'experience_package'`). The single source both
- * `groupPackagesByLane` and the package cards use, so a card can never
- * disagree with the lane it is rendered inside.
- */
-export function packageLane(pkg: Pick<TripPackage, 'id' | 'payment_kind'>): PackageLane {
-  const kind = paymentKindFor({ trip_package_id: pkg.id, trip_package_payment_kind: pkg.payment_kind })
-  return kind === 'stay_package' ? 'stay' : 'experience'
-}
-
-export function groupPackagesByLane(packages: readonly TripPackage[]): Record<PackageLane, TripPackage[]> {
-  const groups: Record<PackageLane, TripPackage[]> = { stay: [], experience: [] }
-  for (const pkg of packages) groups[packageLane(pkg)].push(pkg)
-  return groups
 }
 
 /**

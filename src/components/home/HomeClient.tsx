@@ -6,21 +6,15 @@ import { Curated } from './Curated'
 import { TripBuilderTeaser } from './TripBuilderTeaser'
 import { Stays } from './Stays'
 import { ExploreCategories } from './ExploreCategories'
-import { PackageLanes } from './PackageLanes'
+import { SinaiPackages } from './SinaiPackages'
 import { SignatureMoment } from './SignatureMoment'
 import { CommunitySpread } from './CommunitySpread'
 import { ShopRent } from './ShopRent'
 import { TrustSpread } from './TrustSpread'
 import { FinalCta } from './FinalCta'
 import type { PaymentPolicy } from '@/lib/payment-rules'
-import type {
-  CategoryTile,
-  CuratedPick,
-  PackageLanes as PackageLanesData,
-  ShopRentVisibility,
-  StaysLineup,
-} from '@/lib/home-sections'
-import type { CommunityPost, SiteSettings, Testimonial } from '@/lib/types'
+import type { CategoryTile, CuratedPick, ShopRentVisibility, StaysLineup } from '@/lib/home-sections'
+import type { CommunityPost, SiteSettings, Testimonial, TripPackage } from '@/lib/types'
 
 interface Props {
   settings: SiteSettings | null
@@ -30,7 +24,7 @@ interface Props {
   curatedPicks: CuratedPick[]
   staysLineup: StaysLineup
   categoryTiles: CategoryTile[]
-  packageLanes: PackageLanesData
+  packages: TripPackage[]
   shopRentVisibility: ShopRentVisibility
   signatureImage: string
 }
@@ -50,7 +44,7 @@ export function HomeClient({
   curatedPicks,
   staysLineup,
   categoryTiles,
-  packageLanes,
+  packages,
   shopRentVisibility,
   signatureImage,
 }: Props) {
@@ -62,7 +56,7 @@ export function HomeClient({
       <TripBuilderTeaser />
       <Stays lineup={staysLineup} />
       <ExploreCategories tiles={categoryTiles} />
-      <PackageLanes lanes={packageLanes} policies={policies} />
+      <SinaiPackages packages={packages} policies={policies} />
       <SignatureMoment image={signatureImage} />
       <CommunitySpread posts={posts} />
       <ShopRent visibility={shopRentVisibility} />

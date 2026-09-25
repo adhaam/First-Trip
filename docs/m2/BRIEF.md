@@ -39,9 +39,12 @@ Primary nav: **Stay · Explore · Signature · Shop · Rent** + primary CTA **Bu
 | Trip Builder | `/plan` (new). Prefill via query: `?stay=<accommodation uuid>&mode=package_bus|hiace|stay_only&from=<governorate code>&trip=<uuid>&package=<uuid>` (trip/package repeatable) |
 | Secondary | `/about`, `/partner`, `/policy` (footer + mobile drawer) |
 
-Package semantics: `trip_packages.payment_kind = 'stay_package'` → **Dahab Stay Package**
-(stay-centred, 50/50); `'experience_package'` → **Sinai Experience Package** (100% after
-confirmation). Always label and style them distinctly; never one generic "package".
+Package semantics: `trip_packages` are ONLY **Sinai trip packages** — bundles of real
+Sinai trips/experiences at a better total than booking separately, picked up from the
+guest's Dahab stay, paid 100% after confirmation (`payment_kind: 'experience_package'`).
+`stay_package` is NOT a public package type — it is the Trip Builder's internal payment
+classification for "WEEMAP transport + a stay" (50/50), produced only inside `/plan`.
+Never show it as a public "Dahab Stay Package" product, badge or lane.
 
 ## Visual direction — "Field notes for Sinai"
 Sinai × adventure × local knowledge × freedom × trust × premium curation. Cinematic,
@@ -90,8 +93,8 @@ All in `src/components/brand/` unless noted. Server-safe unless marked client.
 - `npm run check:translations` enforces key parity and flags Arabic == English copies.
 - Arabic copy: natural Egyptian-friendly MSA, warm and direct — write it, don't translate
   word-for-word. Arabic numerals policy: follow existing `src/lib/format.ts`.
-- Arabic terminology (one term per concept): package = باكدج / باكدجات (Dahab Stay Package =
-  باكدج إقامة دهب, Sinai Experience Package = باكدج تجارب سيناء); community = الكوميونيتي;
+- Arabic terminology (one term per concept): package = باكدج / باكدجات (Sinai trip package =
+  باكدج رحلة سيناء, Sinai trip packages = باكدجات رحلات سيناء); community = الكوميونيتي;
   Signature in running Arabic text = سيجنتشر (Latin "WEEMAP Signature" only as a brand mark);
   trip = رحلة, experience = تجربة. Every user-visible number goes through `src/lib/format.ts`.
 - Use logical CSS only (`ms-/me-/ps-/pe-/start-/end-/text-start`), flip directional icons.

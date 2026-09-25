@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { getTripPackages } from '@/lib/trip-packages'
-import { groupPackagesByLane } from '@/lib/explore'
 import { EmptyState } from '@/components/EmptyState'
-import { Eyebrow, PageHero, Section } from '@/components/brand'
-import { PackageLaneSection } from '@/components/explore/PackageLaneSection'
+import { Eyebrow, EditorialCard, PageHero, PaymentTerms, PriceTag, Section, SectionHeading } from '@/components/brand'
+import { TripPackageCard } from '@/components/cards/TripPackageCard'
+import { PickupNote } from '@/components/explore/PickupNote'
 import { Link } from '@/i18n/navigation'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { buildAlternates } from '@/lib/seo'
+import { formatCount } from '@/lib/format'
 
 export const revalidate = 60
 
@@ -16,19 +17,28 @@ type Props = { params: Promise<{ locale: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'explore' })
-  return { title: t('packages'), description: t('packagesLede'), alternates: buildAlternates('/sinai-trips/packages', locale) }
+  return { title: t('packagesTitle'), description: t('packagesLede'), alternates: buildAlternates('/sinai-trips/packages', locale) }
 }
 
 /**
- * `/sinai-trips/packages` — two lanes that are never presented as the same
- * product: Dahab Stay Packages (`payment_kind: 'stay_package'`, 50/50) and
- * Sinai Experience Packages (`'experience_package'`, 100% after
- * confirmation). An empty lane is hidden outright; both empty is the
- * curating empty state, never a bare "no results".
+ * `/sinai-trips/packages` — ONE coherent product: Sinai trip packages (real
+ * Sinai trips bundled together at a better total than booking each apart,
+ * picked up from the guest's stay in Dahab, paid 100% after confirmation —
+ * `PaymentTerms kind="experience_package"`). This page never reads a
+ * package's `payment_kind` to classify it into a lane — `stay_package` is an
+ * internal Trip Builder payment classification, not a public package type
+ * (see docs/m2/BRIEF.md "Package semantics"). Featured packages lead the
+ * catalogue; the rest follow in a grid, never a wall of identical cards.
+ * People who also want a stay are pointed at Build your trip, once, as a
+ * single CTA block — never duplicated as catalogue cards here.
  */
-export default async function PackagesPage() {
-  const [packages, rules, t] = await Promise.all([getTripPackages(), getPaymentRules(), getTranslations('explore')])
-  const lanes = groupPackagesByLane(packages)
+export default async function PackagesPage({ params }: Props) {
+  const { locale } = await params
+  const [packages, rules, t] = await Promise.all([
+    getTripPackages(),
+    getPaymentRules(),
+    getTranslations({ locale, namespace: 'explore' }),
+  ])
 
   if (!packages.length) {
     return (
@@ -47,32 +57,76 @@ export default async function PackagesPage() {
     )
   }
 
+  // Stable sort: featured packages lead, catalogue (sort_order) order is
+  // otherwise untouched — the one piece of "which packages first" logic here,
+  // simple enough not to need its own lib/ helper (unlike the home rail's
+  // selectHomePackages, which several sections would otherwise duplicate).
+  const ordered = [...packages].sort((a, b) => Number(b.featured) - Number(a.featured))
+  const [hero, ...rest] = ordered
+  const heroName = locale === 'ar' ? hero.name_ar : hero.name_en
+  const heroTripCount = hero.trips?.length ?? 0
+
   return (
     <>
       <PageHero
-        image={packages[0]?.image}
+        image={hero.image || hero.trips?.[0]?.image || undefined}
         eyebrow={<Eyebrow tone="light">{t('packagesEyebrow')}</Eyebrow>}
         title={t('packagesTitle')}
         lede={t('packagesLede')}
       />
 
-      <PackageLaneSection
-        lane="stay"
-        packages={lanes.stay}
-        policies={rules.policies}
-        mark={t('stayMark')}
-        title={t('stayPackages')}
-        subtitle={t('stayPackagesLine')}
-      />
+      <Section tone="sand" size="sm">
+        <div className="grid gap-6 md:grid-cols-[1.1fr_1fr]">
+          <div className="max-w-xl">
+            <h2 className="font-display text-2xl font-bold text-sea-900 sm:text-3xl">{t('packagesWhatTitle')}</h2>
+            <p className="mt-3 leading-relaxed text-ink-muted">{t('packagesWhatBody')}</p>
+          </div>
+          <div className="flex flex-col justify-center gap-3 border-t border-sand-300 pt-5 md:border-t-0 md:border-s md:ps-8 md:pt-0">
+            <PickupNote label={t('pickup')} />
+            <PaymentTerms kind="experience_package" policies={rules.policies} />
+          </div>
+        </div>
+      </Section>
 
-      <PackageLaneSection
-        lane="experience"
-        packages={lanes.experience}
-        policies={rules.policies}
-        mark={t('routeMark')}
-        title={t('experiencePackages')}
-        subtitle={t('experiencePackagesLine')}
-      />
+      <Section tone="paper">
+        <SectionHeading eyebrow={<Eyebrow>{t('packagesCatalogueMark')}</Eyebrow>} title={t('packagesCatalogueTitle')} />
+
+        <div className="space-y-6">
+          <EditorialCard
+            href={`/sinai-trips/packages/${hero.slug}`}
+            image={hero.image || hero.trips?.[0]?.image || '/media/heroposter.webp'}
+            title={heroName}
+            kicker={t('packageTripsCount', { count: heroTripCount, n: formatCount(heroTripCount, locale) })}
+            meta={<PriceTag amount={hero.totals?.packageTotal ?? 0} unit="person" tone="light" size="sm" />}
+            size="lg"
+            priority
+          />
+
+          {rest.length > 0 && (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {rest.map((pkg) => (
+                <TripPackageCard key={pkg.id} pkg={pkg} />
+              ))}
+            </div>
+          )}
+        </div>
+      </Section>
+
+      <Section tone="night">
+        <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-xl">
+            <Eyebrow tone="light">{t('buildTripEyebrow')}</Eyebrow>
+            <h2 className="mt-3 font-display text-2xl font-bold text-white sm:text-3xl">{t('buildTripTitle')}</h2>
+            <p className="mt-2 text-sand-100">{t('buildTripBody')}</p>
+          </div>
+          <Link
+            href="/plan"
+            className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-sun-500 px-6 font-semibold text-on-accent transition-colors hover:bg-sun-600"
+          >
+            {t('buildTrip')}
+          </Link>
+        </div>
+      </Section>
     </>
   )
 }

@@ -13,7 +13,6 @@ import { fromPricePerPersonPerNight } from './stays'
 
 import type { Accommodation, Experience, ExperienceDate, SinaiTrip, TripPackage } from './types'
 import { effectiveTripPrice } from './pricing'
-import { paymentKindFor, type PaymentKind } from './payment-rules'
 import { deriveTripCategoryChips, tripMatchesCategoryChip, type TripCategoryChip } from './trip-categories'
 
 // ─── Curated / happening now ───
@@ -117,28 +116,19 @@ export function isFallbackCurated(picks: readonly CuratedPick[]): boolean {
   return picks.every((pick) => pick.reason === 'curated')
 }
 
-// ─── Packages — two distinct lanes ───
+// ─── Packages — one product, Sinai trip packages ───
+//
+// A `trip_package` is never a public "stay" vs "experience" split — that was
+// an internal payment classification leaking into the catalogue (see
+// docs/m2/BRIEF.md "Package semantics"). The home page shows every published
+// package as one rail, owner-featured picks first.
 
-export interface PackageLanes {
-  /** payment_kind 'stay_package' — stay-centred, 50/50. */
-  stayPackages: TripPackage[]
-  /** payment_kind 'experience_package' (or unset) — 100% after confirmation. */
-  experiencePackages: TripPackage[]
-}
-
-/** Resolves a package's payment kind through the same canonical resolver every other surface uses. */
-export function packageLaneKind(pkg: Pick<TripPackage, 'id' | 'payment_kind'>): PaymentKind {
-  return paymentKindFor({ payment_kind: pkg.payment_kind, trip_package_id: pkg.id })
-}
-
-export function splitPackageLanes(packages: readonly TripPackage[]): PackageLanes {
-  const stayPackages: TripPackage[] = []
-  const experiencePackages: TripPackage[] = []
-  for (const pkg of packages) {
-    if (packageLaneKind(pkg) === 'stay_package') stayPackages.push(pkg)
-    else experiencePackages.push(pkg)
-  }
-  return { stayPackages, experiencePackages }
+/** Featured packages first (Site Settings dashboard override), then catalogue (`sort_order`) order. */
+export function selectHomePackages(packages: readonly TripPackage[]): TripPackage[] {
+  return [...packages].sort((a, b) => {
+    if (a.featured !== b.featured) return a.featured ? -1 : 1
+    return a.sort_order - b.sort_order
+  })
 }
 
 // ─── Explore Sinai — category tiles ───

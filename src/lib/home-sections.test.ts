@@ -2,14 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   isFallbackCurated,
-  packageLaneKind,
   selectCategoryTiles,
   selectCuratedPicks,
+  selectHomePackages,
   selectShopRentVisibility,
   selectSignatureImage,
   selectStaysLineup,
   selectUpcomingExperienceDates,
-  splitPackageLanes,
   stayFromPricePerPersonPerNight,
 } from './home-sections'
 import type { Accommodation, Experience, ExperienceDate, SinaiTrip, TripPackage } from './types'
@@ -198,23 +197,21 @@ test('selectCuratedPicks never duplicates a trip that is both featured and disco
   assert.equal(picks.filter((p) => p.kind === 'trip' && p.id === 't-both').length, 1)
 })
 
-// ─── packages lanes ───
+// ─── home packages ───
 
-test('packageLaneKind resolves stay_package explicitly and defaults everything else to experience_package', () => {
-  assert.equal(packageLaneKind({ id: 'p1', payment_kind: 'stay_package' }), 'stay_package')
-  assert.equal(packageLaneKind({ id: 'p2', payment_kind: 'experience_package' }), 'experience_package')
-  assert.equal(packageLaneKind({ id: 'p3', payment_kind: undefined }), 'experience_package')
+test('selectHomePackages puts featured packages first, then sort_order, without dropping any', () => {
+  const a = pkg({ id: 'a', featured: false, sort_order: 2 })
+  const b = pkg({ id: 'b', featured: true, sort_order: 5 })
+  const c = pkg({ id: 'c', featured: false, sort_order: 0 })
+  const d = pkg({ id: 'd', featured: true, sort_order: 1 })
+
+  const result = selectHomePackages([a, b, c, d])
+
+  assert.deepEqual(result.map((p) => p.id), ['d', 'b', 'c', 'a'])
 })
 
-test('splitPackageLanes separates stay packages from experience packages', () => {
-  const stay = pkg({ id: 'stay', payment_kind: 'stay_package' })
-  const experienceExplicit = pkg({ id: 'exp', payment_kind: 'experience_package' })
-  const experienceImplicit = pkg({ id: 'exp-implicit', payment_kind: undefined })
-
-  const lanes = splitPackageLanes([stay, experienceExplicit, experienceImplicit])
-
-  assert.deepEqual(lanes.stayPackages.map((p) => p.id), ['stay'])
-  assert.deepEqual(lanes.experiencePackages.map((p) => p.id), ['exp', 'exp-implicit'])
+test('selectHomePackages returns an empty array for an empty catalogue', () => {
+  assert.deepEqual(selectHomePackages([]), [])
 })
 
 // ─── category tiles ───

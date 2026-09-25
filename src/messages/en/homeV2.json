@@ -99,16 +99,8 @@
   },
   "packages": {
     "eyebrow": "Packages",
-    "title": "Two kinds of package, never one generic bundle",
-    "subtitle": "A Dahab Stay Package and a Sinai Experience Package are paid on different terms, so we always show them as two separate lanes — never one generic bundle.",
-    "stayLane": {
-      "title": "Dahab Stay Packages",
-      "body": "A bundle of Sinai trips built around your stay in Dahab."
-    },
-    "experienceLane": {
-      "title": "Sinai Experience Packages",
-      "body": "Several Sinai experiences bundled together at a better total than booking each apart — paid after confirmation."
-    },
+    "title": "Sinai trip packages",
+    "subtitle": "Real Sinai trips and experiences, bundled together at a better total than booking each apart — paid after confirmation.",
     "cta": "All packages"
   },
   "signature": {
