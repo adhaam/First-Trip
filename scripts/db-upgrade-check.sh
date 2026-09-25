@@ -64,8 +64,8 @@ if [ "$PROFILE" = production ]; then
   echo "Reshaping into the measured production schema"
   apply "$UP/production_shape.sql"
   printf '  %-60s' "catalog fingerprint = production_inventory.txt"
-  docker exec -i "$NAME" psql -U postgres -X -A -t < "$UP/inventory_hash.sql" | sed '/^$/d' | sort > /tmp/weemap_shape.txt
-  grep -v '^#' "$UP/production_inventory.txt" | sed '/^$/d' | sort > /tmp/weemap_prod.txt
+  docker exec -i "$NAME" psql -U postgres -X -A -t < "$UP/inventory_hash.sql" | tr -d '\r' | sed '/^$/d' | sort > /tmp/weemap_shape.txt
+  tr -d '\r' < "$UP/production_inventory.txt" | grep -v '^#' | sed '/^$/d' | sort > /tmp/weemap_prod.txt
   if diff -q /tmp/weemap_prod.txt /tmp/weemap_shape.txt >/dev/null; then
     echo "ok ($(wc -l < /tmp/weemap_prod.txt) objects)"
   else
