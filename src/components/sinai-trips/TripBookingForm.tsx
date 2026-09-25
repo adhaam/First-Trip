@@ -24,6 +24,9 @@ interface FormState {
 
 export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber }: TripBookingFormProps) {
   const t = useTranslations('tripDetail')
+  // Two new strings only — everything else in this form already lives in the
+  // legacy `tripDetail` namespace, which this surface may read but not edit.
+  const tx = useTranslations('explore')
   const locale = useLocale()
   const ar = locale === 'ar'
 
@@ -98,11 +101,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
 
   const whatsappClean = whatsappNumber.replace(/[^0-9]/g, '')
   const tripName = ar ? tripNameAr : tripNameEn
-  const waText = encodeURIComponent(
-    ar
-      ? `أريد الاستفسار عن رحلة: ${tripName}`
-      : `I'd like to ask about the trip: ${tripName}`,
-  )
+  const waText = encodeURIComponent(tx('bookWaText', { name: tripName }))
 
   if (submitted) {
     return (
@@ -142,7 +141,7 @@ export function TripBookingForm({ tripId, tripNameAr, tripNameEn, whatsappNumber
           value={form.customer_name}
           onChange={(e) => setForm((p) => ({ ...p, customer_name: e.target.value }))}
           className="min-h-11 w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-sm text-sea-900 placeholder:text-ink-subtle focus-visible:border-sea-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun-700"
-          placeholder={ar ? 'اسمك الكامل' : 'Your full name'}
+          placeholder={tx('bookNamePlaceholder')}
         />
         {errors.customer_name && <p className="mt-1 text-[11px] text-red-600">{errors.customer_name}</p>}
       </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useLocale } from 'next-intl'
+import { formatCount } from '@/lib/format'
 import type { ReactNode } from 'react'
 import { Link } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
@@ -27,6 +29,7 @@ export function Chip({
   children: ReactNode
   className?: string
 }) {
+  const locale = useLocale()
   const classes = cn(
     'rail-snap-item inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] px-4 text-sm font-semibold transition-colors',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500',
@@ -51,7 +54,7 @@ export function Chip({
             selected ? 'bg-white/20' : 'bg-sand-200 text-ink-subtle',
           )}
         >
-          {count}
+          {formatCount(count, locale)}
         </span>
       )}
     </>

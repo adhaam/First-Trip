@@ -90,6 +90,10 @@ All in `src/components/brand/` unless noted. Server-safe unless marked client.
 - `npm run check:translations` enforces key parity and flags Arabic == English copies.
 - Arabic copy: natural Egyptian-friendly MSA, warm and direct — write it, don't translate
   word-for-word. Arabic numerals policy: follow existing `src/lib/format.ts`.
+- Arabic terminology (one term per concept): package = باكدج / باكدجات (Dahab Stay Package =
+  باكدج إقامة دهب, Sinai Experience Package = باكدج تجارب سيناء); community = الكوميونيتي;
+  Signature in running Arabic text = سيجنتشر (Latin "WEEMAP Signature" only as a brand mark);
+  trip = رحلة, experience = تجربة. Every user-visible number goes through `src/lib/format.ts`.
 - Use logical CSS only (`ms-/me-/ps-/pe-/start-/end-/text-start`), flip directional icons.
 
 ## Trip Builder contract (`/plan`)

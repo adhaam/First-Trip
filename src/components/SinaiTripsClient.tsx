@@ -1,162 +1,69 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { Reveal } from '@/components/motion/Reveal'
-import { TripCard } from '@/components/cards/TripCard'
-import { TripPackageRail } from '@/components/TripPackageRail'
-import { TripPackageCard } from '@/components/cards/TripPackageCard'
-import { Filter, Mountain } from 'lucide-react'
+import { Compass } from 'lucide-react'
+import { useRouter } from '@/i18n/navigation'
 import { EmptyState, ResultCount } from '@/components/EmptyState'
-import { deriveTripCategoryChips, tripMatchesCategoryChip } from '@/lib/trip-categories'
-import { cn } from '@/lib/utils'
-import type { SinaiTrip, TripPackage } from '@/lib/types'
+import { TripCategoryNav } from '@/components/explore/TripCategoryNav'
+import { TripCategoryRail } from '@/components/explore/TripCategoryRail'
+import { TripGrid } from '@/components/explore/TripGrid'
+import { deriveTripCategoryChips } from '@/lib/trip-categories'
+import { tripsForCategory } from '@/lib/explore'
+import { formatCount } from '@/lib/format'
+import type { SinaiTrip } from '@/lib/types'
 
-type ContentFilter = 'all' | 'trips' | 'packages'
-
-// Individual trips stay the main content — this many render before the
-// premium Trip Packages rail is inserted, with the rest continuing after.
-const TRIPS_BEFORE_RAIL = 5
-
+/**
+ * The exploration experience behind `/sinai-trips`: category chips drive a
+ * `?category=` URL param (deep-linkable, no full reload) that either shows
+ * every category as its own featured-trip-plus-rail section, or — once one
+ * category is chosen — a focused grid of just that category's trips.
+ */
 export function SinaiTripsClient({
   trips,
-  packages = [],
+  initialCategory = 'all',
 }: {
   trips: SinaiTrip[]
-  packages?: TripPackage[]
+  initialCategory?: string
 }) {
-  const t = useTranslations('sinai')
-  const states = useTranslations('states')
+  const t = useTranslations('explore')
   const locale = useLocale()
-  const ar = locale === 'ar'
-  const [filter, setFilter] = useState<string>('all')
-  const [contentFilter, setContentFilter] = useState<ContentFilter>('all')
+  const router = useRouter()
 
-  const categories = [
-    { id: 'all', label_ar: 'كل الرحلات', label_en: 'All Trips' },
-    ...deriveTripCategoryChips(trips).map((category) => ({
-      id: category.id,
-      label_ar: category.name_ar,
-      label_en: category.name_en,
-    })),
-  ]
+  const categories = useMemo(() => deriveTripCategoryChips(trips), [trips])
+  const filtered = useMemo(() => tripsForCategory(trips, initialCategory), [trips, initialCategory])
 
-  const filtered =
-    filter === 'all' ? trips : trips.filter((trip) => tripMatchesCategoryChip(trip, filter))
-
-  if (trips.length === 0 && packages.length === 0) {
-    return (
-      <EmptyState
-        icon={<Mountain className="h-8 w-8" />}
-        title={states('noTrips')}
-        className="my-8"
-      />
-    )
+  const selectCategory = (categoryId: string) => {
+    const href = categoryId === 'all' ? '/sinai-trips' : `/sinai-trips?category=${encodeURIComponent(categoryId)}`
+    router.replace(href, { scroll: false })
   }
 
-  const showTrips = contentFilter !== 'packages'
-  const showPackages = contentFilter !== 'trips' && packages.length > 0
-  const firstBatch = showTrips ? filtered.slice(0, TRIPS_BEFORE_RAIL) : []
-  const restBatch = showTrips ? filtered.slice(TRIPS_BEFORE_RAIL) : []
+  if (!trips.length) {
+    return <EmptyState variant="curating" icon={<Compass />} title={t('noTrips')} hint={t('noTripsHint')} />
+  }
 
   return (
-    <>
-      {packages.length > 0 && (
-        <div className="no-scrollbar mb-4 flex items-center gap-2 overflow-x-auto pb-2">
-          {([
-            ['all', ar ? 'الكل' : 'All'],
-            ['trips', ar ? 'الرحلات' : 'Trips'],
-            ['packages', ar ? 'الباكدجات' : 'Packages'],
-          ] as const).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setContentFilter(id)}
-              aria-pressed={contentFilter === id}
-              className={cn(
-                'min-h-9 shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors',
-                contentFilter === id
-                  ? 'bg-sea-900 text-white'
-                  : 'border border-sand-300 bg-white text-ink-muted hover:text-sea-900',
-              )}
-            >
-              {label}
-            </button>
-          ))}
+    <div>
+      <TripCategoryNav categories={categories} selected={initialCategory} onSelect={selectCategory} />
+
+      <ResultCount
+        count={filtered.length}
+        label={t('results', { count: filtered.length, n: formatCount(filtered.length, locale) })}
+        className="my-5"
+      />
+
+      {!filtered.length ? (
+        <EmptyState title={t('noResults')} onClear={() => selectCategory('all')} />
+      ) : initialCategory === 'all' ? (
+        <div className="space-y-12">
+          {categories.map((category) => {
+            const entries = tripsForCategory(trips, category.id)
+            return entries.length ? <TripCategoryRail key={category.id} category={category} trips={entries} /> : null
+          })}
         </div>
+      ) : (
+        <TripGrid trips={filtered} />
       )}
-
-      {showTrips && (
-        <div className="no-scrollbar mb-8 flex items-center gap-2 overflow-x-auto pb-2">
-          <Filter className="h-4 w-4 shrink-0 text-ink-subtle" />
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setFilter(cat.id)}
-              aria-pressed={filter === cat.id}
-              className={cn(
-                'min-h-11 shrink-0 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                filter === cat.id
-                  ? 'bg-sun-500 text-on-accent'
-                  : 'border border-sand-300 bg-white text-ink-muted hover:text-sea-900',
-              )}
-            >
-              {ar ? cat.label_ar : cat.label_en}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {showTrips && filtered.length === 0 && !showPackages && (
-        <EmptyState
-          icon={<Mountain className="h-8 w-8" />}
-          title={states('noTripMatches')}
-          onClear={filter !== 'all' || contentFilter !== 'all'
-            ? () => { setFilter('all'); setContentFilter('all') }
-            : undefined}
-        />
-      )}
-
-      {showTrips && (
-        <ResultCount
-          count={filtered.length}
-          label={`${filtered.length} ${ar ? 'رحلة' : filtered.length === 1 ? 'trip' : 'trips'}`}
-          className="mb-5"
-        />
-      )}
-
-      {showTrips && firstBatch.length > 0 && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {firstBatch.map((trip, i) => (
-            <Reveal key={trip.id} delay={(i % 9) * 60} className={cn('h-full', i === 0 && 'sm:col-span-2 lg:col-span-2')}>
-              <TripCard trip={trip} includesLabel={t('includes')} featured={i === 0} />
-            </Reveal>
-          ))}
-        </div>
-      )}
-
-      {showPackages && contentFilter === 'all' && <TripPackageRail packages={packages} />}
-
-      {showPackages && contentFilter === 'packages' && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {packages.map((pkg, i) => (
-            <Reveal key={pkg.id} delay={(i % 9) * 60} className="h-full">
-              <TripPackageCard pkg={pkg} />
-            </Reveal>
-          ))}
-        </div>
-      )}
-
-      {showTrips && restBatch.length > 0 && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {restBatch.map((trip, i) => (
-            <Reveal key={trip.id} delay={(i % 9) * 60} className="h-full">
-              <TripCard trip={trip} includesLabel={t('includes')} />
-            </Reveal>
-          ))}
-        </div>
-      )}
-    </>
+    </div>
   )
 }

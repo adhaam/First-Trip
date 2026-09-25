@@ -1,56 +1,46 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import Image from 'next/image'
 import { getSinaiTrips } from '@/lib/data'
-import { getTripPackages } from '@/lib/trip-packages'
+import { categoryFromSearchParam } from '@/lib/explore'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
-import { WaveDivider } from '@/components/brand/Section'
+import { Eyebrow, PageHero, Section } from '@/components/brand'
 import { buildAlternates } from '@/lib/seo'
 
-export const revalidate = 60 // re-fetch from Supabase at most once a minute
+export const revalidate = 60
 
-export async function generateMetadata({ params }: {
+type Props = {
   params: Promise<{ locale: string }>
-}): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'sinai' })
-  return {
-    title: t('title'),
-    description: t('subtitle'),
-    alternates: buildAlternates('/sinai-trips', locale),
-  }
+  searchParams: Promise<{ category?: string | string[] }>
 }
 
-export default async function SinaiTripsPage() {
-  const t = await getTranslations('sinai')
-  const [trips, packages] = await Promise.all([getSinaiTrips(), getTripPackages()])
-  const heroImage = trips[0]?.images?.[0] || '/media/heroposter.webp'
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'explore' })
+  return { title: t('trips'), description: t('tripsLede'), alternates: buildAlternates('/sinai-trips', locale) }
+}
+
+/**
+ * `/sinai-trips` — category-led exploration, not a database listing. The
+ * category taxonomy and matching always come from `src/lib/trip-categories.ts`
+ * (never recreated as frontend constants); `?category=` is resolved to a
+ * canonical id in `src/lib/explore.ts` so a deep link from Home or Community
+ * works whether it carries a category id or its friendlier slug.
+ */
+export default async function SinaiTripsPage({ searchParams }: Props) {
+  const [trips, search, t] = await Promise.all([getSinaiTrips(), searchParams, getTranslations('explore')])
+  const category = categoryFromSearchParam(search.category, trips)
 
   return (
-    <div className="bg-sand-50">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-sea-900 py-20 text-center text-white md:py-28 grain">
-        <div className="absolute inset-0 opacity-25">
-          <Image src={heroImage} alt="" fill sizes="100vw" className="object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-sea-900/60 to-sea-900" />
-        </div>
-        <div className="container-main relative z-10">
-          <span className="eyebrow mb-5 justify-center text-sun-300">
-            <span aria-hidden className="h-px w-6 bg-current" />
-            {t('title')}
-          </span>
-          <h1 className="font-display text-4xl font-bold sm:text-5xl">{t('title')}</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-sand-100/80">{t('subtitle')}</p>
-        </div>
-        <WaveDivider className="absolute inset-x-0 bottom-0 text-sand-50" />
-      </section>
-
-      {/* Filter + Grid */}
-      <section className="section-padding bg-sand-50">
-        <div className="container-main">
-          <SinaiTripsClient trips={trips} packages={packages} />
-        </div>
-      </section>
-    </div>
+    <>
+      <PageHero
+        image={trips[0]?.images?.[0]}
+        eyebrow={<Eyebrow tone="light">{t('tripsEyebrow')}</Eyebrow>}
+        title={t('tripsTitle')}
+        lede={t('tripsLede')}
+      />
+      <Section tone="paper">
+        <SinaiTripsClient trips={trips} initialCategory={category} />
+      </Section>
+    </>
   )
 }
