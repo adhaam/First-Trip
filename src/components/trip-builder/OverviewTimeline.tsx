@@ -49,7 +49,7 @@ export function OverviewTimeline({ state, catalog, locale }: { state: BuilderSta
   }
 
   if (departureDate) {
-    steps.push({ icon: <CalendarCheck className="h-4 w-4" />, label: t('return', { date: formatDate(departureDate, locale) }) })
+    steps.push({ icon: <CalendarCheck className="h-4 w-4" />, label: t(isStayOnly ? 'checkOut' : 'return', { date: formatDate(departureDate, locale) }) })
   }
 
   const confirmations = [

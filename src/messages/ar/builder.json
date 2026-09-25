@@ -147,5 +147,6 @@
   "summaryRoomsMeal": "{rooms, plural, one {غرفة واحدة} two {غرفتين} few {{n} غرف} other {{n} غرفة}} · {meal}",
   "summaryExperiences": "{count, plural, one {تجربة واحدة مضافة} two {تجربتين مضافتين} few {{n} تجارب مضافة} other {{n} تجربة مضافة}}",
   "addItem": "أضف {name}",
-  "removeItem": "شيل {name} من رحلتك"
+  "removeItem": "شيل {name} من رحلتك",
+  "checkOut": "مغادرة · {date}"
 }
