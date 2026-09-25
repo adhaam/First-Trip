@@ -1,13 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Link } from '@/i18n/navigation'
-import { ArrowUpRight } from 'lucide-react'
 import { Reveal } from '@/components/motion/Reveal'
+import { Chip, ChipRail } from '@/components/brand/Chip'
 import { SignatureExperienceCard } from '@/components/cards/SignatureExperienceCard'
-import { cn } from '@/lib/utils'
+import { EmptyState } from '@/components/EmptyState'
 import type { Experience, ExperienceCategory } from '@/lib/types'
+
+/** Seeded as a real experience_categories row (migration 018) purely so the
+ * admin can order/label it, but it is a CTA, not a filterable taxonomy
+ * entry — the dedicated invitation panel below the grid covers it with its
+ * own copy, so it is excluded from the chip row rather than doubled up. */
+const BUILD_CATEGORY_SLUG = 'build-your-signature'
 
 export function SignatureClient({
   categories,
@@ -16,70 +21,51 @@ export function SignatureClient({
   categories: ExperienceCategory[]
   experiences: Experience[]
 }) {
-  const t = useTranslations('signature')
-  const states = useTranslations('states')
+  const t = useTranslations('signatureV2')
   const locale = useLocale()
   const ar = locale === 'ar'
   const [filter, setFilter] = useState<string>('all')
 
+  const filterableCategories = useMemo(
+    () => categories.filter((cat) => cat.slug !== BUILD_CATEGORY_SLUG),
+    [categories],
+  )
   const filtered = filter === 'all' ? experiences : experiences.filter((e) => e.category === filter)
 
+  if (experiences.length === 0) {
+    return <EmptyState variant="curating" title={t('noExperiences')} />
+  }
+
   return (
-    <>
-      {/* Category showcase — the "Build Your Signature" tile links out instead of filtering */}
-      {categories.length > 0 && (
-        <div className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((cat) => {
-            const isBuild = cat.slug === 'build-your-signature'
-            const label = ar ? cat.label_ar : cat.label_en
-            const desc = ar ? cat.description_ar : cat.description_en
-            const content = (
-              <div
-                className={cn(
-                  'flex h-full flex-col justify-between rounded-2xl border-[1.5px] p-6 transition-colors',
-                  isBuild
-                    ? 'border-weemap-orange bg-weemap-charcoal text-white hover:bg-weemap-charcoal/90'
-                    : filter === cat.slug
-                      ? 'border-weemap-orange bg-sun-50'
-                      : 'border-sand-300 bg-white hover:border-weemap-orange/60',
-                )}
-              >
-                <div>
-                  <h3 className={cn('font-display text-lg font-bold', isBuild ? 'text-weemap-orange' : 'text-sea-900')}>{label}</h3>
-                  {desc && <p className={cn('mt-2 text-sm leading-relaxed', isBuild ? 'text-white/75' : 'text-ink-muted')}>{desc}</p>}
-                </div>
-                {isBuild && (
-                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-weemap-orange">
-                    {t('buildCta')}
-                    <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
-                  </span>
-                )}
-              </div>
-            )
-            return isBuild ? (
-              <Link key={cat.slug} href="/signature/build" className="h-full">{content}</Link>
-            ) : (
-              <button key={cat.slug} type="button" onClick={() => setFilter(filter === cat.slug ? 'all' : cat.slug)} className="h-full text-start">
-                {content}
-              </button>
-            )
-          })}
-        </div>
+    <div id="experiences">
+      {filterableCategories.length > 0 && (
+        <ChipRail className="mb-8">
+          <Chip selected={filter === 'all'} onClick={() => setFilter('all')}>
+            {t('categoryAll')}
+          </Chip>
+          {filterableCategories.map((cat) => (
+            <Chip key={cat.slug} selected={filter === cat.slug} onClick={() => setFilter(cat.slug)}>
+              {ar ? cat.label_ar : cat.label_en}
+            </Chip>
+          ))}
+        </ChipRail>
       )}
 
-      {experiences.length === 0 ? (
-        <div className="py-16 text-center text-ink-subtle">{t('noExperiences')}</div>
-      ) : filtered.length === 0 ? (
-        <div className="py-16 text-center text-ink-subtle">{states('noTripMatches')}</div>
+      {filtered.length === 0 ? (
+        <EmptyState variant="no-results" title={t('noExperienceMatches')} onClear={() => setFilter('all')} />
       ) : (
-        <div id="experiences" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((exp, i) => (
-            <Reveal key={exp.id} delay={(i % 9) * 60}>
-              <SignatureExperienceCard experience={exp} />
+            <Reveal
+              key={exp.id}
+              delay={(i % 9) * 60}
+              className={i === 0 ? 'sm:col-span-2' : undefined}
+            >
+              <SignatureExperienceCard experience={exp} size={i === 0 ? 'lg' : 'md'} priority={i === 0} />
             </Reveal>
           ))}
         </div>
       )}
-    </>
+    </div>
   )
 }

@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "title": "Stays in Dahab",
+    "description": "Hotels, chalets and camps in Dahab — book a stay on its own, or turn it into a full trip with WEEMAP transport."
+  },
+  "hero": {
+    "eyebrow": "Where you land",
+    "title": "A place in Dahab that actually feels like Dahab.",
+    "lede": "Camps on the sea, quiet chalets, proper hotels — curated, not crawled. Book the stay alone, or build a whole trip around it."
+  },
+  "intro": {
+    "body": "Every stay below can be booked on its own. Want transfers and Sinai trips wrapped around it? Build your trip and we will price the whole thing before you commit to anything.",
+    "cta": "Build your trip"
+  },
+  "list": {
+    "title": "All stays",
+    "resultCount": "{count, plural, =0 {No stays match} one {# place} other {# places}}",
+    "filterAll": "All",
+    "filterHotel": "Hotels",
+    "filterChalet": "Chalets",
+    "filterCamp": "Camps",
+    "sortLabel": "Sort",
+    "sortDefault": "Curated order",
+    "sortPriceAsc": "Price, low to high",
+    "sortPriceDesc": "Price, high to low",
+    "filterSheetTitle": "Sort stays",
+    "curatingTitle": "We are still curating this list.",
+    "curatingHint": "New stays land here as soon as the team has walked through them. Tell us what you're after and we'll point you somewhere good in the meantime.",
+    "curatingAction": "Message us on WhatsApp",
+    "noResultsTitle": "Nothing matches that filter.",
+    "noResultsHint": "Try a different type, or clear the filter to see every stay.",
+    "finalCtaTitle": "Not sure which one is right?",
+    "finalCtaBody": "Tell us your dates and how many of you there are — we'll point you at the stay that actually fits.",
+    "finalCtaAction": "Message us on WhatsApp"
+  },
+  "card": {
+    "viewStay": "View stay"
+  },
+  "gallery": {
+    "label": "Photo gallery",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "expand": "View full screen",
+    "close": "Close gallery",
+    "counter": "{current} of {total}"
+  },
+  "detail": {
+    "back": "Back to stays",
+    "ratingLabel": "Rated {rating} of 5",
+    "fromPrice": "From",
+    "fromContext": "per person, per night — the lowest room rate currently configured",
+    "seasonalNote": "Rates can vary in busier seasons; the exact rate for your dates is confirmed before you pay anything.",
+    "noSeasonalNote": "Choose your dates in the trip builder to see the exact total.",
+    "buildStayCta": "Build your stay",
+    "buildStayHint": "Add transfers, dates and Sinai trips around this stay.",
+    "whatsappCta": "Ask a question",
+    "aboutTitle": "Why stay here",
+    "roomsTitle": "Rooms & rates",
+    "roomsHint": "Per room, per night. Seasonal periods can move these — confirmed with you before payment.",
+    "roomSingle": "Single room",
+    "roomDouble": "Double room",
+    "roomTriple": "Triple room",
+    "perPersonPerNight": "{amount} per person, per night",
+    "upgradesTitle": "Room upgrades",
+    "upgradeSupplement": "+{amount} per room, per night",
+    "mealPlansTitle": "Meal options",
+    "mealPlanIncluded": "Included",
+    "mealPlanSupplement": "+{amount} per person, per night",
+    "amenitiesTitle": "Amenities",
+    "amenityGroupWater": "Sea & pool",
+    "amenityGroupComfort": "Comfort",
+    "amenityGroupFood": "Food & drink",
+    "amenityGroupOutdoor": "Outdoor",
+    "amenityGroupOther": "Also here",
+    "locationTitle": "Location",
+    "paymentTitle": "How payment works",
+    "paymentStayNote": "Booking this stay on its own.",
+    "paymentPackageNote": "Add WEEMAP transport in the trip builder and this becomes a Dahab Stay Package — same payment source, priced like this:",
+    "tripsTitle": "Popular trips from Dahab",
+    "tripsHint": "The Sinai trips guests from this stay ask about most — add any of them in the trip builder.",
+    "guidesTitle": "Local guides",
+    "guidesHint": "Field notes from the WEEMAP community, not a generic \"related posts\" list.",
+    "guidesCta": "Read more from the community",
+    "relatedTitle": "More stays like this"
+  }
+}

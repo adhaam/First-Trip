@@ -2,11 +2,18 @@ import type { Metadata } from 'next'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { ArrowLeft, Check, Clock, Layers3, X } from 'lucide-react'
+import { Check, Clock, Layers3, X } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { getExperienceBySlug } from '@/lib/experiences'
+import { getPaymentRules } from '@/lib/payment-rules-load'
 import { discountedExperiencePrice } from '@/lib/experience-pricing'
 import { SignatureRequestForm } from '@/components/SignatureRequestForm'
+import { SignatureGallery } from '@/components/signature/SignatureGallery'
+import { SignatureItinerary } from '@/components/signature/SignatureItinerary'
+import { Eyebrow } from '@/components/brand/Eyebrow'
+import { PriceTag } from '@/components/brand/PriceTag'
+import { PaymentTerms } from '@/components/brand/PaymentTerms'
+import { ArrowBack } from '@/components/brand/DirectionalIcon'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 
 export const revalidate = 60
@@ -43,8 +50,8 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
   const experience = await getExperienceBySlug(slug)
   if (!experience) notFound()
 
-  const t = await getTranslations({ locale, namespace: 'signature' })
-  const common = await getTranslations({ locale, namespace: 'common' })
+  const t = await getTranslations({ locale, namespace: 'signatureV2' })
+  const { policies } = await getPaymentRules()
 
   const ar = locale === 'ar'
   const name = ar ? experience.title_ar : experience.title_en
@@ -76,16 +83,17 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }}
       />
 
-      <header className="relative isolate min-h-[56svh] overflow-hidden bg-weemap-charcoal text-white">
-        <Image src={cover} alt={name} fill priority sizes="100vw" className="-z-20 object-cover" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/90 via-black/45 to-black/15" />
+      <header className="relative isolate min-h-[56svh] overflow-hidden bg-sea-900 text-white">
+        <Image src={cover} alt="" fill priority sizes="100vw" className="-z-20 object-cover" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-sea-900/92 via-sea-900/45 to-sea-900/15" />
+        <div aria-hidden className="topo-bg absolute inset-0 -z-10 opacity-30 mix-blend-overlay" />
         <div className="container-main flex min-h-[56svh] flex-col justify-end pb-12 pt-28 md:pb-16">
           <Link href="/signature" className="mb-8 inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-white/80 hover:text-white">
-            <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
+            <ArrowBack className="h-4 w-4" />
             {t('backToSignature')}
           </Link>
           {(experience.badge_ar || experience.badge_en) && (
-            <p className="eyebrow text-weemap-orange">{ar ? experience.badge_ar : experience.badge_en}</p>
+            <Eyebrow tone="light">{ar ? experience.badge_ar : experience.badge_en}</Eyebrow>
           )}
           <h1 className="mt-4 max-w-4xl font-display text-4xl font-extrabold leading-tight sm:text-5xl">{name}</h1>
           {shortDescription && <p className="mt-5 max-w-2xl text-lg leading-8 text-white/78">{shortDescription}</p>}
@@ -98,13 +106,8 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
             <div className="space-y-12">
               {gallery.length > 1 && (
                 <section aria-labelledby="exp-gallery-heading">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {gallery.slice(1, 7).map((image, index) => (
-                      <div key={`${image}-${index}`} className="relative aspect-[4/3] overflow-hidden bg-sand-200 pin-card">
-                        <Image src={image} alt={`${name} ${index + 2}`} fill sizes="(max-width: 640px) 50vw, 30vw" className="object-cover" />
-                      </div>
-                    ))}
-                  </div>
+                  <h2 id="exp-gallery-heading" className="sr-only">{t('gallery')}</h2>
+                  <SignatureGallery images={gallery.slice(1, 7)} title={name} />
                 </section>
               )}
 
@@ -118,16 +121,9 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
               {itinerary.length > 0 && (
                 <section aria-labelledby="exp-itinerary-heading">
                   <h2 id="exp-itinerary-heading" className="font-display text-2xl font-bold text-sea-900">{t('itinerary')}</h2>
-                  <ol className="mt-5 space-y-4">
-                    {itinerary.map((step, i) => (
-                      <li key={i} className="border-s-2 border-weemap-orange ps-4">
-                        <p className="font-semibold text-sea-900">{ar ? step.title_ar : step.title_en}</p>
-                        {(ar ? step.description_ar : step.description_en) && (
-                          <p className="mt-1 text-sm leading-6 text-ink-muted">{ar ? step.description_ar : step.description_en}</p>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
+                  <div className="mt-5">
+                    <SignatureItinerary steps={itinerary} />
+                  </div>
                 </section>
               )}
 
@@ -177,9 +173,7 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
 
               {experience.partners && experience.partners.length > 0 && (
                 <section aria-labelledby="exp-partners-heading">
-                  <h2 id="exp-partners-heading" className="font-display text-xl font-bold text-sea-900">
-                    {ar ? 'بالتعاون مع' : 'In partnership with'}
-                  </h2>
+                  <h2 id="exp-partners-heading" className="font-display text-xl font-bold text-sea-900">{t('partnersTitle')}</h2>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     {experience.partners.map((partner) => (
                       <div key={partner.id} className="rounded-xl border border-sand-300 bg-white p-4">
@@ -212,12 +206,16 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
                 </dl>
               )}
               {price > 0 && (
-                <p className="mt-4 font-display text-2xl font-extrabold text-sea-900">
-                  {experience.starting_from_price && <span className="me-1.5 text-sm font-semibold text-ink-muted">{t('startingFrom')}</span>}
-                  {price.toLocaleString(ar ? 'ar-EG' : 'en-US')} <span className="text-base font-semibold text-ink-muted">{common('egp')}</span>
-                </p>
+                <div className="mt-4">
+                  <PriceTag amount={price} from={experience.starting_from_price} size="lg" />
+                </div>
               )}
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">{t('paymentTitle')}</p>
+                <PaymentTerms kind="signature" policies={policies} compact className="mt-1.5" />
+              </div>
               <div className="mt-6 border-t border-sand-200 pt-6">
+                <p className="mb-4 font-display text-lg font-bold text-sea-900">{t('requestPanelTitle')}</p>
                 <SignatureRequestForm experienceId={experience.id} />
               </div>
             </aside>

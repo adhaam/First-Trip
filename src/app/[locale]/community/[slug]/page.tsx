@@ -2,11 +2,17 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { Link } from '@/i18n/navigation'
-import { getCommunityPostBySlug, getRelatedCommunityPosts } from '@/lib/data'
+import { getTranslations } from 'next-intl/server'
+import { Calendar, Pin } from 'lucide-react'
+import { getCommunityPostBySlug, getRelatedCommunityPosts, getSinaiTrips } from '@/lib/data'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getArticleSchema } from '@/lib/schema-org'
 import { POST_CATEGORY_LABELS } from '@/lib/community'
-import { Calendar, Pin, ArrowLeft, ArrowRight } from 'lucide-react'
+import { activeTripCategorySlugs, estimateReadingMinutes, matchingTripCategorySlug } from '@/lib/community-view'
+import { formatDate } from '@/lib/format'
+import { ArrowBack, ArrowForward, ChevronForward } from '@/components/brand/DirectionalIcon'
+import { CommunityCard } from '@/components/community/CommunityCard'
+import { COMMUNITY_CATEGORY_ICONS } from '@/components/community/category-icons'
 
 export const revalidate = 60
 
@@ -43,16 +49,28 @@ export default async function CommunityPostPage({ params }: {
 }) {
   const { slug, locale } = await params
   const post = await getCommunityPostBySlug(slug)
-
-  if (!post) {
-    notFound()
-  }
+  if (!post) notFound()
 
   const ar = locale === 'ar'
+  const t = await getTranslations({ locale, namespace: 'communityV2' })
+  const [related, trips] = await Promise.all([getRelatedCommunityPosts(post, 3), getSinaiTrips()])
+
   const title = ar ? post.title_ar : post.title_en
   const content = ar ? post.content_ar : post.content_en
-  const related = await getRelatedCommunityPosts(post, 3)
-  const BackIcon = ar ? ArrowRight : ArrowLeft
+  const categoryLabel = POST_CATEGORY_LABELS[post.category][ar ? 'ar' : 'en']
+  const CategoryIcon = COMMUNITY_CATEGORY_ICONS[post.category]
+  const minutes = estimateReadingMinutes(content)
+  const relatedWithSlug = related.filter((r): r is typeof r & { slug: string } => Boolean(r.slug))
+
+  // "Explore <category> trips" is offered ONLY when the post's category slug
+  // is byte-identical to a real, active structured Sinai Trip category —
+  // never inferred (see BRIEF.md "Never invent... relationships").
+  const tripSlugs = activeTripCategorySlugs(trips)
+  const matchedSlug = matchingTripCategorySlug(post, tripSlugs)
+  const matchedTripCategoryName = matchedSlug
+    ? trips.flatMap((trip) => trip.category_tags ?? []).find((tag) => tag.slug === matchedSlug)
+    : null
+  const matchedCategoryLabel = matchedTripCategoryName ? (ar ? matchedTripCategoryName.name_ar : matchedTripCategoryName.name_en) : null
 
   const articleSchema = getArticleSchema({
     title,
@@ -70,107 +88,95 @@ export default async function CommunityPostPage({ params }: {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema).replace(/</g, '\\u003c') }}
       />
 
-      <article className="section-padding" dir={ar ? 'rtl' : 'ltr'}>
-        <div className="container-main max-w-3xl">
-          {/* Back to community */}
-          <Link
-            href="/community"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-ink-muted hover:text-sun-700 transition-colors"
-          >
-            <BackIcon className="h-4 w-4" />
-            {ar ? 'العودة للكوميونيتي' : 'Back to Community'}
-          </Link>
-
-          {/* Meta */}
-          <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-ink-subtle">
-            <Link
-              href="/community"
-              className="inline-flex items-center gap-1.5 font-semibold text-sun-700 hover:text-sun-700"
-            >
-              {POST_CATEGORY_LABELS[post.category][ar ? 'ar' : 'en']}
+      <article>
+        {/* Breadcrumb */}
+        <div className="container-main pt-8">
+          <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-2 text-sm">
+            <Link href="/community" className="inline-flex min-h-11 items-center gap-2 font-semibold text-ink-muted hover:text-sun-700">
+              <ArrowBack className="h-4 w-4" />
+              {t('backToCommunity')}
             </Link>
+            <ChevronForward className="h-3.5 w-3.5 text-ink-subtle" />
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold text-sun-700 ${ar ? '' : 'uppercase tracking-wide'}`}>
+              <CategoryIcon className="h-3.5 w-3.5" aria-hidden />
+              {categoryLabel}
+            </span>
+          </nav>
+        </div>
+
+        <div className="container-main mt-4 max-w-3xl">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-ink-subtle">
             {post.is_pinned && (
-              <span className="inline-flex items-center gap-1">
-                <Pin className="h-3 w-3" />
-                {ar ? 'مثبت' : 'Pinned'}
+              <span className="inline-flex items-center gap-1 font-semibold text-sun-700">
+                <Pin className="h-3 w-3" aria-hidden />
+                {t('pinnedBadge')}
               </span>
             )}
             <span className="inline-flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {new Date(post.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-GB')}
+              <Calendar className="h-3 w-3" aria-hidden />
+              {t('publishedOn', { date: formatDate(post.created_at, locale) })}
             </span>
+            <span>{t('readingMinutes', { minutes })}</span>
           </div>
 
-          {/* Title */}
-          <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-sea-900 md:text-5xl">
-            {title}
-          </h1>
+          <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-sea-900 md:text-5xl">{title}</h1>
 
-          {/* Hero image */}
           {post.image_url && (
-            <div className="relative mt-8 aspect-[16/9] w-full overflow-hidden rounded-xl bg-sand-200">
-              <Image
-                src={post.image_url}
-                alt={title}
-                fill
-                sizes="(max-width: 768px) 100vw, 768px"
-                className="object-cover"
-                priority
-              />
+            <div className="relative mt-8 aspect-[16/9] w-full overflow-hidden pin-card bg-sand-200">
+              <Image src={post.image_url} alt={title} fill sizes="(max-width: 768px) 100vw, 768px" className="object-cover" priority />
             </div>
           )}
 
-          {/* Body */}
-          <div className="mt-8 whitespace-pre-line text-lg leading-relaxed text-ink-muted">
+          {/* Long-read body — measure capped for readability, Arabic gets a
+              larger size and taller line-height per BRIEF.md typography rules. */}
+          <div
+            className={
+              ar
+                ? 'mx-auto mt-10 max-w-[65ch] whitespace-pre-line text-[1.15rem] leading-[2.1] text-ink'
+                : 'mx-auto mt-10 max-w-[70ch] whitespace-pre-line text-lg leading-8 text-ink'
+            }
+          >
             {content}
           </div>
 
-          {/* Video */}
           {post.video_url && (
-            <video
-              src={post.video_url}
-              controls
-              preload="metadata"
-              className="mt-8 aspect-video w-full rounded-lg bg-black"
-            />
+            <video src={post.video_url} controls preload="metadata" className="mx-auto mt-8 aspect-video w-full max-w-[70ch] rounded-lg bg-black" />
           )}
+        </div>
+
+        {/* Plan it with WEEMAP */}
+        <div className="container-main mt-14 max-w-3xl">
+          <div className="rounded-3xl border-[1.5px] border-sand-300 bg-card p-6 sm:p-8">
+            <h2 className="font-display text-xl font-bold text-sea-900">{t('planTitle')}</h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-muted">{t('planBody')}</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/plan"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-sun-500 px-5 text-sm font-semibold text-on-accent transition-colors hover:bg-sun-600"
+              >
+                {t('planBuildCta')}
+                <ArrowForward className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/sinai-trips"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] border-sea-900 px-5 text-sm font-semibold text-sea-900 transition-colors hover:bg-sea-900 hover:text-sand-50"
+              >
+                {matchedCategoryLabel ? t('exploreCategoryTrips', { category: matchedCategoryLabel }) : t('planTripsCta')}
+                <ArrowForward className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
         </div>
       </article>
 
       {/* Related articles */}
-      {related.length > 0 && (
-        <section className="border-t border-sand-300 bg-[#fffdf8] section-padding" dir={ar ? 'rtl' : 'ltr'}>
+      {relatedWithSlug.length > 0 && (
+        <section className="border-t border-sand-300 bg-[#fffdf8] section-padding">
           <div className="container-main max-w-3xl">
-            <h2 className="font-display text-2xl font-bold text-sea-900">
-              {ar ? 'مقالات ذات صلة' : 'Related articles'}
-            </h2>
+            <h2 className="font-display text-2xl font-bold text-sea-900">{t('relatedTitle')}</h2>
             <div className="mt-6 grid gap-6 sm:grid-cols-3">
-              {related.map((r) => (
-                <Link
-                  key={r.id}
-                  href={r.slug ? `/community/${r.slug}` : '/community'}
-                  className="group block overflow-hidden rounded-lg border border-sand-300 bg-white transition-shadow hover:shadow-md"
-                >
-                  {r.image_url && (
-                    <div className="aspect-[4/3] w-full overflow-hidden bg-sand-200">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={r.image_url}
-                        alt={ar ? r.title_ar : r.title_en}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
-                      />
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <span className="text-xs font-semibold text-sun-700">
-                      {POST_CATEGORY_LABELS[r.category][ar ? 'ar' : 'en']}
-                    </span>
-                    <h3 className="mt-2 font-display font-bold leading-tight text-sea-900">
-                      {ar ? r.title_ar : r.title_en}
-                    </h3>
-                  </div>
-                </Link>
+              {relatedWithSlug.map((r) => (
+                <CommunityCard key={r.id} post={r} size="sm" />
               ))}
             </div>
           </div>

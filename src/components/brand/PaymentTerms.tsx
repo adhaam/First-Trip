@@ -1,6 +1,7 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatCount } from '@/lib/format'
 import type { PaymentKind, PaymentPolicy } from '@/lib/payment-rules'
 import { cn } from '@/lib/utils'
 
@@ -26,14 +27,16 @@ export function PaymentTerms({
   className?: string
 }) {
   const ui = useTranslations('ui')
+  const locale = useLocale()
   const policy = policies.find((candidate) => candidate.booking_kind === kind && candidate.is_active !== false)
 
   if (!policy) {
     return <p className={cn('text-sm text-ink-subtle', className)}>{ui('paymentUnknown')}</p>
   }
 
-  const upfront = policy.upfront_percent
-  const balance = 100 - upfront
+  // Digits follow the site's number policy (Arabic-Indic in Arabic), like prices.
+  const upfront = formatCount(policy.upfront_percent, locale)
+  const balance = formatCount(100 - policy.upfront_percent, locale)
   const upfrontPhrase = AVAILABILITY_KINDS.includes(kind)
     ? ui('paymentUpfrontAvailability', { percent: upfront })
     : ui('paymentUpfrontConfirmation', { percent: upfront })

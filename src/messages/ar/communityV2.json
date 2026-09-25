@@ -1,0 +1,21 @@
+{
+  "eyebrow": "كوميونيتي ويماب",
+  "title": "معرفة محلية، من ناس عايشينها فعلًا.",
+  "subtitle": "قصص وأماكن مخفية ودليل دهب حقيقي — كتبه ناس عارفة الساحل ده بجد.",
+  "categoryAll": "كل الأقسام",
+  "featuredBadge": "قصة مميزة",
+  "pinnedBadge": "مثبت",
+  "readingMinutes": "{minutes} د قراءة",
+  "readMore": "اقرأ القصة",
+  "readFullStory": "اقرأ القصة كاملة",
+  "noPosts": "الكوميونيتي لسه بتتكتب — تابعنا قريب لأول القصص.",
+  "noCategoryMatches": "لسه مفيش منشور في القسم ده.",
+  "backToCommunity": "رجوع للكوميونيتي",
+  "relatedTitle": "المزيد من الكوميونيتي",
+  "planTitle": "خططها مع ويماب",
+  "planBody": "قريت حاجة عايز تعملها فعلًا؟ اعمل رحلة حواليها أو تصفح رحلات سيناء الجاهزة.",
+  "planBuildCta": "ابني رحلتك",
+  "planTripsCta": "تصفح رحلات سيناء",
+  "exploreCategoryTrips": "استكشف رحلات {category}",
+  "publishedOn": "نُشر في {date}"
+}

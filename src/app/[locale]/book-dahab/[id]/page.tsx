@@ -1,12 +1,19 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getAccommodationById, getAccommodations, getRelatedAccommodations, getSiteSettings, getTransferPricing, getSinaiTrips } from '@/lib/data'
-import { getTripPackages } from '@/lib/trip-packages'
+import {
+  getAccommodationById,
+  getAccommodations,
+  getCommunityPosts,
+  getRelatedAccommodations,
+  getSinaiTrips,
+  getSiteSettings,
+} from '@/lib/data'
+import { getPaymentRules } from '@/lib/payment-rules-load'
+import { startingRoomRate } from '@/lib/stays'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getProductSchema } from '@/lib/schema-org'
-import { getTransportSchedule } from '@/lib/transport/load'
 
 export const revalidate = 60
 
@@ -33,25 +40,20 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const [all, pricing, settings, sinaiTrips, tripPackages, transportSchedule] = await Promise.all([
+  const [all, settings, sinaiTrips, communityPosts, paymentRules] = await Promise.all([
     getAccommodations(),
-    getTransferPricing(),
     getSiteSettings(),
     getSinaiTrips(),
-    getTripPackages(),
-    getTransportSchedule(),
+    getCommunityPosts(),
+    getPaymentRules(),
   ])
   const related = getRelatedAccommodations(accommodation, all)
 
-  const roomRates = [accommodation.price_single_room, accommodation.price_double_room, accommodation.price_triple_room]
-    .map(Number)
-    .filter((price) => price > 0)
-  const startingPrice = roomRates.length ? Math.min(...roomRates) : Number(accommodation.price_per_night) || 0
   const productSchema = getProductSchema({
     name: locale === 'ar' ? accommodation.name_ar || accommodation.name_en : accommodation.name_en || accommodation.name_ar,
     description: locale === 'ar' ? accommodation.description_ar : accommodation.description_en,
     image: accommodation.image_url || accommodation.images?.[0] || `${SITE_URL}/brand/logo.png`,
-    price: startingPrice,
+    price: startingRoomRate(accommodation),
   })
 
   return (
@@ -62,11 +64,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       />
       <ProductDetailClient
         accommodation={accommodation}
-        pricing={pricing}
         whatsapp={settings?.whatsapp_number}
         sinaiTrips={sinaiTrips}
-        tripPackages={tripPackages}
-        transportSchedule={transportSchedule}
+        communityPosts={communityPosts}
+        policies={paymentRules.policies}
       />
       <RelatedPlaces related={related} />
     </div>

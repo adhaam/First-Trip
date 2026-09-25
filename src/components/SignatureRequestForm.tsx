@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { Loader2, Send, CheckCircle2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,9 +12,7 @@ import { Turnstile } from '@/components/Turnstile'
 import { trackConversion, trackRequestFailure } from '@/lib/conversion'
 
 export function SignatureRequestForm({ experienceId }: { experienceId?: string }) {
-  const t = useTranslations('signature')
-  const locale = useLocale()
-  const ar = locale === 'ar'
+  const t = useTranslations('signatureV2')
 
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -113,7 +111,7 @@ export function SignatureRequestForm({ experienceId }: { experienceId?: string }
         {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
         {submitting ? t('sending') : t('submit')}
       </Button>
-      <p className="text-center text-xs text-ink-subtle">{ar ? 'ده طلب مبدئي — مفيش تأكيد فوري.' : "This is a request, not an instant confirmation."}</p>
+      <p className="text-center text-xs text-ink-subtle">{t('notice')}</p>
     </form>
   )
 }

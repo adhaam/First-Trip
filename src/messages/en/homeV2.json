@@ -1,0 +1,150 @@
+{
+  "hero": {
+    "location": "Dahab · South Sinai · Egypt",
+    "heading": "WE MAP SINAI.",
+    "subheading": "YOU LIVE IT.",
+    "lede": "Stays, trips, packages and curated experiences — shaped around the trip you actually want, confirmed by a local team before anything is booked.",
+    "primaryCta": "Build your trip",
+    "secondaryCta": "Explore Sinai",
+    "originText": "From the heart of <b>{place}</b>"
+  },
+  "gateway": {
+    "eyebrow": "Start here",
+    "title": "What do you want to do in Sinai?",
+    "subtitle": "Pick the shape of your trip — we'll help with the rest.",
+    "plan": {
+      "title": "Plan the full trip",
+      "body": "Stay, transfers, trips and extras, shaped around your dates."
+    },
+    "stay": {
+      "title": "Just a stay",
+      "body": "Hotel, chalet or camp in Dahab — nothing else attached."
+    },
+    "trips": {
+      "title": "Day trips & adventures",
+      "body": "Sea, desert, mountains or a night out — one experience, booked on its own."
+    },
+    "packages": {
+      "title": "Packages",
+      "body": "More of Sinai bundled together, at a better price than booking separately."
+    },
+    "signature": {
+      "title": "Something special",
+      "body": "A complete journey, built around one idea — honeymoons, diving, deep adventure."
+    },
+    "rent": {
+      "title": "Gear & rentals",
+      "body": "Dive, camp and ride gear by the day, so you can travel lighter."
+    }
+  },
+  "curated": {
+    "eyebrow": "Happening now",
+    "title": "Curated for the days ahead",
+    "subtitle": "What's featured, on offer or coming up soon in Sinai right now.",
+    "eyebrowFallback": "Curated by WEEMAP",
+    "titleFallback": "Hand-picked to start with",
+    "badgeFeatured": "Featured",
+    "badgeDiscount": "Limited offer",
+    "badgeSignatureDate": "Upcoming date",
+    "cta": "See everything"
+  },
+  "builder": {
+    "eyebrow": "How WEEMAP works",
+    "title": "One trip, connected",
+    "subtitle": "Tell us the shape of your trip once — we confirm availability, then build the rest with you.",
+    "note": "Nothing is paid online until WEEMAP confirms your dates.",
+    "cta": "Start building",
+    "steps": {
+      "discover": { "title": "Discover", "body": "Browse stays, trips, packages and experiences." },
+      "shape": { "title": "Shape", "body": "Pick your dates, travelers and what you want included." },
+      "request": { "title": "Request", "body": "Send it to WEEMAP — no payment, no account needed yet." },
+      "confirm": { "title": "Confirm", "body": "We check real availability with our partners and confirm with you." },
+      "experience": { "title": "Experience", "body": "Arrive, and let the local team handle the details." },
+      "addMore": { "title": "Add more", "body": "Extend your trip with more experiences whenever you like." }
+    }
+  },
+  "stays": {
+    "eyebrow": "Stays",
+    "title": "Sleep somewhere that fits your trip",
+    "subtitle": "Hotels, chalets and camps in Dahab — each priced by the room, not guessed.",
+    "cta": "View all stays",
+    "fromUnit": "per person, per night"
+  },
+  "explore": {
+    "eyebrow": "Explore Sinai",
+    "title": "Find your kind of Sinai",
+    "subtitle": "Sea, desert, mountains, culture, nights out — every trip is tagged by what it actually is.",
+    "truthLine": "Every trip picks up and drops off at your accommodation in Dahab.",
+    "cta": "See this category"
+  },
+  "packages": {
+    "eyebrow": "Packages",
+    "title": "Two kinds of package, never one generic bundle",
+    "subtitle": "A Dahab Stay Package centres your accommodation; a Sinai Experience Package bundles trips and experiences. Payment terms differ, so we never blur the two.",
+    "stayLane": {
+      "title": "Dahab Stay Packages",
+      "body": "Your stay, transfer and included trips in one booking."
+    },
+    "experienceLane": {
+      "title": "Sinai Experience Packages",
+      "body": "Several Sinai experiences bundled at a better total than booking each alone."
+    },
+    "cta": "View package"
+  },
+  "signature": {
+    "eyebrow": "WEEMAP Signature",
+    "title": "Tell us the experience. We'll build the journey.",
+    "body": "Some trips shouldn't be built piece by piece. Signature Experiences bring the place, the activity and the right partners together around one idea.",
+    "cta": "Explore Signature Experiences"
+  },
+  "community": {
+    "eyebrow": "Community",
+    "title": "Know the place before you arrive",
+    "subtitle": "Stories, guides and local knowledge from people who actually live Sinai.",
+    "cta": "Explore the Community",
+    "readMore": "Read more"
+  },
+  "shop": {
+    "eyebrow": "More from WEEMAP",
+    "title": "Take a little of Sinai with you",
+    "merch": {
+      "title": "WEEMAP Merch",
+      "body": "Pieces made with the spirit of Sinai — for the trip, the sea, and after you're back.",
+      "cta": "Shop Merch"
+    },
+    "rent": {
+      "title": "Rent",
+      "body": "Selected gear by the day, so you can travel lighter and enjoy more.",
+      "cta": "Explore Rentals"
+    },
+    "emptyLine": "Merch and rentals are on the way — for now, everything else on this page is ready to book."
+  },
+  "trust": {
+    "eyebrow": "Why WEEMAP",
+    "title": "Built by a team that actually lives here",
+    "subtitle": "No claims we can't back up — just how a WEEMAP trip actually works.",
+    "local": {
+      "title": "A local team in Dahab",
+      "body": "We're based here, not routing your trip through a call centre elsewhere."
+    },
+    "payment": {
+      "title": "Payment only after confirmation",
+      "body": "Nothing is charged online. You pay once your dates are confirmed."
+    },
+    "pickup": {
+      "title": "Pickup from your Dahab stay",
+      "body": "Trips and transfers start and end at your accommodation in Dahab."
+    },
+    "human": {
+      "title": "A human on WhatsApp",
+      "body": "Real answers from the WEEMAP team, not a bot script."
+    },
+    "testimonialsTitle": "What travelers say"
+  },
+  "finalCta": {
+    "title": "Sinai is waiting",
+    "subtitle": "Tell us the shape of your trip and we'll help you build the rest.",
+    "primaryCta": "Build your trip",
+    "whatsappCta": "Talk to WEEMAP"
+  }
+}

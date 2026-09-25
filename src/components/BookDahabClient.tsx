@@ -1,126 +1,131 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { BedDouble } from 'lucide-react'
 import { Reveal } from '@/components/motion/Reveal'
 import { AccommodationCard } from '@/components/cards/AccommodationCard'
-import { ArrowUpDown, BedDouble } from 'lucide-react'
 import { EmptyState, ResultCount } from '@/components/EmptyState'
-import { cn } from '@/lib/utils'
+import { EditorialCard } from '@/components/brand/EditorialCard'
+import { Chip, ChipRail } from '@/components/brand/Chip'
+import { FilterSheet } from '@/components/brand/FilterSheet'
+import { PriceTag } from '@/components/brand/PriceTag'
+import { ButtonLink } from '@/components/ButtonLink'
+import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
+import {
+  accommodationTypeCounts,
+  filterAccommodationsByType,
+  sortAccommodations,
+  startingRoomRate,
+  type StayFilterKey,
+  type StaySortKey,
+} from '@/lib/stays'
 import type { Accommodation } from '@/lib/types'
 
-export function BookDahabClient({ accommodations }: { accommodations: Accommodation[] }) {
+const TYPE_FILTERS: { key: StayFilterKey; labelKey: 'filterAll' | 'filterHotel' | 'filterChalet' | 'filterCamp' }[] = [
+  { key: 'all', labelKey: 'filterAll' },
+  { key: 'hotel', labelKey: 'filterHotel' },
+  { key: 'chalet', labelKey: 'filterChalet' },
+  { key: 'camp', labelKey: 'filterCamp' },
+]
+
+const SORT_OPTIONS: { key: StaySortKey; labelKey: 'sortDefault' | 'sortPriceAsc' | 'sortPriceDesc' }[] = [
+  { key: 'default', labelKey: 'sortDefault' },
+  { key: 'price-asc', labelKey: 'sortPriceAsc' },
+  { key: 'price-desc', labelKey: 'sortPriceDesc' },
+]
+
+export function BookDahabClient({
+  accommodations,
+  whatsapp,
+}: {
+  accommodations: Accommodation[]
+  whatsapp?: string | null
+}) {
   const locale = useLocale()
-  const states = useTranslations('states')
+  const t = useTranslations('stays')
   const ar = locale === 'ar'
-  const [filterType, setFilterType] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<string>('default')
 
-  const filtered = accommodations.filter((a) => filterType === 'all' || a.type === filterType)
+  const [filterType, setFilterType] = useState<StayFilterKey>('all')
+  const [sortBy, setSortBy] = useState<StaySortKey>('default')
 
-  /**
-   * The card displays Math.min(single, double, triple) falling back to
-   * price_per_night. Sort must use the same value so "Price ↑" is not
-   * contradicted by what the customer reads on the card.
-   * Zero/missing prices sort last.
-   */
-  function startingRate(a: Accommodation): number {
-    const rates = [a.price_single_room, a.price_double_room, a.price_triple_room]
-      .map(Number)
-      .filter((p) => p > 0)
-    return rates.length ? Math.min(...rates) : (Number(a.price_per_night) || 0)
-  }
+  const counts = useMemo(() => accommodationTypeCounts(accommodations), [accommodations])
+  const filtered = useMemo(() => filterAccommodationsByType(accommodations, filterType), [accommodations, filterType])
+  const sorted = useMemo(() => sortAccommodations(filtered, sortBy), [filtered, sortBy])
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'price-asc' || sortBy === 'price-desc') {
-      const pa = startingRate(a)
-      const pb = startingRate(b)
-      // Zero / missing → always last regardless of sort direction
-      if (pa === 0 && pb === 0) return 0
-      if (pa === 0) return 1
-      if (pb === 0) return -1
-      return sortBy === 'price-asc' ? pa - pb : pb - pa
-    }
-    // Default: preserve server order (sort_order ASC from getAccommodations)
-    return 0
-  })
+  const digits = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
+  const waLink = `https://wa.me/${digits}`
 
-  const filters = [
-    { key: 'all', label_ar: 'الكل', label_en: 'All' },
-    { key: 'hotel', label_ar: 'فنادق', label_en: 'Hotels' },
-    { key: 'chalet', label_ar: 'شاليهات', label_en: 'Chalets' },
-    { key: 'camp', label_ar: 'كمبات', label_en: 'Camps' },
-  ]
-
-  const sorts = [
-    { key: 'default', label_ar: 'الافتراضي', label_en: 'Default' },
-    { key: 'price-asc', label_ar: 'السعر ↑', label_en: 'Price ↑' },
-    { key: 'price-desc', label_ar: 'السعر ↓', label_en: 'Price ↓' },
-  ]
+  const [first, ...rest] = sorted
 
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-sand-300 bg-card p-1">
-          {filters.map((f) => (
-            <button
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <ChipRail>
+          {TYPE_FILTERS.map((f) => (
+            <Chip
               key={f.key}
-              type="button"
+              selected={filterType === f.key}
               onClick={() => setFilterType(f.key)}
-              aria-pressed={filterType === f.key}
-              className={cn(
-                'min-h-11 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
-                filterType === f.key
-                  ? 'bg-sea-900 text-sand-50'
-                  : 'text-ink-muted hover:text-sea-900',
-              )}
+              count={f.key === 'all' ? undefined : counts[f.key]}
+              icon={f.key !== 'all' ? <span aria-hidden>{ACCOMMODATION_TAGS[f.key]?.emoji}</span> : undefined}
             >
-              {ar ? f.label_ar : f.label_en}
-            </button>
+              {t(`list.${f.labelKey}`)}
+            </Chip>
           ))}
-        </div>
+        </ChipRail>
 
-        <div className="flex items-center gap-1 rounded-full border border-sand-300 bg-card p-1">
-          <ArrowUpDown className="mx-1.5 h-3.5 w-3.5 text-ink-subtle" />
-          {sorts.map((s) => (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setSortBy(s.key)}
-              aria-pressed={sortBy === s.key}
-              className={cn(
-                'min-h-11 rounded-full px-3 py-2 text-xs font-medium transition-colors',
-                sortBy === s.key
-                  ? 'bg-sea-900 text-sand-50'
-                  : 'text-ink-muted hover:text-sea-900',
-              )}
-            >
-              {ar ? s.label_ar : s.label_en}
-            </button>
-          ))}
-        </div>
-
-        <ResultCount
-          count={sorted.length}
-          label={`${sorted.length} ${ar ? 'مكان إقامة' : 'places'}`}
-        />
+        <FilterSheet
+          title={t('list.filterSheetTitle')}
+          triggerLabel={t('list.sortLabel')}
+          activeCount={sortBy !== 'default' ? 1 : 0}
+          onReset={sortBy !== 'default' ? () => setSortBy('default') : undefined}
+        >
+          <div className="flex flex-col gap-2">
+            {SORT_OPTIONS.map((s) => (
+              <Chip key={s.key} selected={sortBy === s.key} onClick={() => setSortBy(s.key)} className="justify-center">
+                {t(`list.${s.labelKey}`)}
+              </Chip>
+            ))}
+          </div>
+        </FilterSheet>
       </div>
+
+      <ResultCount count={sorted.length} label={t('list.resultCount', { count: sorted.length })} className="mb-5" />
 
       {sorted.length === 0 ? (
         <EmptyState
+          variant={accommodations.length === 0 ? 'curating' : 'no-results'}
           icon={<BedDouble className="h-8 w-8" />}
-          title={accommodations.length === 0 ? states('noAccommodations') : states('noAccommodationMatches')}
-          onClear={
-            filterType !== 'all' || sortBy !== 'default'
-              ? () => { setFilterType('all'); setSortBy('default') }
-              : undefined
+          title={accommodations.length === 0 ? t('list.curatingTitle') : t('list.noResultsTitle')}
+          hint={accommodations.length === 0 ? t('list.curatingHint') : t('list.noResultsHint')}
+          action={
+            accommodations.length === 0 ? (
+              <ButtonLink href={waLink} target="_blank" rel="noopener" variant="whatsapp" size="lg">
+                {t('list.curatingAction')}
+              </ButtonLink>
+            ) : undefined
           }
+          onClear={filterType !== 'all' ? () => setFilterType('all') : undefined}
         />
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {sorted.map((acc, i) => (
+          {first && (
+            <Reveal className="h-full sm:col-span-2 xl:col-span-2" as="div">
+              <EditorialCard
+                href={`/book-dahab/${first.id}`}
+                image={first.image_url || first.images?.[0] || '/media/heroposter.webp'}
+                title={ar ? first.name_ar : first.name_en}
+                kicker={ar ? ACCOMMODATION_TAGS[first.type]?.label_ar : ACCOMMODATION_TAGS[first.type]?.label_en}
+                meta={<PriceTag amount={startingRoomRate(first)} from unit="night" size="sm" tone="light" />}
+                size="lg"
+                priority
+              />
+            </Reveal>
+          )}
+          {rest.map((acc, i) => (
             <Reveal key={acc.id} delay={(i % 8) * 60} className="h-full">
-              <AccommodationCard acc={acc} priority={i === 0} />
+              <AccommodationCard acc={acc} />
             </Reveal>
           ))}
         </div>

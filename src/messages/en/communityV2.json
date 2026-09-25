@@ -1,0 +1,21 @@
+{
+  "eyebrow": "WEEMAP Community",
+  "title": "Local knowledge, from people living it.",
+  "subtitle": "Stories, hidden spots and a real Dahab guide — written by the people who actually know this coastline.",
+  "categoryAll": "Everything",
+  "featuredBadge": "Featured story",
+  "pinnedBadge": "Pinned",
+  "readingMinutes": "{minutes} min read",
+  "readMore": "Read the story",
+  "readFullStory": "Read the full story",
+  "noPosts": "The Community is still being written — check back soon for the first stories.",
+  "noCategoryMatches": "Nothing published in this category yet.",
+  "backToCommunity": "Back to Community",
+  "relatedTitle": "More from the Community",
+  "planTitle": "Plan it with WEEMAP",
+  "planBody": "Read something you want to actually do? Build a trip around it or browse ready-made Sinai Trips.",
+  "planBuildCta": "Build your trip",
+  "planTripsCta": "Browse Sinai Trips",
+  "exploreCategoryTrips": "Explore {category} trips",
+  "publishedOn": "Published {date}"
+}
