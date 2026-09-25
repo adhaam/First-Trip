@@ -24,6 +24,7 @@ import {
   upcomingServiceDates,
   type TransportScheduleConfig,
 } from '@/lib/transport/schedule'
+import { todayInCairo } from '@/lib/transport/today'
 import type {
   Accommodation, MealPlan, SinaiTrip, TransferDirection, TransferGovernoratePrice,
   TransferPricing, TransferType, TripPackage,
@@ -293,7 +294,7 @@ export function BookingForm({
 
   // ─── date options for standalone transfers ───
   // Both transport types respect the active schedule, including exceptions.
-  const scheduleToday = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const scheduleToday = useMemo(() => todayInCairo(), [])
 
   const transferDateOptions = useMemo(() => {
     const direction = transferDirection === 'from_dahab' ? 'return' : 'outbound'

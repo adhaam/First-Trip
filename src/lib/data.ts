@@ -12,7 +12,6 @@ import type {
   TripCategory,
   CommunityPost,
   SiteSettings,
-  TripDate,
   GovernoratePricing,
   Testimonial,
   TransferGovernoratePrice,
@@ -294,30 +293,6 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
     return null
   }
   return data as SiteSettings
-}
-
-export async function getTripDates(): Promise<TripDate[]> {
-  if (!isSupabaseConfigured()) return []
-  const supabase = getSupabaseAdmin()
-  const { data, error } = await supabase
-    .from('trip_dates')
-    .select('*')
-    .eq('is_active', true)
-    .gte('trip_date', new Date().toISOString().slice(0, 10))
-    .order('trip_date', { ascending: true })
-
-  if (error) {
-    console.error('getTripDates error:', error)
-    return []
-  }
-  // DB column is `trip_date`; frontend type uses `date`
-  return (data ?? []).map((d) => ({
-    id: d.id,
-    date: d.trip_date,
-    day_of_week: d.day_of_week,
-    duration: d.duration,
-    is_active: d.is_active,
-  })) as TripDate[]
 }
 
 // Pure helper (no fetch) — same-type first, then closest price, capped at 3

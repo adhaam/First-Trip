@@ -1,4 +1,5 @@
 export { DEFAULT_TRANSPORT_SCHEDULE } from './defaults'
+export { todayInCairo } from './today'
 export {
   addDays,
   checkServiceDate,

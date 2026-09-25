@@ -307,14 +307,6 @@ export interface TripPackageTrip {
   sort_order: number
 }
 
-export interface TripDate {
-  id: string
-  date: string // ISO date string
-  day_of_week: 'sunday' | 'thursday'
-  duration: TripDuration
-  is_active: boolean
-}
-
 export interface Booking {
   id: string
   customer_name: string
