@@ -94,3 +94,42 @@ test('allowedNextStatuses is exactly canTransition over every status pair', () =
     }
   }
 })
+
+test('pickup orders go ready → completed and are never out for delivery', () => {
+  const pickup = { fulfillmentMethod: 'pickup' }
+  assert.equal(canTransition('commerce_order', 'ready', 'completed', pickup), true)
+  assert.equal(canTransition('commerce_order', 'ready', 'out_for_delivery', pickup), false)
+  for (const from of STATUSES.commerce_order) {
+    if (from !== 'out_for_delivery') {
+      assert.equal(canTransition('commerce_order', from, 'out_for_delivery', pickup), false, `pickup ${from}`)
+    }
+  }
+  assert.deepEqual(allowedNextStatuses('commerce_order', 'ready', pickup), ['ready', 'completed', 'cancelled'])
+})
+
+test('delivery orders keep ready → out_for_delivery → completed and cannot skip delivery', () => {
+  for (const delivery of [{ fulfillmentMethod: 'delivery' }, undefined]) {
+    assert.equal(canTransition('commerce_order', 'ready', 'out_for_delivery', delivery), true)
+    assert.equal(canTransition('commerce_order', 'out_for_delivery', 'completed', delivery), true)
+    assert.equal(canTransition('commerce_order', 'ready', 'completed', delivery), false)
+  }
+  assert.throws(() => assertTransition('commerce_order', 'ready', 'completed', { fulfillmentMethod: 'delivery' }))
+})
+
+test('the commerce graph matches weemap_commerce_order_next() in migration 039', () => {
+  const sql = readFileSync(
+    new URL('../../supabase/migrations/039_commerce_workflow_integrity.sql', import.meta.url), 'utf8',
+  )
+  const body = sql.slice(sql.indexOf('FUNCTION public.weemap_commerce_order_next'), sql.indexOf('$$;'))
+  const list = (text: string) => [...text.matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
+  for (const method of ['pickup', 'delivery'] as const) {
+    for (const from of STATUSES.commerce_order) {
+      const branch = body.split(new RegExp(`WHEN '${from}'\\s+THEN`))[1]?.split(/\n {4}WHEN '|\n {4}ELSE ARRAY/)[0] ?? ''
+      const expected = /p_method = 'pickup'/.test(branch)
+        ? list(branch.split('ELSE')[method === 'pickup' ? 0 : 1].replace(/p_method = 'pickup'/, ''))
+        : list(branch)
+      const actual = allowedNextStatuses('commerce_order', from, { fulfillmentMethod: method }).slice(1)
+      assert.deepEqual(actual, expected, `${method}: ${from}`)
+    }
+  }
+})

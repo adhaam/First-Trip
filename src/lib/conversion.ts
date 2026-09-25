@@ -43,6 +43,7 @@
  *    break a booking.
  */
 
+import { useSyncExternalStore } from 'react'
 import { track } from '@vercel/analytics'
 import { FB_PIXEL_ID, GTM_ID, pushDataLayer, trackPixel } from './analytics'
 
@@ -219,23 +220,67 @@ function sanitize(payload: ConversionPayload): Record<string, string | number | 
 /* ──────────────────────────── consent gate ──────────────────────────────── */
 
 /**
- * ⚠ There is no consent UI in this project today, and GTM + the Meta Pixel
- * already load unconditionally on every page (that predates this module).
+ * A real consent boundary: GTM and the Meta Pixel do not load — no script tag,
+ * no request to googletagmanager.com/google-analytics.com/facebook.net — until
+ * `setTrackingConsent(true)` has been called. See AnalyticsScripts, which reads
+ * `useTrackingConsent()` and renders nothing tracking-related before that.
  *
- * This gate does not change that behaviour — removing working tracking was out
- * of scope — but it puts the switch in one place so a consent banner can be
- * wired up by flipping one env var and calling `setTrackingConsent`:
+ * Consent is REQUIRED BY DEFAULT — no env var needs to be set:
  *
- *   NEXT_PUBLIC_REQUIRE_CONSENT=true
+ *   NEXT_PUBLIC_REQUIRE_CONSENT=false
+ *       → escape hatch: tracking is allowed without an explicit grant.
+ *   unset / anything else
  *       → nothing is sent until setTrackingConsent(true) is called.
- *   unset / 'false'
- *       → current behaviour is preserved.
  *
  * Global Privacy Control is always honoured, in both modes, because respecting
- * it only ever reduces what is sent.
+ * it only ever reduces what is sent — it forces "not allowed" even when the
+ * escape hatch above is set.
  */
-const REQUIRE_CONSENT = process.env.NEXT_PUBLIC_REQUIRE_CONSENT === 'true'
 const CONSENT_KEY = 'weemap-tracking-consent'
+
+/** Dispatched on `window` whenever consent changes, so UI can react without a reload. */
+const CONSENT_CHANGE_EVENT = 'weemap-consent-change'
+
+export type ConsentState = 'granted' | 'denied' | 'unset'
+
+/**
+ * Pure decision logic, kept separate from `window`/`localStorage` so it can be
+ * unit-tested directly without standing up a DOM. `envValue` is whatever
+ * `NEXT_PUBLIC_REQUIRE_CONSENT` resolves to, `storedValue` is whatever is in
+ * localStorage under `CONSENT_KEY` (or null), and `gpc` is Global Privacy
+ * Control's current value.
+ */
+export function resolveTrackingAllowed(
+  envValue: string | undefined,
+  storedValue: string | null,
+  gpc: boolean,
+): boolean {
+  if (gpc) return false
+  const requireConsent = envValue !== 'false'
+  if (!requireConsent) return true
+  return storedValue === 'granted'
+}
+
+/** Same inputs as {@link resolveTrackingAllowed}, but the tri-state the UI needs. */
+export function resolveConsentState(storedValue: string | null, gpc: boolean): ConsentState {
+  if (gpc) return 'denied'
+  if (storedValue === 'granted') return 'granted'
+  if (storedValue === 'denied') return 'denied'
+  return 'unset'
+}
+
+function readGpc(): boolean {
+  const nav = window.navigator as Navigator & { globalPrivacyControl?: boolean }
+  return nav.globalPrivacyControl === true
+}
+
+function readStoredConsent(): string | null {
+  try {
+    return window.localStorage.getItem(CONSENT_KEY)
+  } catch {
+    return null
+  }
+}
 
 export function setTrackingConsent(granted: boolean): void {
   if (typeof window === 'undefined') return
@@ -244,23 +289,68 @@ export function setTrackingConsent(granted: boolean): void {
   } catch {
     /* private mode / storage disabled — fall through to the default */
   }
+  try {
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
+  } catch {
+    /* no-op outside a real DOM */
+  }
+}
+
+/** Forgets the visitor's choice so the consent banner asks again (policy page "Change my choice"). */
+export function resetTrackingConsent(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(CONSENT_KEY)
+  } catch {
+    /* storage disabled — nothing was stored */
+  }
+  try {
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
+  } catch {
+    /* no-op outside a real DOM */
+  }
 }
 
 export function isTrackingAllowed(): boolean {
   if (typeof window === 'undefined') return false
+  return resolveTrackingAllowed(process.env.NEXT_PUBLIC_REQUIRE_CONSENT, readStoredConsent(), readGpc())
+}
 
-  // Global Privacy Control is a legally recognised opt-out in several
-  // jurisdictions. Honour it unconditionally.
-  const nav = window.navigator as Navigator & { globalPrivacyControl?: boolean }
-  if (nav.globalPrivacyControl === true) return false
+/* ─────────────────────────── consent subscription ───────────────────────── */
 
-  if (!REQUIRE_CONSENT) return true
-
-  try {
-    return window.localStorage.getItem(CONSENT_KEY) === 'granted'
-  } catch {
-    return false
+function subscribeToConsentChange(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {}
+  // 'storage' covers a grant/decline made in another tab; the custom event
+  // covers this tab, which never receives its own 'storage' event.
+  window.addEventListener(CONSENT_CHANGE_EVENT, callback)
+  window.addEventListener('storage', callback)
+  return () => {
+    window.removeEventListener(CONSENT_CHANGE_EVENT, callback)
+    window.removeEventListener('storage', callback)
   }
+}
+
+function getConsentSnapshot(): ConsentState {
+  if (typeof window === 'undefined') return 'unset'
+  const gpc = readGpc()
+  // Escape hatch (NEXT_PUBLIC_REQUIRE_CONSENT=false): behave as granted unless GPC says no.
+  if (!gpc && process.env.NEXT_PUBLIC_REQUIRE_CONSENT === 'false') return 'granted'
+  return resolveConsentState(readStoredConsent(), gpc)
+}
+
+function getServerConsentSnapshot(): ConsentState {
+  // The server never knows localStorage/GPC — always render as if undecided,
+  // which is also what a first client render sees before hydration settles.
+  return 'unset'
+}
+
+/**
+ * Reactive read of the visitor's consent choice: 'granted' | 'denied' | 'unset'.
+ * SSR-safe — the server snapshot is always 'unset', so there is no hydration
+ * mismatch — and updates immediately (no reload) via the subscription above.
+ */
+export function useTrackingConsent(): ConsentState {
+  return useSyncExternalStore(subscribeToConsentChange, getConsentSnapshot, getServerConsentSnapshot)
 }
 
 /* ───────────────────────────── attribution ──────────────────────────────── */

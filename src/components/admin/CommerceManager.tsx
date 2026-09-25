@@ -251,7 +251,6 @@ interface OrderDetail extends Order {
   delivery_zones: { name_ar: string; name_en: string } | null
 }
 
-const ORDER_STATUSES: OrderStatus[] = ['new', 'contacted', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'completed', 'cancelled']
 const ORDER_STATUS_LABELS_AR: Record<OrderStatus, string> = {
   new: 'جديد', contacted: 'تم التواصل', confirmed: 'مؤكد', preparing: 'قيد التجهيز', ready: 'جاهز', out_for_delivery: 'في الطريق', completed: 'مكتمل', cancelled: 'ملغي',
 }
@@ -283,15 +282,27 @@ function OrdersTab() {
     load()
   }, [load])
 
-  const updateStatus = async (id: string, status: OrderStatus) => {
+  const updateStatus = async (order: Order, status: OrderStatus) => {
+    if (status === order.status) return
     // Cancelling restocks any decremented sale inventory — guard against an
     // accidental click on a destructive, hard-to-reverse action.
-    if (status === 'cancelled' && !window.confirm(ar ? 'إلغاء الطلب هيرجع أي مخزون تم حجزه. تأكيد؟' : 'Cancelling this order will restock any reserved inventory. Confirm?')) {
-      return
+    const confirmCancel = ar
+      ? 'إلغاء الطلب سيعيد أي مخزون محجوز. هل تريد المتابعة؟'
+      : 'Cancelling this order will restock any reserved inventory. Confirm?'
+    if (status === 'cancelled' && !window.confirm(confirmCancel)) return
+    try {
+      // expected_status: the server refuses the change if someone else moved
+      // the order since this list was loaded.
+      await api(`/api/admin/commerce/orders/${order.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, expected_status: order.status }),
+      })
+      setItems((prev) => prev.map((o) => (o.id === order.id ? { ...o, status } : o)))
+      if (detail?.id === order.id) setDetail((d) => (d ? { ...d, status } : d))
+    } catch (e) {
+      alert((e as Error).message)
+      await load()
     }
-    setItems((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)))
-    if (detail?.id === id) setDetail((d) => (d ? { ...d, status } : d))
-    await api(`/api/admin/commerce/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
   }
 
   const openDetail = async (id: string) => {
@@ -329,10 +340,16 @@ function OrdersTab() {
                   <TableCell>{o.order_type}</TableCell>
                   <TableCell>{o.total_price} {ar ? 'ج.م' : 'EGP'}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Select value={o.status} onValueChange={(v) => v && updateStatus(o.id, v as OrderStatus)}>
-                      <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <Select value={o.status} onValueChange={(v) => v && updateStatus(o, v as OrderStatus)}>
+                      <SelectTrigger className="w-[150px] h-8 text-xs">
+                        <SelectValue>{ar ? ORDER_STATUS_LABELS_AR[o.status] : ORDER_STATUS_LABELS_EN[o.status]}</SelectValue>
+                      </SelectTrigger>
                       <SelectContent>
-                        {ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{ar ? ORDER_STATUS_LABELS_AR[s] : ORDER_STATUS_LABELS_EN[s]}</SelectItem>)}
+                        {/* Only the moves the workflow allows: pickup orders go ready → completed,
+                            delivery orders ready → out for delivery → completed. */}
+                        {allowedNextStatuses('commerce_order', o.status, { fulfillmentMethod: o.fulfillment_method }).map((s) => (
+                          <SelectItem key={s} value={s}>{ar ? ORDER_STATUS_LABELS_AR[s] : ORDER_STATUS_LABELS_EN[s]}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </TableCell>
@@ -454,13 +471,18 @@ function RentalsTab() {
   })
 
   const updateStatus = async (id: string, status: RentalStatus) => {
-    if (status === 'cancelled' && !window.confirm(ar ? 'إلغاء الحجز هيفرج عن التوافر للتواريخ دي. تأكيد؟' : 'Cancelling this reservation releases its dates back to availability. Confirm?')) {
-      return
-    }
+    const confirmCancel = ar
+      ? 'إلغاء الحجز يعيد هذه التواريخ إلى التوافر. هل تريد المتابعة؟'
+      : 'Cancelling this reservation releases its dates back to availability. Confirm?'
+    if (status === 'cancelled' && !window.confirm(confirmCancel)) return
     const prevItems = items
+    const expected = items.find((r) => r.id === id)?.status
     setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
     try {
-      await api(`/api/admin/commerce/rentals/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+      await api(`/api/admin/commerce/rentals/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, ...(expected ? { expected_status: expected } : {}) }),
+      })
     } catch (e) {
       setItems(prevItems)
       alert((e as Error).message)

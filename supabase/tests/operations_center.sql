@@ -142,6 +142,10 @@ BEGIN
   IF got <> 'experience_package' THEN RAISE EXCEPTION 'package booking kind %', got; END IF;
   SELECT notes INTO got FROM trip_requests WHERE id = req_id;
   IF got <> 'Customer words' THEN RAISE EXCEPTION 'customer notes were changed by conversion'; END IF;
+  -- M4: the generated bookings add up to exactly the frozen quote.
+  SELECT (SELECT total_price FROM bookings WHERE id = bk_id)
+         + (SELECT SUM(final_price) FROM trip_bookings WHERE trip_request_id = req_id) INTO got;
+  IF got::numeric <> 12760 THEN RAISE EXCEPTION 'converted bookings sum to % instead of the quoted 12760', got; END IF;
 
   res := weemap_convert_trip_request(req_id);
   IF NOT (res->>'already_converted')::boolean OR (res->>'booking_id')::uuid <> bk_id THEN

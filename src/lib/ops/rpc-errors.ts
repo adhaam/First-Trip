@@ -1,6 +1,7 @@
 /**
  * Maps errors raised by the Operations Center RPCs (migration 036:
- * weemap_record_payment, weemap_convert_trip_request) to HTTP responses. The
+ * weemap_record_payment, weemap_convert_trip_request) and the payment truth
+ * guards (migration 040) to HTTP responses. The
  * functions RAISE a bare machine code as the message, so the message IS the code.
  */
 export type RpcErrorMapping = { status: number; code: string }
@@ -18,6 +19,12 @@ const BY_MESSAGE: Record<string, number> = {
   missing_quote_snapshot: 422,
   snapshot_mismatch: 422,
   not_found: 404,
+  // Migration 040 (payment truth guards), raised by the database on any write.
+  invalid_received_at: 422,
+  payment_via_ledger: 409,
+  total_below_paid: 409,
+  amount_paid_exceeds_total: 422,
+  has_payments: 409,
 }
 
 // Function or table not there yet: the code is deployed before migration 036.

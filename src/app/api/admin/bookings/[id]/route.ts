@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
+import { mapRpcError } from '@/lib/ops/rpc-errors'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { ledgerOnlyFieldsIn } from '@/lib/ops/ledger-fields'
 import { BOOKING_SOURCES } from '@/lib/booking-sources'
@@ -62,6 +63,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if (result.kind === 'not_found') return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
   if (result.kind === 'error') {
+    const mapped = mapRpcError(result.error as { message?: string; code?: string })
+    if (mapped) return NextResponse.json({ error: mapped.code, code: mapped.code }, { status: mapped.status })
     console.error('PATCH booking error:', result.error)
     return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 })
   }
@@ -75,6 +78,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const supabase = getSupabaseAdmin(gate.staff)
   const { error } = await supabase.from('bookings').delete().eq('id', id)
   if (error) {
+    const mapped = mapRpcError(error)
+    if (mapped) return NextResponse.json({ error: mapped.code, code: mapped.code }, { status: mapped.status })
     console.error('DELETE booking error:', error)
     return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 })
   }

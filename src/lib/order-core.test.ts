@@ -1,155 +1,172 @@
 import assert from 'node:assert/strict'
 import test, { mock } from 'node:test'
-import { applyOrderPatchWithClient, createCommerceOrderWithClient, type OrderItemSnapshot } from './order-core'
-import { createOrderStatusFake } from './testing/order-core-fake'
+import { applyOrderPatchWithClient, createCommerceOrderWithClient } from './order-core'
+
+// Order creation and status changes are one database transaction each
+// (migration 039; behaviour proven by supabase/tests/commerce_integrity.sql).
+// These tests pin what the server sends to those functions and how it
+// answers their errors.
 
 type Row = Record<string, unknown>
+type RpcCall = { name: string; args: Record<string, unknown> }
+type RpcAnswer = { data: unknown; error: { message: string; code?: string } | null }
 
-function saleLine(id: string, variantId: string, quantity: number, snapshot: OrderItemSnapshot = { inventory_reserved: true }): Row {
-  // order_id mirrors the real commerce_order_items schema (NOT NULL FK, migration 013)
-  // so the fake's .eq('order_id', orderId) filter in stockReservedLines matches these rows
-  // the way it would match real ones.
-  return { id, order_id: 'o1', product_id: `p-${id}`, variant_id: variantId, quantity, item_type: 'sale', variant_snapshot: snapshot }
-}
+const PRODUCTS: Row[] = [
+  {
+    id: 'p1', name_ar: 'قميص', name_en: 'Shirt', product_type: 'sale', base_price: 100,
+    is_active: true, archived_at: null, track_inventory: true, deposit_amount: 0,
+  },
+  {
+    id: 'p2', name_ar: 'خيمة', name_en: 'Tent', product_type: 'rental', base_price: 0,
+    is_active: true, archived_at: null, track_inventory: false, deposit_amount: 200,
+  },
+]
+const VARIANTS: Row[] = [
+  { id: 'v1', product_id: 'p1', price_override: 120, inventory_quantity: 3, is_active: true, option_value_ids: ['o1'] },
+]
+const TIERS: Row[] = [
+  { id: 't1', product_id: 'p2', variant_id: null, duration_days: 1, price: 150, is_active: true },
+]
 
-test('cancel marks successful restocks, retries only failed lines, and then becomes a no-op', async () => {
-  const state = {
-    order: { id: 'o1', status: 'confirmed' }, items: [saleLine('i1', 'v1', 1), saleLine('i2', 'v2', 2), saleLine('i3', 'v3', 3)],
-    inventory: { v1: 0, v2: 0, v3: 0 }, failedRestocks: new Set(['v2']), restockCalls: [] as string[], decrementCalls: [] as string[],
-  }
-  const db = createOrderStatusFake(state)
-  const first = await applyOrderPatchWithClient(db as never, 'o1', { status: 'cancelled', expectedStatus: 'confirmed' })
-  assert.deepEqual(first, { ok: false, status: 409, code: 'restock_incomplete', error: 'Order was cancelled but some inventory restocks are incomplete', pendingLineIds: ['i2'], warnings: ['Variant v2 was not restocked by 2'] })
-  assert.equal(state.order.status, 'cancelled')
-  assert.deepEqual(state.inventory, { v1: 1, v2: 0, v3: 3 })
-  assert.ok((state.items[0].variant_snapshot as OrderItemSnapshot).inventory_restocked_at)
-  assert.equal((state.items[1].variant_snapshot as OrderItemSnapshot).inventory_restocked_at, undefined)
-  assert.ok((state.items[2].variant_snapshot as OrderItemSnapshot).inventory_restocked_at)
-  state.failedRestocks.clear()
-  assert.equal((await applyOrderPatchWithClient(db as never, 'o1', { status: 'cancelled', expectedStatus: 'cancelled' })).ok, true)
-  assert.deepEqual(state.restockCalls, ['v1', 'v2', 'v3', 'v2'])
-  assert.deepEqual(state.inventory, { v1: 1, v2: 2, v3: 3 })
-  assert.equal((await applyOrderPatchWithClient(db as never, 'o1', { status: 'cancelled', expectedStatus: 'cancelled' })).ok, true)
-  assert.deepEqual(state.restockCalls, ['v1', 'v2', 'v3', 'v2'])
-})
-
-test('reopen after partial restock reserves only the lines whose cancellation restock succeeded', async () => {
-  const state = {
-    order: { id: 'o1', status: 'cancelled' },
-    items: [saleLine('i1', 'v1', 1, { inventory_reserved: true, inventory_restocked_at: '2026-01-01T00:00:00.000Z' }), saleLine('i2', 'v2', 2), saleLine('i3', 'v3', 3, { inventory_reserved: true, inventory_restocked_at: '2026-01-01T00:00:00.000Z' })],
-    inventory: { v1: 1, v2: 0, v3: 3 }, failedRestocks: new Set<string>(), restockCalls: [] as string[], decrementCalls: [] as string[],
-  }
-  const result = await applyOrderPatchWithClient(createOrderStatusFake(state) as never, 'o1', { status: 'new', expectedStatus: 'cancelled' })
-  assert.equal(result.ok, true)
-  assert.equal(state.order.status, 'new')
-  assert.deepEqual(state.decrementCalls, ['v1', 'v3'])
-  assert.deepEqual(state.inventory, { v1: 0, v2: 0, v3: 0 })
-  for (const item of state.items) assert.equal((item.variant_snapshot as OrderItemSnapshot).inventory_restocked_at, undefined)
-})
-
-function creationRollbackClient(state: { orders: Row[]; items: Row[]; deleteOrderFails: boolean; itemInsertCount: number; failFirstItem: boolean; restockCalls: { variantId: string; qty: number }[]; failRestockVariantIds?: Set<string> }) {
+function fakeDb(answer: (call: RpcCall) => RpcAnswer, updates: Row[] = []) {
+  const calls: RpcCall[] = []
   class Query {
-    private operation = 'select'; private values: Row = {}
+    private values: Row | null = null
     constructor(private table: string) {}
-    select() { return this }; in() { return this }; eq() { return this }; is() { return this }
-    insert(values: Row) { this.operation = 'insert'; this.values = values; return this }; update(values: Row) { this.operation = 'update'; this.values = values; return this }; delete() { this.operation = 'delete'; return this }
-    private execute() {
-      if (this.operation === 'select') {
-        if (this.table === 'commerce_products') return { data: [{ id: 'p1', name_ar: 'Product', name_en: 'Product', product_type: 'sale', base_price: 100, is_active: true, archived_at: null, track_inventory: true, deposit_amount: 0 }], error: null }
-        if (this.table === 'commerce_product_variants') return { data: [{ id: 'v1', product_id: 'p1', price_override: null, inventory_quantity: 3, is_active: true, option_value_ids: [] }], error: null }
-      }
-      if (this.operation === 'insert' && this.table === 'commerce_orders') { const order = { id: 'o1', order_number: 'WM-1000', ...this.values }; state.orders.push(order); return { data: order, error: null } }
-      if (this.operation === 'insert' && this.table === 'commerce_order_items') {
-        state.itemInsertCount += 1
-        if ((state.failFirstItem && state.itemInsertCount === 1) || state.itemInsertCount === 2) return { data: null, error: { message: 'forced item failure' } }
-        const item = { id: `i${state.itemInsertCount}`, ...this.values }; state.items.push(item); return { data: item, error: null }
-      }
-      if (this.operation === 'delete' && this.table === 'commerce_orders') { if (state.deleteOrderFails) return { data: null, error: { message: 'forced order delete failure' } }; state.orders = []; state.items = []; return { data: null, error: null } }
-      if (this.operation === 'delete' && this.table === 'commerce_order_items') { state.items = []; return { data: null, error: null } }
-      if (this.operation === 'update' && this.table === 'commerce_orders') { state.orders.forEach((order) => Object.assign(order, this.values)); return { data: null, error: null } }
-      return { data: null, error: null }
+    select() { return this }
+    in() { return this }
+    eq() { return this }
+    update(values: Row) { this.values = values; updates.push({ table: this.table, ...values }); return this }
+    async maybeSingle() {
+      return { data: this.values ? { id: 'o1', ...this.values } : null, error: null }
     }
-    async single() { const result = this.execute(); return { data: result.data, error: result.error } }
-    then(resolve: (value: unknown) => unknown) { return Promise.resolve(this.execute()).then(resolve) }
+    then(resolve: (value: unknown) => unknown) {
+      const data = this.table === 'commerce_products' ? PRODUCTS
+        : this.table === 'commerce_product_variants' ? VARIANTS
+          : this.table === 'rental_pricing_tiers' ? TIERS : []
+      return Promise.resolve({ data, error: null }).then(resolve)
+    }
   }
   return {
-    from(table: string) { return new Query(table) },
-    async rpc(name: string, args?: { p_variant_id: string; p_qty: number }) {
-      if (name === 'decrement_variant_inventory') return { data: true, error: null }
-      if (name === 'restock_variant_inventory' && args) {
-        state.restockCalls.push({ variantId: args.p_variant_id, qty: args.p_qty })
-        if (state.failRestockVariantIds?.has(args.p_variant_id)) {
-          return { data: null, error: { message: 'forced restock failure' } }
-        }
-        return { data: true, error: null }
-      }
-      return { data: null, error: null }
+    calls,
+    db: {
+      from: (table: string) => new Query(table),
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        const call = { name, args }
+        calls.push(call)
+        return answer(call)
+      },
     },
   }
 }
 
-async function createFailingOrder(db: unknown, items: { productId: string; variantId: string; quantity: number }[]) {
-  return createCommerceOrderWithClient({ customerName: 'Test', customerPhone: '+201000000000', fulfillmentMethod: 'pickup', items }, { db: db as never, findOrCreateCustomer: async () => ({ id: 'c1' }), recordCustomerActivity: async () => {}, getTotalInventory: async () => 0 })
+const deps = (db: unknown) => ({
+  db: db as never,
+  findOrCreateCustomer: async () => ({ id: 'c1' }),
+  recordCustomerActivity: async () => {},
+  today: () => '2026-10-01',
+})
+
+const input = {
+  customerName: 'Mona',
+  customerPhone: '01000000000',
+  fulfillmentMethod: 'pickup' as const,
+  items: [
+    { productId: 'p1', variantId: 'v1', quantity: 2 },
+    { productId: 'p2', quantity: 1, rentalDurationDays: 2, rentalStartDate: '2026-10-05' },
+  ],
 }
 
-test('creation rollback leaves a zero-value cancelled record when deleting the order fails', async () => {
-  const state = { orders: [] as Row[], items: [] as Row[], deleteOrderFails: true, itemInsertCount: 0, failFirstItem: true, restockCalls: [] as { variantId: string; qty: number }[] }
-  const result = await createFailingOrder(creationRollbackClient(state), [{ productId: 'p1', variantId: 'v1', quantity: 1 }])
-  assert.equal(result.success, false)
-  const order = state.orders[0]
-  assert.deepEqual({ status: order.status, subtotal: order.subtotal, delivery_fee: order.delivery_fee, total_price: order.total_price }, { status: 'cancelled', subtotal: 0, delivery_fee: 0, total_price: 0 })
-  assert.match(String(order.internal_notes), /Creation rolled back - no items/)
-})
-
-test('createCommerceOrderWithClient restocks decremented variants when an item insert fails', async () => {
-  // Regression: an order-item insert failure must roll back the stock this
-  // order already decremented, and leave neither the order nor its items
-  // behind (current compensation order: order row deleted first, items
-  // cascade — see 'creation rollback deletes the order first...' below).
-  const state = { orders: [] as Row[], items: [] as Row[], deleteOrderFails: false, itemInsertCount: 0, failFirstItem: true, restockCalls: [] as { variantId: string; qty: number }[] }
-  const result = await createFailingOrder(creationRollbackClient(state), [{ productId: 'p1', variantId: 'v1', quantity: 2 }])
-  assert.deepEqual(result, { success: false, error: 'Failed to create order' })
-  assert.deepEqual(state.restockCalls, [{ variantId: 'v1', qty: 2 }])
-  assert.deepEqual(state.orders, [])
-  assert.deepEqual(state.items, [])
-})
-
-test('creation rollback deletes the order first and cascades already-created items', async () => {
-  const state = { orders: [] as Row[], items: [] as Row[], deleteOrderFails: false, itemInsertCount: 0, failFirstItem: false, restockCalls: [] as { variantId: string; qty: number }[] }
-  const result = await createFailingOrder(creationRollbackClient(state), [{ productId: 'p1', variantId: 'v1', quantity: 1 }, { productId: 'p1', variantId: 'v1', quantity: 1 }])
-  assert.equal(result.success, false)
-  assert.deepEqual(state.orders, [])
-  assert.deepEqual(state.items, [])
-})
-
-test('creation rollback that cannot restock a variant reports failure and logs it for manual reconciliation', async () => {
-  // Regression: when an item insert fails after v1's stock was already
-  // decremented, and the compensating restock of v1 ALSO fails, the caller
-  // must still see a clean failure (never a false success) while the
-  // otherwise-silent inventory drift is surfaced for a human to fix.
-  const state = {
-    orders: [] as Row[],
-    items: [] as Row[],
-    deleteOrderFails: false,
-    itemInsertCount: 0,
-    failFirstItem: true,
-    restockCalls: [] as { variantId: string; qty: number }[],
-    failRestockVariantIds: new Set(['v1']),
+test('creation prices every line on the server and writes it in one call', async () => {
+  const { db, calls } = fakeDb(() => ({ data: { order_id: 'o1', order_number: 'WM-1001' }, error: null }))
+  const result = await createCommerceOrderWithClient(input, deps(db))
+  assert.equal(result.success, true)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].name, 'weemap_place_commerce_order')
+  const order = calls[0].args.p_order as Row
+  const items = calls[0].args.p_items as Row[]
+  assert.equal(order.subtotal, 540)
+  assert.equal(order.total_price, 540)
+  assert.equal(order.fulfillment_method, 'pickup')
+  assert.equal(items[0].unit_price, 120)
+  assert.equal(items[0].line_total, 240)
+  assert.equal((items[0].variant_snapshot as Row).inventory_reserved, true)
+  assert.equal(items[1].item_type, 'rental')
+  assert.equal(items[1].rental_start_date, '2026-10-05')
+  assert.equal(items[1].rental_end_date, '2026-10-06')
+  assert.equal(items[1].line_total, 300)
+  assert.match(String(order.internal_notes), /deposit due at handover: 200 EGP/)
+  if (result.success) {
+    assert.equal(result.orderNumber, 'WM-1001')
+    assert.equal(result.depositTotal, 200)
   }
-  const errorMock = mock.method(console, 'error', () => {})
-  try {
-    const result = await createFailingOrder(creationRollbackClient(state), [{ productId: 'p1', variantId: 'v1', quantity: 1 }])
-    assert.deepEqual(result, { success: false, error: 'Failed to create order' })
-    assert.deepEqual(state.orders, [])
+})
 
-    const rollbackCall = errorMock.mock.calls.find((call) => String(call.arguments[0]).includes('rollback incomplete'))
-    assert.ok(rollbackCall, `expected a console.error call reporting rollback incomplete, got: ${JSON.stringify(errorMock.mock.calls.map((c) => c.arguments))}`)
-    const problems = (rollbackCall!.arguments[1] as { problems: string[] }).problems
-    assert.ok(
-      problems.some((problem) => problem.includes('variant v1 not restocked')),
-      `expected a problem entry mentioning "variant v1 not restocked", got: ${JSON.stringify(problems)}`,
-    )
-  } finally {
-    errorMock.mock.restore()
+test('creation answers the database refusals with the product name, never a raw error', async () => {
+  for (const [message, expected] of [
+    ['insufficient_stock:v1', 'Insufficient stock for Shirt'],
+    ['rental_unavailable:p2', 'Tent is not available for the selected dates'],
+  ]) {
+    const { db } = fakeDb(() => ({ data: null, error: { message, code: 'PT409' } }))
+    assert.deepEqual(await createCommerceOrderWithClient(input, deps(db)), { success: false, error: expected })
   }
+  const logged = mock.method(console, 'error', () => {})
+  const { db } = fakeDb(() => ({ data: null, error: { message: 'totals_mismatch', code: 'PT409' } }))
+  assert.deepEqual(await createCommerceOrderWithClient(input, deps(db)), { success: false, error: 'Failed to create order' })
+  assert.equal(logged.mock.callCount(), 1)
+  logged.mock.restore()
+})
+
+test('creation refuses bad input before writing anything', async () => {
+  const { db, calls } = fakeDb(() => ({ data: null, error: null }))
+  const cases = [
+    { ...input, items: [] },
+    { ...input, items: [{ productId: 'p1', variantId: 'v1', quantity: 0 }] },
+    { ...input, items: [{ productId: 'p1', quantity: 1 }] },
+    { ...input, items: [{ productId: 'p2', quantity: 1, rentalDurationDays: 2, rentalStartDate: '2026-09-01' }] },
+    { ...input, items: [{ productId: 'missing', quantity: 1 }] },
+  ]
+  for (const bad of cases) assert.equal((await createCommerceOrderWithClient(bad, deps(db))).success, false)
+  assert.equal(calls.length, 0)
+})
+
+test('a status change goes to the transactional function with the status the screen saw', async () => {
+  const { db, calls } = fakeDb(() => ({ data: { id: 'o1', status: 'cancelled' }, error: null }))
+  const result = await applyOrderPatchWithClient(db as never, 'o1', { status: 'cancelled', expectedStatus: 'ready' })
+  assert.deepEqual(calls, [{
+    name: 'weemap_set_commerce_order_status',
+    args: { p_order_id: 'o1', p_expected_status: 'ready', p_status: 'cancelled' },
+  }])
+  assert.equal(result.ok, true)
+  if (result.ok) assert.equal(result.transition, 'cancelled')
+
+  const reopened = await applyOrderPatchWithClient(db as never, 'o1', { status: 'new', expectedStatus: 'cancelled' })
+  assert.equal(reopened.ok && reopened.transition, 'reopened')
+})
+
+test('database refusals map to clear 404 / 409 answers', async () => {
+  const cases: [string, number, string | undefined][] = [
+    ['not_found', 404, undefined],
+    ['stale_status', 409, 'stale_status'],
+    ['invalid_transition', 409, 'invalid_transition'],
+    ['insufficient_stock:v1', 409, 'insufficient_stock'],
+  ]
+  for (const [message, status, code] of cases) {
+    const { db } = fakeDb(() => ({ data: null, error: { message, code: 'PT409' } }))
+    const result = await applyOrderPatchWithClient(db as never, 'o1', { status: 'completed', expectedStatus: 'ready' })
+    assert.equal(result.ok, false)
+    if (!result.ok) {
+      assert.equal(result.status, status, message)
+      assert.equal(result.code, code, message)
+    }
+  }
+})
+
+test('a notes-only edit is a plain write and never calls the status function', async () => {
+  const updates: Row[] = []
+  const { db, calls } = fakeDb(() => ({ data: null, error: null }), updates)
+  const result = await applyOrderPatchWithClient(db as never, 'o1', { internal_notes: 'Call before noon' })
+  assert.equal(result.ok, true)
+  assert.equal(calls.length, 0)
+  assert.deepEqual(updates, [{ table: 'commerce_orders', internal_notes: 'Call before noon' }])
 })

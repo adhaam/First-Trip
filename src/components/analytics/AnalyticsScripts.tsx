@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Script from 'next/script'
 import { FB_PIXEL_ID, GTM_ID } from '@/lib/analytics'
-import { captureAttribution } from '@/lib/conversion'
+import { captureAttribution, useTrackingConsent } from '@/lib/conversion'
 
 /**
  * Google Tag Manager + Meta (Facebook) Pixel.
@@ -23,19 +23,29 @@ import { captureAttribution } from '@/lib/conversion'
  *
  * GTM tracks SPA navigation on its side via a History Change trigger, which is
  * configured inside the GTM container, not here.
+ *
+ * ─── Consent boundary ────────────────────────────────────────────────────────
+ * Neither <Script> below is rendered until `useTrackingConsent()` reports
+ * 'granted' — no request to googletagmanager.com or facebook.net is made
+ * before that, and nothing is rendered on the server or before hydration.
+ * The moment the visitor accepts (ConsentBanner calls `setTrackingConsent`),
+ * this component re-renders and both tags load — no reload required.
  */
 export function AnalyticsScripts() {
   const pathname = usePathname()
+  const consent = useTrackingConsent()
+  const granted = consent === 'granted'
 
   // Record utm_*, referrer origin and landing path for the first page of the
   // session so a conversion three pages later still carries its campaign.
-  // Reads only; sends nothing. See captureAttribution() for what is stored.
+  // Reads only; sends nothing. First-party sessionStorage, not gated on
+  // consent — see captureAttribution() for what is stored.
   useEffect(() => {
     captureAttribution()
   }, [])
 
   useEffect(() => {
-    if (!FB_PIXEL_ID) return
+    if (!granted || !FB_PIXEL_ID) return
     let cancelled = false
 
     const send = () => {
@@ -54,7 +64,9 @@ export function AnalyticsScripts() {
     return () => {
       cancelled = true
     }
-  }, [pathname])
+  }, [pathname, granted])
+
+  if (!granted) return null
 
   return (
     <>

@@ -170,10 +170,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       : buildPaymentExpectation(item, rules.policies)
 
     const domain = OPS_ENTITY_TABLES[entityType].domain
-    const allowed_statuses = allowedNextStatuses(domain, item.status as RequestStatus<typeof domain>)
-      .filter((status) => status !== item.status)
-
     const record = recordResult.data as unknown as Record<string, unknown>
+    const allowed_statuses = allowedNextStatuses(domain, item.status as RequestStatus<typeof domain>, {
+      fulfillmentMethod: entityType === 'commerce_order' ? (record.fulfillment_method as string) : null,
+    }).filter((status) => status !== item.status)
+
     if (entityType === 'trip_request') record.journey = await loadRequestJourney(supabase, record)
 
     return NextResponse.json({

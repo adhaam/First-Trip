@@ -12,8 +12,8 @@ import { canAccess, isStaffRole, type StaffRole } from './staff-policy'
 // changing their role or password takes effect on their next request.
 //
 // Transition from the pre-M3 shared password (ADMIN_PASSWORD): a 'legacy'
-// session is honoured ONLY while no active owner account exists (or before
-// migration 035 is applied). It exists to let the first owner be created;
+// session is honoured ONLY while the staff table is readable and holds no
+// active owner account. It exists to let the first owner be created;
 // the moment an owner exists, every legacy session stops working and the
 // shared password can no longer sign in. See docs/m3/OPERATIONS.md.
 
@@ -37,10 +37,6 @@ type GuardRequest = {
   nextUrl?: { pathname: string }
 }
 
-function isMissingTable(error: { code?: string } | null): boolean {
-  return error?.code === '42P01' || error?.code === 'PGRST205'
-}
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** Resolves the signed-in person from the cookie, or null. Does not check route permissions. */
@@ -55,11 +51,12 @@ export async function getStaffSession(req: Pick<GuardRequest, 'cookies'>): Promi
       .select('id', { count: 'exact', head: true })
       .eq('role', 'owner')
       .eq('is_active', true)
-    if (error && !isMissingTable(error)) {
-      console.error('staff owner lookup failed:', error)
+    // Fail closed: a legacy session needs positive proof that no owner exists.
+    if (error) {
+      console.error('staff owner lookup failed:', error.code, error.message)
       return null
     }
-    if (!error && (count ?? 0) > 0) return null
+    if ((count ?? 0) > 0) return null
     return {
       id: null, actor: 'legacy-admin', email: null, displayName: 'Shared admin', role: 'owner', legacy: true,
     }
@@ -72,7 +69,7 @@ export async function getStaffSession(req: Pick<GuardRequest, 'cookies'>): Promi
     .eq('id', claims.sid)
     .maybeSingle()
   if (error) {
-    if (!isMissingTable(error)) console.error('staff session lookup failed:', error)
+    console.error('staff session lookup failed:', error.code, error.message)
     return null
   }
   if (!data || !data.is_active || data.session_version !== claims.ver || !isStaffRole(data.role)) return null

@@ -7,6 +7,8 @@ import {
   captureAttribution,
   trackConversion,
   trackRequestFailure,
+  resolveTrackingAllowed,
+  resolveConsentState,
   __resetConversionDedupe,
 } from './conversion'
 
@@ -34,6 +36,12 @@ function makeStorage() {
 
 const sessionStorage = makeStorage()
 const localStorage = makeStorage()
+// Consent is required by default (see the consent-gate tests below, which
+// exercise resolveTrackingAllowed directly). The tests above that predate
+// consent are about sanitisation/dedup/attribution, not the gate itself, so
+// seed a granted consent here — mirrors a returning visitor who already
+// accepted the banner.
+localStorage.setItem('weemap-tracking-consent', 'granted')
 
 const g = globalThis as unknown as Record<string, unknown>
 
@@ -236,4 +244,45 @@ test('Global Privacy Control suppresses everything', () => {
   assert.equal(captured.dataLayer.length, 0)
   assert.equal(captured.fbq.length, 0)
   nav.globalPrivacyControl = false
+})
+
+// ─── consent gate — pure logic ──────────────────────────────────────────────
+
+test('consent is required by default: unset env, no stored choice → not allowed', () => {
+  assert.equal(resolveTrackingAllowed(undefined, null, false), false)
+})
+
+test('consent is required by default: unset env, explicit denial → not allowed', () => {
+  assert.equal(resolveTrackingAllowed(undefined, 'denied', false), false)
+})
+
+test('consent is required by default: unset env, granted → allowed', () => {
+  assert.equal(resolveTrackingAllowed(undefined, 'granted', false), true)
+})
+
+test('any env value other than the literal string "false" still requires consent', () => {
+  assert.equal(resolveTrackingAllowed('true', null, false), false)
+  assert.equal(resolveTrackingAllowed('TRUE', null, false), false)
+  assert.equal(resolveTrackingAllowed('1', null, false), false)
+})
+
+test('the escape hatch NEXT_PUBLIC_REQUIRE_CONSENT="false" disables the requirement', () => {
+  assert.equal(resolveTrackingAllowed('false', null, false), true)
+  assert.equal(resolveTrackingAllowed('false', 'denied', false), true)
+})
+
+test('Global Privacy Control forces "not allowed" even with the escape hatch set', () => {
+  assert.equal(resolveTrackingAllowed('false', 'granted', true), false)
+  assert.equal(resolveTrackingAllowed(undefined, 'granted', true), false)
+})
+
+test('consent state is a tri-state that mirrors what is stored', () => {
+  assert.equal(resolveConsentState(null, false), 'unset')
+  assert.equal(resolveConsentState('granted', false), 'granted')
+  assert.equal(resolveConsentState('denied', false), 'denied')
+})
+
+test('Global Privacy Control reports the consent state as denied, never unset', () => {
+  assert.equal(resolveConsentState(null, true), 'denied')
+  assert.equal(resolveConsentState('granted', true), 'denied')
 })

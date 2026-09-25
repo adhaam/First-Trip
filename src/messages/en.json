@@ -303,7 +303,13 @@
     "privacyText": "Customer information is used to process requests, coordinate selected services and provide support.",
     "contact": "Contact and support",
     "contactText": "Use the current WEEMAP contact details shown on this website for questions about a request or confirmed booking.",
-    "additionalTerms": "Additional terms"
+    "additionalTerms": "Additional terms",
+    "cookies": "Cookies and analytics",
+    "cookiesText": "Your cart and your Build Your Trip draft are kept in this browser so they survive a reload; they are not sent anywhere until you submit a request. Vercel Analytics counts page visits without cookies. Google Tag Manager and the Meta Pixel, which measure visits and advertising, load only if you accept them, and the website works the same if you decline.",
+    "cookiesGranted": "Your choice: analytics and advertising cookies accepted.",
+    "cookiesDenied": "Your choice: analytics and advertising cookies declined.",
+    "cookiesUnset": "You have not made a choice yet.",
+    "cookiesChange": "Change my choice"
   },
   "trust": {
     "title": "Plan Sinai with clearer context",
@@ -556,5 +562,12 @@
     "err_nameShort": "Enter your full name (at least 3 characters)",
     "err_phoneInvalid": "Enter a valid phone number",
     "err_emailInvalid": "Enter a valid email address"
+  },
+  "consent": {
+    "ariaLabel": "Cookie and tracking consent",
+    "message": "We use optional analytics and advertising cookies (Google, Meta) to measure visits and ads. Accept them?",
+    "policyLink": "Learn more",
+    "accept": "Accept",
+    "decline": "Decline"
   }
 }

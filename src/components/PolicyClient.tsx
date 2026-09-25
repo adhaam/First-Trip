@@ -8,6 +8,7 @@ import {
   Bus,
   CalendarClock,
   CloudSun,
+  Cookie,
   CreditCard,
   FileCheck2,
   HelpCircle,
@@ -19,10 +20,12 @@ import {
 } from 'lucide-react'
 import { Reveal } from '@/components/motion/Reveal'
 import type { SiteSettings } from '@/lib/types'
+import { resetTrackingConsent, useTrackingConsent } from '@/lib/conversion'
 
 export function PolicyClient({ settings }: { settings: SiteSettings | null }) {
   const locale = useLocale()
   const t = useTranslations('policy')
+  const consent = useTrackingConsent()
   const ar = locale === 'ar'
   const refundPolicy = ar ? settings?.refund_policy_ar : settings?.refund_policy_en
   const privacyPolicy = ar ? settings?.privacy_policy_ar : settings?.privacy_policy_en
@@ -70,6 +73,28 @@ export function PolicyClient({ settings }: { settings: SiteSettings | null }) {
               <p className="whitespace-pre-line text-base leading-8 text-ink-muted">{text}</p>
             </section>
           ))}
+
+          <section id="cookies" className="grid gap-4 py-8 md:grid-cols-[15rem_1fr] md:gap-10 md:py-10">
+            <h2 className="flex items-start gap-3 font-display text-lg font-bold text-sea-900">
+              <Cookie className="mt-0.5 h-5 w-5 shrink-0 text-sun-700" aria-hidden="true" />
+              {t('cookies')}
+            </h2>
+            <div className="space-y-4">
+              <p className="whitespace-pre-line text-base leading-8 text-ink-muted">{t('cookiesText')}</p>
+              <p className="text-sm text-ink-muted">
+                {t(consent === 'granted' ? 'cookiesGranted' : consent === 'denied' ? 'cookiesDenied' : 'cookiesUnset')}
+              </p>
+              {consent !== 'unset' && (
+                <button
+                  type="button"
+                  onClick={resetTrackingConsent}
+                  className="min-h-11 rounded-full border border-sand-300 px-5 py-2 text-sm font-semibold text-sea-900 hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sea-900"
+                >
+                  {t('cookiesChange')}
+                </button>
+              )}
+            </div>
+          </section>
 
           {additionalTerms?.trim() && (
             <section className="grid gap-4 py-8 md:grid-cols-[15rem_1fr] md:gap-10 md:py-10">

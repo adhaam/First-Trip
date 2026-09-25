@@ -1,7 +1,6 @@
 import 'server-only'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
-import { getTotalInventory } from '@/lib/rental-availability'
 import {
   applyOrderPatchWithClient,
   createCommerceOrderWithClient,
@@ -18,9 +17,9 @@ import {
  * `commerce_order_items` (+ `rental_reservations` for rental lines) record.
  *
  * Every total is recomputed from DB-trusted product/variant/tier data and
- * creation is all-or-nothing — see createCommerceOrderWithClient in
- * src/lib/order-core.ts for the rules (kept there, free of 'server-only',
- * so it is unit tested against a fake client).
+ * creation is one database transaction — see createCommerceOrderWithClient
+ * in src/lib/order-core.ts (kept there, free of 'server-only', so it is unit
+ * tested against a fake client) and migration 039.
  */
 
 export type {
@@ -39,12 +38,16 @@ export async function createCommerceOrder(
     db: getSupabaseAdmin(),
     findOrCreateCustomer: findOrCreateCustomerByPhone,
     recordCustomerActivity,
-    getTotalInventory,
   })
 }
 
-/** Admin order update with idempotent, symmetric cancel/reopen inventory
- *  handling — see applyOrderPatchWithClient in src/lib/order-core.ts. */
-export async function applyCommerceOrderPatch(id: string, patch: OrderPatch): Promise<OrderPatchResult> {
-  return applyOrderPatchWithClient(getSupabaseAdmin(), id, patch)
+/** Admin order update; status changes (with their inventory effects) are one
+ *  transaction — see applyOrderPatchWithClient in src/lib/order-core.ts. */
+export async function applyCommerceOrderPatch(
+  id: string,
+  patch: OrderPatch,
+  acting: { actor: string },
+): Promise<OrderPatchResult> {
+  // The acting staff member is recorded in status_history / audit_log.
+  return applyOrderPatchWithClient(getSupabaseAdmin(acting), id, patch)
 }

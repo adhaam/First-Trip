@@ -3,7 +3,41 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin();
 
+// Launch security headers (M4). Deliberately no script-src/style-src policy:
+// GTM, the Meta Pixel, Vercel Analytics, JSON-LD and Next's inline bootstrap
+// would all need nonces, which force dynamic rendering of every page. The
+// directives below are the ones that cost nothing and block real attacks:
+// clickjacking (frame-ancestors), <base> hijacking, plugin content and forms
+// posting off-site.
+const SECURITY_HEADERS = [
+  {
+    key: 'Content-Security-Policy',
+    value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+  },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000' },
+]
+
+// The Operations Center: never cached by a shared cache, never indexed.
+const PRIVATE_HEADERS = [
+  { key: 'Cache-Control', value: 'private, no-store' },
+  { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+]
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      { source: '/:path*', headers: SECURITY_HEADERS },
+      { source: '/api/admin/:path*', headers: PRIVATE_HEADERS },
+      { source: '/admin/:path*', headers: PRIVATE_HEADERS },
+      { source: '/admin', headers: PRIVATE_HEADERS },
+      { source: '/:locale(en|ar)/admin/:path*', headers: PRIVATE_HEADERS },
+      { source: '/:locale(en|ar)/admin', headers: PRIVATE_HEADERS },
+    ]
+  },
   async redirects() {
     return [
       {

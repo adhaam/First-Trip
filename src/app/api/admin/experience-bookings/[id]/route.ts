@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
+import { mapRpcError } from '@/lib/ops/rpc-errors'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { ledgerOnlyFieldsIn } from '@/lib/ops/ledger-fields'
 import { STATUSES } from '@/lib/request-workflow'
@@ -46,6 +47,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Request status changed by another admin', code: result.kind }, { status: 409 })
   }
   if (result.kind === 'not_found') return NextResponse.json({ error: 'Request not found' }, { status: 404 })
-  if (result.kind === 'error') return NextResponse.json({ error: 'Failed to update request' }, { status: 500 })
+  if (result.kind === 'error') {
+    const mapped = mapRpcError(result.error as { message?: string; code?: string })
+    if (mapped) return NextResponse.json({ error: mapped.code, code: mapped.code }, { status: mapped.status })
+    return NextResponse.json({ error: 'Failed to update request' }, { status: 500 })
+  }
   return NextResponse.json({ request: result.data })
 }

@@ -20,7 +20,7 @@ import { CartProvider } from '@/components/commerce/CartProvider'
 import { CartDrawer } from '@/components/commerce/CartDrawer'
 import { Analytics } from '@vercel/analytics/next'
 import { AnalyticsScripts } from '@/components/analytics/AnalyticsScripts'
-import { AnalyticsNoScript } from '@/components/analytics/AnalyticsNoScript'
+import { ConsentBanner } from '@/components/consent/ConsentBanner'
 import { jsonLdScript } from '@/lib/safe-html'
 import '../globals.css'
 
@@ -147,7 +147,6 @@ export default async function RootLayout({
       <body
         className={`${jakarta.variable} ${almarai.variable} ${bricolage.variable} ${alexandria.variable} font-sans antialiased`}
       >
-        <AnalyticsNoScript />
         <NextIntlClientProvider messages={messages} locale={locale}>
           <TooltipProvider>
             <CartProvider>
@@ -179,6 +178,7 @@ export default async function RootLayout({
         </NextIntlClientProvider>
         <Analytics />
         <AnalyticsScripts />
+        <ConsentBanner />
       </body>
     </html>
   )

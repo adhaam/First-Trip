@@ -5,6 +5,8 @@ import { updateAdminStatus } from '@/lib/admin-status-update'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { OPS_ENTITY_TABLES, type OpsEntityType } from '@/lib/ops/types'
 import { isMissingOpsRelation, loadWorkItemByEntity } from '@/lib/ops/server'
+import { applyOrderPatchWithClient, type OrderStatus } from '@/lib/order-core'
+import { allowedNextStatuses, canTransition, type RequestStatus } from '@/lib/request-workflow'
 
 const bodySchema = z.object({ status: z.string().min(1), expected_status: z.string().min(1) })
 
@@ -29,6 +31,38 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
         { error: 'Status changed', code: 'stale_status', current_status: current.status },
         { status: 409 },
       )
+    }
+    if (entityType === 'commerce_order') {
+      // Orders carry inventory side effects (restock on cancel, re-reserve on
+      // reopen) and the pickup/delivery split; both live in one database
+      // transaction (migration 039), never a plain status write.
+      const { data: order, error: orderError } = await supabase
+        .from('commerce_orders').select('fulfillment_method').eq('id', id).maybeSingle()
+      if (orderError) throw orderError
+      const ctx = { fulfillmentMethod: order?.fulfillment_method as string | undefined }
+      if (!canTransition('commerce_order', current.status, body.data.status, ctx)) {
+        return NextResponse.json(
+          {
+            error: 'Invalid status transition',
+            code: 'invalid_transition',
+            allowed: allowedNextStatuses('commerce_order', current.status as RequestStatus<'commerce_order'>, ctx),
+          },
+          { status: 409 },
+        )
+      }
+      const patched = await applyOrderPatchWithClient(supabase, id, {
+        status: body.data.status as OrderStatus,
+        expectedStatus: body.data.expected_status as OrderStatus,
+      })
+      if (!patched.ok) {
+        return NextResponse.json(
+          { error: patched.error, ...(patched.code ? { code: patched.code } : {}) },
+          { status: patched.status },
+        )
+      }
+      const item = await loadWorkItemByEntity(supabase, entityType, id)
+      if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      return NextResponse.json({ item })
     }
     const result = await updateAdminStatus(
       {
