@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Plus, MessageCircle, Trash2, Search, Pencil, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ProductEditor } from './ProductEditor'
+import { allowedNextStatuses } from '@/lib/request-workflow'
 
 function useAdminFetch() {
   const locale = useLocale()
@@ -394,7 +395,14 @@ interface Reservation {
   commerce_products: { name_ar: string; name_en: string } | null
   commerce_order_items: { order_id: string; commerce_orders: { order_number: string; customers: { name: string; phone: string } | null } | null } | null
 }
-const RENTAL_STATUSES: RentalStatus[] = ['requested', 'contacted', 'confirmed', 'active', 'returned', 'completed', 'cancelled', 'late']
+const RENTAL_STATUS_LABELS_AR: Record<RentalStatus, string> = {
+  requested: 'مطلوب', contacted: 'تم التواصل', confirmed: 'مؤكد', active: 'نشط',
+  returned: 'مُرجع', completed: 'مكتمل', cancelled: 'ملغي', late: 'متأخر',
+}
+const RENTAL_STATUS_LABELS_EN: Record<RentalStatus, string> = {
+  requested: 'Requested', contacted: 'Contacted', confirmed: 'Confirmed', active: 'Active',
+  returned: 'Returned', completed: 'Completed', cancelled: 'Cancelled', late: 'Late',
+}
 
 const OPS_VIEWS = ['all', 'new', 'upcoming', 'active', 'due_today', 'late', 'returned', 'cancelled'] as const
 type OpsView = (typeof OPS_VIEWS)[number]
@@ -482,9 +490,13 @@ function RentalsTab() {
                   <TableCell>{r.end_date}</TableCell>
                   <TableCell>
                     <Select value={r.status} onValueChange={(v) => v && updateStatus(r.id, v as RentalStatus)}>
-                      <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectValue>{ar ? RENTAL_STATUS_LABELS_AR[r.status] : RENTAL_STATUS_LABELS_EN[r.status]}</SelectValue>
+                      </SelectTrigger>
                       <SelectContent>
-                        {RENTAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {allowedNextStatuses('rental_reservation', r.status).map((s) => (
+                          <SelectItem key={s} value={s}>{ar ? RENTAL_STATUS_LABELS_AR[s] : RENTAL_STATUS_LABELS_EN[s]}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </TableCell>
