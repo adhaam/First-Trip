@@ -8,7 +8,7 @@ import { useCart } from './CartProvider'
 import { Minus, Plus, Trash2, ShoppingBag, KeyRound } from 'lucide-react'
 import { rentalDurationLabel } from '@/lib/shop-view'
 import { trackConversion } from '@/lib/conversion'
-import { formatAmount } from '@/lib/format'
+import { formatAmount, formatCount } from '@/lib/format'
 
 export function CartDrawer() {
   const locale = useLocale()
@@ -86,7 +86,7 @@ export function CartDrawer() {
                       >
                         <Minus className="h-3 w-3" aria-hidden />
                       </button>
-                      <span className="w-5 text-center text-xs font-bold tabular-nums">{item.quantity}</span>
+                      <span className="w-5 text-center text-xs font-bold tabular-nums">{formatCount(item.quantity, locale)}</span>
                       <button
                         type="button"
                         onClick={() => cart.setQuantity(item.lineId, item.quantity + 1)}

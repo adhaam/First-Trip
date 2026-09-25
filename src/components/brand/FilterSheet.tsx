@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { SlidersHorizontal } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
+import { formatCount } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const triggerClass = cn(
@@ -34,6 +35,7 @@ export function FilterSheet({
   className?: string
 }) {
   const ui = useTranslations('ui')
+  const locale = useLocale()
   const [open, setOpen] = useState(false)
   const [desktopOpen, setDesktopOpen] = useState(false)
 
@@ -43,7 +45,7 @@ export function FilterSheet({
       {triggerLabel}
       {!!activeCount && (
         <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sun-500 px-1 text-xs font-bold tabular-nums text-on-accent">
-          {activeCount}
+          {formatCount(activeCount, locale)}
         </span>
       )}
     </>

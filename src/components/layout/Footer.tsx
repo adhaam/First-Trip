@@ -6,7 +6,8 @@ import { Link } from '@/i18n/navigation'
 import { Logo } from '@/components/brand/Logo'
 import { WaveDivider } from '@/components/brand/Section'
 import { NAV_LABEL_KEYS, WHATSAPP_NUMBER, PHONE_NUMBER, EMAIL } from '@/lib/constants'
-import { MapPin, Phone, Mail, ArrowUpRight } from 'lucide-react'
+import { MapPin, Phone, Mail } from 'lucide-react'
+import { ArrowUpForward } from '@/components/brand/DirectionalIcon'
 import type { SiteSettings } from '@/lib/types'
 
 // Same IA as the header (Stay · Explore · Signature · Shop · Rent), just laid
@@ -133,7 +134,7 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-sun-400 px-6 text-sm font-semibold text-on-accent transition-colors hover:bg-sun-500"
             >
               WhatsApp
-              <ArrowUpRight className="h-4 w-4" />
+              <ArrowUpForward className="h-4 w-4" />
             </a>
           </div>
         </div>

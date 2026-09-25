@@ -67,7 +67,6 @@ const BUDGET_KEY: Record<SignatureBudgetComfort, string> = {
 export function SignatureBuildWizard({ experienceId }: { experienceId?: string }) {
   const t = useTranslations('signatureV2')
   const locale = useLocale()
-  const ar = locale === 'ar'
 
   const [draft, setDraft] = useState<SignatureBuildDraft>(EMPTY_SIGNATURE_BUILD_DRAFT)
   const [step, setStep] = useState<SignatureBuildStep>('experience')
@@ -133,9 +132,7 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
   }
 
   if (submitted) {
-    const waMessage = ar
-      ? `مرحبا، بعت طلب سيجنتشر: ${draft.experienceIdea}`
-      : `Hi, I just sent a Signature brief: ${draft.experienceIdea}`
+    const waMessage = t('waMessagePrefill', { idea: draft.experienceIdea })
     return (
       <div className="rounded-3xl border-[1.5px] border-sand-300 bg-card p-6 text-center md:p-10">
         <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">

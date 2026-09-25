@@ -503,7 +503,7 @@
     "viewAll": "View all results",
     "prompt": "Search stays, trips, gear…",
     "searching": "Searching…",
-    "resultsCount": "{count} results"
+    "resultsCount": "{count, plural, =0 {No results} one {{n} result} other {{n} results}}"
   },
   "signature": {
     "eyebrow": "WEEMAP SIGNATURE",

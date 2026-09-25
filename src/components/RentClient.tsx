@@ -10,6 +10,7 @@ import { ButtonLink } from '@/components/ButtonLink'
 import { PageHero, Eyebrow, Chip, ChipRail, FilterSheet, SearchInput } from '@/components/brand'
 import { applicableCategories, catalogView, filterCatalog, rentalCategoryLabels, sortCatalog, type CatalogSort } from '@/lib/shop-view'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
+import { formatCount } from '@/lib/format'
 import type { CommerceCategory, CommerceProduct } from '@/lib/commerce-types'
 
 interface Props {
@@ -37,7 +38,7 @@ export function RentClient({ products, categories, whatsapp }: Props) {
 
   const hasFilters = query.trim() !== ''
   const number = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
-  const waMessage = ar ? 'مرحباً WEEMAP، عايز أعرف إيه المعدات المتاحة للإيجار دلوقتي' : 'Hi WEEMAP, what rental gear do you have available right now?'
+  const waMessage = shop('waMessageRent')
 
   const categoryNames = rentalCategoryLabels(categories, ar)
   const curatingHint = categoryNames.length > 0
@@ -119,7 +120,7 @@ export function RentClient({ products, categories, whatsapp }: Props) {
               />
             </div>
 
-            <ResultCount count={filtered.length} label={shop('resultsCount', { count: filtered.length })} className="mb-4" />
+            <ResultCount count={filtered.length} label={shop('resultsCount', { count: filtered.length, n: formatCount(filtered.length, locale) })} className="mb-4" />
 
             {filtered.length === 0 ? (
               <EmptyState

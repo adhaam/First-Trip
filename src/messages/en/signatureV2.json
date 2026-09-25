@@ -37,14 +37,12 @@
   "galleryClose": "Close gallery",
   "galleryPrevious": "Previous photo",
   "galleryNext": "Next photo",
-
   "buildEyebrow": "Build Your Signature",
   "buildTitle": "Let's build your Sinai, together.",
   "buildBody": "A handful of quick questions — no forms, no fine print. Tell us what you're picturing and a WEEMAP curator takes it from there.",
   "buildStepOf": "Step {current} of {total}",
   "buildSummaryTitle": "So far",
   "buildSummaryEmpty": "Your answers will build up here as you go.",
-
   "stepExperienceTitle": "What's the experience?",
   "stepExperienceHint": "A feeling, a place, an activity — however you'd describe it to a friend.",
   "stepExperiencePlaceholder": "e.g. a slow week of diving and desert camps, away from anywhere touristy…",
@@ -57,19 +55,16 @@
   "vibeCelebration": "Celebration",
   "vibeSlowTravel": "Slow travel",
   "vibeAdventure": "Adventure",
-
   "stepTravelersTitle": "Who's coming?",
   "stepTravelersHint": "A rough headcount is enough for now.",
   "travelersLabel": "Travelers",
   "occasionLabel": "Occasion (optional)",
   "occasionPlaceholder": "Honeymoon, birthday, reunion…",
-
   "stepWhenTitle": "When are you thinking?",
   "stepWhenHint": "No fixed date yet? That's completely fine.",
   "dateModeFixed": "I have dates in mind",
   "dateModeFlexible": "Flexible / not sure yet",
   "preferredDateLabel": "Preferred start date",
-
   "stepVibeTitle": "Pace and budget comfort",
   "stepVibeHint": "Both optional — they just help your curator shape the first suggestion.",
   "paceLabel": "Pace",
@@ -80,13 +75,11 @@
   "budgetSimple": "Keep it simple",
   "budgetMid": "Mid-range",
   "budgetNoLimit": "No real limit",
-
   "stepContactTitle": "Who should we reach?",
   "stepContactHint": "Your curator will follow up on WhatsApp — nowhere else, no spam.",
   "fullName": "Full name",
   "whatsapp": "WhatsApp number",
   "email": "Email (optional)",
-
   "back": "Back",
   "next": "Continue",
   "submit": "Send my brief",
@@ -96,5 +89,6 @@
   "whatsappCta": "Message us on WhatsApp now",
   "requestFailed": "Something went wrong. Please try again or reach us on WhatsApp.",
   "startOver": "Build another brief",
-  "notice": "This is a request, not an instant confirmation — nothing is charged online."
+  "notice": "This is a request, not an instant confirmation — nothing is charged online.",
+  "waMessagePrefill": "Hi, I just sent a Signature brief: {idea}"
 }

@@ -25,6 +25,7 @@ export function ExperiencesStep({
   dispatch: Dispatch<BuilderAction>
 }) {
   const t = useTranslations('builder')
+  const common = useTranslations('common')
   const [category, setCategory] = useState<string | null>(null)
   const categories = useMemo(() => tripCategories(catalog.trips), [catalog.trips])
   const trips = useMemo(() => filterTripsByCategory(catalog.trips, category), [catalog.trips, category])
@@ -55,7 +56,7 @@ export function ExperiencesStep({
                 key={trip.id}
                 image={trip.image}
                 title={locale === 'ar' ? trip.name_ar : trip.name_en}
-                meta={`${locale === 'ar' ? trip.duration_ar : trip.duration_en} · ${formatAmount(trip.price, locale)} EGP`}
+                meta={`${locale === 'ar' ? trip.duration_ar : trip.duration_en} · ${formatAmount(trip.price, locale)} ${common('egp')}`}
                 selected={isSelected('trip', trip.id)}
                 onToggle={() => dispatch({ type: 'toggleExperience', kind: 'trip', id: trip.id })}
               />
@@ -97,6 +98,7 @@ function ExperienceCard({ image, title, meta, selected, onToggle }: { image: str
 
 function PackageCard({ pkg, locale, selected, onToggle }: { pkg: CatalogPackage; locale: 'ar' | 'en'; selected: boolean; onToggle: () => void }) {
   const t = useTranslations('builder')
+  const common = useTranslations('common')
   const total = pkg.public_total ?? pkg.package_total
   return (
     <div className={cn('flex items-center gap-3 rounded-2xl border-[1.5px] p-3', selected ? 'border-sun-600 bg-sun-50' : 'border-sand-300 bg-white')}>
@@ -108,7 +110,7 @@ function PackageCard({ pkg, locale, selected, onToggle }: { pkg: CatalogPackage;
           {pkg.payment_kind === 'stay_package' ? t('stayPackage') : t('experiencePackage')}
         </span>
         <p className="mt-1 truncate font-display text-sm font-bold text-sea-900">{locale === 'ar' ? pkg.name_ar : pkg.name_en}</p>
-        <p className="text-xs text-ink-subtle">{total != null ? `${formatAmount(total, locale)} EGP` : ''}</p>
+        <p className="text-xs text-ink-subtle">{total != null ? `${formatAmount(total, locale)} ${common('egp')}` : ''}</p>
         {selected && <p className="mt-0.5 text-xs font-medium text-sun-700">{t('dateArranged')}</p>}
       </div>
       <ToggleButton selected={selected} onToggle={onToggle} />

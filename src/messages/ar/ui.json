@@ -15,5 +15,7 @@
   "paymentBalanceArrival": "{percent}٪ عند الوصول",
   "paymentBalanceBeforeService": "{percent}٪ قبل الخدمة",
   "paymentNothingOnline": "مفيش أي دفع أونلاين.",
-  "paymentUnknown": "شروط الدفع هتتأكد مع عرض السعر بتاعك."
+  "paymentUnknown": "شروط الدفع هتتأكد مع عرض السعر بتاعك.",
+  "whatsappFloatLabel": "كلمنا",
+  "whatsappFloatAriaLabel": "كلمنا على واتساب"
 }

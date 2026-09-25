@@ -34,6 +34,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useCart } from '@/components/commerce/CartProvider'
 import { GlobalSearch } from '@/components/layout/GlobalSearch'
+import { formatCount } from '@/lib/format'
 
 /**
  * Lucide glyphs for the navigation. Emoji were used here before — they render
@@ -232,7 +233,7 @@ export function Header() {
             <ShoppingBag className="h-5 w-5" aria-hidden />
             {cart.hydrated && cart.count > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sun-500 px-1 text-[10px] font-bold text-on-accent">
-                {cart.count > 9 ? '9+' : cart.count}
+                {cart.count > 9 ? `${formatCount(9, locale)}+` : formatCount(cart.count, locale)}
               </span>
             )}
           </button>

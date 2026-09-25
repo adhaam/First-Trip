@@ -88,7 +88,7 @@ export function Hero({ settings }: { settings: SiteSettings | null }) {
       <div className="absolute inset-0 -z-10">
         <Image
           src={posterSrc}
-          alt={ar ? 'طريق صحراوي في سيناء ليلاً' : 'A Sinai desert road at night'}
+          alt={t('alt')}
           fill
           priority
           sizes="100vw"
@@ -170,7 +170,7 @@ export function Hero({ settings }: { settings: SiteSettings | null }) {
               <Logo size="sm" variant="mark" tone="light" />
               <p className="text-sm leading-snug text-sand-100/70">
                 {t.rich('originText', {
-                  place: ar ? 'دهب، جنوب سيناء' : 'Dahab, South Sinai',
+                  place: t('originPlace'),
                   b: (chunks) => <strong className="font-semibold text-white">{chunks}</strong>,
                 })}
               </p>

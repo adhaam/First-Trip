@@ -6,7 +6,9 @@
     "lede": "Stays, trips, packages and curated experiences — shaped around the trip you actually want, confirmed by a local team before anything is booked.",
     "primaryCta": "Build your trip",
     "secondaryCta": "Explore Sinai",
-    "originText": "From the heart of <b>{place}</b>"
+    "originText": "From the heart of <b>{place}</b>",
+    "alt": "A Sinai desert road at night",
+    "originPlace": "Dahab, South Sinai"
   },
   "gateway": {
     "eyebrow": "Start here",
@@ -55,12 +57,30 @@
     "note": "Nothing is paid online until WEEMAP confirms your dates.",
     "cta": "Start building",
     "steps": {
-      "discover": { "title": "Discover", "body": "Browse stays, trips, packages and experiences." },
-      "shape": { "title": "Shape", "body": "Pick your dates, travelers and what you want included." },
-      "request": { "title": "Request", "body": "Send it to WEEMAP — no payment, no account needed yet." },
-      "confirm": { "title": "Confirm", "body": "We check real availability with our partners and confirm with you." },
-      "experience": { "title": "Experience", "body": "Arrive, and let the local team handle the details." },
-      "addMore": { "title": "Add more", "body": "Extend your trip with more experiences whenever you like." }
+      "discover": {
+        "title": "Discover",
+        "body": "Browse stays, trips, packages and experiences."
+      },
+      "shape": {
+        "title": "Shape",
+        "body": "Pick your dates, travelers and what you want included."
+      },
+      "request": {
+        "title": "Request",
+        "body": "Send it to WEEMAP — no payment, no account needed yet."
+      },
+      "confirm": {
+        "title": "Confirm",
+        "body": "We check real availability with our partners and confirm with you."
+      },
+      "experience": {
+        "title": "Experience",
+        "body": "Arrive, and let the local team handle the details."
+      },
+      "addMore": {
+        "title": "Add more",
+        "body": "Extend your trip with more experiences whenever you like."
+      }
     }
   },
   "stays": {
@@ -95,7 +115,8 @@
     "eyebrow": "WEEMAP Signature",
     "title": "Tell us the experience. We'll build the journey.",
     "body": "Some trips shouldn't be built piece by piece. Signature Experiences bring the place, the activity and the right partners together around one idea.",
-    "cta": "Explore Signature Experiences"
+    "cta": "Explore Signature Experiences",
+    "imageAlt": "A Signature experience in Sinai"
   },
   "community": {
     "eyebrow": "Community",

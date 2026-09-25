@@ -4,8 +4,8 @@ import type { Dispatch } from 'react'
 import { useTranslations } from 'next-intl'
 import { Calendar } from '@/components/ui/calendar'
 import { ChipRail, Chip } from '@/components/brand'
-import { formatDate } from '@/lib/format'
-import { arrivalOptions, earliestArrival, patternsForMode, returnDateFor, stayNights } from '@/lib/trip-builder/dates'
+import { formatCount, formatDate } from '@/lib/format'
+import { arrivalOptions, earliestArrival, journeyNights, patternsForMode, returnDateFor, stayNights } from '@/lib/trip-builder/dates'
 import type { BuilderAction } from '@/lib/trip-builder/state'
 import { recommendedCheckInWeekdayNames } from '@/lib/trip-builder/summaries'
 import type { BuilderCatalog, BuilderState } from '@/lib/trip-builder/types'
@@ -58,7 +58,12 @@ function TransportDates({
     ? arrivalOptions(catalog.schedule, { mode, patternCode: state.stay_pattern_code, originCode: state.origin_governorate_code, from: earliestArrival(catalog.today), count: ARRIVAL_WINDOW })
     : []
   const returnDate = returnDateFor(catalog.schedule, { mode, patternCode: state.stay_pattern_code, originCode: state.origin_governorate_code, arrivalDate: state.arrival_date })
-  const nights = stayNights(state.arrival_date, returnDate ?? undefined)
+  const nights = journeyNights(catalog.schedule, {
+    mode,
+    patternCode: state.stay_pattern_code,
+    originCode: state.origin_governorate_code,
+    arrivalDate: state.arrival_date,
+  })
 
   if (!patterns.length) return <p className="text-sm text-ink-subtle">{t('datesNoPatterns')}</p>
 
@@ -107,7 +112,7 @@ function TransportDates({
 
       {returnDate && state.arrival_date && (
         <p role="status" className="rounded-xl bg-sea-50 px-4 py-3 text-sm font-medium text-sea-900">
-          {t('datesReturnHint', { date: formatDate(returnDate, locale), nights: nights ?? 0 })}
+          {t('datesReturnHint', { date: formatDate(returnDate, locale), nights: nights ?? 0, n: formatCount(nights ?? 0, locale) })}
         </p>
       )}
     </div>
@@ -151,11 +156,21 @@ function StayOnlyDates({
           modifiers={{ recommended: (date) => catalog.schedule.recommendedCheckInWeekdays.includes(date.getDay()) }}
           modifiersClassNames={{ recommended: 'font-bold text-sun-700' }}
           numberOfMonths={1}
+          // react-day-picker's default formatters go through date-fns, which
+          // renders day numbers and captions in Latin digits/English
+          // regardless of the app locale (see src/lib/format.ts's rationale).
+          // Routing through the same locale-aware helpers every other date
+          // in this app uses keeps this calendar consistent in Arabic.
+          formatters={{
+            formatDay: (date) => formatCount(date.getDate(), locale),
+            formatCaption: (date) => formatDate(date, locale, { month: 'long', year: 'numeric' }),
+            formatWeekdayName: (date) => formatDate(date, locale, { weekday: 'narrow' }),
+          }}
         />
       </div>
       {state.arrival_date && state.departure_date && (
         <p role="status" className="rounded-xl bg-sea-50 px-4 py-3 text-sm font-medium text-sea-900">
-          {t('summaryStayDates', { arrival: formatDate(state.arrival_date, locale), departure: formatDate(state.departure_date, locale), nights: nights ?? 0 })}
+          {t('summaryStayDates', { arrival: formatDate(state.arrival_date, locale), departure: formatDate(state.departure_date, locale), nights: nights ?? 0, n: formatCount(nights ?? 0, locale) })}
         </p>
       )}
     </div>

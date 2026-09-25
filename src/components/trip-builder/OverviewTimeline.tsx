@@ -2,8 +2,8 @@
 
 import { useTranslations } from 'next-intl'
 import { CalendarCheck, MapPin, Sparkles, Tent } from 'lucide-react'
-import { formatDate } from '@/lib/format'
-import { returnDateFor, stayNights } from '@/lib/trip-builder/dates'
+import { formatCount, formatDate } from '@/lib/format'
+import { journeyNights, returnDateFor } from '@/lib/trip-builder/dates'
 import type { BuilderCatalog, BuilderState } from '@/lib/trip-builder/types'
 import { summaryFor } from '@/lib/trip-builder/view'
 import { cn } from '@/lib/utils'
@@ -22,7 +22,13 @@ export function OverviewTimeline({ state, catalog, locale }: { state: BuilderSta
   const transportCopy = useTransportCopy(state.transport_mode ?? 'package_bus')
   const returnDate = isStayOnly ? undefined : returnDateFor(catalog.schedule, { mode: state.transport_mode, patternCode: state.stay_pattern_code, originCode: state.origin_governorate_code, arrivalDate: state.arrival_date })
   const departureDate = isStayOnly ? state.departure_date : returnDate ?? undefined
-  const nights = stayNights(state.arrival_date, departureDate)
+  const nights = journeyNights(catalog.schedule, {
+    mode: state.transport_mode,
+    patternCode: state.stay_pattern_code,
+    originCode: state.origin_governorate_code,
+    arrivalDate: state.arrival_date,
+    departureDate,
+  })
 
   const steps: { icon: React.ReactNode; label: string }[] = []
 
@@ -33,7 +39,7 @@ export function OverviewTimeline({ state, catalog, locale }: { state: BuilderSta
   }
 
   if (summary.stay) {
-    steps.push({ icon: <Tent className="h-4 w-4" />, label: nights ? t('stayNights', { nights, stay: summary.stay }) : summary.stay })
+    steps.push({ icon: <Tent className="h-4 w-4" />, label: nights ? t('stayNights', { nights, stay: summary.stay, n: formatCount(nights, locale) }) : summary.stay })
   } else if (!isStayOnly) {
     steps.push({ icon: <Tent className="h-4 w-4" />, label: t('dahab') })
   }

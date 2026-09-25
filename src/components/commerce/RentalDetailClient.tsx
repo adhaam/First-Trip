@@ -13,7 +13,7 @@ import { rentalDurationLabel } from '@/lib/shop-view'
 import { Eyebrow, PaymentTerms, PriceTag, StickyActionBar } from '@/components/brand'
 import type { CommerceProduct, CommerceProductVariant, CartRentalItem, DeliveryZone } from '@/lib/commerce-types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
-import { formatAmount, formatDate } from '@/lib/format'
+import { formatAmount, formatCount, formatDate } from '@/lib/format'
 
 const REQUIREMENT_KEYS: Record<string, string> = {
   id_required: 'requirementIdRequired',
@@ -176,7 +176,7 @@ export function RentalDetailClient({ product, deliveryZones, paymentPolicies }: 
           {images.length > 1 && (
             <div className="mt-3 flex gap-2 overflow-x-auto" role="group" aria-label={shop('gallery')}>
               {images.map((img, i) => (
-                <button key={img + i} type="button" onClick={() => setActiveImage(i)} aria-label={`${shop('gallery')} ${i + 1}`} aria-pressed={activeImage === i} className={cn('relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2', activeImage === i ? 'border-sun-600' : 'border-transparent')}>
+                <button key={img + i} type="button" onClick={() => setActiveImage(i)} aria-label={`${shop('gallery')} ${formatCount(i + 1, locale)}`} aria-pressed={activeImage === i} className={cn('relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2', activeImage === i ? 'border-sun-600' : 'border-transparent')}>
                   <Image src={img} alt="" fill sizes="64px" className="object-cover" />
                 </button>
               ))}
@@ -283,7 +283,7 @@ export function RentalDetailClient({ product, deliveryZones, paymentPolicies }: 
               <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label={shop('decreaseQuantity')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-sand-300 hover:bg-sand-100">
                 <Minus className="h-3.5 w-3.5" aria-hidden />
               </button>
-              <span className="w-6 text-center font-bold tabular-nums">{quantity}</span>
+              <span className="w-6 text-center font-bold tabular-nums">{formatCount(quantity, locale)}</span>
               <button type="button" onClick={() => setQuantity((q) => q + 1)} aria-label={shop('increaseQuantity')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-sea-500 text-sea-700 hover:bg-sea-50">
                 <Plus className="h-3.5 w-3.5" aria-hidden />
               </button>
@@ -295,11 +295,11 @@ export function RentalDetailClient({ product, deliveryZones, paymentPolicies }: 
           )}
           {!availability.checking && !availability.available && (
             <p className="mt-3 text-xs font-semibold text-red-600">
-              {availability.remaining != null ? shop('fewLeftForDates', { count: availability.remaining }) : shop('unavailableForDates')}
+              {availability.remaining != null ? shop('fewLeftForDates', { count: formatCount(availability.remaining, locale) }) : shop('unavailableForDates')}
             </p>
           )}
           {!availability.checking && availability.available && availability.remaining != null && availability.remaining <= 3 && (
-            <p className="mt-3 text-xs font-medium text-sun-700">{shop('lowStock', { count: availability.remaining })}</p>
+            <p className="mt-3 text-xs font-medium text-sun-700">{shop('lowStock', { count: formatCount(availability.remaining, locale) })}</p>
           )}
 
           {/* Fulfillment */}

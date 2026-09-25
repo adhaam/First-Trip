@@ -1,20 +1,17 @@
 {
   "metaTitle": "Build your Dahab trip | WEEMAP",
   "metaDescription": "Shape your Dahab trip step by step, then send one request for confirmation.",
-
   "heroKicker": "28.49°N · 34.51°E",
   "title": "Plot your route to Dahab",
   "intro": "Pick your way in, your dates, your stay. We confirm availability, seats and experience dates with you — nothing is paid now.",
   "heroStartFrom": "Starting from your last plan",
   "heroStartFresh": "Starting fresh",
-
   "optional": "Optional",
   "skip": "Skip",
   "skipped": "Skipped",
   "edit": "Edit",
   "step": "Step {number}",
   "complete": "Done",
-
   "stepTransportTitle": "From & how",
   "stepTransportSubtitle": "How you're getting to Dahab",
   "stepDatesTitle": "Dates",
@@ -30,7 +27,6 @@
   "stepOverviewTitle": "Your journey",
   "stepPriceTitle": "Price & payment",
   "stepContactTitle": "Contact & request",
-
   "transportPackageBusTitle": "WEEMAP Bus",
   "transportPackageBusDescription": "Shared coach on a fixed schedule",
   "transportHiaceTitle": "Private Hiace",
@@ -44,41 +40,36 @@
   "transportChooseOrigin": "Choose your governorate",
   "transportChooseModeFirst": "Choose how you're travelling to see your origin options.",
   "transportNoOrigins": "No departure points are configured for this transfer yet — talk to us on WhatsApp.",
-
   "datesChooseTransportFirst": "Choose how you're travelling first.",
   "datesPatternLabel": "Length of stay",
   "datesNoPatterns": "No stay lengths are configured for this transfer yet.",
   "datesPickArrival": "Pick your departure date",
   "datesNoArrivals": "No dates match this combination in the next few months — try another length of stay or talk to us on WhatsApp.",
-  "datesReturnHint": "Return {date} · {nights, plural, one {# night} other {# nights}}",
+  "datesReturnHint": "Return {date} · {nights, plural, one {{n} night} other {{n} nights}}",
   "datesCheckIn": "Check-in",
   "datesCheckOut": "Check-out",
   "datesRangeHint": "Choose your check-in and check-out dates. Any date works.",
   "datesRecommendedCheckIn": "{days} are popular check-in days",
-  "datesNights": "{nights, plural, one {# night} other {# nights}}",
-
+  "datesNights": "{nights, plural, one {{n} night} other {{n} nights}}",
   "adults": "Adults",
   "children": "Children",
   "adultsHint": "Age 12 and up",
   "childrenHint": "Under 12",
-
   "stayTransferOnly": "Just the ride — I have a place",
   "stayRequiredHint": "A stay is required for \"I'll get there myself\".",
   "stayPrefilled": "Pre-selected for you",
   "stayFromPrice": "From",
   "stayEmpty": "Stays aren't listed yet",
   "stayEmptyHint": "Talk to us on WhatsApp and we'll help you pick a place to stay.",
-
   "roomsSingle": "Single rooms",
   "roomsDouble": "Double rooms",
   "roomsTriple": "Triple rooms",
-  "roomsCapacity": "Fits up to {capacity, plural, one {# guest} other {# guests}}",
-  "roomsNotEnough": "Add another room — {people, plural, one {# traveller needs} other {# travellers need}} more space.",
+  "roomsCapacity": "Fits up to {capacity, plural, one {{n} guest} other {{n} guests}}",
+  "roomsNotEnough": "Add another room — {people, plural, one {{n} traveller needs} other {{n} travellers need}} more space.",
   "roomsUpgrades": "Room upgrades",
   "mealPlan": "Meal plan",
   "included": "Included",
   "perPersonPerNight": "per person, per night",
-
   "experiencesTrips": "Trips",
   "experiencesPackages": "Packages",
   "experiencesAllCategories": "All",
@@ -89,11 +80,10 @@
   "experiencePackage": "Sinai Experience Package",
   "experiencesEmpty": "Trips and packages will appear here soon.",
   "experiencesEmptyHint": "Talk to us on WhatsApp for what's available right now.",
-
   "depart": "Depart · {date}",
   "checkIn": "Check in · {date}",
-  "stayNights": "{nights, plural, one {# night} other {# nights}} at {stay}",
-  "roomsLine": "{rooms, plural, one {# room} other {# rooms}} · {meal}",
+  "stayNights": "{nights, plural, one {{n} night} other {{n} nights}} at {stay}",
+  "roomsLine": "{rooms, plural, one {{n} room} other {{n} rooms}} · {meal}",
   "dahab": "Dahab",
   "return": "Return · {date}",
   "confirmNextTitle": "What WEEMAP confirms next",
@@ -101,7 +91,6 @@
   "confirmNextTransport": "Seats on the {mode}",
   "confirmNextExperiences": "Dates for your experiences, with you",
   "confirmNextGeneric": "We'll get back to you with the next steps",
-
   "addDates": "Add dates to see the price",
   "total": "Total",
   "nowNothing": "Now: nothing",
@@ -117,7 +106,6 @@
   "paymentKindTransfer": "Transfer",
   "paymentKindTrip": "Trip",
   "paymentKindExperiencePackage": "Experience package",
-
   "name": "Your name",
   "phone": "Phone / WhatsApp",
   "phonePlaceholder": "+20 10 123 4567",
@@ -132,7 +120,6 @@
   "sending": "Sending…",
   "completeRequired": "Please complete the required journey details and contact fields.",
   "submitError": "We couldn't send this request. Please try again or talk to us on WhatsApp.",
-
   "whatsapp": "Send this plan on WhatsApp",
   "whatsappHint": "Prefer to talk it through?",
   "continue": "Continue",
@@ -142,24 +129,21 @@
   "viewSummary": "View summary",
   "startOver": "Start a new trip",
   "startOverConfirm": "Start over? This clears everything you've chosen.",
-
   "requestSent": "Your request is with WEEMAP",
   "requestSentHint": "We'll confirm what's available and get back to you with the next steps. Nothing is paid now.",
   "reference": "Reference",
   "quotedTotal": "Quoted total",
-
   "curatingTitle": "Trips are being prepared",
   "curatingHint": "Talk to us on WhatsApp and we'll help shape your Dahab plan.",
-
   "summaryStayOnly": "Getting there yourself",
   "summaryTransportPackageBus": "WEEMAP Bus from {origin}",
   "summaryTransportHiace": "Private Hiace from {origin}",
   "summaryTransportDates": "{pattern} · departs {arrival}, returns {return}",
-  "summaryStayDates": "{arrival} → {departure} · {nights, plural, one {# night} other {# nights}}",
-  "summaryTravelers": "{adults, plural, one {# traveller} other {# travellers}}",
+  "summaryStayDates": "{arrival} → {departure} · {nights, plural, one {{n} night} other {{n} nights}}",
+  "summaryTravelers": "{adults, plural, one {{n} traveller} other {{n} travellers}}",
   "summaryTravelersWithChildren": "{adults} adult(s), {children} child(ren)",
   "summaryTransferOnly": "Just the ride — no stay booked",
-  "summaryRooms": "{rooms, plural, one {# room} other {# rooms}} · fits {capacity}",
-  "summaryRoomsMeal": "{rooms, plural, one {# room} other {# rooms}} · {meal}",
-  "summaryExperiences": "{count, plural, one {# experience added} other {# experiences added}}"
+  "summaryRooms": "{rooms, plural, one {{n} room} other {{n} rooms}} · fits {capacity}",
+  "summaryRoomsMeal": "{rooms, plural, one {{n} room} other {{n} rooms}} · {meal}",
+  "summaryExperiences": "{count, plural, one {{n} experience added} other {{n} experiences added}}"
 }

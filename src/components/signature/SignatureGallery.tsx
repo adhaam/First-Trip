@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { SafeImage as Image } from '@/components/SafeImage'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { X } from 'lucide-react'
 import { ArrowBack, ArrowForward } from '@/components/brand/DirectionalIcon'
+import { formatCount } from '@/lib/format'
 
 /**
  * The full gallery grid (below the header cover) plus a keyboard-navigable
@@ -17,6 +18,7 @@ import { ArrowBack, ArrowForward } from '@/components/brand/DirectionalIcon'
  */
 export function SignatureGallery({ images, title }: { images: string[]; title: string }) {
   const t = useTranslations('signatureV2')
+  const locale = useLocale()
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
   const close = useCallback(() => setOpenIndex(null), [])
@@ -52,12 +54,12 @@ export function SignatureGallery({ images, title }: { images: string[]; title: s
             <button
               type="button"
               onClick={() => setOpenIndex(index)}
-              aria-label={t('galleryOpen', { index: index + 1 })}
+              aria-label={t('galleryOpen', { index: formatCount(index + 1, locale) })}
               className="group relative block aspect-[4/3] w-full overflow-hidden pin-card bg-sand-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun-500 focus-visible:ring-offset-2"
             >
               <Image
                 src={src}
-                alt={`${title} ${index + 1}`}
+                alt={`${title} ${formatCount(index + 1, locale)}`}
                 fill
                 sizes="(min-width: 640px) 33vw, 50vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -105,9 +107,9 @@ export function SignatureGallery({ images, title }: { images: string[]; title: s
           )}
 
           <figure className="relative h-full max-h-[80vh] w-full max-w-4xl">
-            <Image src={images[openIndex]} alt={`${title} ${openIndex + 1}`} fill sizes="100vw" className="object-contain" priority />
+            <Image src={images[openIndex]} alt={`${title} ${formatCount(openIndex + 1, locale)}`} fill sizes="100vw" className="object-contain" priority />
             <figcaption className="absolute inset-x-0 -bottom-8 text-center text-sm text-sand-200">
-              {openIndex + 1} / {images.length}
+              {formatCount(openIndex + 1, locale)} / {formatCount(images.length, locale)}
             </figcaption>
           </figure>
         </div>

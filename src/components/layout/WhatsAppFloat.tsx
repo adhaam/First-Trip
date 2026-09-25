@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { MessageCircle } from 'lucide-react'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { trackConversion } from '@/lib/conversion'
@@ -14,6 +14,7 @@ import { trackConversion } from '@/lib/conversion'
  * content on small screens, and expands again on hover/focus.
  */
 export function WhatsAppFloat({ number }: { number?: string | null }) {
+  const ui = useTranslations('ui')
   const locale = useLocale()
   const pathname = usePathname()
   const [compact, setCompact] = useState(false)
@@ -42,7 +43,7 @@ export function WhatsAppFloat({ number }: { number?: string | null }) {
       href={`https://wa.me/${digits}`}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="WhatsApp"
+      aria-label={ui('whatsappFloatAriaLabel')}
       onClick={() => trackConversion('whatsapp_click', { source: 'floating_button' }, { once: false })}
       className={cn(
         'group fixed z-50 flex min-h-12 items-center gap-2 rounded-full bg-[#25D366] py-3 text-on-accent shadow-[0_6px_24px_-6px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-[#1FBE59]',
@@ -60,7 +61,7 @@ export function WhatsAppFloat({ number }: { number?: string | null }) {
           compact ? 'max-w-0 opacity-0 group-hover:max-w-[7rem] group-hover:opacity-100' : 'max-w-[7rem] opacity-100',
         )}
       >
-        {locale === 'ar' ? 'كلمنا' : 'WhatsApp'}
+        {ui('whatsappFloatLabel')}
       </span>
     </a>
   )

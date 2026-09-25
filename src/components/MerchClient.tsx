@@ -11,6 +11,7 @@ import { ButtonLink } from '@/components/ButtonLink'
 import { PageHero, Eyebrow, Chip, ChipRail, FilterSheet, SearchInput } from '@/components/brand'
 import { applicableCategories, catalogView, filterCatalog, sortCatalog, type CatalogSort } from '@/lib/shop-view'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
+import { formatCount } from '@/lib/format'
 import type { CommerceCategory, CommerceCollection, CommerceProduct } from '@/lib/commerce-types'
 
 interface Props {
@@ -40,7 +41,7 @@ export function MerchClient({ products, categories, collections, whatsapp }: Pro
 
   const hasFilters = query.trim() !== ''
   const number = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
-  const waMessage = ar ? 'مرحباً WEEMAP، عايز أعرف التشكيلة الجديدة إمتى هتظهر' : "Hi WEEMAP, I'd like to know when the new drop lands"
+  const waMessage = shop('waMessageMerch')
 
   const sortLabel = (s: CatalogSort) =>
     shop(`sort${s === 'featured' ? 'Featured' : s === 'price_asc' ? 'PriceAsc' : s === 'price_desc' ? 'PriceDesc' : 'Name'}`)
@@ -132,7 +133,7 @@ export function MerchClient({ products, categories, collections, whatsapp }: Pro
               />
             </div>
 
-            <ResultCount count={filtered.length} label={shop('resultsCount', { count: filtered.length })} className="mb-4" />
+            <ResultCount count={filtered.length} label={shop('resultsCount', { count: filtered.length, n: formatCount(filtered.length, locale) })} className="mb-4" />
 
             {filtered.length === 0 ? (
               <EmptyState

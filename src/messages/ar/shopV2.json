@@ -22,7 +22,7 @@
   "searchMerchPlaceholder": "دوّر على منتج…",
   "searchRentPlaceholder": "دوّر على إيجار…",
   "searchLabel": "بحث",
-  "resultsCount": "{count, plural, =0 {مفيش نتايج} one {نتيجة واحدة} two {نتيجتين} few {# نتايج} other {# نتيجة}}",
+  "resultsCount": "{count, plural, =0 {مفيش نتايج} one {نتيجة واحدة} two {نتيجتين} few {{n} نتايج} other {{n} نتيجة}}",
   "noMatchesTitle": "مفيش حاجة مطابقة للفلتر ده",
   "noMatchesHint": "جرّب تصنيف مختلف أو كلمة بحث تانية.",
   "collectionsLabel": "مجموعات",
@@ -100,5 +100,9 @@
   "whatsappCta": "كلم WEEMAP على واتساب",
   "continueShopping": "كمّل تسوق",
   "browseMerch": "تصفح المتجر",
-  "browseRentals": "تصفح الإيجارات"
+  "browseRentals": "تصفح الإيجارات",
+  "waMessageMerch": "مرحباً WEEMAP، عايز أعرف التشكيلة الجديدة إمتى هتظهر",
+  "waMessageRent": "مرحباً WEEMAP، عايز أعرف إيه المعدات المتاحة للإيجار دلوقتي",
+  "waMessageOrder": "مرحباً WEEMAP، لسه بعتّ طلب {orderNumber}",
+  "waMessageOrderDeposit": "التأمين المسترد عند الاستلام: {amount} {egp}"
 }

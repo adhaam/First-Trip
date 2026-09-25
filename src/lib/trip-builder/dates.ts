@@ -44,3 +44,25 @@ export function recommendedCheckIn(schedule: TransportScheduleConfig, date: stri
 export function earliestArrival(today: string) {
   return addDays(today, 1)
 }
+
+/**
+ * Nights of stay for the journey as the server prices it (see
+ * resolveJourneyDates in src/lib/trip-requests/build.ts): a transport journey
+ * takes the stay pattern's own `nights`, because the outbound bus travels
+ * overnight and the calendar gap between departure and return is longer than
+ * the stay; stay-only counts calendar nights between the chosen dates.
+ */
+export function journeyNights(
+  schedule: TransportScheduleConfig,
+  input: { mode?: TransportMode; patternCode?: string; originCode?: string; arrivalDate?: string; departureDate?: string },
+): number | null {
+  if (input.mode === 'stay_only') return stayNights(input.arrivalDate, input.departureDate)
+  if (!input.mode || !input.patternCode || !input.arrivalDate) return null
+  const result = resolveStayPattern(schedule, {
+    patternCode: input.patternCode,
+    transferType: input.mode,
+    outboundDate: input.arrivalDate,
+    originCode: input.originCode,
+  })
+  return result.ok ? result.nights : null
+}

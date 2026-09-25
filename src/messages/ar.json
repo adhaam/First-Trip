@@ -503,7 +503,7 @@
     "viewAll": "عرض كل النتائج",
     "prompt": "ابحث عن إقامة أو رحلة أو معدات…",
     "searching": "بندوّر…",
-    "resultsCount": "{count} نتيجة"
+    "resultsCount": "{count, plural, =0 {مفيش نتايج} one {نتيجة واحدة} two {نتيجتين} few {{n} نتايج} other {{n} نتيجة}}"
   },
   "signature": {
     "eyebrow": "WEEMAP SIGNATURE",

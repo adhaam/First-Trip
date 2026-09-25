@@ -1,6 +1,6 @@
 'use client'
 
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { ButtonLink } from '@/components/ButtonLink'
 import { Eyebrow } from '@/components/brand/Eyebrow'
@@ -16,14 +16,12 @@ import { Reveal } from '@/components/motion/Reveal'
  */
 export function SignatureMoment({ image }: { image: string }) {
   const t = useTranslations('homeV2.signature')
-  const locale = useLocale()
-  const ar = locale === 'ar'
 
   return (
     <section className="relative isolate min-h-[32rem] overflow-hidden bg-sea-900 text-white md:min-h-[38rem]">
       <Image
         src={image}
-        alt={ar ? 'تجربة Signature في سيناء' : 'A Signature experience in Sinai'}
+        alt={t('imageAlt')}
         fill
         sizes="100vw"
         className="-z-20 object-cover object-center"

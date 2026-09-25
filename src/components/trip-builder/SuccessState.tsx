@@ -25,6 +25,7 @@ export function SuccessState({
   onReset: () => void
 }) {
   const t = useTranslations('builder')
+  const common = useTranslations('common')
   const whatsappHref = catalog.whatsappNumber
     ? whatsappLink(catalog.whatsappNumber, buildHandoffMessage({ state, catalog, locale, reference: success.reference, total: success.total }))
     : undefined
@@ -45,7 +46,7 @@ export function SuccessState({
               <p className="mt-1 font-display text-xl font-bold tabular-nums text-sea-900">{formatReference(success.reference)}</p>
               {success.total != null && (
                 <p className="mt-1 text-sm text-ink-muted">
-                  {t('quotedTotal')}: {formatAmount(success.total, locale)} EGP
+                  {t('quotedTotal')}: {formatAmount(success.total, locale)} {common('egp')}
                 </p>
               )}
             </div>

@@ -59,6 +59,7 @@ export function PriceSummary({
   className?: string
 }) {
   const t = useTranslations('builder')
+  const common = useTranslations('common')
   const rows = paymentRows(quote)
   const quoteErrorText = useQuoteErrorText(errorKey)
 
@@ -77,14 +78,14 @@ export function PriceSummary({
                     <span className="block text-xs text-ink-subtle">{locale === 'ar' ? line.detail_ar : line.detail_en}</span>
                   )}
                 </span>
-                <span className="shrink-0 font-semibold tabular-nums text-sea-900">{formatAmount(line.amount, locale)} EGP</span>
+                <span className="shrink-0 font-semibold tabular-nums text-sea-900">{formatAmount(line.amount, locale)} {common('egp')}</span>
               </div>
             ))}
           </div>
 
           <div className="flex items-baseline justify-between border-t border-sand-300 pt-3.5">
             <span className="font-display text-base font-bold text-sea-900">{t('total')}</span>
-            <span className="font-display text-2xl font-bold tabular-nums text-sea-900">{formatAmount(quote.total, locale)} EGP</span>
+            <span className="font-display text-2xl font-bold tabular-nums text-sea-900">{formatAmount(quote.total, locale)} {common('egp')}</span>
           </div>
 
           <div className="space-y-1.5 rounded-xl bg-sand-100 p-3.5 text-sm">

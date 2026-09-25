@@ -13,7 +13,7 @@ import type { PaymentPolicy } from '@/lib/payment-rules'
 import { HoneypotField } from '@/components/HoneypotField'
 import { Turnstile } from '@/components/Turnstile'
 import { trackConversion, trackRequestFailure } from '@/lib/conversion'
-import { formatAmount } from '@/lib/format'
+import { formatAmount, formatCount } from '@/lib/format'
 import { rentalDurationLabel } from '@/lib/shop-view'
 import { EmptyState } from '@/components/EmptyState'
 import { ButtonLink } from '@/components/ButtonLink'
@@ -116,9 +116,10 @@ export function CartCheckoutClient({ deliveryZones, whatsapp, paymentPolicies }:
   }
 
   if (success) {
-    const waMessage = ar
-      ? `مرحباً WEEMAP، لسه بعتّ طلب ${success.orderNumber}${success.depositTotal > 0 ? `\nالتأمين المسترد عند الاستلام: ${formatAmount(success.depositTotal, locale)} ${common('egp')}` : ''}`
-      : `Hi WEEMAP, I just sent request ${success.orderNumber}${success.depositTotal > 0 ? `\nRefundable deposit due at handover: ${formatAmount(success.depositTotal, locale)} ${common('egp')}` : ''}`
+    const waMessage = shop('waMessageOrder', { orderNumber: success.orderNumber })
+      + (success.depositTotal > 0
+        ? `\n${shop('waMessageOrderDeposit', { amount: formatAmount(success.depositTotal, locale), egp: common('egp') })}`
+        : '')
     return (
       <div className="container-main flex min-h-[60svh] flex-col items-center justify-center py-16 text-center">
         <PartyPopper className="mb-4 h-12 w-12 text-sun-700" aria-hidden />
@@ -220,7 +221,7 @@ export function CartCheckoutClient({ deliveryZones, whatsapp, paymentPolicies }:
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => cart.setQuantity(item.lineId, item.quantity - 1)} aria-label={shop('decreaseQuantity')} className="flex h-7 w-7 items-center justify-center rounded border border-sand-300 hover:bg-sand-100"><Minus className="h-3 w-3" aria-hidden /></button>
-                    <span className="w-6 text-center text-sm font-bold tabular-nums">{item.quantity}</span>
+                    <span className="w-6 text-center text-sm font-bold tabular-nums">{formatCount(item.quantity, locale)}</span>
                     <button type="button" onClick={() => cart.setQuantity(item.lineId, item.quantity + 1)} aria-label={shop('increaseQuantity')} className="flex h-7 w-7 items-center justify-center rounded border border-sea-500 text-sea-700 hover:bg-sea-50"><Plus className="h-3 w-3" aria-hidden /></button>
                   </div>
                   <span className="text-sm font-bold text-sea-900 tabular-nums">{formatAmount(item.unitPriceEstimate * item.quantity, locale)} {common('egp')}</span>

@@ -11,7 +11,7 @@ import { isOutOfStock } from '@/lib/shop-view'
 import type { CommerceProduct, CommerceProductVariant, DeliveryZone } from '@/lib/commerce-types'
 import type { CartMerchItem } from '@/lib/commerce-types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
-import { formatAmount } from '@/lib/format'
+import { formatAmount, formatCount } from '@/lib/format'
 
 export function ProductDetailClient({ product, deliveryZones, paymentPolicies }: {
   product: CommerceProduct
@@ -122,7 +122,7 @@ export function ProductDetailClient({ product, deliveryZones, paymentPolicies }:
                   key={img + i}
                   type="button"
                   onClick={() => setActiveImage(i)}
-                  aria-label={`${shop('gallery')} ${i + 1}`}
+                  aria-label={`${shop('gallery')} ${formatCount(i + 1, locale)}`}
                   aria-pressed={activeImage === i}
                   className={cn(
                     'relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2',
@@ -148,7 +148,7 @@ export function ProductDetailClient({ product, deliveryZones, paymentPolicies }:
                 {showDelivery && (
                   <span className="inline-flex items-center gap-1.5">
                     <Truck className="h-4 w-4 text-sea-600" aria-hidden />
-                    {shop('deliveryAvailableFrom', { zones: deliveryZones.length })}
+                    {shop('deliveryAvailableFrom', { zones: formatCount(deliveryZones.length, locale) })}
                   </span>
                 )}
               </div>
@@ -211,7 +211,7 @@ export function ProductDetailClient({ product, deliveryZones, paymentPolicies }:
             <p className="mt-3 text-xs font-medium text-red-600">{shop('optionUnavailable')}</p>
           )}
           {matchedVariant && product.track_inventory && stock !== null && stock > 0 && stock <= 5 && (
-            <p className="mt-3 text-xs font-medium text-sun-700">{shop('lowStock', { count: stock })}</p>
+            <p className="mt-3 text-xs font-medium text-sun-700">{shop('lowStock', { count: formatCount(stock, locale) })}</p>
           )}
           {(variantOutOfStock || (!hasOptions && productOutOfStock)) && (
             <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-red-600">
@@ -226,7 +226,7 @@ export function ProductDetailClient({ product, deliveryZones, paymentPolicies }:
               <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label={shop('decreaseQuantity')} className="flex h-9 w-9 items-center justify-center rounded-lg border border-sand-300 hover:bg-sand-100">
                 <Minus className="h-3.5 w-3.5" aria-hidden />
               </button>
-              <span className="w-6 text-center font-bold tabular-nums">{quantity}</span>
+              <span className="w-6 text-center font-bold tabular-nums">{formatCount(quantity, locale)}</span>
               <button
                 type="button"
                 onClick={() => setQuantity((q) => (stock !== null ? Math.min(stock, q + 1) : q + 1))}

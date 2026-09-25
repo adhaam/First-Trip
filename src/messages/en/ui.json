@@ -15,5 +15,7 @@
   "paymentBalanceArrival": "{percent}% on arrival",
   "paymentBalanceBeforeService": "{percent}% before service",
   "paymentNothingOnline": "Nothing is charged online.",
-  "paymentUnknown": "Payment terms confirmed with your quote."
+  "paymentUnknown": "Payment terms confirmed with your quote.",
+  "whatsappFloatLabel": "WhatsApp",
+  "whatsappFloatAriaLabel": "Chat with WEEMAP on WhatsApp"
 }

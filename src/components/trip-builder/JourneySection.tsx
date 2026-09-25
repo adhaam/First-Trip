@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Check } from 'lucide-react'
-import { formatNumber } from '@/lib/format'
+import { formatCount, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { SectionSummary } from '@/lib/trip-builder/summaries'
 
@@ -24,7 +24,7 @@ import type { SectionSummary } from '@/lib/trip-builder/summaries'
  * `summaryStay` is a pure name passthrough (the stay's own localized name)
  * and never had a message to begin with.
  */
-function useSectionSummaryText(summary: SectionSummary | undefined): string | undefined {
+function useSectionSummaryText(summary: SectionSummary | undefined, locale: 'ar' | 'en'): string | undefined {
   const t = useTranslations('builder')
   if (!summary) return undefined
   switch (summary.key) {
@@ -32,14 +32,32 @@ function useSectionSummaryText(summary: SectionSummary | undefined): string | un
     case 'summaryTransportPackageBus': return t('summaryTransportPackageBus', summary.values as { origin: string })
     case 'summaryTransportHiace': return t('summaryTransportHiace', summary.values as { origin: string })
     case 'summaryTransportDates': return t('summaryTransportDates', summary.values as { pattern: string; arrival: string; return: string })
-    case 'summaryStayDates': return t('summaryStayDates', summary.values as { arrival: string; departure: string; nights: number })
-    case 'summaryTravelers': return t('summaryTravelers', summary.values as { adults: number; children: number })
-    case 'summaryTravelersWithChildren': return t('summaryTravelersWithChildren', summary.values as { adults: number; children: number })
+    case 'summaryStayDates': {
+      const values = summary.values as { arrival: string; departure: string; nights: number }
+      return t('summaryStayDates', { ...values, n: formatCount(values.nights, locale) })
+    }
+    case 'summaryTravelers': {
+      const values = summary.values as { adults: number; children: number }
+      return t('summaryTravelers', { ...values, n: formatCount(values.adults, locale) })
+    }
+    case 'summaryTravelersWithChildren': {
+      const values = summary.values as { adults: number; children: number }
+      return t('summaryTravelersWithChildren', { adults: formatCount(values.adults, locale), children: formatCount(values.children, locale) })
+    }
     case 'summaryTransferOnly': return t('summaryTransferOnly')
     case 'summaryStay': return summary.values?.stay as string | undefined
-    case 'summaryRooms': return t('summaryRooms', summary.values as { rooms: number; capacity: number })
-    case 'summaryRoomsMeal': return t('summaryRoomsMeal', summary.values as { rooms: number; capacity: number; meal: string })
-    case 'summaryExperiences': return t('summaryExperiences', summary.values as { count: number })
+    case 'summaryRooms': {
+      const values = summary.values as { rooms: number; capacity: number }
+      return t('summaryRooms', { rooms: values.rooms, capacity: formatCount(values.capacity, locale), n: formatCount(values.rooms, locale) })
+    }
+    case 'summaryRoomsMeal': {
+      const values = summary.values as { rooms: number; capacity: number; meal: string }
+      return t('summaryRoomsMeal', { rooms: values.rooms, capacity: formatCount(values.capacity, locale), meal: values.meal, n: formatCount(values.rooms, locale) })
+    }
+    case 'summaryExperiences': {
+      const values = summary.values as { count: number }
+      return t('summaryExperiences', { ...values, n: formatCount(values.count, locale) })
+    }
     default: return undefined
   }
 }
@@ -86,7 +104,7 @@ export function JourneySection({
   children: ReactNode
 }) {
   const t = useTranslations('builder')
-  const summaryText = useSectionSummaryText(summary)
+  const summaryText = useSectionSummaryText(summary, locale)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const wasActive = useRef(active)
 

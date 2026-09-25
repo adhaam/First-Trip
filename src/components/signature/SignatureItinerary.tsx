@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { ChevronDown } from 'lucide-react'
+import { formatCount } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { ExperienceItineraryStep } from '@/lib/types'
 
@@ -46,7 +47,7 @@ export function SignatureItinerary({ steps }: { steps: ExperienceItineraryStep[]
                   className="flex w-full items-center gap-4 px-5 py-4 text-start transition-colors hover:bg-sand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sun-500"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sun-500/10 font-display text-sm font-bold text-sun-700">
-                    {index + 1}
+                    {formatCount(index + 1, locale)}
                   </span>
                   <span className="flex-1 font-display text-base font-semibold text-sea-900">{title}</span>
                   <ChevronDown className={cn('h-5 w-5 shrink-0 text-ink-subtle transition-transform', expanded && 'rotate-180')} aria-hidden />

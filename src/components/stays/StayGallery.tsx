@@ -111,7 +111,7 @@ export function StayGallery({ images, name }: { images: string[]; name: string }
               key={img + i}
               type="button"
               onClick={() => setIndex(i)}
-              aria-label={`${i + 1}`}
+              aria-label={formatCount(i + 1, locale)}
               aria-current={i === index}
               className={cn(
                 'relative h-16 w-24 shrink-0 overflow-hidden rounded-lg transition-all',

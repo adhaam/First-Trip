@@ -22,7 +22,7 @@
   "searchMerchPlaceholder": "Search merch…",
   "searchRentPlaceholder": "Search rentals…",
   "searchLabel": "Search",
-  "resultsCount": "{count, plural, =0 {No items} one {# item} other {# items}}",
+  "resultsCount": "{count, plural, =0 {No items} one {{n} item} other {{n} items}}",
   "noMatchesTitle": "Nothing matches that filter",
   "noMatchesHint": "Try a different category or search word.",
   "collectionsLabel": "Collections",
@@ -100,5 +100,9 @@
   "whatsappCta": "Message WEEMAP on WhatsApp",
   "continueShopping": "Continue shopping",
   "browseMerch": "Browse merch",
-  "browseRentals": "Browse rentals"
+  "browseRentals": "Browse rentals",
+  "waMessageMerch": "Hi WEEMAP, I'd like to know when the new drop lands",
+  "waMessageRent": "Hi WEEMAP, what rental gear do you have available right now?",
+  "waMessageOrder": "Hi WEEMAP, I just sent request {orderNumber}",
+  "waMessageOrderDeposit": "Refundable deposit due at handover: {amount} {egp}"
 }

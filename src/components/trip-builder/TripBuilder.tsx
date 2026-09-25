@@ -74,6 +74,7 @@ function stepTitle(t: ReturnType<typeof useTranslations>, id: StepId): { title: 
  */
 export function TripBuilder({ catalog, locale, prefill }: Props) {
   const t = useTranslations('builder')
+  const common = useTranslations('common')
   const [state, dispatch] = useReducer(builderReducer, undefined, initialBuilderState)
   const [success, setSuccess] = useState<SubmitSuccess | null>(null)
   const [pinnedStep, setPinnedStep] = useState<StepId | 'contact' | null>(null)
@@ -276,7 +277,7 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
         summary={
           <button type="button" onClick={() => setSummarySheetOpen(true)} className="min-h-11 text-start">
             <span className="block text-xs font-medium text-ink-subtle">{t('yourTrip')}</span>
-            <span className="block text-sm font-bold text-sea-900">{quoteState.quote ? `${formatAmount(quoteState.quote.total, locale)} EGP` : t('addDates')}</span>
+            <span className="block text-sm font-bold text-sea-900">{quoteState.quote ? `${formatAmount(quoteState.quote.total, locale)} ${common('egp')}` : t('addDates')}</span>
           </button>
         }
         action={

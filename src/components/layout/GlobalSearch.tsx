@@ -8,6 +8,7 @@ import { SafeImage as Image } from '@/components/SafeImage'
 import { cn } from '@/lib/utils'
 import type { SearchResult, SearchResultType } from '@/app/api/search/route'
 import { trackConversion } from '@/lib/conversion'
+import { formatAmount, formatCount } from '@/lib/format'
 
 const TYPE_ORDER: SearchResultType[] = ['accommodation', 'trip', 'merch', 'rental']
 
@@ -265,7 +266,7 @@ export function GlobalSearch() {
         {/* Screen readers get told how many results the query produced; sighted
             users can already see the list change. */}
         <p aria-live="polite" className="sr-only">
-          {query.length < 2 ? '' : loading ? t('searching') : t('resultsCount', { count: resultNodes.length })}
+          {query.length < 2 ? '' : loading ? t('searching') : t('resultsCount', { count: resultNodes.length, n: formatCount(resultNodes.length, locale) })}
         </p>
 
         {/* Results */}
@@ -334,7 +335,7 @@ export function GlobalSearch() {
                           </div>
                           {r.price != null && r.price > 0 && (
                             <p className="shrink-0 text-xs font-semibold text-sea-700">
-                              {t('from')} {r.price.toLocaleString(ar ? 'ar-EG' : 'en-US')}
+                              {t('from')} {formatAmount(r.price, locale)}
                             </p>
                           )}
                         </button>

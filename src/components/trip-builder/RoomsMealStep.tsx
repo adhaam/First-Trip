@@ -2,7 +2,7 @@
 
 import type { Dispatch } from 'react'
 import { useTranslations } from 'next-intl'
-import { formatAmount } from '@/lib/format'
+import { formatAmount, formatCount } from '@/lib/format'
 import { roomCapacity, roomsFit } from '@/lib/trip-builder/rooms'
 import type { BuilderAction } from '@/lib/trip-builder/state'
 import type { BuilderCatalog, BuilderState } from '@/lib/trip-builder/types'
@@ -33,6 +33,7 @@ export function RoomsMealStep({
   dispatch: Dispatch<BuilderAction>
 }) {
   const t = useTranslations('builder')
+  const common = useTranslations('common')
   const stay = catalog.accommodations.find((item) => item.id === state.accommodation_id)
   if (!stay) return null
 
@@ -69,7 +70,9 @@ export function RoomsMealStep({
           ))}
         </div>
         <p className={fits || !allocations.length ? 'mt-2.5 text-xs text-ink-subtle' : 'mt-2.5 text-xs font-semibold text-red-700'} role={fits ? undefined : 'alert'}>
-          {fits || !allocations.length ? t('roomsCapacity', { capacity: capacity || people }) : t('roomsNotEnough', { people })}
+          {fits || !allocations.length
+            ? t('roomsCapacity', { capacity: capacity || people, n: formatCount(capacity || people, locale) })
+            : t('roomsNotEnough', { people, n: formatCount(people, locale) })}
         </p>
       </div>
 
@@ -82,7 +85,7 @@ export function RoomsMealStep({
                 key={upgrade.id}
                 active={state.upgrade_id === upgrade.id}
                 title={locale === 'ar' ? upgrade.name_ar : upgrade.name_en}
-                detail={`+${formatAmount(upgrade.extra_price_per_night, locale)} EGP · ${t('perPersonPerNight')}`}
+                detail={`+${formatAmount(upgrade.extra_price_per_night, locale)} ${common('egp')} · ${t('perPersonPerNight')}`}
                 onClick={() => dispatch({ type: 'setUpgrade', id: state.upgrade_id === upgrade.id ? undefined : upgrade.id })}
                 className="min-h-16 p-3.5"
               />
@@ -100,7 +103,7 @@ export function RoomsMealStep({
                 key={meal.key}
                 active={state.meal_plan_key === meal.key}
                 title={locale === 'ar' ? meal.label_ar : meal.label_en}
-                detail={meal.price_per_person_per_night > 0 ? `+${formatAmount(meal.price_per_person_per_night, locale)} EGP · ${t('perPersonPerNight')}` : t('included')}
+                detail={meal.price_per_person_per_night > 0 ? `+${formatAmount(meal.price_per_person_per_night, locale)} ${common('egp')} · ${t('perPersonPerNight')}` : t('included')}
                 onClick={() => dispatch({ type: 'setMeal', key: meal.key })}
                 className="min-h-16 p-3.5"
               />

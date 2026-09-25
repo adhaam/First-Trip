@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight, ArrowLeft, type LucideProps } from 'lucide-react'
+import { ArrowRight, ChevronRight, ArrowLeft, ArrowUpRight, type LucideProps } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -22,4 +22,9 @@ export function ChevronForward({ className, ...props }: LucideProps) {
 /** The reverse of ArrowForward — "back / previous". */
 export function ArrowBack({ className, ...props }: LucideProps) {
   return <ArrowLeft className={cn('rtl:-scale-x-100', className)} aria-hidden {...props} />
+}
+
+/** Diagonal "external link / go to" arrow — flips horizontally in RTL like ArrowForward. */
+export function ArrowUpForward({ className, ...props }: LucideProps) {
+  return <ArrowUpRight className={cn('rtl:-scale-x-100', className)} aria-hidden {...props} />
 }
