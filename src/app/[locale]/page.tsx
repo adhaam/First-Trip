@@ -75,7 +75,7 @@ export default async function HomePage() {
   const shopRentVisibility = selectShopRentVisibility(merchProducts.length, rentalProducts.length)
   // Never the homepage hero's own poster — a real Signature Experience photo
   // when one exists, otherwise a different existing brand asset.
-  const signatureImage = selectSignatureImage(experiences, '/media/og-cover.jpg')
+  const signatureImage = selectSignatureImage(experiences, null)
 
   return (
     <HomeClient

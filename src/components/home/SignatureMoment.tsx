@@ -14,18 +14,24 @@ import { Reveal } from '@/components/motion/Reveal'
  * photo when one is published, otherwise a different brand asset — never the
  * homepage hero's own poster, or the two sections read as the same moment.
  */
-export function SignatureMoment({ image }: { image: string }) {
+export function SignatureMoment({ image }: { image: string | null }) {
   const t = useTranslations('homeV2.signature')
 
   return (
     <section className="relative isolate min-h-[32rem] overflow-hidden bg-sea-900 text-white md:min-h-[38rem]">
-      <Image
-        src={image}
-        alt={t('imageAlt')}
-        fill
-        sizes="100vw"
-        className="-z-20 object-cover object-center"
-      />
+      {image ? (
+        <Image
+          src={image}
+          alt={t('imageAlt')}
+          fill
+          sizes="100vw"
+          className="-z-20 object-cover object-center"
+        />
+      ) : (
+        // No real Signature photograph yet: a designed night surface rather
+        // than re-using the hero photo or a stand-in from somewhere else.
+        <div aria-hidden className="surface-night topo-bg absolute inset-0 -z-20 opacity-90" />
+      )}
       <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/80 via-black/40 to-black/10 rtl:bg-gradient-to-l" />
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
       <div className="container-main flex min-h-[32rem] items-end py-14 md:min-h-[38rem] md:items-center md:py-24">

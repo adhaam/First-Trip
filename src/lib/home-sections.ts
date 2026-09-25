@@ -202,7 +202,7 @@ export function stayFromPricePerPersonPerNight(acc: {
  * poster, or the two full-bleed photo sections on the page read as the same
  * moment twice.
  */
-export function selectSignatureImage(experiences: readonly Experience[], fallback: string): string {
+export function selectSignatureImage(experiences: readonly Experience[], fallback: string | null): string | null {
   return experiences.find((experience) => Boolean(experience.hero_image))?.hero_image || fallback
 }
 

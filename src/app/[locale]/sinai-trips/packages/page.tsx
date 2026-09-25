@@ -90,7 +90,7 @@ export default async function PackagesPage({ params }: Props) {
       </Section>
 
       <Section tone="paper">
-        <SectionHeading eyebrow={<Eyebrow>{t('packagesCatalogueMark')}</Eyebrow>} title={t('packagesCatalogueTitle')} />
+        <SectionHeading eyebrow={t('packagesCatalogueMark')} title={t('packagesCatalogueTitle')} />
 
         <div className="space-y-6">
           <EditorialCard

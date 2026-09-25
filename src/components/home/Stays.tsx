@@ -41,7 +41,7 @@ export function Stays({ lineup }: { lineup: StaysLineup }) {
           (taller) height, leaving blank card background below the hero
           image instead of the image filling the card. */}
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
-        <Reveal className="min-w-0 lg:col-span-7">
+        <Reveal className="min-w-0 lg:sticky lg:top-24 lg:col-span-7">
           <EditorialCard
             href={`/book-dahab/${lineup.hero.id}`}
             image={lineup.hero.image_url || lineup.hero.images?.[0] || NEUTRAL_MEDIA}

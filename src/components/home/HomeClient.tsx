@@ -26,7 +26,7 @@ interface Props {
   categoryTiles: CategoryTile[]
   packages: TripPackage[]
   shopRentVisibility: ShopRentVisibility
-  signatureImage: string
+  signatureImage: string | null
 }
 
 /**
