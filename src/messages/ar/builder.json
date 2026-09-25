@@ -148,5 +148,5 @@
   "summaryExperiences": "{count, plural, one {تجربة واحدة مضافة} two {تجربتين مضافتين} few {{n} تجارب مضافة} other {{n} تجربة مضافة}}",
   "addItem": "أضف {name}",
   "removeItem": "شيل {name} من رحلتك",
-  "checkOut": "مغادرة · {date}"
+  "checkOut": "تسجيل المغادرة · {date}"
 }
