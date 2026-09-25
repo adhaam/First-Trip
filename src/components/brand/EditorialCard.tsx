@@ -64,7 +64,7 @@ export function EditorialCard({
         className="group block h-full rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun-500 focus-visible:ring-offset-3"
       >
         <article className="hover-lift h-full overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
-          <div className={cn('slow-zoom relative', s.aspect)}>
+          <div className={cn('slow-zoom relative bg-sea-900', s.aspect)}>
             <Image
               src={image}
               alt=""
