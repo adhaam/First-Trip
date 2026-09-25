@@ -2,6 +2,48 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Reveal } from '@/components/motion/Reveal'
 
+const SECTION_TONE = {
+  paper: 'bg-sand-50 text-ink',
+  sand: 'bg-sand-100 text-ink',
+  night: 'surface-night grain',
+  sea: 'bg-sea-700 text-sand-50',
+} as const
+
+const SECTION_SIZE = {
+  sm: 'py-8 sm:py-10 md:py-14',
+  md: 'section-padding',
+  lg: 'py-14 sm:py-20 md:py-32',
+} as const
+
+/**
+ * The alternating night/paper/sand/sea rhythm the whole site is built on
+ * (see "Contrast of surfaces" in docs/m2/BRIEF.md). Owns background, text
+ * colour and vertical rhythm so a page is built by stacking `<Section>`s
+ * rather than every page re-deciding its own padding and surface colour.
+ */
+export function Section({
+  tone = 'paper',
+  size = 'md',
+  id,
+  className,
+  children,
+}: {
+  tone?: keyof typeof SECTION_TONE
+  size?: keyof typeof SECTION_SIZE
+  id?: string
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <section
+      id={id}
+      className={cn('relative', SECTION_TONE[tone], SECTION_SIZE[size], className)}
+    >
+      <div className="container-main relative">{children}</div>
+    </section>
+  )
+}
+
 /**
  * Section heading with the brand's hand-drawn brush underline.
  * `align` defaults to start (not centre) — centred headings on every single

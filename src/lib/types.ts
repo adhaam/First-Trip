@@ -549,15 +549,22 @@ export interface WeemapSiteSettings {
 }
 
 export interface NavItem {
-  label_ar: string
-  label_en: string
   href: string
   /** Lucide icon key — see NAV_ICONS in components/layout/Header.tsx. */
   icon?: string
-  /** Shown directly in the desktop bar. Everything else lives under "More". */
+  /** Shown directly in the desktop primary bar (Stay · Signature · Shop · Rent). */
   primary?: boolean
-  /** Grouping used by the mobile drawer. */
-  group?: 'plan' | 'shop' | 'weemap'
+  /** Grouping used by the mobile drawer's section headings. */
+  group?: 'plan' | 'explore' | 'shop' | 'weemap'
+  /** Listed inside the desktop "Explore" popover (Trips / Packages / Community). */
+  popover?: boolean
+  /** The primary "Build your trip" CTA — styled distinctly, not a plain nav link. */
+  cta?: boolean
+  /**
+   * One-line description shown only in the desktop "Explore" popover —
+   * key into the `ia` message namespace.
+   */
+  descriptionKey?: string
 }
 
 export interface ServiceItem {

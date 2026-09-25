@@ -1,0 +1,19 @@
+{
+  "clear": "Clear",
+  "filters": "Filters",
+  "showResults": "Show results",
+  "close": "Close",
+  "railPrev": "Previous",
+  "railNext": "Next",
+  "priceFrom": "From",
+  "unitPerson": "per person",
+  "unitNight": "per night",
+  "unitRoom": "per room",
+  "unitTrip": "per trip",
+  "paymentUpfrontAvailability": "{percent}% after availability confirmation",
+  "paymentUpfrontConfirmation": "{percent}% after confirmation",
+  "paymentBalanceArrival": "{percent}% on arrival",
+  "paymentBalanceBeforeService": "{percent}% before service",
+  "paymentNothingOnline": "Nothing is charged online.",
+  "paymentUnknown": "Payment terms confirmed with your quote."
+}

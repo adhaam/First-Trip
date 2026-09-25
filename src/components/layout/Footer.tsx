@@ -1,6 +1,6 @@
 'use client'
 
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
 import { Logo } from '@/components/brand/Logo'
@@ -9,12 +9,18 @@ import { NAV_LABEL_KEYS, WHATSAPP_NUMBER, PHONE_NUMBER, EMAIL } from '@/lib/cons
 import { MapPin, Phone, Mail, ArrowUpRight } from 'lucide-react'
 import type { SiteSettings } from '@/lib/types'
 
+// Same IA as the header (Stay · Explore · Signature · Shop · Rent), just laid
+// out as a sitemap rather than a bar + popover. "Explore" here means the
+// column heading, not the header's popover component.
+const LINK_GROUPS = [
+  { titleKey: 'explore', links: ['/book-dahab', '/sinai-trips', '/sinai-trips/packages', '/signature', '/merch', '/rent'] },
+  { titleKey: 'footerColumnCompany', links: ['/community', '/about', '/partner'] },
+  { titleKey: 'footerColumnSupport', links: ['/policy'] },
+] as const
+
 export function Footer({ settings }: { settings?: SiteSettings | null }) {
-  const t = useTranslations('footer')
-  const nav = useTranslations('nav')
-  const locale = useLocale()
+  const t = useTranslations('ia')
   const pathname = usePathname()
-  const ar = locale === 'ar'
 
   const whatsapp = settings?.whatsapp_number || WHATSAPP_NUMBER
   const phone = settings?.phone_number || PHONE_NUMBER
@@ -29,21 +35,6 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
     pathname === '/en/admin' ||
     pathname.startsWith('/en/admin/')
 
-  const linkGroups = [
-    {
-      title: t('explore'),
-      links: ['/book-dahab', '/sinai-trips', '/signature', '/merch', '/rent'],
-    },
-    {
-      title: t('company'),
-      links: ['/community', '/about', '/partner'],
-    },
-    {
-      title: t('support'),
-      links: ['/policy'],
-    },
-  ]
-
   if (isAdminRoute) return null
 
   return (
@@ -54,11 +45,14 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
       <div className="depth-bg">
         <div className="container-main py-16 md:py-20">
           <div className="grid grid-cols-2 gap-x-8 gap-y-12 md:grid-cols-5 lg:gap-12">
-            {/* Brand */}
+            {/* Brand + sign-off */}
             <div className="col-span-2 lg:col-span-1">
               <Logo size="lg" tone="light" />
-              <p className="mt-5 max-w-xs text-sm leading-relaxed text-sand-100/65">
-                {t('description')}
+              <p className="mt-6 font-display text-xl font-bold leading-snug text-white sm:text-2xl">
+                {t('signOff')}
+              </p>
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-sand-100/65">
+                {t('footerDescription')}
               </p>
 
               <div className="mt-6 flex gap-2">
@@ -75,10 +69,10 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
               </div>
             </div>
 
-            {linkGroups.map((group) => (
-              <div key={group.title}>
+            {LINK_GROUPS.map((group) => (
+              <div key={group.titleKey}>
                 <h3 className="mb-5 font-display text-xs font-bold uppercase tracking-[0.2em] text-sun-300">
-                  {group.title}
+                  {t(group.titleKey)}
                 </h3>
                 <ul className="space-y-2.5">
                   {group.links.map((href) => (
@@ -87,7 +81,7 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
                         href={href}
                         className="inline-flex min-h-11 items-center text-sm text-sand-100/70 transition-colors hover:text-white"
                       >
-                        {nav(NAV_LABEL_KEYS[href])}
+                        {t(NAV_LABEL_KEYS[href])}
                       </Link>
                     </li>
                   ))}
@@ -98,12 +92,12 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
             {/* Contact */}
             <div className="col-span-2 md:col-span-1">
               <h3 className="mb-5 font-display text-xs font-bold uppercase tracking-[0.2em] text-sun-300">
-                {t('contact')}
+                {t('footerContact')}
               </h3>
               <ul className="space-y-3.5">
                 <li className="flex items-start gap-2.5 text-sm text-sand-100/70">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sun-300" />
-                  <span>{settings?.location || t('dahab')}</span>
+                  <span>{settings?.location || t('footerDahab')}</span>
                 </li>
                 <li>
                   <a
@@ -130,7 +124,7 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
 
           <div className="mt-10 flex flex-col gap-5 border-t border-white/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-xl text-sm leading-relaxed text-sand-100/70">
-              {t('whatsappText')}
+              {t('footerWhatsappText')}
             </p>
             <a
               href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
@@ -146,13 +140,13 @@ export function Footer({ settings }: { settings?: SiteSettings | null }) {
 
         <div className="border-t border-white/10">
           <div className="container-main flex flex-col items-center justify-between gap-3 py-6 sm:flex-row">
-            <p className="text-xs text-sand-100/50">{t('rights')}</p>
+            <p className="text-xs text-sand-100/50">{t('footerRights')}</p>
             <div className="flex gap-5 text-xs text-sand-100/50">
               <Link href="/policy" className="transition-colors hover:text-white">
-                {ar ? 'سياسة الخصوصية' : 'Privacy Policy'}
+                {t('footerPrivacy')}
               </Link>
               <Link href="/policy" className="transition-colors hover:text-white">
-                {ar ? 'الشروط والأحكام' : 'Terms & Conditions'}
+                {t('footerTerms')}
               </Link>
             </div>
           </div>

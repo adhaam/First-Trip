@@ -1,0 +1,19 @@
+{
+  "clear": "امسح",
+  "filters": "الفلاتر",
+  "showResults": "عرض النتائج",
+  "close": "إغلاق",
+  "railPrev": "السابق",
+  "railNext": "التالي",
+  "priceFrom": "يبدأ من",
+  "unitPerson": "للفرد",
+  "unitNight": "لليلة",
+  "unitRoom": "للغرفة",
+  "unitTrip": "للرحلة",
+  "paymentUpfrontAvailability": "{percent}٪ بعد تأكيد التوافر",
+  "paymentUpfrontConfirmation": "{percent}٪ بعد التأكيد",
+  "paymentBalanceArrival": "{percent}٪ عند الوصول",
+  "paymentBalanceBeforeService": "{percent}٪ قبل الخدمة",
+  "paymentNothingOnline": "مفيش أي دفع أونلاين.",
+  "paymentUnknown": "شروط الدفع هتتأكد مع عرض السعر بتاعك."
+}

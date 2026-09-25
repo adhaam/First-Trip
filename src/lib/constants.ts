@@ -11,33 +11,40 @@ export const EMAIL = 'info@weemapsinai.com'
 // here before: they render differently on every platform, never take the brand
 // colour, and are read out literally by screen readers.
 //
-// `primary` marks the five revenue routes that sit directly in the desktop bar
-// from the `lg` breakpoint up. The rest live under a "More" menu on desktop and
-// in labelled groups in the mobile drawer — ten flat items was an overloaded
-// nav, and it collapsed entirely into a hamburger below 1280px.
+// IA per docs/m2/BRIEF.md: primary nav is Stay · Explore · Signature · Shop ·
+// Rent, plus the "Build your trip" CTA. `primary` marks the four plain links
+// that sit directly in the desktop bar (Stay, Signature, Shop, Rent) — Explore
+// is a popover the Header renders separately, and Build your trip is the
+// distinctly-styled CTA button, so neither is `primary`. `popover` marks the
+// three items listed inside that Explore popover. `group` drives the mobile
+// drawer's section headings, which is why Signature appears there under
+// "Explore" even though it also gets its own primary desktop link.
 export const NAV_ITEMS: NavItem[] = [
-  { label_ar: 'الرئيسية', label_en: 'Home', href: '/', icon: 'home', group: 'plan' },
-  { label_ar: 'احجز دهب', label_en: 'Book Dahab', href: '/book-dahab', icon: 'bed', primary: true, group: 'plan' },
-  { label_ar: 'رحلات سيناء', label_en: 'Sinai Trips', href: '/sinai-trips', icon: 'mountain', primary: true, group: 'plan' },
-  { label_ar: 'Signature Experiences', label_en: 'Signature Experiences', href: '/signature', icon: 'sparkles', primary: true, group: 'plan' },
-  { label_ar: 'المتجر', label_en: 'Merch', href: '/merch', icon: 'bag', primary: true, group: 'shop' },
-  { label_ar: 'الإيجارات', label_en: 'Rental', href: '/rent', icon: 'bike', primary: true, group: 'shop' },
-  { label_ar: 'المجتمع', label_en: 'Community', href: '/community', icon: 'users', group: 'weemap' },
-  { label_ar: 'كن شريكاً', label_en: 'Partner With Us', href: '/partner', icon: 'handshake', group: 'weemap' },
-  { label_ar: 'عن الشركة', label_en: 'About Us', href: '/about', icon: 'book', group: 'weemap' },
-  { label_ar: 'السياسة والاسترداد', label_en: 'Policy & Refund', href: '/policy', icon: 'shield', group: 'weemap' },
+  { href: '/plan', icon: 'compass', group: 'plan', cta: true },
+  { href: '/book-dahab', icon: 'bed', primary: true, group: 'plan' },
+  { href: '/sinai-trips', icon: 'mountain', group: 'explore', popover: true, descriptionKey: 'tripsDesc' },
+  { href: '/sinai-trips/packages', icon: 'package', group: 'explore', popover: true, descriptionKey: 'packagesDesc' },
+  { href: '/community', icon: 'users', group: 'explore', popover: true, descriptionKey: 'communityDesc' },
+  { href: '/signature', icon: 'sparkles', primary: true, group: 'explore' },
+  { href: '/merch', icon: 'bag', primary: true, group: 'shop' },
+  { href: '/rent', icon: 'bike', primary: true, group: 'shop' },
+  { href: '/about', icon: 'book', group: 'weemap' },
+  { href: '/partner', icon: 'handshake', group: 'weemap' },
+  { href: '/policy', icon: 'shield', group: 'weemap' },
 ]
 
+/** href -> key in the `ia` message namespace. */
 export const NAV_LABEL_KEYS: Record<string, string> = {
-  '/': 'home',
-  '/book-dahab': 'book',
+  '/plan': 'buildTrip',
+  '/book-dahab': 'stay',
   '/sinai-trips': 'trips',
-  '/signature': 'signature',
+  '/sinai-trips/packages': 'packages',
   '/community': 'community',
-  '/partner': 'partner',
-  '/about': 'about',
-  '/merch': 'merch',
+  '/signature': 'signature',
+  '/merch': 'shop',
   '/rent': 'rent',
+  '/about': 'about',
+  '/partner': 'partner',
   '/policy': 'policy',
 }
 

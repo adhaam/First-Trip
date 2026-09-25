@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import {
   Plus_Jakarta_Sans,
   Almarai,
+  Bricolage_Grotesque,
+  Alexandria,
 } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
@@ -38,6 +40,26 @@ const almarai = Almarai({
   subsets: ['arabic'],
   variable: '--font-almarai',
   weight: ['400', '700', '800'],
+  display: 'swap',
+})
+
+// ─── Display typeface pairing ───
+// Latin: Bricolage Grotesque — a display grotesque with real character (the
+// wonky, hand-set axis) that reads as editorial rather than SaaS-default.
+// Arabic: Alexandria — an Egyptian-designed display face, built for headings
+// at heavy weight without the letter-spacing/uppercase tricks that break
+// Arabic legibility.
+const bricolage = Bricolage_Grotesque({
+  subsets: ['latin'],
+  variable: '--font-bricolage',
+  weight: ['600', '700', '800'],
+  display: 'swap',
+})
+
+const alexandria = Alexandria({
+  subsets: ['arabic'],
+  variable: '--font-alexandria',
+  weight: ['500', '600', '700', '800'],
   display: 'swap',
 })
 
@@ -117,7 +139,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${jakarta.variable} ${almarai.variable} font-sans antialiased`}
+        className={`${jakarta.variable} ${almarai.variable} ${bricolage.variable} ${alexandria.variable} font-sans antialiased`}
       >
         <AnalyticsNoScript />
         <NextIntlClientProvider messages={messages} locale={locale}>

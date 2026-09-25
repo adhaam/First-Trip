@@ -124,10 +124,13 @@
 }
 
 :root {
-  /* Typography — Plus Jakarta Sans for latin (warm, rounded, easy on the eye).
-     Almarai for arabic (soft, rounded, built for comfortable reading even
-     at heavy weights — feels friendly and safe rather than shouty). */
-  --font-display: var(--font-jakarta), var(--font-almarai), ui-sans-serif, system-ui, sans-serif;
+  /* Typography — display vs. body are two different jobs, two different faces.
+     Display (headings, kickers, hero type): Bricolage Grotesque for Latin,
+     Alexandria for Arabic — both are display-drawn faces with real character
+     instead of a body font stretched up to heading size.
+     Body (running text): Plus Jakarta Sans for Latin, Almarai for Arabic —
+     warm, rounded, built for comfortable reading at length. */
+  --font-display: var(--font-bricolage), var(--font-alexandria), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-jakarta), var(--font-almarai), ui-sans-serif, system-ui, sans-serif;
 
   --background: #FBF7F0;
@@ -227,8 +230,10 @@
 /* ─── RTL ─── */
 html[dir="rtl"] {
   direction: rtl;
-  /* Almarai FIRST for Arabic — soft, rounded, and comfortable at length. */
-  --font-display: var(--font-almarai), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  /* Alexandria FIRST for Arabic display — an Egyptian-designed display face
+     built for heavy weights without needing Latin tracking/uppercase tricks.
+     Almarai FIRST for Arabic body — soft, rounded, comfortable at length. */
+  --font-display: var(--font-alexandria), var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-almarai), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -249,6 +254,12 @@ html[dir="rtl"] .ltr-only {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Arabic reads a touch small at the Latin body size — nudge the base size up
+     slightly. Tailwind's text-* utilities are rem-based off the <html> root,
+     so this only affects inherited (unstyled) text, never a sized utility. */
+  html[dir="rtl"] body {
+    font-size: 1.0625rem;
   }
   html {
     @apply scroll-smooth;
@@ -279,9 +290,18 @@ html[dir="rtl"] .ltr-only {
    Unlayered on purpose: Tailwind utilities live in @layer utilities, and
    unlayered rules beat every layer. A `leading-none` hero heading therefore
    cannot clip Arabic glyphs, while Latin headings keep their tight display
-   leading untouched. */
+   leading untouched. Floor is 1.35 — Alexandria's ascenders/descenders clip
+   below that at heading weights. */
 html[dir="rtl"] :is(h1, h2, h3, h4) {
-  line-height: 1.3;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+/* Arabic never gets the Latin display convention of uppercase + tracked
+   kickers — Arabic has no case, and letter-spacing breaks letter joining.
+   Same visual weight, delivered through color/size/weight instead. */
+html[dir="rtl"] .eyebrow {
+  text-transform: none;
   letter-spacing: 0;
 }
 
@@ -355,6 +375,24 @@ html[dir="rtl"] :is(h1, h2, h3, h4) {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Night surface — the charcoal sea-900 tone used for cinematic sections
+   (hero backdrops, footers, night-mode cards). Grain baked in so nothing
+   has to stack `surface-night grain` by hand. */
+@utility surface-night {
+  position: relative;
+  background-color: var(--color-sea-900);
+  color: var(--color-sand-50);
+}
+
+.surface-night::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 /* Brush-stroke underline for section headings. */
 @utility brush-underline {
   position: relative;
@@ -376,6 +414,43 @@ html[dir="rtl"] :is(h1, h2, h3, h4) {
 
 @utility eyebrow {
   @apply inline-flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.22em];
+}
+
+/* Dashed route line — the map motif's connective thread. Uses currentColor
+   so it inherits whatever accent the caller has already set (sun on paper,
+   sand on night). Logical property so it draws the same line in RTL. */
+@utility route-line {
+  border-block-start: 1.5px dashed color-mix(in srgb, currentColor 50%, transparent);
+}
+
+@utility route-line-v {
+  border-inline-start: 1.5px dashed color-mix(in srgb, currentColor 50%, transparent);
+}
+
+/* Horizontal snap rail — mobile card rails (trips, experiences, chips).
+   Hides the scrollbar without hiding the ability to scroll. */
+@utility rail-snap {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rail-snap::-webkit-scrollbar {
+  display: none;
+}
+
+@utility rail-snap-item {
+  scroll-snap-align: start;
+}
+
+/* Bottom padding that clears the home-indicator / gesture bar on notched
+   phones, for anything pinned to the viewport bottom (StickyActionBar,
+   drawer CTAs). */
+@utility safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 /* ═══════════ Motion ═══════════ */
@@ -426,6 +501,27 @@ html[dir="rtl"] :is(h1, h2, h3, h4) {
   will-change: opacity, transform;
 }
 
+/* Slow-zoom hover image — EditorialCard, PageHero and any other card whose
+   cover image should breathe on hover/focus rather than sit static. The
+   container clips; the image itself (a direct child, e.g. next/image's
+   inner <img>) does the scaling, so the crop never reveals letterboxing. */
+@utility slow-zoom {
+  position: relative;
+  overflow: hidden;
+}
+
+.slow-zoom > img,
+.slow-zoom > span > img {
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.slow-zoom:hover > img,
+.slow-zoom:focus-within > img,
+.slow-zoom:hover > span > img,
+.slow-zoom:focus-within > span > img {
+  transform: scale(1.06);
+}
+
 /* Pointer-tracking glow used on feature cards. */
 .glow-follow {
   position: relative;
@@ -468,6 +564,17 @@ html[dir="rtl"] :is(h1, h2, h3, h4) {
   }
 
   .glow-follow::before { display: none; }
+
+  .slow-zoom > img,
+  .slow-zoom > span > img {
+    transition: none;
+  }
+  .slow-zoom:hover > img,
+  .slow-zoom:focus-within > img,
+  .slow-zoom:hover > span > img,
+  .slow-zoom:focus-within > span > img {
+    transform: none;
+  }
 
   *,
   *::before,

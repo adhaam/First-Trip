@@ -23,6 +23,7 @@ import { TransferPricingManager } from '@/components/admin/TransferPricingManage
 import { TestimonialsManager } from '@/components/admin/TestimonialsManager'
 import { NewsletterManager } from '@/components/admin/NewsletterManager'
 import { TripBookingsManager } from '@/components/admin/TripBookingsManager'
+import { TripRequestsManager } from '@/components/admin/TripRequestsManager'
 import { CommerceManager } from '@/components/admin/CommerceManager'
 import { TripPackageManager } from '@/components/admin/TripPackageManager'
 import { PackageCategoryManager } from '@/components/admin/PackageCategoryManager'
@@ -47,6 +48,7 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: ClipboardList, key: 'bookings', label_ar: 'حجوزات دهب', label_en: 'Dahab Bookings' },
       { icon: MapPinned, key: 'trip-bookings', label_ar: 'طلبات رحلات سيناء', label_en: 'Sinai Trip Bookings' },
+      { icon: Inbox, key: 'trip-requests', label_ar: 'طلبات الرحلات (Trip Builder)', label_en: 'Trip Builder Requests' },
       { icon: Inbox, key: 'signature-requests', label_ar: 'طلبات التجارب المميزة', label_en: 'Signature Requests', badgeKey: 'signature-requests' },
       { icon: UserPlus, key: 'partner-inquiries', label_ar: 'طلبات الشراكة', label_en: 'Partner Inquiries', badgeKey: 'partner-inquiries' },
     ],
@@ -266,6 +268,7 @@ export default function AdminDashboardPage() {
           {active === 'trip-packages' && <TripPackageManager />}
           {active === 'package-categories' && <PackageCategoryManager />}
           {active === 'trip-bookings' && <TripBookingsManager />}
+          {active === 'trip-requests' && <TripRequestsManager />}
           {active === 'signature-experiences' && <ExperienceManager />}
           {active === 'signature-categories' && <ExperienceCategoryManager />}
           {active === 'experience-partners' && <ExperiencePartnerManager />}

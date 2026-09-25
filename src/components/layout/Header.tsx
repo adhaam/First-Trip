@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { usePathname } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
@@ -12,18 +12,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Logo } from '@/components/brand/Logo'
+import { ArrowForward } from '@/components/brand/DirectionalIcon'
 import { NAV_ITEMS, NAV_LABEL_KEYS } from '@/lib/constants'
 import {
-  ArrowUpRight,
   BedDouble,
   Bike,
   BookOpen,
   ChevronDown,
+  Compass,
   Globe,
   Handshake,
-  Home,
   Menu,
   Mountain,
+  Package,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
@@ -40,9 +41,9 @@ import { GlobalSearch } from '@/components/layout/GlobalSearch'
  * readers announce them literally in the middle of a link label.
  */
 const NAV_ICONS: Record<string, LucideIcon> = {
-  home: Home,
   bed: BedDouble,
   mountain: Mountain,
+  package: Package,
   sparkles: Sparkles,
   bag: ShoppingBag,
   bike: Bike,
@@ -50,17 +51,19 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   handshake: Handshake,
   book: BookOpen,
   shield: ShieldCheck,
+  compass: Compass,
 }
 
-/** Section headings for the mobile drawer, so ten links read as three groups. */
+/** Section headings for the mobile drawer — see the IA table in docs/m2/BRIEF.md. */
 const DRAWER_GROUPS = [
   { key: 'plan', labelKey: 'groupPlan' },
+  { key: 'explore', labelKey: 'groupExplore' },
   { key: 'shop', labelKey: 'groupShop' },
   { key: 'weemap', labelKey: 'groupWeemap' },
 ] as const
 
 export function Header() {
-  const t = useTranslations('nav')
+  const t = useTranslations('ia')
   const locale = useLocale()
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
@@ -94,13 +97,16 @@ export function Header() {
     pathname === '/en/admin' ||
     pathname.startsWith('/en/admin/')
 
-  // Two tiers. The five revenue routes sit in the bar from `lg` up; everything
-  // else lives under "More". Previously all ten items were `xl:flex`, so every
-  // visitor between 1024px and 1279px — iPad landscape, most 13" laptops — got
-  // a hamburger next to an almost empty header.
-  const primaryItems = NAV_ITEMS.filter((item) => item.primary)
-  const secondaryItems = NAV_ITEMS.filter((item) => !item.primary && item.href !== '/')
-  const moreActive = secondaryItems.some((item) => isActive(item.href))
+  // Stay · Explore · Signature · Shop · Rent, plus the "Build your trip" CTA.
+  // Explore is a popover (Trips / Packages / Community), not a plain link, so
+  // it isn't in this list — it's spliced in after the first item below. The
+  // CTA is styled distinctly rather than looped as a plain nav link too.
+  const primaryBarItems = NAV_ITEMS.filter((item) => item.primary)
+  const exploreItems = NAV_ITEMS.filter((item) => item.popover)
+  const ctaItem = NAV_ITEMS.find((item) => item.cta)
+  // /sinai-trips/packages should highlight "Explore" even though it isn't a
+  // link itself — the popover trigger is active whenever any item inside it is.
+  const exploreActive = exploreItems.some((item) => isActive(item.href))
 
   if (isAdminRoute) return null
 
@@ -127,74 +133,88 @@ export function Header() {
 
         {/* Desktop nav — a single ink hairline rail rather than floating pills */}
         <nav className="hidden items-center lg:flex" aria-label={t('primaryLabel')}>
-          {primaryItems.map((item) => {
-            const labelKey = NAV_LABEL_KEYS[item.href] || 'home'
+          {primaryBarItems.map((item, idx) => {
+            const labelKey = NAV_LABEL_KEYS[item.href]
             const active = isActive(item.href)
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'relative whitespace-nowrap px-2.5 py-2 text-[0.875rem] font-medium transition-colors xl:px-3 xl:text-[0.9rem]',
-                  'rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300',
-                  active ? 'text-white' : 'text-white/80 hover:text-white',
-                )}
-              >
-                {t(labelKey)}
-                <span
-                  aria-hidden
+              <Fragment key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'absolute inset-x-2 -bottom-0.5 h-[2px] origin-center rounded-full bg-sun-400 transition-transform duration-300',
-                    active ? 'scale-x-100' : 'scale-x-0',
+                    'relative whitespace-nowrap px-2.5 py-2 text-[0.875rem] font-medium transition-colors xl:px-3 xl:text-[0.9rem]',
+                    'rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300',
+                    active ? 'text-white' : 'text-white/80 hover:text-white',
                   )}
-                />
-              </Link>
+                >
+                  {t(labelKey)}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute inset-x-2 -bottom-0.5 h-[2px] origin-center rounded-full bg-sun-400 transition-transform duration-300',
+                      active ? 'scale-x-100' : 'scale-x-0',
+                    )}
+                  />
+                </Link>
+
+                {/* Explore sits right after Stay: a popover, not a route of
+                    its own, exposing Trips / Packages / Community with a
+                    one-line description each. */}
+                {idx === 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      aria-label={t('exploreMenuLabel')}
+                      className={cn(
+                        'relative inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-2 text-[0.875rem] font-medium transition-colors xl:px-3 xl:text-[0.9rem]',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300',
+                        exploreActive ? 'text-white' : 'text-white/80 hover:text-white',
+                      )}
+                    >
+                      {t('explore')}
+                      <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'absolute inset-x-2 -bottom-0.5 h-[2px] origin-center rounded-full bg-sun-400 transition-transform duration-300',
+                          exploreActive ? 'scale-x-100' : 'scale-x-0',
+                        )}
+                      />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-72 border-sand-300 bg-sand-50 p-1.5">
+                      {exploreItems.map((exploreItem) => {
+                        const Icon = NAV_ICONS[exploreItem.icon || '']
+                        const exploreItemActive = isActive(exploreItem.href)
+                        return (
+                          <DropdownMenuItem
+                            key={exploreItem.href}
+                            className={cn(
+                              'min-h-14 items-start gap-3 rounded-lg px-2.5 py-2.5',
+                              exploreItemActive && 'bg-sand-200',
+                            )}
+                            render={
+                              <Link href={exploreItem.href} aria-current={exploreItemActive ? 'page' : undefined} />
+                            }
+                          >
+                            {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0 text-sun-700" aria-hidden />}
+                            <span className="flex min-w-0 flex-col gap-0.5">
+                              <span className="text-sm font-semibold text-sea-900">
+                                {t(NAV_LABEL_KEYS[exploreItem.href])}
+                              </span>
+                              {exploreItem.descriptionKey && (
+                                <span className="text-xs leading-snug text-ink-subtle">
+                                  {t(exploreItem.descriptionKey)}
+                                </span>
+                              )}
+                            </span>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </Fragment>
             )
           })}
-
-          {/* Secondary routes. base-ui's dropdown gives keyboard navigation,
-              Escape-to-close, click-outside and focus return for free. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={cn(
-                'relative inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-2 text-[0.875rem] font-medium transition-colors xl:px-3 xl:text-[0.9rem]',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300',
-                moreActive ? 'text-white' : 'text-white/80 hover:text-white',
-              )}
-            >
-              {t('more')}
-              <ChevronDown className="h-3.5 w-3.5" aria-hidden />
-              <span
-                aria-hidden
-                className={cn(
-                  'absolute inset-x-2 -bottom-0.5 h-[2px] origin-center rounded-full bg-sun-400 transition-transform duration-300',
-                  moreActive ? 'scale-x-100' : 'scale-x-0',
-                )}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-56 border-sand-300 bg-sand-50 p-1.5">
-              {secondaryItems.map((item) => {
-                const Icon = NAV_ICONS[item.icon || 'home']
-                const active = isActive(item.href)
-                return (
-                  <DropdownMenuItem
-                    key={item.href}
-                    className={cn(
-                      'min-h-11 gap-2.5 rounded-lg px-2.5 text-sm font-medium text-sea-900',
-                      active && 'bg-sand-200',
-                    )}
-                    render={
-                      <Link href={item.href} aria-current={active ? 'page' : undefined} />
-                    }
-                  >
-                    {Icon && <Icon className="h-4 w-4 shrink-0 text-sun-700" aria-hidden />}
-                    {t(NAV_LABEL_KEYS[item.href] || 'home')}
-                  </DropdownMenuItem>
-                )
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </nav>
 
         <div className="flex items-center gap-1.5">
@@ -217,6 +237,10 @@ export function Header() {
             )}
           </button>
 
+          {/* Language names are endonyms, not translated prose — "العربية"
+              and "English" read the same regardless of the current UI
+              language, so this stays a literal ternary rather than an `ia`
+              key (which would collide as an "untranslated" Arabic string). */}
           <Link
             href={cleanPath}
             locale={otherLocale}
@@ -231,19 +255,21 @@ export function Header() {
             <span className="hidden sm:inline">{otherLocale === 'ar' ? 'العربية' : 'English'}</span>
           </Link>
 
-          <Link
-            href="/book-dahab"
-            className={cn(
-              'hidden h-11 items-center gap-1.5 rounded-full px-5 text-sm font-semibold transition-all sm:inline-flex',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300',
-              transparent
-                ? 'bg-white text-sea-900 hover:bg-sand-100'
-                : 'bg-sun-500 text-on-accent hover:bg-sun-600',
-            )}
-          >
-            {t('bookCta')}
-            <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
-          </Link>
+          {ctaItem && (
+            <Link
+              href={ctaItem.href}
+              className={cn(
+                'hidden h-11 items-center gap-1.5 rounded-full px-5 text-sm font-semibold transition-all sm:inline-flex',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-300',
+                transparent
+                  ? 'bg-white text-sea-900 hover:bg-sand-100'
+                  : 'bg-sun-500 text-on-accent hover:bg-sun-600',
+              )}
+            >
+              {t('buildTrip')}
+              <ArrowForward className="h-4 w-4" />
+            </Link>
+          )}
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
@@ -258,14 +284,14 @@ export function Header() {
             <SheetContent
               side={locale === 'ar' ? 'right' : 'left'}
               closeLabel={t('closeMenu')}
-              className="w-[300px] overflow-y-auto border-sand-300 bg-sand-50 sm:w-[340px]"
+              className="flex w-[320px] flex-col overflow-y-auto border-sand-300 bg-sand-50 sm:w-[360px]"
             >
               <SheetTitle className="sr-only">{t('menu')}</SheetTitle>
               <div className="px-5 pt-5">
                 <Logo size="md" />
               </div>
 
-              <nav className="mt-6 flex flex-col gap-5 px-3 pb-6" aria-label={t('menu')}>
+              <nav className="mt-6 flex flex-1 flex-col gap-6 px-3 pb-6" aria-label={t('menu')}>
                 {DRAWER_GROUPS.map((group) => {
                   const items = NAV_ITEMS.filter((item) => item.group === group.key)
                   if (items.length === 0) return null
@@ -276,7 +302,7 @@ export function Header() {
                       </h2>
                       <ul className="flex flex-col">
                         {items.map((item) => {
-                          const Icon = NAV_ICONS[item.icon || 'home']
+                          const Icon = NAV_ICONS[item.icon || '']
                           const active = isActive(item.href)
                           return (
                             <li key={item.href}>
@@ -285,7 +311,7 @@ export function Header() {
                                 onClick={() => setOpen(false)}
                                 aria-current={active ? 'page' : undefined}
                                 className={cn(
-                                  'flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[0.95rem] font-medium transition-colors',
+                                  'flex min-h-14 items-center gap-3 rounded-xl px-3 py-3 text-base font-medium transition-colors',
                                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-700',
                                   active
                                     ? 'bg-sun-500 text-on-accent'
@@ -294,11 +320,11 @@ export function Header() {
                               >
                                 {Icon && (
                                   <Icon
-                                    className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-on-accent' : 'text-sun-700')}
+                                    className={cn('h-5 w-5 shrink-0', active ? 'text-on-accent' : 'text-sun-700')}
                                     aria-hidden
                                   />
                                 )}
-                                <span>{t(NAV_LABEL_KEYS[item.href] || 'home')}</span>
+                                <span>{t(NAV_LABEL_KEYS[item.href])}</span>
                               </Link>
                             </li>
                           )
@@ -309,16 +335,18 @@ export function Header() {
                 })}
               </nav>
 
-              <div className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-                <Link
-                  href="/book-dahab"
-                  onClick={() => setOpen(false)}
-                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-sun-500 text-sm font-semibold text-on-accent transition-colors hover:bg-sun-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-700"
-                >
-                  {t('bookTripCta')}
-                  <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
-                </Link>
-              </div>
+              {ctaItem && (
+                <div className="safe-bottom px-5 pt-2">
+                  <Link
+                    href={ctaItem.href}
+                    onClick={() => setOpen(false)}
+                    className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-sun-500 text-base font-semibold text-on-accent transition-colors hover:bg-sun-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-700"
+                  >
+                    {t('buildTrip')}
+                    <ArrowForward className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
             </SheetContent>
           </Sheet>
         </div>
