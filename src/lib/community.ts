@@ -33,3 +33,10 @@ export const POST_CATEGORY_LABELS: Record<PostCategory, { ar: string; en: string
   'advanced-adventure': { ar: 'مغامرات متقدمة', en: 'Advanced Adventure' },
   blog: { ar: 'مقالات', en: 'Journal' },
 }
+
+// Community discovery link vocabulary (migration 037) — the closed set of
+// target types a post can be curated to link. Kept here (pure, no server
+// import) because src/lib/community-view.ts imports from this module and
+// must stay usable outside the server runtime. The DB-touching link
+// loaders live in src/lib/community-links.ts (server-only).
+export const COMMUNITY_LINK_TARGET_TYPES = ['stay', 'trip', 'trip_package', 'signature_experience'] as const

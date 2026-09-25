@@ -78,6 +78,16 @@ test('search: rental URL uses /rent/[slug]', () => {
   assert.equal(`/rent/${slug}`, '/rent/freediving-fins')
 })
 
+test('search: trip package URL uses /sinai-trips/packages/[slug]', () => {
+  const slug = 'kite-escape-week'
+  assert.equal(`/sinai-trips/packages/${slug}`, '/sinai-trips/packages/kite-escape-week')
+})
+
+test('search: community post URL uses /community/[slug]', () => {
+  const slug = 'ras-abu-galum-hidden-coastline'
+  assert.equal(`/community/${slug}`, '/community/ras-abu-galum-hidden-coastline')
+})
+
 // ── Search query sanitization ─────────────────────────────────────────────
 
 test('search sanitizer removes PostgREST filter grammar and LIKE wildcards', () => {
@@ -98,13 +108,25 @@ test('search commerce product columns exist in the authoritative migration', () 
   const columns = new Set(
     [...table![1].matchAll(/^\s*([a-z_]+)\s+/gm)].map((match) => match[1]),
   )
-  const route = readFileSync('src/app/api/search/route.ts', 'utf8')
+  const route = readFileSync('src/lib/discovery/search.ts', 'utf8')
   const select = route.match(/from\('commerce_products'\)\s*\.select\('([^']+)'\)/)?.[1] || ''
   const selected = select.split(',').map((column) => column.trim())
-  const filtered = [...route.matchAll(/(?:\.eq|\.is)\('([a-z_]+)'/g)].map((match) => match[1])
+  // Scoped to the commerce_products query block only — a global match would
+  // also pick up .eq()/.is() calls from the trip_packages/community_posts
+  // queries elsewhere in this file, whose columns don't exist on this table.
+  const commerceBlock = route.split("from('commerce_products')")[1]?.split("from('")[0] || ''
+  const filtered = [...commerceBlock.matchAll(/(?:\.eq|\.is)\('([a-z_]+)'/g)].map((match) => match[1])
   for (const column of [...selected, ...filtered]) {
     assert.ok(columns.has(column), `commerce_products.${column} exists in migration 013`)
   }
+})
+
+test('search never queries trip_packages or community_posts without an active/published filter', () => {
+  const route = readFileSync('src/lib/discovery/search.ts', 'utf8')
+  const packagesBlock = route.split("from('trip_packages')")[1]?.split("from('")[0] || ''
+  assert.ok(packagesBlock.includes(".eq('is_active', true)"), 'trip_packages search is scoped to is_active')
+  const postsBlock = route.split("from('community_posts')")[1]?.split("from('")[0] || ''
+  assert.ok(postsBlock.includes(".eq('is_published', true)"), 'community_posts search is scoped to is_published')
 })
 
 test('search: empty or short queries return no results without hitting DB', () => {

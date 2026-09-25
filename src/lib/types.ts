@@ -728,6 +728,32 @@ export interface ExperienceBooking {
   experiences?: { title_ar: string; title_en: string } | null
 }
 
+/** A curated "this community post is about that product" edge (migration 037). */
+export type CommunityLinkTargetType = 'stay' | 'trip' | 'trip_package' | 'signature_experience'
+
+export interface CommunityPostLink {
+  id: string
+  post_id: string
+  target_type: CommunityLinkTargetType
+  target_id: string
+  sort_order: number
+  created_at: string
+}
+
+/** A community_post_link resolved against its live target row — what the
+ *  public "Plan it with WEEMAP" / "Local guides" blocks actually render. */
+export interface CommunityLinkedTarget {
+  /** community_post_links.id — needed to remove the link from the admin editor. */
+  id: string
+  target_type: CommunityLinkTargetType
+  target_id: string
+  title_ar: string
+  title_en: string
+  image: string | null
+  /** Locale-agnostic pathname, e.g. `/book-dahab/<id>` — pass through getPathname()/<Link> for the active locale. */
+  pathname: string
+}
+
 export type PartnerInquiryStatus = 'new' | 'contacted' | 'in_discussion' | 'closed'
 
 /** An inbound lead from a business/person asking to become a WEEMAP partner, submitted via the public /partner page form.

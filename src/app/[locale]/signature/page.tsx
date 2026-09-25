@@ -7,7 +7,7 @@ import { SignatureClient } from '@/components/SignatureClient'
 import { Eyebrow, Section, SectionHeading } from '@/components/brand'
 import { Reveal } from '@/components/motion/Reveal'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 
 export const revalidate = 60
 
@@ -16,11 +16,7 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'signatureV2' })
-  return {
-    title: t('title'),
-    description: t('subtitle'),
-    alternates: buildAlternates('/signature', locale),
-  }
+  return pageMetadata({ locale, path: '/signature', title: t('title'), description: t('subtitle') })
 }
 
 export default async function SignaturePage({ params }: { params: Promise<{ locale: string }> }) {

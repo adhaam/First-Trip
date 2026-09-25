@@ -119,6 +119,44 @@ like once `001` has run.
   classification of a transport + stay booking (`bookings`, trip-request
   payment parts). Apply it together with `029`–`033`.
 
+## M3 Operations Center (035–036)
+
+- **035 — staff identity and audit.** Adds `staff_users` (owner / admin /
+  operations, scrypt password hashes, a `session_version` that a trigger bumps
+  on disable / role / email / password change so old sessions die, and a
+  trigger that refuses to remove the last active owner) and
+  `weemap_current_actor()`, which trusts the `x-weemap-actor` header **only**
+  on service-role requests. The 031 request trigger now records that actor in
+  `status_history` and in event payloads. `audit_log` records every catalogue,
+  pricing, transport, settings and staff change, plus field edits and deletes
+  on request tables, in the same transaction. It redacts password hashes and
+  summarises long text. See `docs/m3/OPERATIONS.md` for the transition from
+  the shared password.
+- **036 — Operations Center.** Adds `payment_records`, an append-only ledger
+  written only by `weemap_record_payment()`. That function locks the row,
+  rejects a stale caller, refuses money before availability is confirmed and
+  any over-payment or over-refund, and derives `payment_status`. It never
+  touches `payment_kind`. `weemap_convert_trip_request()` turns a confirmed
+  Trip Builder request into a stay/transport `bookings` row plus one
+  `trip_bookings` row per experience. It prices them from the frozen snapshot,
+  keeps provenance and is idempotent via unique indexes. The migration also
+  adds `trip_requests.internal_notes` / `converted_at` / `converted_by`, the
+  customer domain events and the read-only `ops_work_items` queue view.
+  `supabase/tests/operations_center.sql` proves the invariants inside a rolled
+  back transaction.
+
+## M3 Discovery (037)
+
+- **037 — community discovery links.** `community_post_links` lets an
+  operator curate "this guide is about that stay/trip/package/Signature
+  experience" links (`target_type` in `stay | trip | trip_package |
+  signature_experience`, `target_id` is that row's id in its own table — no
+  cross-table FK, existence is checked in the admin API instead). Powers the
+  community article's "Plan it with WEEMAP" block and the reverse "Local
+  guides" block on stay/trip/package detail pages. Public read, service-role
+  write RLS, same pattern as `033`. 035 and 036 are reserved for the Ops
+  Center track and intentionally skipped here.
+
 ## Production preflight for 029–034
 
 Before deploying the M1 code (payment kinds, new workflow states, transport

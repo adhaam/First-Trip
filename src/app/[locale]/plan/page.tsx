@@ -4,10 +4,24 @@ import { TripBuilder } from '@/components/trip-builder/TripBuilder'
 import { buildAlternates } from '@/lib/seo'
 import { getTripBuilderCatalog } from '@/lib/trip-builder/catalog.server'
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const { locale } = await params
+export async function generateMetadata({ params, searchParams }: {
+  params: Promise<{ locale: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}): Promise<Metadata> {
+  const [{ locale }, prefill] = await Promise.all([params, searchParams])
   const t = await getTranslations({ locale, namespace: 'builder' })
-  return { title: t('metaTitle'), description: t('metaDescription'), alternates: buildAlternates('/plan', locale) }
+  // The bare /plan URL is the real, indexable "Build Your Trip" landing
+  // page (see sitemap.ts). A ?stay=/?trip=/?package= prefilled URL renders
+  // the same builder pre-populated for one visitor's click-through — not a
+  // distinct piece of content worth indexing — so only that variant is
+  // marked noindex,follow.
+  const hasPrefill = Object.keys(prefill).length > 0
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+    alternates: buildAlternates('/plan', locale),
+    ...(hasPrefill ? { robots: { index: false, follow: true } } : {}),
+  }
 }
 
 export default async function PlanPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {

@@ -12,8 +12,13 @@ import { getTripPackageBySlugForDetail } from '@/lib/trip-packages'
 import { getSiteSettings } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
+import { getPathname } from '@/i18n/navigation'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 import { NEUTRAL_MEDIA } from '@/lib/media'
+import { getBreadcrumbSchema, getTouristTripSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
+import { getCommunityPostsLinkingTarget } from '@/lib/community-links'
+import { LocalGuides } from '@/components/community/LocalGuides'
 
 export const revalidate = 60
 
@@ -26,10 +31,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const ar = locale === 'ar'
   const name = ar ? pkg.name_ar : pkg.name_en
+  const description = (ar ? pkg.short_description_ar : pkg.short_description_en) || undefined
+  const alternates = buildAlternates(`/sinai-trips/packages/${pkg.slug}`, locale)
+  const image = pkg.image || pkg.trips?.[0]?.image
   return {
     title: name,
-    description: (ar ? pkg.short_description_ar : pkg.short_description_en) || undefined,
-    alternates: buildAlternates(`/sinai-trips/packages/${pkg.slug}`, locale),
+    description,
+    alternates,
+    openGraph: {
+      title: name,
+      description,
+      url: `${SITE_URL}${getPathname({ href: `/sinai-trips/packages/${pkg.slug}`, locale })}`,
+      ...(image ? { images: [{ url: image }] } : {}),
+      type: 'website',
+      locale: ar ? 'ar_EG' : 'en_US',
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title: name,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
   }
 }
 
@@ -44,6 +66,10 @@ export default async function PackageDetail({ params }: Props) {
     getTranslations({ locale, namespace: 'ui' }),
   ])
   if (!pkg) notFound()
+  const [td, localGuides] = await Promise.all([
+    getTranslations({ locale, namespace: 'discovery' }),
+    getCommunityPostsLinkingTarget('trip_package', pkg.id),
+  ])
 
   const ar = locale === 'ar'
   const name = ar ? pkg.name_ar : pkg.name_en
@@ -56,19 +82,27 @@ export default async function PackageDetail({ params }: Props) {
   // `payment_kind` here (see docs/m2/BRIEF.md "Package semantics").
   const kind = 'experience_package' as const
   const totals = pkg.totals!
+  const pageUrl = `${SITE_URL}${getPathname({ href: `/sinai-trips/packages/${pkg.slug}`, locale })}`
 
-  const schema = {
-    '@context': 'https://schema.org',
-    '@type': 'TouristTrip',
+  const schema = getTouristTripSchema({
     name,
-    ...(short ? { description: short } : {}),
-    image: [cover],
-    url: `${SITE_URL}${locale === 'en' ? '/en' : ''}/sinai-trips/packages/${pkg.slug}`,
-  }
+    description: short || description,
+    url: pageUrl,
+    image: cover,
+    // The package's aggregate total IS the price shown on this page
+    // (PackageValueCard) — the per-trip breakdown is never shown publicly.
+    offers: totals?.isValid ? { price: totals.packageTotal } : null,
+  })
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: ar ? 'باقات رحلات سيناء' : 'Sinai Trip Packages', url: `${SITE_URL}${getPathname({ href: '/sinai-trips/packages', locale })}` },
+    { name, url: pageUrl },
+  ])
 
   return (
     <article>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
 
       <PageHero
         image={cover}
@@ -143,6 +177,12 @@ export default async function PackageDetail({ params }: Props) {
           </aside>
         </div>
       </Section>
+
+      {localGuides.length > 0 && (
+        <Section tone="paper" size="sm">
+          <LocalGuides posts={localGuides} locale={locale} heading={td('localGuides.heading')} />
+        </Section>
+      )}
 
       <StickyActionBar
         summary={<span>{t('packageBadge')}</span>}

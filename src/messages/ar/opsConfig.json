@@ -1,0 +1,273 @@
+{
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "retry": "إعادة المحاولة",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "add": "إضافة",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "confirm": "تأكيد",
+    "activate": "تفعيل",
+    "deactivate": "إيقاف",
+    "yes": "نعم",
+    "no": "لا",
+    "never": "أبداً",
+    "currency": "ج.م",
+    "loadError": "تعذر تحميل البيانات. حاول مرة أخرى.",
+    "saveError": "تعذر الحفظ. حاول مرة أخرى.",
+    "saved": "تم الحفظ",
+    "active": "مفعّل",
+    "inactive": "غير مفعّل",
+    "readOnlyNotice": "للعرض فقط — المالك والأدمن فقط يقدروا يعدّلوا هنا."
+  },
+  "payment": {
+    "statusUnpaid": "لم يُدفع",
+    "statusPartial": "جزئي",
+    "statusPaid": "مدفوع",
+    "statusRefunded": "مسترد",
+    "paidOf": "دُفع {paid} / {total} {currency}",
+    "remaining": "متبقي {amount} {currency}",
+    "viewPayments": "المدفوعات"
+  },
+  "staff": {
+    "title": "الموظفون",
+    "subtitle": "الأشخاص اللي يقدروا يدخلوا مركز العمليات، وصلاحية كل واحد.",
+    "ownerOnlyNotice": "إدارة الموظفين متاحة للمالك فقط.",
+    "addButton": "إضافة شخص",
+    "table": {
+      "name": "الاسم",
+      "email": "الإيميل",
+      "role": "الصلاحية",
+      "status": "الحالة",
+      "lastSignIn": "آخر دخول",
+      "actions": "إجراءات"
+    },
+    "roles": {
+      "ownerName": "مالك",
+      "ownerDesc": "كل شيء، بما في ذلك إدارة الموظفين.",
+      "adminName": "أدمن",
+      "adminDesc": "كل شيء ما عدا إدارة الموظفين.",
+      "operationsName": "عمليات",
+      "operationsDesc": "يتابع الطلبات والحجوزات والمدفوعات يوماً بيوم؛ الكتالوج والأسعار والإعدادات للعرض فقط، وممنوع الحذف."
+    },
+    "create": {
+      "title": "إضافة شخص جديد",
+      "emailLabel": "الإيميل",
+      "nameLabel": "الاسم الظاهر",
+      "roleLabel": "الصلاحية",
+      "passwordLabel": "كلمة مرور مبدئية",
+      "generatePassword": "توليد كلمة مرور قوية",
+      "submit": "إنشاء الحساب",
+      "passwordHint": "10 حروف على الأقل."
+    },
+    "editRole": {
+      "label": "الصلاحية"
+    },
+    "resetPassword": {
+      "button": "إعادة تعيين كلمة المرور",
+      "title": "إعادة تعيين كلمة مرور {name}",
+      "passwordLabel": "كلمة المرور الجديدة",
+      "generatePassword": "توليد كلمة مرور قوية",
+      "submit": "تعيين كلمة المرور",
+      "notice": "هيتم تسجيل خروجه من كل مكان فوراً."
+    },
+    "disable": {
+      "button": "إيقاف",
+      "title": "إيقاف حساب {name}؟",
+      "body": "هيتم تسجيل خروجه فوراً ولن يقدر يدخل مرة أخرى. اسمه هيفضل ظاهر في السجل والتدقيق القديم.",
+      "confirm": "إيقاف الحساب"
+    },
+    "enable": {
+      "button": "إعادة تفعيل",
+      "title": "إعادة تفعيل حساب {name}؟",
+      "body": "هيقدر يدخل تاني بنفس كلمة المرور الحالية.",
+      "confirm": "إعادة تفعيل الحساب"
+    },
+    "statusActive": "مفعّل",
+    "statusDisabled": "موقوف",
+    "errors": {
+      "lastOwner": "لازم يفضل مالك واحد مفعّل على الأقل.",
+      "duplicateEmail": "في موظف بنفس الإيميل ده موجود بالفعل.",
+      "weakPassword": "كلمة المرور لازم تكون 10 حروف على الأقل.",
+      "generic": "حصل خطأ. حاول مرة أخرى."
+    }
+  },
+  "transport": {
+    "title": "الانتقالات",
+    "subtitle": "شيئان منفصلان: مواعيد تشغيل الانتقالات فعلياً، وأنماط الإقامة اللي بتبيعها WEEMAP.",
+    "tabs": {
+      "schedule": "جدول التشغيل",
+      "patterns": "أنماط الإقامة التجارية"
+    },
+    "schedule": {
+      "title": "جدول تشغيل الانتقالات",
+      "subtitle": "مواعيد تشغيل كل خدمة — ده منفصل تماماً عن اللي بيتباع.",
+      "modeLabel": "الوضع",
+      "modeScheduled": "مجدول",
+      "modeOnDemand": "عند الطلب",
+      "modeChangeTitle": "تغيير وضع الجدولة لـ{service}؟",
+      "modeChangeBody": "التبديل بين مجدول وعند الطلب بيغيّر الأيام اللي الخدمة دي بتُعتبر شغالة فيها. أكّد التغيير.",
+      "modeChangeConfirm": "تغيير الوضع",
+      "weeklyRulesTitle": "القواعد الأسبوعية",
+      "directionOutbound": "ذهاب لدهب",
+      "directionReturn": "عودة من دهب",
+      "directionBoth": "الاتجاهين",
+      "addRule": "إضافة قاعدة أسبوعية",
+      "editRule": "تعديل القاعدة",
+      "weekdayLabel": "يوم الأسبوع",
+      "originLabel": "محافظة الانطلاق (اختياري)",
+      "originAny": "أي محافظة",
+      "validFromLabel": "سارية من (اختياري)",
+      "validToLabel": "سارية لغاية (اختياري)",
+      "notesLabel": "ملاحظات (اختياري)",
+      "ruleActive": "مفعّلة",
+      "ruleInactive": "موقوفة",
+      "noRules": "لا توجد قواعد أسبوعية لهذا الاتجاه بعد.",
+      "exceptionsTitle": "استثناءات بتواريخ محددة",
+      "exceptionsSubtitle": "الأقرب أولاً — إلغاءات ورحلات إضافية فوق القواعد الأسبوعية.",
+      "addBlackout": "إضافة يوم إلغاء",
+      "addExtraDeparture": "إضافة رحلة إضافية",
+      "exceptionServiceLabel": "الخدمة",
+      "exceptionDateLabel": "التاريخ",
+      "exceptionDateError": "التاريخ لازم يكون اليوم أو بعده.",
+      "exceptionDirectionLabel": "الاتجاه",
+      "exceptionKindBlackout": "إلغاء",
+      "exceptionKindExtra": "رحلة إضافية",
+      "exceptionReasonArLabel": "السبب (عربي)",
+      "exceptionReasonEnLabel": "السبب (إنجليزي)",
+      "exceptionOriginLabel": "محافظة الانطلاق (اختياري)",
+      "noExceptions": "لا توجد استثناءات مسجلة.",
+      "previewTitle": "معاينة التشغيل لـ4 أسابيع",
+      "previewSubtitle": "التواريخ الفعلية اللي هتشتغل بيها الخدمة، قبل وبعد التغيير.",
+      "previewEmpty": "لا توجد أيام تشغيل في الأسابيع الأربعة القادمة."
+    },
+    "patterns": {
+      "title": "أنماط الإقامة التجارية",
+      "subtitle": "اللي WEEMAP بتبيعه — منفصل عن مواعيد تشغيل الانتقالات.",
+      "add": "إضافة نمط",
+      "edit": "تعديل النمط",
+      "table": {
+        "code": "الكود",
+        "service": "الخدمة",
+        "name": "الاسم",
+        "duration": "المدة",
+        "returnOffset": "إزاحة العودة",
+        "departureWeekdays": "أيام الانطلاق",
+        "status": "الحالة",
+        "order": "الترتيب",
+        "actions": "إجراءات"
+      },
+      "allServices": "كل الخدمات",
+      "anyOperatingDay": "أي يوم تشغيل",
+      "nightsSuffix": "ليالي",
+      "daysSuffix": "أيام",
+      "offsetSuffix": "يوم بعد الانطلاق",
+      "codeLabel": "الكود",
+      "serviceLabel": "الخدمة",
+      "nameArLabel": "الاسم (عربي)",
+      "nameEnLabel": "الاسم (إنجليزي)",
+      "durationDaysLabel": "المدة (أيام)",
+      "nightsLabel": "عدد الليالي",
+      "returnOffsetLabel": "إزاحة العودة (أيام)",
+      "departureWeekdaysLabel": "أيام الانطلاق (اتركه فارغاً لأي يوم تشغيل)",
+      "sortOrderLabel": "ترتيب العرض",
+      "activeLabel": "مفعّل"
+    },
+    "weekdays": {
+      "0": "أحد",
+      "1": "إثنين",
+      "2": "ثلاثاء",
+      "3": "أربعاء",
+      "4": "خميس",
+      "5": "جمعة",
+      "6": "سبت"
+    },
+    "errors": {
+      "problem": "{service}: لا توجد رحلة {direction} يوم {weekday}",
+      "notOperable": "لا يمكن بيع هذه المدة في هذه الأيام — {problems}.",
+      "dependsOnRule": "هناك مدد إقامة نشطة تعتمد على هذا اليوم ({patterns}). عدّل هذه المدد أو أوقفها أولاً.",
+      "duplicate": "هذا العنصر موجود بالفعل.",
+      "invalid": "يُرجى مراجعة الحقول المحددة.",
+      "forbidden": "يمكنك الاطلاع على جدول النقل، لكن دورك لا يسمح بتعديله.",
+      "generic": "تعذّر الحفظ، حاول مرة أخرى."
+    }
+  },
+  "audit": {
+    "title": "سجل التدقيق",
+    "subtitle": "كل تعديل على جدول محمي، ومين عمله، وإيه اللي اتغيّر.",
+    "filters": {
+      "table": "الجدول",
+      "actor": "المستخدم",
+      "rowId": "معرّف الصف",
+      "allTables": "كل الجداول",
+      "apply": "تطبيق",
+      "clear": "مسح"
+    },
+    "table": {
+      "time": "الوقت",
+      "actor": "المستخدم",
+      "tableName": "الجدول",
+      "action": "الإجراء",
+      "changes": "التغييرات"
+    },
+    "actions": {
+      "INSERT": "إنشاء",
+      "UPDATE": "تعديل",
+      "DELETE": "حذف"
+    },
+    "redacted": "[محجوب]",
+    "textChars": "[نص: {count} حرف]",
+    "empty": "لا توجد سجلات تدقيق مطابقة لهذه الفلاتر.",
+    "pageOf": "صفحة {page} من {total}",
+    "previous": "السابق",
+    "next": "التالي",
+    "tables": {
+      "staff_users": "الموظفون",
+      "bookings": "حجوزات الإقامة",
+      "trip_bookings": "حجوزات الرحلات",
+      "experience_bookings": "طلبات التجارب الخاصة",
+      "commerce_orders": "طلبات المتجر",
+      "commerce_rentals": "الإيجارات",
+      "payment_records": "المدفوعات",
+      "customers": "العملاء",
+      "trip_requests": "طلبات الرحلات",
+      "transport_services": "خدمات الانتقالات",
+      "transport_weekly_rules": "القواعد الأسبوعية للانتقالات",
+      "transport_exceptions": "استثناءات الانتقالات",
+      "transport_stay_patterns": "أنماط الإقامة",
+      "accommodations": "أماكن الإقامة",
+      "sinai_trips": "رحلات سيناء",
+      "trip_packages": "باكدجات الرحلات",
+      "experiences": "التجارب الخاصة",
+      "commerce_products": "منتجات المتجر"
+    }
+  },
+  "catalogueHealth": {
+    "title": "سلامة الكتالوج",
+    "subtitle": "مشاكل موجودة في الكتالوج العام محتاجة متابعة.",
+    "empty": "الكتالوج سليم ومتسق.",
+    "viewLink": "فتح",
+    "types": {
+      "accommodation": "إقامة",
+      "sinai_trip": "رحلة سيناء",
+      "trip_package": "باكدج رحلة",
+      "signature_experience": "تجربة خاصة",
+      "commerce_product": "منتج متجر"
+    },
+    "issues": {
+      "no_images": "بدون صور (تظهر الوسائط المحايدة)",
+      "no_room_price": "لا يوجد سعر للغرف",
+      "no_price": "لا يوجد سعر",
+      "no_category_tag": "غير مُدرجة في أي تصنيف رحلات",
+      "too_few_items": "الباقة تضم أقل من رحلتين",
+      "item_missing_package_price": "رحلة داخل الباقة بلا سعر باقة",
+      "no_active_variant": "لا يوجد نوع مفعّل",
+      "zero_stock": "نفد المخزون",
+      "no_active_pricing_tier": "لا توجد شريحة سعر إيجار مفعّلة",
+      "no_upcoming_open_date": "لا توجد مواعيد متاحة قادمة",
+      "other": "يحتاج مراجعة"
+    }
+  }
+}

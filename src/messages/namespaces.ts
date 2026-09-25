@@ -19,6 +19,7 @@ export const V2_NAMESPACES = [
   'shopV2',
   'communityV2',
   'ops',
+  'opsConfig',
   'discovery',
 ] as const
 

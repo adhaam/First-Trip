@@ -171,7 +171,7 @@ BEGIN
   BEGIN
     PERFORM weemap_record_payment('accommodation_booking', bk_id, 'received', 100, 'cash', 0);
     RAISE EXCEPTION 'stale payment accepted';
-  EXCEPTION WHEN serialization_failure THEN NULL;
+  EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL;
   END;
   BEGIN
     PERFORM weemap_record_payment('accommodation_booking', bk_id, 'received', 4481, 'cash', 4480);

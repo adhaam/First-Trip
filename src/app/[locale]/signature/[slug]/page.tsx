@@ -15,7 +15,10 @@ import { PriceTag } from '@/components/brand/PriceTag'
 import { PaymentTerms } from '@/components/brand/PaymentTerms'
 import { ArrowBack } from '@/components/brand/DirectionalIcon'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
+import { getPathname } from '@/i18n/navigation'
 import { NEUTRAL_MEDIA } from '@/lib/media'
+import { getBreadcrumbSchema, getTouristTripSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
 
 export const revalidate = 60
 
@@ -40,8 +43,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: name,
       description,
+      url: `${SITE_URL}${getPathname({ href: canonicalPath, locale })}`,
       type: 'website',
+      locale: ar ? 'ar_EG' : 'en_US',
       images: experience.hero_image ? [{ url: experience.hero_image, alt: name }] : undefined,
+    },
+    twitter: {
+      card: experience.hero_image ? 'summary_large_image' : 'summary',
+      title: name,
+      description,
+      images: experience.hero_image ? [experience.hero_image] : undefined,
     },
   }
 }
@@ -67,22 +78,25 @@ export default async function SignatureExperienceDetailPage({ params }: PageProp
   const cover = experience.hero_image || gallery[0] || NEUTRAL_MEDIA
   const price = discountedExperiencePrice(experience)
   const canonicalPath = `/signature/${experience.slug}`
+  const pageUrl = `${SITE_URL}${getPathname({ href: canonicalPath, locale })}`
 
-  const schema = {
-    '@context': 'https://schema.org',
-    '@type': 'TouristTrip',
+  const schema = getTouristTripSchema({
     name,
-    ...(shortDescription ? { description: shortDescription } : {}),
-    ...(experience.hero_image ? { image: [experience.hero_image] } : {}),
-    url: `${SITE_URL}${locale === 'en' ? '/en' : ''}${canonicalPath}`,
-  }
+    description: shortDescription || fullDescription,
+    url: pageUrl,
+    image: experience.hero_image || null,
+    offers: price ? { price } : null,
+  })
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: ar ? 'سيجنتشر' : 'Signature', url: `${SITE_URL}${getPathname({ href: '/signature', locale })}` },
+    { name, url: pageUrl },
+  ])
 
   return (
     <article className="bg-sand-50">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
 
       <header className="relative isolate min-h-[56svh] overflow-hidden bg-sea-900 text-white">
         <Image src={cover} alt="" fill priority sizes="100vw" className="-z-20 object-cover" />

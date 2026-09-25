@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { ledgerOnlyFieldsIn } from '@/lib/ops/ledger-fields'
 import { STATUSES } from '@/lib/request-workflow'
 import { updateAdminStatus } from '@/lib/admin-status-update'
 
@@ -17,6 +18,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!gate.ok) return gate.response
   const { id } = await params
   const body = await req.json().catch(() => null)
+  const ledgerFields = ledgerOnlyFieldsIn(body)
+  if (ledgerFields.length) {
+    return NextResponse.json({
+      error: 'Payments are recorded through POST /api/admin/payments',
+      code: 'payment_via_ledger',
+      fields: ledgerFields,
+    }, { status: 400 })
+  }
   const validated = updateSchema.safeParse(body)
   if (!validated.success) {
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })

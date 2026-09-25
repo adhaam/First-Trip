@@ -42,7 +42,10 @@
 --   * trip_requests.internal_notes holds staff notes; notes stays the
 --     customer's own words.
 --   * ops_work_items is a read-only view that normalises every request type
---     into one row shape for the Operations Center queue.
+--     into one row shape for the Operations Center queue. Tables without a
+--     human reference get a display one: BK- (stay/transfer bookings), TB-
+--     (Sinai trip / package bookings), SG- (Signature) + the first 8 hex of
+--     the id — for finding and reading out, not a unique key (use entity_id).
 --   * Customers emit customer_created / customer_updated / customer_merged
 --     domain events (identifiers only, no contact data in the payload).
 --
@@ -160,7 +163,8 @@ BEGIN
   END IF;
 
   IF p_expected_amount_paid IS DISTINCT FROM cur.amount_paid THEN
-    RAISE EXCEPTION 'stale_payment_state' USING ERRCODE = 'serialization_failure';
+    -- PT409: PostgREST answers HTTP 409. (40001 would make it retry/hang.)
+    RAISE EXCEPTION 'stale_payment_state' USING ERRCODE = 'PT409';
   END IF;
 
   IF p_direction = 'received' THEN
@@ -409,7 +413,7 @@ CREATE OR REPLACE VIEW public.ops_work_items
 WITH (security_invoker = true) AS
 SELECT
   'accommodation_booking'::text AS entity_type, b.id AS entity_id,
-  upper(left(b.id::text, 8)) AS reference, b.booking_type AS subtype, b.payment_kind,
+  'BK-' || upper(left(b.id::text, 8)) AS reference, b.booking_type AS subtype, b.payment_kind,
   b.customer_id, b.customer_name, b.customer_phone,
   b.status, b.payment_status, b.total_price AS amount_total, b.amount_paid,
   b.trip_date AS start_date, b.return_date AS end_date, b.num_people AS people,
@@ -419,7 +423,7 @@ FROM public.bookings b
 LEFT JOIN public.accommodations a ON a.id = b.accommodation_id
 UNION ALL
 SELECT
-  'trip_booking', tb.id, upper(left(tb.id::text, 8)),
+  'trip_booking', tb.id, 'TB-' || upper(left(tb.id::text, 8)),
   CASE WHEN tb.trip_package_id IS NOT NULL THEN 'package' ELSE 'trip' END, tb.payment_kind,
   tb.customer_id, tb.customer_name, tb.customer_phone,
   tb.status, tb.payment_status, COALESCE(tb.final_price, tb.quoted_price), tb.amount_paid,
@@ -431,7 +435,7 @@ LEFT JOIN public.sinai_trips st ON st.id = tb.trip_id
 LEFT JOIN public.trip_packages tp ON tp.id = tb.trip_package_id
 UNION ALL
 SELECT
-  'signature_request', eb.id, upper(left(eb.id::text, 8)),
+  'signature_request', eb.id, 'SG-' || upper(left(eb.id::text, 8)),
   CASE WHEN eb.is_custom_request THEN 'custom' ELSE 'experience' END, 'signature',
   eb.customer_id, eb.full_name, eb.phone,
   eb.status, eb.payment_status, eb.quoted_price, eb.amount_paid,

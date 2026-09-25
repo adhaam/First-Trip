@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import { MerchClient } from '@/components/MerchClient'
 import { getCommerceCategories, getCommerceCollections, getCommerceProducts, getSiteSettings } from '@/lib/data'
 
@@ -13,11 +13,7 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'shopV2' })
-  return {
-    title: t('merchTitle'),
-    description: t('merchLede'),
-    alternates: buildAlternates('/merch', locale),
-  }
+  return pageMetadata({ locale, path: '/merch', title: t('merchTitle'), description: t('merchLede') })
 }
 
 export default async function MerchPage() {

@@ -20,6 +20,8 @@ import {
 import { Booking, BookingStatus, BookingType, Accommodation, TransferType, TransferDirection, MealPlan } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { allowedNextStatuses, STATUSES } from '@/lib/request-workflow'
+import { useStaff } from '@/components/admin/ops/StaffContext'
+import { PaymentSummary } from '@/components/admin/config/PaymentSummary'
 import { InvoiceViewer } from './InvoiceViewer'
 
 type BookingWorkflowStatus = (typeof STATUSES.accommodation_booking)[number]
@@ -135,6 +137,8 @@ const emptyManual = {
 export function BookingsManager() {
   const locale = useLocale()
   const ar = locale === 'ar'
+  const { staff } = useStaff()
+  const canDelete = staff?.role !== 'operations'
 
   const [bookings, setBookings] = useState<ManagedBooking[]>([])
   const [accommodations, setAccommodations] = useState<Accommodation[]>([])
@@ -723,46 +727,16 @@ export function BookingsManager() {
                             <DetailField label={ar ? 'المصدر' : 'Source'} value={(() => { const s = SOURCE_LABELS[b.source || 'website'] || SOURCE_LABELS.other; return ar ? s.ar : s.en })()} />
                             <DetailField label={ar ? 'تاريخ الإنشاء' : 'Created at'} value={b.created_at ? new Date(b.created_at).toLocaleString(ar ? 'ar-EG' : 'en-GB') : '—'} />
 
-                            {/* ─── Payment tracking (manual, no gateway) ─── */}
+                            {/* ─── Payment (read-only; recorded on the item's Payments ledger) ─── */}
                             <div className="col-span-2 md:col-span-4 rounded-lg border bg-white p-4">
                               <div className="mb-3 text-xs font-semibold text-gray-500">{ar ? 'الدفع' : 'Payment'}</div>
-                              <div className="flex flex-wrap items-end gap-4">
-                                <div>
-                                  <Label className="text-xs text-gray-500">{ar ? 'حالة الدفع' : 'Payment status'}</Label>
-                                  <Select
-                                    value={b.payment_status || 'unpaid'}
-                                    onValueChange={(v) => v && patchBooking(b.id, { payment_status: v })}
-                                    disabled={updatingId === b.id}
-                                  >
-                                    <SelectTrigger className={cn('mt-1 h-8 w-[130px] text-xs border-0', PAYMENT_LABELS[b.payment_status || 'unpaid']?.cls)}>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Object.keys(PAYMENT_LABELS).map(p => (
-                                        <SelectItem key={p} value={p}>{ar ? PAYMENT_LABELS[p].ar : PAYMENT_LABELS[p].en}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <Label className="text-xs text-gray-500">{ar ? 'المبلغ المدفوع' : 'Amount paid'}</Label>
-                                  <Input
-                                    type="number" min={0} dir="ltr"
-                                    className="mt-1 h-8 w-[120px]"
-                                    defaultValue={b.amount_paid ?? 0}
-                                    onBlur={e => {
-                                      const v = Number(e.target.value) || 0
-                                      if (v !== Number(b.amount_paid || 0)) patchBooking(b.id, { amount_paid: v })
-                                    }}
-                                  />
-                                </div>
-                                <div className="text-sm">
-                                  <span className="text-xs text-gray-500">{ar ? 'المتبقي: ' : 'Remaining: '}</span>
-                                  <span className={cn('font-semibold', (Number(b.total_price) || 0) - (Number(b.amount_paid) || 0) > 0 ? 'text-red-600' : 'text-green-600')}>
-                                    {((Number(b.total_price) || 0) - (Number(b.amount_paid) || 0)).toLocaleString()} ج.م
-                                  </span>
-                                </div>
-                              </div>
+                              <PaymentSummary
+                                entityType="accommodation_booking"
+                                entityId={b.id}
+                                paymentStatus={b.payment_status}
+                                amountPaid={b.amount_paid}
+                                total={b.total_price}
+                              />
                             </div>
 
                             {/* ─── Frozen price breakdown (snapshot at booking time) ─── */}
@@ -831,14 +805,16 @@ export function BookingsManager() {
                                 <FileText className="h-4 w-4" />
                                 {ar ? 'فاتورة' : 'Invoice'}
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteBooking(b.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                {ar ? 'حذف الحجز' : 'Delete booking'}
-                              </Button>
+                              {canDelete && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteBooking(b.id)}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  {ar ? 'حذف الحجز' : 'Delete booking'}
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </TableCell>

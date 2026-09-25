@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { effectiveTripPrice } from '@/lib/pricing'
 import type { TripDiscountType } from '@/lib/types'
 import { allowedNextStatuses, STATUSES } from '@/lib/request-workflow'
+import { PaymentSummary } from '@/components/admin/config/PaymentSummary'
 import { InvoiceViewer } from './InvoiceViewer'
 
 type TripBookingStatus = (typeof STATUSES.trip_booking)[number]
@@ -36,6 +37,8 @@ interface TripBooking {
   num_people: number
   quoted_price: number | null
   final_price: number | null
+  payment_status?: string | null
+  amount_paid?: number | null
   status: TripBookingStatus
   created_at: string
   context: string
@@ -388,17 +391,18 @@ export function TripBookingsManager() {
                 <TableHead>{ar ? 'عدد الأشخاص' : 'People'}</TableHead>
                 <TableHead>{ar ? 'السعر' : 'Price'}</TableHead>
                 <TableHead>{ar ? 'الحالة' : 'Status'}</TableHead>
+                <TableHead>{ar ? 'الدفع' : 'Payment'}</TableHead>
                 <TableHead>{ar ? 'فاتورة' : 'Invoice'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">
+                <TableRow><TableCell colSpan={9} className="text-center text-gray-400 py-8">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />{ar ? 'جاري التحميل...' : 'Loading...'}
                 </TableCell></TableRow>
               )}
               {!loading && error && (
-                <TableRow><TableCell colSpan={8} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-red-500 py-8">{error}</TableCell></TableRow>
               )}
               {!loading && !error && bookings.map((b) => (
                 <TableRow key={b.id}>
@@ -434,6 +438,16 @@ export function TripBookingsManager() {
                     </Select>
                   </TableCell>
                   <TableCell>
+                    <PaymentSummary
+                      entityType="trip_booking"
+                      entityId={b.id}
+                      paymentStatus={b.payment_status}
+                      amountPaid={b.amount_paid}
+                      total={b.final_price ?? b.quoted_price}
+                      compact
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Button
                       variant="outline"
                       size="sm"
@@ -451,7 +465,7 @@ export function TripBookingsManager() {
                 </TableRow>
               ))}
               {!loading && !error && bookings.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات رحلات بعد' : 'No trip bookings yet'}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

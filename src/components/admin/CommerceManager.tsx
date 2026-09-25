@@ -16,6 +16,8 @@ import { Loader2, Plus, MessageCircle, Trash2, Search, Pencil, X, Check } from '
 import { cn } from '@/lib/utils'
 import { ProductEditor } from './ProductEditor'
 import { allowedNextStatuses } from '@/lib/request-workflow'
+import { useStaff } from '@/components/admin/ops/StaffContext'
+import { PaymentSummary } from '@/components/admin/config/PaymentSummary'
 
 function useAdminFetch() {
   const locale = useLocale()
@@ -234,6 +236,7 @@ type OrderStatus = 'new' | 'contacted' | 'confirmed' | 'preparing' | 'ready' | '
 interface Order {
   id: string; order_number: string; order_type: string; status: OrderStatus
   total_price: number; created_at: string; fulfillment_method: string
+  payment_status?: string | null; amount_paid?: number | null
   customers: { name: string; phone: string } | null
 }
 interface OrderItem {
@@ -372,6 +375,16 @@ function OrdersTab() {
             </div>
             <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 font-bold text-gray-900">
               <span>{ar ? 'الإجمالي' : 'Total'}</span><span>{detail.total_price} {ar ? 'ج.م' : 'EGP'}</span>
+            </div>
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              <div className="mb-2 text-xs font-semibold text-gray-500">{ar ? 'الدفع' : 'Payment'}</div>
+              <PaymentSummary
+                entityType="commerce_order"
+                entityId={detail.id}
+                paymentStatus={detail.payment_status}
+                amountPaid={detail.amount_paid}
+                total={detail.total_price}
+              />
             </div>
             {number && (
               <a href={`https://wa.me/${number}`} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700">
@@ -519,6 +532,8 @@ interface Block { id: string; product_id: string; variant_id: string | null; qua
 function AvailabilityBlocksTab({ rentalProducts }: { rentalProducts: Product[] }) {
   const locale = useLocale(); const ar = locale === 'ar'
   const api = useAdminFetch()
+  const { staff } = useStaff()
+  const canDelete = staff?.role !== 'operations'
   const [items, setItems] = useState<Block[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ product_id: '', quantity: 1, start_date: '', end_date: '', reason: '' })
@@ -586,7 +601,11 @@ function AvailabilityBlocksTab({ rentalProducts }: { rentalProducts: Product[] }
                   <TableCell>{b.end_date}</TableCell>
                   <TableCell>{b.quantity}</TableCell>
                   <TableCell>{b.reason || '—'}</TableCell>
-                  <TableCell><button onClick={() => remove(b.id)}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button></TableCell>
+                  <TableCell>
+                    {canDelete && (
+                      <button onClick={() => remove(b.id)}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {!loading && items.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">{ar ? 'لا توجد حجوزات حجب بعد' : 'No availability blocks yet'}</TableCell></TableRow>}

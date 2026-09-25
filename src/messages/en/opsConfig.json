@@ -1,0 +1,273 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "yes": "Yes",
+    "no": "No",
+    "never": "Never",
+    "currency": "EGP",
+    "loadError": "Could not load this. Please try again.",
+    "saveError": "Could not save. Please try again.",
+    "saved": "Saved",
+    "active": "Active",
+    "inactive": "Inactive",
+    "readOnlyNotice": "Read-only — only owner and admin can make changes here."
+  },
+  "payment": {
+    "statusUnpaid": "Unpaid",
+    "statusPartial": "Partial",
+    "statusPaid": "Paid",
+    "statusRefunded": "Refunded",
+    "paidOf": "{paid} / {total} {currency} paid",
+    "remaining": "{amount} {currency} remaining",
+    "viewPayments": "Payments"
+  },
+  "staff": {
+    "title": "Staff",
+    "subtitle": "People who can sign in to the Operations Center, and what they can do.",
+    "ownerOnlyNotice": "Only an owner can manage staff.",
+    "addButton": "Add person",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "lastSignIn": "Last sign-in",
+      "actions": "Actions"
+    },
+    "roles": {
+      "ownerName": "Owner",
+      "ownerDesc": "Everything, including staff management.",
+      "adminName": "Admin",
+      "adminDesc": "Everything except staff management.",
+      "operationsName": "Operations",
+      "operationsDesc": "Handles day-to-day requests, bookings and payments; catalogue, pricing and settings are read-only, and nothing can be deleted."
+    },
+    "create": {
+      "title": "Add a person",
+      "emailLabel": "Email",
+      "nameLabel": "Display name",
+      "roleLabel": "Role",
+      "passwordLabel": "Initial password",
+      "generatePassword": "Generate a strong password",
+      "submit": "Create account",
+      "passwordHint": "At least 10 characters."
+    },
+    "editRole": {
+      "label": "Role"
+    },
+    "resetPassword": {
+      "button": "Reset password",
+      "title": "Reset password for {name}",
+      "passwordLabel": "New password",
+      "generatePassword": "Generate a strong password",
+      "submit": "Set new password",
+      "notice": "This signs them out everywhere immediately."
+    },
+    "disable": {
+      "button": "Disable",
+      "title": "Disable {name}?",
+      "body": "This signs them out immediately and they will no longer be able to sign in. Their name stays on past history and audit entries.",
+      "confirm": "Disable account"
+    },
+    "enable": {
+      "button": "Re-enable",
+      "title": "Re-enable {name}?",
+      "body": "They will be able to sign in again with their existing password.",
+      "confirm": "Re-enable account"
+    },
+    "statusActive": "Active",
+    "statusDisabled": "Disabled",
+    "errors": {
+      "lastOwner": "At least one active owner must remain.",
+      "duplicateEmail": "A staff member with this email already exists.",
+      "weakPassword": "Password must be at least 10 characters.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "transport": {
+    "title": "Transport",
+    "subtitle": "Two separate things: when transport actually runs, and what WEEMAP sells as stay patterns.",
+    "tabs": {
+      "schedule": "Operating schedule",
+      "patterns": "Commercial stay patterns"
+    },
+    "schedule": {
+      "title": "Transport operating schedule",
+      "subtitle": "When each service runs — this never touches what is sold.",
+      "modeLabel": "Mode",
+      "modeScheduled": "Scheduled",
+      "modeOnDemand": "On-demand",
+      "modeChangeTitle": "Change schedule mode for {service}?",
+      "modeChangeBody": "Switching between scheduled and on-demand changes which dates this service is considered to be operating on. Confirm the change.",
+      "modeChangeConfirm": "Change mode",
+      "weeklyRulesTitle": "Weekly rules",
+      "directionOutbound": "Outbound to Dahab",
+      "directionReturn": "Return from Dahab",
+      "directionBoth": "Both directions",
+      "addRule": "Add weekly rule",
+      "editRule": "Edit rule",
+      "weekdayLabel": "Weekday",
+      "originLabel": "Origin governorate (optional)",
+      "originAny": "Any governorate",
+      "validFromLabel": "Valid from (optional)",
+      "validToLabel": "Valid to (optional)",
+      "notesLabel": "Notes (optional)",
+      "ruleActive": "Active",
+      "ruleInactive": "Inactive",
+      "noRules": "No weekly rules for this direction yet.",
+      "exceptionsTitle": "Date exceptions",
+      "exceptionsSubtitle": "Upcoming first — blackouts and extra departures on top of the weekly rules.",
+      "addBlackout": "Add blackout",
+      "addExtraDeparture": "Add extra departure",
+      "exceptionServiceLabel": "Service",
+      "exceptionDateLabel": "Date",
+      "exceptionDateError": "The date must be today or later.",
+      "exceptionDirectionLabel": "Direction",
+      "exceptionKindBlackout": "Blackout",
+      "exceptionKindExtra": "Extra departure",
+      "exceptionReasonArLabel": "Reason (Arabic)",
+      "exceptionReasonEnLabel": "Reason (English)",
+      "exceptionOriginLabel": "Origin governorate (optional)",
+      "noExceptions": "No exceptions on the books.",
+      "previewTitle": "4-week operating preview",
+      "previewSubtitle": "The actual operating dates this produces, before and after your change.",
+      "previewEmpty": "No operating dates in the next 4 weeks."
+    },
+    "patterns": {
+      "title": "Commercial stay patterns",
+      "subtitle": "What WEEMAP sells — separate from when transport runs.",
+      "add": "Add pattern",
+      "edit": "Edit pattern",
+      "table": {
+        "code": "Code",
+        "service": "Service",
+        "name": "Name",
+        "duration": "Duration",
+        "returnOffset": "Return offset",
+        "departureWeekdays": "Departure weekdays",
+        "status": "Status",
+        "order": "Order",
+        "actions": "Actions"
+      },
+      "allServices": "All services",
+      "anyOperatingDay": "Any operating day",
+      "nightsSuffix": "nights",
+      "daysSuffix": "days",
+      "offsetSuffix": "days after departure",
+      "codeLabel": "Code",
+      "serviceLabel": "Service",
+      "nameArLabel": "Name (Arabic)",
+      "nameEnLabel": "Name (English)",
+      "durationDaysLabel": "Duration (days)",
+      "nightsLabel": "Nights",
+      "returnOffsetLabel": "Return offset (days)",
+      "departureWeekdaysLabel": "Departure weekdays (leave empty for any operating day)",
+      "sortOrderLabel": "Sort order",
+      "activeLabel": "Active"
+    },
+    "weekdays": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    },
+    "errors": {
+      "problem": "{service}: no {direction} service on {weekday}",
+      "notOperable": "This pattern cannot be sold on these days — {problems}.",
+      "dependsOnRule": "Active stay patterns depend on this service day ({patterns}). Change or deactivate those patterns first.",
+      "duplicate": "This already exists.",
+      "invalid": "Please check the highlighted fields.",
+      "forbidden": "Your role can view the transport schedule but not change it.",
+      "generic": "Could not save. Please try again."
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "Every change to a protected table, who made it, and what changed.",
+    "filters": {
+      "table": "Table",
+      "actor": "Actor",
+      "rowId": "Row ID",
+      "allTables": "All tables",
+      "apply": "Apply",
+      "clear": "Clear"
+    },
+    "table": {
+      "time": "Time",
+      "actor": "Actor",
+      "tableName": "Table",
+      "action": "Action",
+      "changes": "Changes"
+    },
+    "actions": {
+      "INSERT": "Created",
+      "UPDATE": "Updated",
+      "DELETE": "Deleted"
+    },
+    "redacted": "[redacted]",
+    "textChars": "[text: {count} chars]",
+    "empty": "No audit entries match these filters.",
+    "pageOf": "Page {page} of {total}",
+    "previous": "Previous",
+    "next": "Next",
+    "tables": {
+      "staff_users": "Staff",
+      "bookings": "Stay bookings",
+      "trip_bookings": "Trip bookings",
+      "experience_bookings": "Signature requests",
+      "commerce_orders": "Commerce orders",
+      "commerce_rentals": "Rentals",
+      "payment_records": "Payments",
+      "customers": "Customers",
+      "trip_requests": "Trip requests",
+      "transport_services": "Transport services",
+      "transport_weekly_rules": "Transport weekly rules",
+      "transport_exceptions": "Transport exceptions",
+      "transport_stay_patterns": "Stay patterns",
+      "accommodations": "Accommodations",
+      "sinai_trips": "Sinai trips",
+      "trip_packages": "Trip packages",
+      "experiences": "Signature experiences",
+      "commerce_products": "Commerce products"
+    }
+  },
+  "catalogueHealth": {
+    "title": "Catalogue health",
+    "subtitle": "Issues found in the public catalogue that need attention.",
+    "empty": "Catalogue looks consistent.",
+    "viewLink": "Open",
+    "types": {
+      "accommodation": "Accommodation",
+      "sinai_trip": "Sinai trip",
+      "trip_package": "Trip package",
+      "signature_experience": "Signature experience",
+      "commerce_product": "Commerce product"
+    },
+    "issues": {
+      "no_images": "Has no photos (neutral media shown)",
+      "no_room_price": "No room price set",
+      "no_price": "No price set",
+      "no_category_tag": "Not in any trip category",
+      "too_few_items": "Package has fewer than 2 trips",
+      "item_missing_package_price": "A trip in the package has no package price",
+      "no_active_variant": "No active variant",
+      "zero_stock": "Out of stock",
+      "no_active_pricing_tier": "No active rental price tier",
+      "no_upcoming_open_date": "No upcoming open date",
+      "other": "Needs review"
+    }
+  }
+}

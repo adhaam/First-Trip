@@ -123,6 +123,8 @@ done
 
 echo "==> Applying local acceptance seed data"
 apply_sql "$ROOT/supabase/dev/local-seed.sql"
+echo "==> Applying local operational fixtures (Operations Center)"
+apply_sql "$ROOT/supabase/dev/local-seed-operations.sql"
 
 echo "==> Setting authenticator role password (for PostgREST)"
 # authenticator is a reserved role in the supabase/postgres image — only a

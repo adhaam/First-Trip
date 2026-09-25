@@ -15,6 +15,7 @@ import {
 import { Plus, Pencil, Trash2, X, Search, Upload, Loader2, Pin, ImagePlus } from 'lucide-react'
 import { CommunityPost } from '@/lib/types'
 import { POST_CATEGORIES, POST_CATEGORY_LABELS } from '@/lib/community'
+import { LinkedTargetsEditor } from './CommunityPostLinksEditor'
 
 const CATEGORIES = POST_CATEGORIES.map((value) => ({
   value,
@@ -230,6 +231,15 @@ export function CommunityPostManager() {
 
               <div><Label className="mb-2 block">{locale === 'ar' ? 'المحتوى (عربي)' : 'Content (Arabic)'}</Label><Textarea rows={4} value={form.content_ar || ''} onChange={e => updateField('content_ar', e.target.value)} /></div>
               <div><Label className="mb-2 block">{locale === 'ar' ? 'المحتوى (إنجليزي)' : 'Content (English)'}</Label><Textarea rows={4} value={form.content_en || ''} onChange={e => updateField('content_en', e.target.value)} /></div>
+
+              {editing && <LinkedTargetsEditor postId={editing.id} locale={locale} />}
+              {!editing && (
+                <p className="text-xs text-gray-400">
+                  {locale === 'ar'
+                    ? 'احفظ المنشور أولاً لتقدر تربطه بإقامات أو رحلات أو باقات.'
+                    : 'Save the post first to link it to stays, trips or packages.'}
+                </p>
+              )}
 
               <div className="flex gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">

@@ -17,6 +17,9 @@ export async function generateMetadata({ params }: {
     title: t('buildTitle'),
     description: t('buildBody'),
     alternates: buildAlternates('/signature/build', locale),
+    // A custom-request wizard, not a distinct catalog entity to rank —
+    // matches /cart and the prefilled /plan variant.
+    robots: { index: false, follow: true },
   }
 }
 

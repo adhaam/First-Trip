@@ -32,3 +32,70 @@ export function buildAlternates(pathname: string, locale: string): Metadata['alt
     languages,
   }
 }
+
+/**
+ * The sitewide fallback social image — same path the root layout falls back
+ * to (`settings?.social_share_image || '/media/og-cover.jpg'`,
+ * src/app/[locale]/layout.tsx). Metadata is only **shallowly** merged
+ * across a route's segments (root layout → page): when a page defines its
+ * own `openGraph`, that whole object REPLACES the layout's, it does not
+ * deep-merge field by field (see
+ * node_modules/next/dist/docs/01-app/03-api-reference/04-functions/generate-metadata.md
+ * "Merging" / "Overwriting fields"). So a page-level `openGraph` with no
+ * `images` produces NO og:image at all, not the layout's default — this
+ * constant is what `pageMetadata()` falls back to instead, so every public
+ * page keeps a real og:image.
+ */
+export const DEFAULT_OG_IMAGE = '/media/og-cover.jpg'
+
+/**
+ * Full page-level Metadata for a public route: canonical + hreflang
+ * (`buildAlternates`), Open Graph and Twitter Card. Built once here so
+ * every public page (list and detail) gets the same real `og:url` (the
+ * page's own canonical, not the sitewide default) and `og:locale`, instead
+ * of silently inheriting the root layout's site-default title/description/
+ * url via the shallow-merge behaviour described on `DEFAULT_OG_IMAGE`.
+ *
+ * `image` should be the entity's own real photo when the page has one
+ * (never stock/other-place imagery — pass `NEUTRAL_MEDIA` instead when an
+ * entity has no photo of its own); omitted entirely, it falls back to
+ * `DEFAULT_OG_IMAGE`, never to "no image".
+ */
+export function pageMetadata(opts: {
+  locale: string
+  /** Locale-agnostic path, e.g. `/sinai-trips` or `/book-dahab/<id>`. */
+  path: string
+  title: string
+  description: string
+  image?: string | null
+  robots?: Metadata['robots']
+  siteName?: string
+}): Metadata {
+  const ar = opts.locale === 'ar'
+  const alternates = buildAlternates(opts.path, opts.locale)
+  const canonicalUrl = `${SITE_URL}${getPathname({ href: opts.path, locale: opts.locale })}`
+  const image = opts.image || `${SITE_URL}${DEFAULT_OG_IMAGE}`
+
+  return {
+    title: opts.title,
+    description: opts.description,
+    alternates,
+    ...(opts.robots ? { robots: opts.robots } : {}),
+    openGraph: {
+      title: opts.title,
+      description: opts.description,
+      url: canonicalUrl,
+      siteName: opts.siteName || 'WEEMAP SINAI',
+      type: 'website',
+      locale: ar ? 'ar_EG' : 'en_US',
+      alternateLocale: ar ? 'en_US' : 'ar_EG',
+      images: [{ url: image }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: opts.title,
+      description: opts.description,
+      images: [image],
+    },
+  }
+}

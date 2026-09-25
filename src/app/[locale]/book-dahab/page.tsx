@@ -6,7 +6,7 @@ import { PageHero } from '@/components/brand/PageHero'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { Section, SectionHeading } from '@/components/brand/Section'
 import { ButtonLink } from '@/components/ButtonLink'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 
 export const revalidate = 60
@@ -20,11 +20,12 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'stays' })
-  return {
+  return pageMetadata({
+    locale,
+    path: '/book-dahab',
     title: t('meta.title'),
     description: t('meta.description'),
-    alternates: buildAlternates('/book-dahab', locale),
-  }
+  })
 }
 
 export default async function BookDahabPage({ params }: { params: Promise<{ locale: string }> }) {

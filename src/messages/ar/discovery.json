@@ -1,0 +1,29 @@
+{
+  "linkedTargets": {
+    "heading": "خطط رحلتك مع WEEMAP",
+    "planCta": "أضفها لرحلتي",
+    "viewCta": "شوف التفاصيل"
+  },
+  "localGuides": {
+    "heading": "أدلة محلية"
+  },
+  "search": {
+    "resultsTitle": "بحث",
+    "resultsTitleFor": "نتائج البحث عن \"{query}\"",
+    "metaDescription": "دور في إقامات دهب، رحلات سيناء، باقات الرحلات، الميرش، معدات الإيجار، وأدلة WEEMAP المحلية.",
+    "promptLonger": "اكتب كلمتين على الأقل للبحث.",
+    "resultsCount": "{count, plural, =0 {مفيش نتايج} one {نتيجة واحدة} two {نتيجتين} few {{n} نتايج} other {{n} نتيجة}}",
+    "empty": "لا نتائج لـ \"{query}\"",
+    "emptyHint": "جرب كلمة مختلفة أو تحقق من التهجئة.",
+    "from": "تبدأ من",
+    "viewAllResults": "كل نتائج \"{query}\"",
+    "group": {
+      "accommodation": "أماكن الإقامة",
+      "trip": "رحلات سيناء",
+      "trip_package": "باقات الرحلات",
+      "merch": "الميرش",
+      "rental": "معدات الإيجار",
+      "community_post": "أدلة المجتمع"
+    }
+  }
+}

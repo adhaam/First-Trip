@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import { RentClient } from '@/components/RentClient'
 import { getCommerceCategories, getCommerceProducts, getSiteSettings } from '@/lib/data'
 
@@ -13,11 +13,7 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'shopV2' })
-  return {
-    title: t('rentTitle'),
-    description: t('rentLede'),
-    alternates: buildAlternates('/rent', locale),
-  }
+  return pageMetadata({ locale, path: '/rent', title: t('rentTitle'), description: t('rentLede') })
 }
 
 export default async function RentPage() {

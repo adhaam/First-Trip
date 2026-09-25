@@ -645,6 +645,34 @@ INSERT INTO public.testimonials (id, name, text_ar, text_en, rating, trip_ar, tr
    'The Colored Canyon trip was one of the best I''ve done in Sinai. The guide was professional and the scenery was incredible.',
    5, 'رحلة الكانيون الملون', 'Colored Canyon trip', 'facebook', 4, true);
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- 10. Community discovery links (migration 037) — a couple of real-looking
+--     curated links between the seed community posts and the seed stays/
+--     trips above them, so the "Plan it with WEEMAP" / "Local guides"
+--     blocks have something to show locally. Guarded so this file stays
+--     runnable against a DB that hasn't applied 037 yet (fresh checkout
+--     order), and ON CONFLICT DO NOTHING so re-running this file is safe.
+-- ─────────────────────────────────────────────────────────────────────────
+DO $$
+BEGIN
+  IF to_regclass('public.community_post_links') IS NOT NULL THEN
+    INSERT INTO public.community_post_links (post_id, target_type, target_id, sort_order) VALUES
+      -- "5 Reasons Dahab..." mentions the reefs right off the shore and a
+      -- budget-friendly stay — links the Blue Hole snorkel trip and the
+      -- Sea Breeze Bedouin Camp.
+      ('d1000000-0000-4000-8000-000000000001', 'trip', 'b1000000-0000-4000-8000-000000000001', 0),
+      ('d1000000-0000-4000-8000-000000000001', 'stay', 'a1000000-0000-4000-8000-000000000001', 1),
+      -- "A First-Timer's Guide to Dahab's Lagoon" is literally about the
+      -- lagoon — links the Blue Lagoon Chalets.
+      ('d1000000-0000-4000-8000-000000000002', 'stay', 'a1000000-0000-4000-8000-000000000002', 0),
+      -- "Ras Abu Galum: Sinai's Untouched Coastline" is about that trip.
+      ('d1000000-0000-4000-8000-000000000003', 'trip', 'b1000000-0000-4000-8000-000000000002', 0),
+      -- "Diving the Blue Hole: What to Know" links the matching snorkel trip.
+      ('d1000000-0000-4000-8000-000000000005', 'trip', 'b1000000-0000-4000-8000-000000000001', 0)
+    ON CONFLICT (post_id, target_type, target_id) DO NOTHING;
+  END IF;
+END $$;
+
 COMMIT;
 
 NOTIFY pgrst, 'reload schema';

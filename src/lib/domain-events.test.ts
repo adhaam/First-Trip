@@ -41,8 +41,26 @@ function emittedEventTypes() {
   return events
 }
 
+// Migration 036 adds events written directly by its RPCs and customer trigger.
+function operationsCenterEventTypes() {
+  const operations = readFileSync(
+    new URL('../../supabase/migrations/036_operations_center.sql', import.meta.url),
+    'utf8',
+  )
+  const events = new Set<string>()
+  const inserts = /INSERT INTO (?:public\.)?domain_events[\s\S]*?VALUES\s*\(([\s\S]*?),/g
+  for (const insert of operations.matchAll(inserts)) {
+    const literal = insert[1].trim().match(/^'([a-z]+(?:_[a-z]+)*)'$/)
+    if (literal) events.add(literal[1])
+    for (const branch of insert[1].matchAll(/\b(?:THEN|ELSE)\s+'([a-z]+(?:_[a-z]+)*)'/g)) {
+      events.add(branch[1])
+    }
+  }
+  return events
+}
+
 test('DOMAIN_EVENT_TYPES exactly matches the database outbox event vocabulary', () => {
-  const sqlEventTypes = emittedEventTypes()
+  const sqlEventTypes = new Set([...emittedEventTypes(), ...operationsCenterEventTypes()])
   const typeScriptEventTypes = new Set(DOMAIN_EVENT_TYPES)
 
   assert.deepEqual([...typeScriptEventTypes].sort(), [...sqlEventTypes].sort())

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2 } from 'lucide-react'
 import type { ExperienceBooking } from '@/lib/types'
 import { allowedNextStatuses, STATUSES } from '@/lib/request-workflow'
+import { PaymentSummary } from '@/components/admin/config/PaymentSummary'
 
 type ExperienceWorkflowStatus = (typeof STATUSES.signature_request)[number]
 type ManagedExperienceBooking = Omit<ExperienceBooking, 'status'> & { status: ExperienceWorkflowStatus }
@@ -85,14 +86,15 @@ export function ExperienceRequestsManager() {
                 <TableHead>{ar ? 'الهاتف' : 'Phone'}</TableHead>
                 <TableHead>{ar ? 'المهتمين بـ' : 'Interests'}</TableHead>
                 <TableHead>{ar ? 'الحالة' : 'Status'}</TableHead>
+                <TableHead>{ar ? 'الدفع' : 'Payment'}</TableHead>
                 <TableHead>{ar ? 'تاريخ الطلب' : 'Submitted'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
-              {!loading && loadError && <TableRow><TableCell colSpan={6} className="text-center text-red-500 py-8">{loadError}</TableCell></TableRow>}
+              {loading && <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>}
+              {!loading && loadError && <TableRow><TableCell colSpan={7} className="text-center text-red-500 py-8">{loadError}</TableCell></TableRow>}
               {!loading && !loadError && requests.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات بعد' : 'No requests yet'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">{ar ? 'لا توجد طلبات بعد' : 'No requests yet'}</TableCell></TableRow>
               )}
               {!loading && requests.map((r) => (
                 <TableRow key={r.id}>
@@ -117,6 +119,16 @@ export function ExperienceRequestsManager() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell>
+                    <PaymentSummary
+                      entityType="signature_request"
+                      entityId={r.id}
+                      paymentStatus={r.payment_status}
+                      amountPaid={r.amount_paid}
+                      total={r.quoted_price}
+                      compact
+                    />
                   </TableCell>
                   <TableCell className="text-gray-400 text-xs">{new Date(r.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-GB')}</TableCell>
                 </TableRow>

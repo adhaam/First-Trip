@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { ledgerOnlyFieldsIn } from '@/lib/ops/ledger-fields'
 import { applyCommerceOrderPatch } from '@/lib/orders'
 import { STATUSES, WorkflowError, allowedNextStatuses, assertTransition } from '@/lib/request-workflow'
 
 const updateSchema = z.object({
   status: z.enum(['new', 'contacted', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'completed', 'cancelled']).optional(),
-  payment_status: z.enum(['unpaid', 'partial', 'paid', 'refunded']).optional(),
-  amount_paid: z.number().min(0).optional(),
   internal_notes: z.string().max(2000).optional(),
 })
 
@@ -31,6 +30,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!gate.ok) return gate.response
   const { id } = await params
   const body = await req.json().catch(() => null)
+  const ledgerFields = ledgerOnlyFieldsIn(body)
+  if (ledgerFields.length) {
+    return NextResponse.json({
+      error: 'Payments are recorded through POST /api/admin/payments',
+      code: 'payment_via_ledger',
+      fields: ledgerFields,
+    }, { status: 400 })
+  }
   const validated = updateSchema.safeParse(body)
   if (!validated.success) {
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })

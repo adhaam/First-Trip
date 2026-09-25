@@ -4,7 +4,7 @@ import { getSinaiTrips } from '@/lib/data'
 import { categoryFromSearchParam } from '@/lib/explore'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
 import { Eyebrow, PageHero, Section } from '@/components/brand'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 
 export const revalidate = 60
 
@@ -16,7 +16,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'explore' })
-  return { title: t('trips'), description: t('tripsLede'), alternates: buildAlternates('/sinai-trips', locale) }
+  return pageMetadata({ locale, path: '/sinai-trips', title: t('trips'), description: t('tripsLede') })
 }
 
 /**

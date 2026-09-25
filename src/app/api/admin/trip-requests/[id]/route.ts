@@ -5,11 +5,14 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 import { STATUSES } from '@/lib/request-workflow'
 import { updateAdminStatus } from '@/lib/admin-status-update'
 
-// Status only. `notes` holds the customer's own words from the Trip Builder —
-// there is no staff-notes column yet, so staff must not overwrite it here.
+// Status and staff notes only. `notes` and the journey hold what the customer
+// submitted in the Trip Builder and are never editable; staff write to
+// internal_notes (migration 036). Concrete changes happen on the bookings the
+// request is converted into (POST ./convert).
 const updateSchema = z.object({
-  status: z.enum(STATUSES.trip_request),
-}).strict()
+  status: z.enum(STATUSES.trip_request).optional(),
+  internal_notes: z.string().max(4000).optional(),
+}).strict().refine((body) => Object.keys(body).length > 0, 'Nothing to update')
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireStaff(req)

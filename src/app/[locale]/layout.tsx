@@ -12,9 +12,10 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat'
 import { WeemapAI } from '@/components/ai/WeemapAI'
-import { getSchemaOrg } from '@/lib/schema-org'
+import { getSchemaOrg, getWebSiteSchema } from '@/lib/schema-org'
 import { getSiteSettings } from '@/lib/data'
 import { SITE_URL } from '@/lib/seo'
+import { getPathname } from '@/i18n/navigation'
 import { CartProvider } from '@/components/commerce/CartProvider'
 import { CartDrawer } from '@/components/commerce/CartDrawer'
 import { Analytics } from '@vercel/analytics/next'
@@ -130,12 +131,23 @@ export default async function RootLayout({
     && Boolean(process.env.WEEMAP_N8N_CHAT_WEBHOOK_URL?.trim())
     && Boolean(process.env.WEEMAP_N8N_CHAT_SECRET?.trim())
 
+  const websiteSchema = getWebSiteSchema({
+    locale,
+    // Real public search results page (src/app/[locale]/search) — the
+    // urlTemplate literally works if a crawler/assistant fills it in.
+    searchUrlTemplate: `${SITE_URL}${getPathname({ href: '/search', locale })}?q={search_term_string}`,
+  })
+
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScript(getSchemaOrg(settings)) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteSchema) }}
         />
       </head>
       <body

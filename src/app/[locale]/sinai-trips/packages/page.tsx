@@ -8,7 +8,7 @@ import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { PickupNote } from '@/components/explore/PickupNote'
 import { Link } from '@/i18n/navigation'
 import { getPaymentRules } from '@/lib/payment-rules-load'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import { formatCount } from '@/lib/format'
 
 export const revalidate = 60
@@ -18,7 +18,7 @@ type Props = { params: Promise<{ locale: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'explore' })
-  return { title: t('packagesTitle'), description: t('packagesLede'), alternates: buildAlternates('/sinai-trips/packages', locale) }
+  return pageMetadata({ locale, path: '/sinai-trips/packages', title: t('packagesTitle'), description: t('packagesLede') })
 }
 
 /**

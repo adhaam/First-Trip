@@ -58,6 +58,8 @@ export function getArticleSchema(article: {
   description: string
   image: string
   datePublished: string
+  /** Real `updated_at` when the row has one — falls back to datePublished, never invented. */
+  dateModified?: string | null
   url: string
   inLanguage: string
 }) {
@@ -68,7 +70,7 @@ export function getArticleSchema(article: {
     description: article.description,
     image: article.image,
     datePublished: article.datePublished,
-    dateModified: article.datePublished,
+    dateModified: article.dateModified || article.datePublished,
     inLanguage: article.inLanguage,
     mainEntityOfPage: {
       '@type': 'WebPage',
@@ -102,6 +104,159 @@ export function getProductSchema(accommodation: {
       '@type': 'Offer',
       price: accommodation.price,
       priceCurrency: 'EGP',
+    },
+  }
+}
+
+/**
+ * Sitewide WebSite entity. `searchUrlTemplate` is only passed once a real
+ * public search RESULTS page exists at that URL (`/[locale]/search?q=`) —
+ * without it, `potentialAction` is omitted entirely rather than pointing at
+ * a page that doesn't exist.
+ */
+export function getWebSiteSchema(opts: { locale: string; searchUrlTemplate?: string | null }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${SITE_URL}/#website`,
+    url: SITE_URL,
+    name: 'WEEMAP SINAI',
+    inLanguage: opts.locale,
+    ...(opts.searchUrlTemplate
+      ? {
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: { '@type': 'EntryPoint', urlTemplate: opts.searchUrlTemplate },
+            'query-input': 'required name=search_term_string',
+          },
+        }
+      : {}),
+  }
+}
+
+/** BreadcrumbList for a detail page. `items` is the real navigation trail shown on the page, root first. */
+export function getBreadcrumbSchema(items: { name: string; url: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  }
+}
+
+/**
+ * Stay detail page. `address`/`priceRange` are only included when derived
+ * from real DB fields the page actually shows — never invented when the
+ * accommodation row doesn't carry them.
+ */
+export function getLodgingBusinessSchema(input: {
+  name: string
+  description: string
+  url: string
+  image?: string | null
+  address?: { locality: string; region?: string | null; country?: string } | null
+  priceRange?: string | null
+  ratingValue?: number | null
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'LodgingBusiness',
+    name: input.name,
+    description: input.description,
+    url: input.url,
+    ...(input.image ? { image: input.image } : {}),
+    ...(input.address
+      ? {
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: input.address.locality,
+            ...(input.address.region ? { addressRegion: input.address.region } : {}),
+            addressCountry: input.address.country || 'EG',
+          },
+        }
+      : {}),
+    ...(input.priceRange ? { priceRange: input.priceRange } : {}),
+    ...(input.ratingValue
+      ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: input.ratingValue, reviewCount: 1, bestRating: 5 } }
+      : {}),
+  }
+}
+
+/**
+ * Sinai trip / trip package / Signature experience detail page. `offers` is
+ * only included when the page itself shows that price — a package's
+ * per-trip breakdown is never surfaced here (src/lib/trip-packages.ts
+ * strips it from every surface except the operator-only detail fetch).
+ */
+export function getTouristTripSchema(input: {
+  name: string
+  description: string
+  url: string
+  image?: string | null
+  offers?: { price: number; priceCurrency?: string } | null
+  itinerary?: { name: string; description?: string }[] | null
+  touristType?: string | null
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'TouristTrip',
+    name: input.name,
+    description: input.description,
+    url: input.url,
+    ...(input.image ? { image: input.image } : {}),
+    ...(input.offers
+      ? { offers: { '@type': 'Offer', price: input.offers.price, priceCurrency: input.offers.priceCurrency || 'EGP' } }
+      : {}),
+    ...(input.itinerary && input.itinerary.length > 0
+      ? {
+          itinerary: {
+            '@type': 'ItemList',
+            itemListElement: input.itinerary.map((step, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              name: step.name,
+              ...(step.description ? { description: step.description } : {}),
+            })),
+          },
+        }
+      : {}),
+    ...(input.touristType ? { touristType: input.touristType } : {}),
+  }
+}
+
+/**
+ * Merch / rental product detail page. `availability` must be derived from
+ * real inventory (in stock vs out of stock / unavailable for these dates),
+ * never assumed InStock.
+ */
+export function getCommerceProductSchema(input: {
+  name: string
+  description: string
+  url: string
+  image?: string | null
+  price: number
+  priceCurrency?: string
+  availability: 'InStock' | 'OutOfStock'
+  sku?: string | null
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: input.name,
+    description: input.description,
+    url: input.url,
+    ...(input.image ? { image: input.image } : {}),
+    ...(input.sku ? { sku: input.sku } : {}),
+    offers: {
+      '@type': 'Offer',
+      price: input.price,
+      priceCurrency: input.priceCurrency || 'EGP',
+      availability: `https://schema.org/${input.availability}`,
+      url: input.url,
     },
   }
 }

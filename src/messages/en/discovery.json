@@ -1,0 +1,29 @@
+{
+  "linkedTargets": {
+    "heading": "Plan it with WEEMAP",
+    "planCta": "Add to my trip",
+    "viewCta": "View details"
+  },
+  "localGuides": {
+    "heading": "Local guides"
+  },
+  "search": {
+    "resultsTitle": "Search",
+    "resultsTitleFor": "Search results for \"{query}\"",
+    "metaDescription": "Search Dahab stays, Sinai trips, trip packages, merch, rental gear and WEEMAP's local guides.",
+    "promptLonger": "Type at least 2 characters to search.",
+    "resultsCount": "{count, plural, =0 {No results} one {{n} result} other {{n} results}}",
+    "empty": "No results for \"{query}\"",
+    "emptyHint": "Try a different word or check the spelling.",
+    "from": "From",
+    "viewAllResults": "All results for \"{query}\"",
+    "group": {
+      "accommodation": "Stays",
+      "trip": "Sinai Trips",
+      "trip_package": "Trip Packages",
+      "merch": "Merch",
+      "rental": "Rental Gear",
+      "community_post": "Community Guides"
+    }
+  }
+}

@@ -3,22 +3,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
-import { Search, X, Loader2, MapPin, Mountain, ShoppingBag, Package } from 'lucide-react'
+import { Search, X, Loader2, MapPin, Mountain, ShoppingBag, Package, Route, BookOpen } from 'lucide-react'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { cn } from '@/lib/utils'
 import type { SearchResult, SearchResultType } from '@/app/api/search/route'
 import { trackConversion } from '@/lib/conversion'
 import { formatAmount, formatCount } from '@/lib/format'
 
-const TYPE_ORDER: SearchResultType[] = ['accommodation', 'trip', 'merch', 'rental']
+const TYPE_ORDER: SearchResultType[] = ['accommodation', 'trip', 'trip_package', 'merch', 'rental', 'community_post']
 
-/** Search result kinds mapped onto the conversion layer's content types. */
-const SEARCH_CONTENT_TYPE = {
+/** Search result kinds mapped onto the conversion layer's content types. community_post has no matching content_type — left out. */
+const SEARCH_CONTENT_TYPE: Partial<Record<SearchResultType, 'accommodation' | 'trip' | 'trip_package' | 'product' | 'rental'>> = {
   accommodation: 'accommodation',
   trip: 'trip',
+  trip_package: 'trip_package',
   merch: 'product',
   rental: 'rental',
-} as const
+}
 
 function groupResults(results: SearchResult[]): Map<SearchResultType, SearchResult[]> {
   const map = new Map<SearchResultType, SearchResult[]>()
@@ -30,12 +31,15 @@ function groupResults(results: SearchResult[]): Map<SearchResultType, SearchResu
 function ResultIcon({ type }: { type: SearchResultType }) {
   if (type === 'accommodation') return <MapPin className="h-3.5 w-3.5 shrink-0 text-sea-500" aria-hidden />
   if (type === 'trip') return <Mountain className="h-3.5 w-3.5 shrink-0 text-sun-700" aria-hidden />
+  if (type === 'trip_package') return <Route className="h-3.5 w-3.5 shrink-0 text-sun-700" aria-hidden />
   if (type === 'merch') return <ShoppingBag className="h-3.5 w-3.5 shrink-0 text-brand-blue" aria-hidden />
+  if (type === 'community_post') return <BookOpen className="h-3.5 w-3.5 shrink-0 text-sea-700" aria-hidden />
   return <Package className="h-3.5 w-3.5 shrink-0 text-brand-orange" aria-hidden />
 }
 
 export function GlobalSearch() {
   const t = useTranslations('search')
+  const td = useTranslations('discovery')
   const locale = useLocale()
   const ar = locale === 'ar'
   const router = useRouter()
@@ -162,7 +166,15 @@ export function GlobalSearch() {
     } else if (e.key === 'Enter' && activeIdx >= 0) {
       const r = flatResults[activeIdx]
       if (r) navigate(r)
+    } else if (e.key === 'Enter' && activeIdx === -1 && query.trim().length >= 2) {
+      viewAllResults()
     }
+  }
+
+  const viewAllResults = () => {
+    const q = query.trim()
+    closeSearch()
+    router.push(`/search?q=${encodeURIComponent(q)}` as Parameters<typeof router.push>[0])
   }
 
   const navigate = (r: SearchResult) => {
@@ -180,10 +192,12 @@ export function GlobalSearch() {
   const grouped = groupResults(results)
 
   const groupLabel = (type: SearchResultType) => {
-    if (type === 'accommodation') return ar ? t('groupAccommodations') : t('groupAccommodations')
-    if (type === 'trip') return ar ? t('groupTrips') : t('groupTrips')
-    if (type === 'merch') return ar ? t('groupMerch') : t('groupMerch')
-    return ar ? t('groupRentals') : t('groupRentals')
+    if (type === 'accommodation') return t('groupAccommodations')
+    if (type === 'trip') return t('groupTrips')
+    if (type === 'trip_package') return td('search.group.trip_package')
+    if (type === 'merch') return t('groupMerch')
+    if (type === 'community_post') return td('search.group.community_post')
+    return t('groupRentals')
   }
 
   // Results flat list for keyboard indexing
@@ -347,6 +361,18 @@ export function GlobalSearch() {
             </div>
           )}
         </div>
+
+        {!loading && !error && query.length >= 2 && results.length > 0 && (
+          <div className="border-t border-sand-200 px-4 py-2.5">
+            <button
+              type="button"
+              onClick={viewAllResults}
+              className="text-sm font-semibold text-sea-700 hover:underline"
+            >
+              {td('search.viewAllResults', { query })}
+            </button>
+          </div>
+        )}
       </div>
     </>
   )

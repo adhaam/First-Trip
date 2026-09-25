@@ -8,11 +8,16 @@ import { getCommunityPostBySlug, getRelatedCommunityPosts, getSinaiTrips } from 
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getArticleSchema } from '@/lib/schema-org'
 import { POST_CATEGORY_LABELS } from '@/lib/community'
+import { getLinkedTargetsForPost } from '@/lib/community-links'
 import { activeTripCategorySlugs, estimateReadingMinutes, matchingTripCategorySlug } from '@/lib/community-view'
 import { formatCount, formatDate } from '@/lib/format'
 import { ArrowBack, ArrowForward, ChevronForward } from '@/components/brand/DirectionalIcon'
 import { CommunityCard } from '@/components/community/CommunityCard'
 import { COMMUNITY_CATEGORY_ICONS } from '@/components/community/category-icons'
+import { LinkedTargets } from '@/components/community/LinkedTargets'
+import { getBreadcrumbSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
+import { getPathname } from '@/i18n/navigation'
 
 export const revalidate = 60
 
@@ -22,13 +27,14 @@ export async function generateMetadata({ params }: {
   const { slug, locale } = await params
   const post = await getCommunityPostBySlug(slug).catch(() => null)
   const alternates = buildAlternates(`/community/${slug}`, locale)
-  if (!post) return { alternates }
+  if (!post) return { alternates, robots: { index: false, follow: true } }
 
   const ar = locale === 'ar'
   const title = ar ? post.title_ar || post.title_en : post.title_en || post.title_ar
   const content = ar ? post.content_ar : post.content_en
   const description = content?.slice(0, 160)
   const image = post.image_url || `${SITE_URL}/brand/logo.png`
+  const pageUrl = `${SITE_URL}${getPathname({ href: `/community/${slug}`, locale })}`
 
   return {
     title,
@@ -37,9 +43,18 @@ export async function generateMetadata({ params }: {
     openGraph: {
       title,
       description,
+      url: pageUrl,
       images: [{ url: image }],
       type: 'article',
+      locale: ar ? 'ar_EG' : 'en_US',
       publishedTime: post.created_at,
+      modifiedTime: post.updated_at || post.created_at,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
     },
   }
 }
@@ -53,7 +68,12 @@ export default async function CommunityPostPage({ params }: {
 
   const ar = locale === 'ar'
   const t = await getTranslations({ locale, namespace: 'communityV2' })
-  const [related, trips] = await Promise.all([getRelatedCommunityPosts(post, 3), getSinaiTrips()])
+  const td = await getTranslations({ locale, namespace: 'discovery' })
+  const [related, trips, linkedTargets] = await Promise.all([
+    getRelatedCommunityPosts(post, 3),
+    getSinaiTrips(),
+    getLinkedTargetsForPost(post.id),
+  ])
 
   const title = ar ? post.title_ar : post.title_en
   const content = ar ? post.content_ar : post.content_en
@@ -72,20 +92,31 @@ export default async function CommunityPostPage({ params }: {
     : null
   const matchedCategoryLabel = matchedTripCategoryName ? (ar ? matchedTripCategoryName.name_ar : matchedTripCategoryName.name_en) : null
 
+  const pageUrl = `${SITE_URL}${getPathname({ href: `/community/${slug}`, locale })}`
   const articleSchema = getArticleSchema({
     title,
     description: content?.slice(0, 160) || '',
     image: post.image_url || `${SITE_URL}/brand/logo.png`,
     datePublished: post.created_at,
-    url: `${SITE_URL}${ar ? '' : '/en'}/community/${slug}`,
+    dateModified: post.updated_at,
+    url: pageUrl,
     inLanguage: ar ? 'ar' : 'en',
   })
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: ar ? 'المجتمع' : 'Community', url: `${SITE_URL}${getPathname({ href: '/community', locale })}` },
+    { name: title, url: pageUrl },
+  ])
 
   return (
     <div className="bg-sand-50">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }}
       />
 
       <article>
@@ -165,6 +196,13 @@ export default async function CommunityPostPage({ params }: {
                 <ArrowForward className="h-4 w-4" />
               </Link>
             </div>
+            <LinkedTargets
+              targets={linkedTargets}
+              locale={locale}
+              heading={td('linkedTargets.heading')}
+              planCtaLabel={td('linkedTargets.planCta')}
+              viewCtaLabel={td('linkedTargets.viewCta')}
+            />
           </div>
         </div>
       </article>

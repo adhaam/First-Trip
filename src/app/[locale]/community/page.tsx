@@ -5,7 +5,7 @@ import { getCommunityPosts } from '@/lib/data'
 import { CommunityClient } from '@/components/CommunityClient'
 import { Eyebrow, Section } from '@/components/brand'
 import { Reveal } from '@/components/motion/Reveal'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 
 export const revalidate = 60
 
@@ -14,11 +14,7 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'communityV2' })
-  return {
-    title: t('title'),
-    description: t('subtitle'),
-    alternates: buildAlternates('/community', locale),
-  }
+  return pageMetadata({ locale, path: '/community', title: t('title'), description: t('subtitle') })
 }
 
 export default async function CommunityPage({ params }: { params: Promise<{ locale: string }> }) {

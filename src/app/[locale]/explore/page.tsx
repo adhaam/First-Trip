@@ -6,7 +6,7 @@ import { getCommunityPosts, getSinaiTrips } from '@/lib/data'
 import { getTripPackages } from '@/lib/trip-packages'
 import { EditorialCard, Eyebrow, PageHero, Section, SectionHeading } from '@/components/brand'
 import { Link } from '@/i18n/navigation'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import { formatCount } from '@/lib/format'
 import { NEUTRAL_MEDIA } from '@/lib/media'
 
@@ -17,7 +17,7 @@ type Props = { params: Promise<{ locale: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'explore' })
-  return { title: t('hubTitle'), description: t('hubLede'), alternates: buildAlternates('/explore', locale) }
+  return pageMetadata({ locale, path: '/explore', title: t('hubTitle'), description: t('hubLede') })
 }
 
 /**

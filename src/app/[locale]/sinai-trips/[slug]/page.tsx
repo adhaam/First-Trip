@@ -15,7 +15,13 @@ import { getPaymentRules } from '@/lib/payment-rules-load'
 import { packagesIncludingTrip } from '@/lib/explore'
 import { getTripIdFromRouteSlug, getTripRouteSlug } from '@/lib/trips'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
+import { getPathname } from '@/i18n/navigation'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
+import { effectiveTripPrice } from '@/lib/pricing'
+import { getBreadcrumbSchema, getTouristTripSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
+import { getCommunityPostsLinkingTarget } from '@/lib/community-links'
+import { LocalGuides } from '@/components/community/LocalGuides'
 
 export const revalidate = 60
 
@@ -29,10 +35,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const ar = locale === 'ar'
   const name = (ar ? trip.name_ar : trip.name_en) || trip.name_en
+  const description = (ar ? trip.description_ar : trip.description_en) || undefined
+  const alternates = buildAlternates(`/sinai-trips/${getTripRouteSlug(trip)}`, locale)
+  const image = trip.images?.[0]
   return {
     title: name,
-    description: (ar ? trip.description_ar : trip.description_en) || undefined,
-    alternates: buildAlternates(`/sinai-trips/${getTripRouteSlug(trip)}`, locale),
+    description,
+    alternates,
+    openGraph: {
+      title: name,
+      description,
+      url: `${SITE_URL}${getPathname({ href: `/sinai-trips/${getTripRouteSlug(trip)}`, locale })}`,
+      ...(image ? { images: [{ url: image }] } : {}),
+      type: 'website',
+      locale: ar ? 'ar_EG' : 'en_US',
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title: name,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
   }
 }
 
@@ -41,15 +64,17 @@ export default async function TripDetail({ params }: Props) {
   const id = getTripIdFromRouteSlug(slug)
   if (!id) notFound()
 
-  const [trip, trips, packages, settings, rules, t] = await Promise.all([
+  const [trip, trips, packages, settings, rules, t, localGuides] = await Promise.all([
     getSinaiTripById(id),
     getSinaiTrips(),
     getTripPackages(),
     getSiteSettings(),
     getPaymentRules(),
     getTranslations({ locale, namespace: 'explore' }),
+    getCommunityPostsLinkingTarget('trip', id),
   ])
   if (!trip) notFound()
+  const td = await getTranslations({ locale, namespace: 'discovery' })
 
   const ar = locale === 'ar'
   const name = (ar ? trip.name_ar : trip.name_en) || trip.name_en
@@ -62,19 +87,29 @@ export default async function TripDetail({ params }: Props) {
     .filter((item) => item.id !== trip.id && tags.some((tag) => item.category_tags?.some((candidate) => candidate.id === tag.id)))
     .slice(0, 3)
   const crossSellPackages = packagesIncludingTrip(packages, trip.id)
+  const pageUrl = `${SITE_URL}${getPathname({ href: `/sinai-trips/${getTripRouteSlug(trip)}`, locale })}`
+  const price = effectiveTripPrice(trip).final
 
-  const schema = {
-    '@context': 'https://schema.org',
-    '@type': 'TouristTrip',
+  const schema = getTouristTripSchema({
     name,
-    ...(description ? { description } : {}),
-    ...(images.length ? { image: images } : {}),
-    url: `${SITE_URL}${locale === 'en' ? '/en' : ''}/sinai-trips/${getTripRouteSlug(trip)}`,
-  }
+    description,
+    url: pageUrl,
+    image: images[0] || null,
+    // Only when the trip is bookable as a standalone product at this
+    // price on this page — a trip's package_price (its price INSIDE a
+    // bundle) is never shown here, so it is never put in offers either.
+    offers: price ? { price } : null,
+  })
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: ar ? 'رحلات سيناء' : 'Sinai Trips', url: `${SITE_URL}${getPathname({ href: '/sinai-trips', locale })}` },
+    { name, url: pageUrl },
+  ])
 
   return (
     <article>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
 
       <PageHero
         image={images[0]}
@@ -153,6 +188,12 @@ export default async function TripDetail({ params }: Props) {
               <TripCard key={item.id} trip={item} />
             ))}
           </div>
+        </Section>
+      )}
+
+      {localGuides.length > 0 && (
+        <Section tone="paper" size="sm">
+          <LocalGuides posts={localGuides} locale={locale} heading={td('localGuides.heading')} />
         </Section>
       )}
 

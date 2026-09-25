@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { HomeClient } from '@/components/home/HomeClient'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import {
   getAccommodations,
   getSinaiTrips,
@@ -30,7 +31,13 @@ export async function generateMetadata({ params }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
-  return { alternates: buildAlternates('/', locale) }
+  const t = await getTranslations({ locale, namespace: 'discovery' })
+  return pageMetadata({
+    locale,
+    path: '/',
+    title: t('pages.home.title'),
+    description: t('pages.home.description'),
+  })
 }
 
 // Server Component: everything the home page shows comes from Supabase and is
