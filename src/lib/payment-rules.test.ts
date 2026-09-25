@@ -4,7 +4,7 @@ import test from 'node:test'
 import {
   DEFAULT_PAYMENT_METHODS,
   DEFAULT_PAYMENT_POLICIES,
-  bookingKindFor,
+  paymentKindFor,
   paymentPlan,
   paymentPlanForParts,
 } from './payment-rules'
@@ -34,48 +34,66 @@ test('default payment methods exactly mirror the 030 migration seed', () => {
   assert.deepEqual(DEFAULT_PAYMENT_METHODS, rows)
 })
 
-test('bookingKindFor maps accommodation and trip request table vocabularies', () => {
-  assert.equal(bookingKindFor({ booking_type: 'package' }), 'accommodation_package')
-  assert.equal(bookingKindFor({ booking_type: 'accommodation-only' }), 'accommodation_stay')
-  assert.equal(bookingKindFor({ booking_type: 'transfer-only' }), 'transfer')
-  assert.equal(bookingKindFor({ table: 'trip_bookings', context: 'package' }), 'trip_package')
-  assert.equal(bookingKindFor({ table: 'trip_bookings', context: 'standalone' }), 'trip')
-  assert.equal(bookingKindFor('signature'), 'signature')
+test('paymentKindFor prioritizes stored payment_kind over legacy fallbacks', () => {
+  assert.equal(paymentKindFor({ payment_kind: 'experience_package', table: 'trip_bookings', trip_package_id: 'package-id' }), 'experience_package')
+  assert.equal(paymentKindFor({ payment_kind: 'stay_package', booking_type: 'accommodation-only' }), 'stay_package')
 })
 
-test('payment plans round EGP half up and always wait for confirmation', () => {
-  assert.deepEqual(paymentPlan('accommodation_stay', 2001), {
-    kind: 'accommodation_stay', rule: 'policy', upfrontPercent: 50,
-    upfrontAmount: 1001, balanceAmount: 1000, upfrontDue: 'after_confirmation',
-    balanceDue: 'on_arrival', payableNow: false,
-  })
+test('paymentKindFor uses only explicit legacy classifications during the migration rollout', () => {
+  assert.equal(paymentKindFor({ booking_type: 'package' }), 'stay_package')
+  assert.equal(paymentKindFor({ booking_type: 'accommodation-only' }), 'stay')
+  assert.equal(paymentKindFor({ booking_type: 'transfer-only' }), 'transfer')
+  assert.equal(paymentKindFor({ table: 'trip_bookings', trip_package_id: 'package-id', trip_package: { payment_kind: 'stay_package' } }), 'stay_package')
+  assert.equal(paymentKindFor({ table: 'trip_bookings', trip_package_id: 'package-id' }), 'experience_package')
+  assert.equal(paymentKindFor({ trip_package_id: null }), 'trip')
+  assert.equal(paymentKindFor({ table: 'trip_bookings' }), 'trip')
 })
 
-test('100 percent transfer and trip-package policies have no balance', () => {
-  for (const kind of ['transfer', 'trip_package'] as const) {
+test('Dahab stay package and stay only split 2,001 EGP after confirmation and on arrival', () => {
+  for (const kind of ['stay_package', 'stay'] as const) {
+    assert.deepEqual(paymentPlan(kind, 2001), {
+      kind, rule: 'policy', upfrontPercent: 50,
+      upfrontAmount: 1001, balanceAmount: 1000, upfrontDue: 'after_confirmation',
+      balanceDue: 'on_arrival', payableNow: false,
+    })
+  }
+})
+
+test('experience packages, standalone trips, and transfers are fully due after confirmation', () => {
+  for (const kind of ['experience_package', 'trip', 'transfer'] as const) {
     const plan = paymentPlan(kind, 800)
     assert.equal(plan.upfrontAmount, 800)
     assert.equal(plan.balanceAmount, 0)
+    assert.equal(plan.upfrontDue, 'after_confirmation')
     assert.equal(plan.balanceDue, null)
     assert.equal(plan.payableNow, false)
   }
 })
 
-test('kinds without an active policy are per quote', () => {
+test('signature requests remain per quote', () => {
   assert.deepEqual(paymentPlan('signature', 5000), {
     kind: 'signature', rule: 'per_quote', upfrontPercent: null, upfrontAmount: null,
     balanceAmount: null, upfrontDue: 'after_confirmation', balanceDue: null, payableNow: false,
   })
 })
 
-test('combined plans add independently rounded part amounts', () => {
+test('payment plans are never payable immediately', () => {
+  for (const kind of ['stay', 'stay_package', 'transfer', 'trip', 'experience_package', 'signature', 'commerce', 'rental'] as const) {
+    assert.equal(paymentPlan(kind, 100).payableNow, false)
+  }
+})
+
+test('combined plans add a stay package, experience package, and trip independently', () => {
   const combined = paymentPlanForParts([
-    { kind: 'accommodation_package', total: 2001 },
-    { kind: 'trip', total: 499 },
+    { kind: 'stay_package', total: 2001 },
+    { kind: 'experience_package', total: 499 },
+    { kind: 'trip', total: 800 },
   ])
-  assert.equal(combined.upfrontAmount, 1500)
-  assert.equal(combined.balanceAmount, 1000)
-  assert.equal(combined.payableNow, false)
+  assert.deepEqual(combined, {
+    kind: 'combined', rule: 'policy', upfrontPercent: null,
+    upfrontAmount: 2300, balanceAmount: 1000, upfrontDue: 'after_confirmation',
+    balanceDue: null, payableNow: false,
+  })
 })
 
 test('invalid totals are rejected', () => {

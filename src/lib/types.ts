@@ -275,6 +275,8 @@ export interface TripPackage {
   description_ar: string
   description_en: string
   image: string
+  /** Explicit catalogue classification used to set payment terms (migration 030). */
+  payment_kind?: 'experience_package' | 'stay_package'
   badge_ar?: string | null
   badge_en?: string | null
   package_category_id?: string | null
@@ -319,6 +321,8 @@ export interface Booking {
   customer_phone: string
   customer_email?: string
   booking_type: BookingType
+  /** Explicit payment classification captured when the request is created (migration 030). */
+  payment_kind?: 'stay' | 'stay_package' | 'transfer' | null
   accommodation_id?: string
   /** Joined from `accommodations` on the admin GET route — not present on write. */
   accommodations?: { name_ar: string; name_en: string } | null
@@ -455,6 +459,11 @@ export interface TripBookingPriceSnapshot {
   computed_total?: number
   price_override_reason?: string
   computed_at: string
+}
+
+/** The payment classification captured on a `trip_bookings` request (migration 030). */
+export interface TripBooking {
+  payment_kind?: 'trip' | 'experience_package' | 'stay_package' | null
 }
 
 export interface CommunityPost {

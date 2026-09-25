@@ -1,15 +1,15 @@
-export type BookingKind =
-  | 'accommodation_package'
-  | 'accommodation_stay'
+export type PaymentKind =
+  | 'stay'
+  | 'stay_package'
   | 'transfer'
   | 'trip'
-  | 'trip_package'
+  | 'experience_package'
   | 'signature'
   | 'commerce'
   | 'rental'
 
 export type PaymentPolicy = {
-  booking_kind: BookingKind
+  booking_kind: PaymentKind
   upfront_percent: number
   upfront_due: 'after_confirmation'
   balance_due: 'on_arrival' | 'before_service' | null
@@ -27,11 +27,11 @@ export type PaymentMethod = {
 
 /** The seed values in supabase/migrations/030_payment_policies.sql. */
 export const DEFAULT_PAYMENT_POLICIES: readonly PaymentPolicy[] = [
-  { booking_kind: 'accommodation_package', upfront_percent: 50, upfront_due: 'after_confirmation', balance_due: 'on_arrival' },
-  { booking_kind: 'accommodation_stay', upfront_percent: 50, upfront_due: 'after_confirmation', balance_due: 'on_arrival' },
+  { booking_kind: 'stay', upfront_percent: 50, upfront_due: 'after_confirmation', balance_due: 'on_arrival' },
+  { booking_kind: 'stay_package', upfront_percent: 50, upfront_due: 'after_confirmation', balance_due: 'on_arrival' },
   { booking_kind: 'transfer', upfront_percent: 100, upfront_due: 'after_confirmation', balance_due: null },
   { booking_kind: 'trip', upfront_percent: 100, upfront_due: 'after_confirmation', balance_due: null },
-  { booking_kind: 'trip_package', upfront_percent: 100, upfront_due: 'after_confirmation', balance_due: null },
+  { booking_kind: 'experience_package', upfront_percent: 100, upfront_due: 'after_confirmation', balance_due: null },
 ]
 
 /** The seed values in supabase/migrations/030_payment_policies.sql. */
@@ -42,35 +42,45 @@ export const DEFAULT_PAYMENT_METHODS: readonly PaymentMethod[] = [
   { code: 'card_link', name_ar: 'رابط دفع فيزا / ماستركارد', name_en: 'Visa / Mastercard payment link', on_request_only: true, sort_order: 3 },
 ]
 
-type BookingKindRow = {
-  kind?: BookingKind
-  booking_kind?: BookingKind
+type PaymentKindRow = {
+  payment_kind?: PaymentKind | null
   booking_type?: string | null
-  context?: string | null
+  trip_package_id?: string | null
+  trip_package_payment_kind?: PaymentKind | null
+  trip_package?: { payment_kind?: PaymentKind | null } | null
+  trip_packages?: { payment_kind?: PaymentKind | null } | null
   table?: string | null
   entity_type?: string | null
 }
 
-/** Maps request-table vocabulary to the policy vocabulary. */
-export function bookingKindFor(row: BookingKind | BookingKindRow): BookingKind {
+/**
+ * Resolves the stored payment classification. Legacy fallbacks exist only while
+ * migration 030 is rolling out: package contents and request context must never
+ * be used to decide how a package is paid.
+ */
+export function paymentKindFor(row: PaymentKind | PaymentKindRow): PaymentKind {
   if (typeof row === 'string') return row
-  if (row.kind) return row.kind
-  if (row.booking_kind) return row.booking_kind
+  if (row.payment_kind) return row.payment_kind
 
-  const table = row.table ?? row.entity_type
-  if (table === 'trip_bookings' || row.context !== undefined) {
-    return row.context === 'package' ? 'trip_package' : 'trip'
+  if (row.trip_package_id) {
+    return row.trip_package_payment_kind
+      ?? row.trip_package?.payment_kind
+      ?? row.trip_packages?.payment_kind
+      ?? 'experience_package'
   }
+
+  if ('trip_package_id' in row || row.table === 'trip_bookings' || row.entity_type === 'trip_bookings') return 'trip'
+
   switch (row.booking_type) {
-    case 'package': return 'accommodation_package'
-    case 'accommodation-only': return 'accommodation_stay'
+    case 'package': return 'stay_package'
+    case 'accommodation-only': return 'stay'
     case 'transfer-only': return 'transfer'
-    default: throw new Error('Cannot determine payment booking kind')
+    default: throw new Error('Cannot determine payment kind')
   }
 }
 
 export type PaymentPlan = {
-  kind: BookingKind
+  kind: PaymentKind
   rule: 'policy' | 'per_quote'
   upfrontPercent: number | null
   upfrontAmount: number | null
@@ -88,7 +98,7 @@ function roundHalfUp(value: number) {
   return Math.floor(value + 0.5)
 }
 
-export function paymentPlan(kind: BookingKind, total: number, policies: readonly PaymentPolicy[] = DEFAULT_PAYMENT_POLICIES): PaymentPlan {
+export function paymentPlan(kind: PaymentKind, total: number, policies: readonly PaymentPolicy[] = DEFAULT_PAYMENT_POLICIES): PaymentPlan {
   assertTotal(total)
   const policy = policies.find((candidate) => candidate.booking_kind === kind && candidate.is_active !== false)
   if (!policy) {
@@ -113,7 +123,7 @@ export type CombinedPaymentPlan = Omit<PaymentPlan, 'kind'> & {
   balanceDue: null
 }
 
-export function paymentPlanForParts(parts: readonly { kind: BookingKind, total: number }[], policies: readonly PaymentPolicy[] = DEFAULT_PAYMENT_POLICIES): CombinedPaymentPlan {
+export function paymentPlanForParts(parts: readonly { kind: PaymentKind, total: number }[], policies: readonly PaymentPolicy[] = DEFAULT_PAYMENT_POLICIES): CombinedPaymentPlan {
   const plans = parts.map((part) => paymentPlan(part.kind, part.total, policies))
   const hasPerQuote = plans.some((plan) => plan.rule === 'per_quote')
   return {
