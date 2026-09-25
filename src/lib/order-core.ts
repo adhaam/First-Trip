@@ -75,6 +75,8 @@ export interface OrderItemSnapshot {
   /** True iff sale stock was decremented for this line at creation time.
    *  Cancel/reopen use it so restocking is exactly symmetric. */
   inventory_reserved?: boolean
+  /** Set after this line's stock is returned on cancellation; reopening clears it. */
+  inventory_restocked_at?: string
   rental_pricing_rule?: RentalPricingRule
   rental_requested_days?: number
   /** Refundable deposit — separate from line_total, never added to it. */
@@ -180,34 +182,26 @@ export async function createCommerceOrderWithClient(
   // ── Compensation ledger ──
   const decrementedVariants: { variantId: string; quantity: number }[] = []
   let createdOrderId: string | null = null
-  const createdItemIds: string[] = []
-  const createdReservationIds: string[] = []
 
   const rollback = async (reason: string) => {
     const problems: string[] = []
-    if (createdReservationIds.length) {
-      const { error } = await db.from('rental_reservations').delete().in('id', createdReservationIds)
-      if (error) {
-        const { error: cancelError } = await db
-          .from('rental_reservations')
-          .update({ status: 'cancelled' })
-          .in('id', createdReservationIds)
-        if (cancelError) problems.push(`reservations ${createdReservationIds.join(',')} not removed`)
-      }
-    }
     if (createdOrderId) {
-      if (createdItemIds.length) {
-        const { error } = await db.from('commerce_order_items').delete().eq('order_id', createdOrderId)
-        if (error) problems.push(`items of order ${createdOrderId} not removed`)
-      }
       const { error } = await db.from('commerce_orders').delete().eq('id', createdOrderId)
       if (error) {
+        const { error: itemError } = await db.from('commerce_order_items').delete().eq('order_id', createdOrderId)
+        if (itemError) problems.push(`items of order ${createdOrderId} not removed`)
         // Can't delete → at least make sure nobody fulfils it.
         const { error: cancelError } = await db
           .from('commerce_orders')
-          .update({ status: 'cancelled', internal_notes: `Auto-cancelled: order creation failed (${reason})` })
+          .update({
+            status: 'cancelled',
+            subtotal: 0,
+            delivery_fee: 0,
+            total_price: 0,
+            internal_notes: `Creation rolled back - no items (${reason})`,
+          })
           .eq('id', createdOrderId)
-        if (cancelError) problems.push(`order ${createdOrderId} not removed or cancelled`)
+        if (cancelError) problems.push(`order ${createdOrderId} not removed or honestly cancelled`)
       }
     }
     for (const d of decrementedVariants) {
@@ -402,7 +396,6 @@ export async function createCommerceOrderWithClient(
         .select('id')
         .single()
       if (itemError || !orderItem) return fail('Failed to create order', `item insert failed for ${item.productId}`)
-      createdItemIds.push(orderItem.id as string)
 
       if (item.itemType === 'rental' && item.rentalStartDate && item.rentalEndDate) {
         const { data: reservation, error: reservationError } = await db
@@ -421,7 +414,6 @@ export async function createCommerceOrderWithClient(
         if (reservationError || !reservation) {
           return fail('Failed to create order', `reservation insert failed for ${item.productId}`)
         }
-        createdReservationIds.push(reservation.id as string)
       }
     }
 
@@ -458,6 +450,8 @@ export type OrderStatus =
 
 export interface OrderPatch {
   status?: OrderStatus
+  /** Status read by the route immediately before it validates the transition. */
+  expectedStatus?: OrderStatus
   payment_status?: 'unpaid' | 'partial' | 'paid' | 'refunded'
   amount_paid?: number
   internal_notes?: string
@@ -465,13 +459,20 @@ export interface OrderPatch {
 
 export type OrderPatchResult =
   | { ok: true; order: Record<string, unknown>; transition: 'cancelled' | 'reopened' | null; warnings: string[] }
-  | { ok: false; status: number; error: string }
+  | {
+    ok: false
+    status: number
+    error: string
+    code?: 'restock_incomplete' | 'stale_status'
+    pendingLineIds?: string[]
+    warnings?: string[]
+  }
 
 /** Reservation statuses an order cancellation moves to 'cancelled'.
  *  returned/completed rentals are history and are left untouched. */
 const CANCELLABLE_RESERVATION_STATUSES = ['requested', 'contacted', 'confirmed', 'active', 'late']
 
-type StockLine = { id: string; variant_id: string; quantity: number }
+type StockLine = { id: string; variant_id: string; quantity: number; snapshot: OrderItemSnapshot }
 
 /**
  * Sale lines whose stock was decremented at creation. New orders record it
@@ -510,7 +511,25 @@ async function stockReservedLines(db: SupabaseClient, orderId: string): Promise<
       const flag = (i.variant_snapshot as OrderItemSnapshot | null)?.inventory_reserved
       return typeof flag === 'boolean' ? flag : tracked.has(i.product_id as string)
     })
-    .map((i) => ({ id: i.id as string, variant_id: i.variant_id as string, quantity: Number(i.quantity) }))
+    .map((i) => ({
+      id: i.id as string,
+      variant_id: i.variant_id as string,
+      quantity: Number(i.quantity),
+      snapshot: { ...((i.variant_snapshot as OrderItemSnapshot | null) || {}) },
+    }))
+}
+
+async function markLineRestocked(db: SupabaseClient, line: StockLine, restocked: boolean): Promise<boolean> {
+  const snapshot = { ...line.snapshot }
+  if (restocked) snapshot.inventory_restocked_at = new Date().toISOString()
+  else delete snapshot.inventory_restocked_at
+  const { data, error } = await db
+    .from('commerce_order_items')
+    .update({ variant_snapshot: snapshot })
+    .eq('id', line.id)
+    .select('id')
+    .maybeSingle()
+  return !error && !!data
 }
 
 async function orderItemIds(db: SupabaseClient, orderId: string): Promise<string[]> {
@@ -540,34 +559,52 @@ export async function applyOrderPatchWithClient(
   patch: OrderPatch,
 ): Promise<OrderPatchResult> {
   const warnings: string[] = []
+  const { expectedStatus, ...fields } = patch
 
-  const plainUpdate = async (fields: OrderPatch): Promise<OrderPatchResult> => {
-    const { data, error } = await db.from('commerce_orders').update(fields).eq('id', id).select().maybeSingle()
+  const plainUpdate = async (update: Omit<OrderPatch, 'expectedStatus'>, expected?: OrderStatus): Promise<OrderPatchResult> => {
+    let query = db.from('commerce_orders').update(update).eq('id', id)
+    if (expected) query = query.eq('status', expected)
+    const { data, error } = await query.select().maybeSingle()
     if (error) return { ok: false, status: 500, error: 'Failed to update order' }
-    if (!data) return { ok: false, status: 404, error: 'Order not found' }
+    if (!data) {
+      return expected
+        ? { ok: false, status: 409, code: 'stale_status', error: 'Order status changed before it could be updated' }
+        : { ok: false, status: 404, error: 'Order not found' }
+    }
     return { ok: true, order: data, transition: null, warnings }
   }
 
-  if (patch.status === 'cancelled') {
-    const { data: claimed, error } = await db
-      .from('commerce_orders')
-      .update(patch)
-      .eq('id', id)
-      .neq('status', 'cancelled')
-      .select()
-    if (error) return { ok: false, status: 500, error: 'Failed to update order' }
-    if (!claimed || claimed.length === 0) {
-      // Already cancelled (or missing): apply the other fields, no restock.
-      return plainUpdate(patch)
-    }
-
+  if (fields.status === 'cancelled') {
+    const updated = await plainUpdate(fields, expectedStatus)
+    if (!updated.ok) return updated
+    const pendingLineIds: string[] = []
+    let inventorySideEffectsFailed = false
     try {
       for (const line of await stockReservedLines(db, id)) {
+        if (line.snapshot.inventory_restocked_at) continue
         const { error: restockError } = await db.rpc('restock_variant_inventory', {
           p_variant_id: line.variant_id,
           p_qty: line.quantity,
         })
-        if (restockError) warnings.push(`Variant ${line.variant_id} was not restocked by ${line.quantity}`)
+        if (restockError) {
+          pendingLineIds.push(line.id)
+          warnings.push(`Variant ${line.variant_id} was not restocked by ${line.quantity}`)
+          continue
+        }
+        if (!(await markLineRestocked(db, line, true))) {
+          // Do not leave an unmarked successful restock, which a retry could
+          // otherwise apply twice. Restore the pre-cancel quantity first.
+          const { data: reverted, error: revertError } = await db.rpc('decrement_variant_inventory', {
+            p_variant_id: line.variant_id,
+            p_qty: line.quantity,
+          })
+          pendingLineIds.push(line.id)
+          warnings.push(
+            revertError || !reverted
+              ? `Variant ${line.variant_id} was restocked but its durable state could not be recorded; reconcile manually`
+              : `Variant ${line.variant_id} restock state could not be recorded; restock was reverted`,
+          )
+        }
       }
       const itemIds = await orderItemIds(db, id)
       if (itemIds.length) {
@@ -579,21 +616,35 @@ export async function applyOrderPatchWithClient(
         if (resError) warnings.push('Linked rental reservations were not cancelled')
       }
     } catch (err) {
+      inventorySideEffectsFailed = true
       warnings.push(err instanceof Error ? err.message : 'Inventory side effects failed')
     }
     if (warnings.length) console.error('[orders] cancel side effects incomplete:', { id, warnings })
-    return { ok: true, order: claimed[0], transition: 'cancelled', warnings }
+    if (pendingLineIds.length || inventorySideEffectsFailed) {
+      return {
+        ok: false,
+        status: 409,
+        code: 'restock_incomplete',
+        error: 'Order was cancelled but some inventory restocks are incomplete',
+        pendingLineIds,
+        warnings,
+      }
+    }
+    return { ok: true, order: updated.order, transition: 'cancelled', warnings }
   }
 
-  if (patch.status) {
+  if (fields.status && (expectedStatus === 'cancelled' || !expectedStatus)) {
     const { data: claimed, error } = await db
       .from('commerce_orders')
-      .update(patch)
+      .update(fields)
       .eq('id', id)
       .eq('status', 'cancelled')
       .select()
     if (error) return { ok: false, status: 500, error: 'Failed to update order' }
-    if (!claimed || claimed.length === 0) return plainUpdate(patch)
+    if (!claimed || claimed.length === 0) {
+      if (!expectedStatus) return plainUpdate(fields)
+      return { ok: false, status: 409, code: 'stale_status', error: 'Order status changed before it could be updated' }
+    }
 
     // Reopening: take the stock back. Roll back the reopen if we can't.
     const revert = async (message: string, redecremented: StockLine[]): Promise<OrderPatchResult> => {
@@ -612,12 +663,17 @@ export async function applyOrderPatchWithClient(
     }
     const done: StockLine[] = []
     for (const line of lines) {
+      if (!line.snapshot.inventory_restocked_at) continue
       const { data: reserved, error: decError } = await db.rpc('decrement_variant_inventory', {
         p_variant_id: line.variant_id,
         p_qty: line.quantity,
       })
       if (decError || !reserved) {
         return revert('Not enough stock to reopen this order; it was left cancelled.', done)
+      }
+      if (!(await markLineRestocked(db, line, false))) {
+        await db.rpc('restock_variant_inventory', { p_variant_id: line.variant_id, p_qty: line.quantity })
+        return revert('Could not record re-reserved stock; order left cancelled.', done)
       }
       done.push(line)
     }
@@ -634,5 +690,5 @@ export async function applyOrderPatchWithClient(
     return { ok: true, order: claimed[0], transition: 'reopened', warnings }
   }
 
-  return plainUpdate(patch)
+  return plainUpdate(fields, expectedStatus)
 }
