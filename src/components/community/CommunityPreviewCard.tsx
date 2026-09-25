@@ -6,6 +6,7 @@ import { Pin } from 'lucide-react'
 import { GlowCard } from '@/components/motion/Reveal'
 import { estimateReadingMinutes } from '@/lib/community-view'
 import { POST_CATEGORY_LABELS } from '@/lib/community'
+import { formatCount } from '@/lib/format'
 import { COMMUNITY_CATEGORY_ICONS } from './category-icons'
 import type { CommunityPost } from '@/lib/types'
 
@@ -60,7 +61,7 @@ export function CommunityPreviewCard({
                 {categoryLabel}
               </p>
               <h3 className="font-display text-lg font-bold leading-snug text-white drop-shadow">{title}</h3>
-              <p className="mt-2 text-xs text-white/85">{t('readingMinutes', { minutes })}</p>
+              <p className="mt-2 text-xs text-white/85">{t('readingMinutes', { minutes, minutesText: formatCount(minutes, locale) })}</p>
             </div>
           </div>
         </article>

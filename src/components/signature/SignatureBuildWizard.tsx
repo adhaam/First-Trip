@@ -12,6 +12,7 @@ import { Chip, ChipRail } from '@/components/brand/Chip'
 import { ArrowBack, ArrowForward } from '@/components/brand/DirectionalIcon'
 import { StickyActionBar } from '@/components/brand/StickyActionBar'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
+import { formatCount, formatDate } from '@/lib/format'
 import { trackConversion, trackRequestFailure } from '@/lib/conversion'
 import { cn } from '@/lib/utils'
 import {
@@ -167,8 +168,9 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
   const summaryFacts = [
     draft.experienceIdea.trim() && draft.experienceIdea.trim(),
     draft.vibes.length > 0 && draft.vibes.join(' · '),
-    maxReachableIndex >= 1 && `${draft.travelers} · ${t('travelersLabel')}`,
-    maxReachableIndex >= 2 && (draft.dateMode === 'flexible' ? t('dateModeFlexible') : draft.preferredDate),
+    maxReachableIndex >= 1 && `${formatCount(draft.travelers, locale)} · ${t('travelersLabel')}`,
+    maxReachableIndex >= 2 &&
+      (draft.dateMode === 'flexible' ? t('dateModeFlexible') : formatDate(draft.preferredDate, locale)),
     draft.pace && t(PACE_KEY[draft.pace]),
     draft.budgetComfort && t(BUDGET_KEY[draft.budgetComfort]),
   ].filter(Boolean) as string[]
@@ -187,14 +189,17 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
           ))}
         </div>
         <span className="shrink-0 text-xs font-semibold text-ink-subtle">
-          {t('buildStepOf', { current: stepIndex + 1, total: SIGNATURE_BUILD_STEPS.length })}
+          {t('buildStepOf', {
+            current: formatCount(stepIndex + 1, locale),
+            total: formatCount(SIGNATURE_BUILD_STEPS.length, locale),
+          })}
         </span>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
-        <div className="rounded-3xl border-[1.5px] border-sand-300 bg-card p-6 md:p-8">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_18rem]">
+        <div className="min-w-0 rounded-3xl border-[1.5px] border-sand-300 bg-card p-6 md:p-8">
           {step === 'experience' && (
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="font-display text-xl font-bold text-sea-900">{t('stepExperienceTitle')}</legend>
               <p className="mt-1.5 text-sm text-ink-muted">{t('stepExperienceHint')}</p>
               <Textarea
@@ -221,7 +226,7 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
           )}
 
           {step === 'travelers' && (
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="font-display text-xl font-bold text-sea-900">{t('stepTravelersTitle')}</legend>
               <p className="mt-1.5 text-sm text-ink-muted">{t('stepTravelersHint')}</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -253,7 +258,7 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
           )}
 
           {step === 'when' && (
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="font-display text-xl font-bold text-sea-900">{t('stepWhenTitle')}</legend>
               <p className="mt-1.5 text-sm text-ink-muted">{t('stepWhenHint')}</p>
               <div className="mt-5 flex flex-wrap gap-2.5">
@@ -280,7 +285,7 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
           )}
 
           {step === 'vibe' && (
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="font-display text-xl font-bold text-sea-900">{t('stepVibeTitle')}</legend>
               <p className="mt-1.5 text-sm text-ink-muted">{t('stepVibeHint')}</p>
               <p className="mt-5 text-xs font-semibold text-ink-subtle">{t('paceLabel')}</p>
@@ -307,7 +312,7 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
           )}
 
           {step === 'contact' && (
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="font-display text-xl font-bold text-sea-900">{t('stepContactTitle')}</legend>
               <p className="mt-1.5 text-sm text-ink-muted">{t('stepContactHint')}</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -394,7 +399,7 @@ export function SignatureBuildWizard({ experienceId }: { experienceId?: string }
         </div>
 
         {/* Live summary */}
-        <aside className="hidden rounded-3xl border-[1.5px] border-sand-300 bg-sand-100 p-6 lg:block">
+        <aside className="hidden min-w-0 rounded-3xl border-[1.5px] border-sand-300 bg-sand-100 p-6 lg:block">
           <h3 className="font-display text-sm font-bold uppercase tracking-wide text-ink-subtle">{t('buildSummaryTitle')}</h3>
           {summaryFacts.length === 0 ? (
             <p className="mt-3 text-sm text-ink-subtle">{t('buildSummaryEmpty')}</p>

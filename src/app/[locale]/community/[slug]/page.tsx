@@ -9,7 +9,7 @@ import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getArticleSchema } from '@/lib/schema-org'
 import { POST_CATEGORY_LABELS } from '@/lib/community'
 import { activeTripCategorySlugs, estimateReadingMinutes, matchingTripCategorySlug } from '@/lib/community-view'
-import { formatDate } from '@/lib/format'
+import { formatCount, formatDate } from '@/lib/format'
 import { ArrowBack, ArrowForward, ChevronForward } from '@/components/brand/DirectionalIcon'
 import { CommunityCard } from '@/components/community/CommunityCard'
 import { COMMUNITY_CATEGORY_ICONS } from '@/components/community/category-icons'
@@ -116,7 +116,7 @@ export default async function CommunityPostPage({ params }: {
               <Calendar className="h-3 w-3" aria-hidden />
               {t('publishedOn', { date: formatDate(post.created_at, locale) })}
             </span>
-            <span>{t('readingMinutes', { minutes })}</span>
+            <span>{t('readingMinutes', { minutes, minutesText: formatCount(minutes, locale) })}</span>
           </div>
 
           <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-sea-900 md:text-5xl">{title}</h1>

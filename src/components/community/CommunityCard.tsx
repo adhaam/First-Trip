@@ -5,6 +5,7 @@ import { Pin } from 'lucide-react'
 import { EditorialCard } from '@/components/brand/EditorialCard'
 import { estimateReadingMinutes } from '@/lib/community-view'
 import { POST_CATEGORY_LABELS } from '@/lib/community'
+import { formatCount } from '@/lib/format'
 import { COMMUNITY_CATEGORY_ICONS } from './category-icons'
 import type { CommunityPost } from '@/lib/types'
 
@@ -55,7 +56,7 @@ export function CommunityCard({
           </span>
         ) : undefined
       }
-      meta={<span>{t('readingMinutes', { minutes })}</span>}
+      meta={<span>{t('readingMinutes', { minutes, minutesText: formatCount(minutes, locale) })}</span>}
       size={size}
       priority={priority}
       className={className}

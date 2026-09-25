@@ -5,7 +5,7 @@
   "categoryAll": "Everything",
   "featuredBadge": "Featured story",
   "pinnedBadge": "Pinned",
-  "readingMinutes": "{minutes} min read",
+  "readingMinutes": "{minutes, plural, one {{minutesText} min read} other {{minutesText} min read}}",
   "readMore": "Read the story",
   "readFullStory": "Read the full story",
   "noPosts": "The Community is still being written — check back soon for the first stories.",

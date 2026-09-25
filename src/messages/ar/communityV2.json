@@ -5,7 +5,7 @@
   "categoryAll": "كل الأقسام",
   "featuredBadge": "قصة مميزة",
   "pinnedBadge": "مثبت",
-  "readingMinutes": "{minutes} د قراءة",
+  "readingMinutes": "{minutes, plural, zero {أقل من دقيقة} one {دقيقة واحدة} two {دقيقتين} few {{minutesText} دقائق} many {{minutesText} دقيقة} other {{minutesText} دقيقة}}",
   "readMore": "اقرأ القصة",
   "readFullStory": "اقرأ القصة كاملة",
   "noPosts": "الكوميونيتي لسه بتتكتب — تابعنا قريب لأول القصص.",

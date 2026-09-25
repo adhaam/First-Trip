@@ -82,7 +82,7 @@ export function PageHero({
 
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-t from-sea-900/92 via-sea-900/40 to-sea-900/10"
+        className="absolute inset-0 bg-gradient-to-t from-sea-900 from-15% via-sea-900/70 via-55% to-sea-900/25"
       />
       <div aria-hidden className="topo-bg absolute inset-0 opacity-30 mix-blend-overlay" />
 

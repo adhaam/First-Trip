@@ -14,6 +14,8 @@ import {
   selectFeaturedPost,
   selectSecondaryPosts,
 } from '@/lib/community-view'
+import { formatCount } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { CommunityPost, PostCategory } from '@/lib/types'
 
 /**
@@ -50,11 +52,28 @@ export function CommunityClient({ posts }: { posts: CommunityPost[] }) {
           <Chip selected={filter === 'all'} onClick={() => setFilter('all')}>
             {t('categoryAll')}
           </Chip>
-          {facets.map(({ category, count }) => (
-            <Chip key={category} selected={filter === category} onClick={() => setFilter(category)} count={count}>
-              {POST_CATEGORY_LABELS[category][ar ? 'ar' : 'en']}
-            </Chip>
-          ))}
+          {facets.map(({ category, count }) => {
+            const selected = filter === category
+            return (
+              <Chip key={category} selected={selected} onClick={() => setFilter(category)}>
+                {/* Chip's own `count` prop renders the raw JS number (always
+                    Latin digits) — this mirrors its badge styling but with a
+                    locale-formatted count via formatCount, so Arabic gets
+                    Arabic-Indic digits (see src/lib/format.ts). */}
+                <span className="inline-flex items-center gap-1.5">
+                  {POST_CATEGORY_LABELS[category][ar ? 'ar' : 'en']}
+                  <span
+                    className={cn(
+                      'rounded-full px-1.5 text-xs font-bold tabular-nums',
+                      selected ? 'bg-white/20' : 'bg-sand-200 text-ink-subtle',
+                    )}
+                  >
+                    {formatCount(count, locale)}
+                  </span>
+                </span>
+              </Chip>
+            )
+          })}
         </ChipRail>
       )}
 
