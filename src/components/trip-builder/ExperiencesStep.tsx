@@ -91,7 +91,7 @@ function ExperienceCard({ image, title, meta, selected, onToggle }: { image: str
         <p className="text-xs text-ink-subtle">{meta}</p>
         {selected && <p className="mt-0.5 text-xs font-medium text-sun-700">{t('dateArranged')}</p>}
       </div>
-      <ToggleButton selected={selected} onToggle={onToggle} />
+      <ToggleButton selected={selected} onToggle={onToggle} name={title} />
     </div>
   )
 }
@@ -113,20 +113,21 @@ function PackageCard({ pkg, locale, selected, onToggle }: { pkg: CatalogPackage;
         <p className="text-xs text-ink-subtle">{total != null ? `${formatAmount(total, locale)} ${common('egp')}` : ''}</p>
         {selected && <p className="mt-0.5 text-xs font-medium text-sun-700">{t('dateArranged')}</p>}
       </div>
-      <ToggleButton selected={selected} onToggle={onToggle} />
+      <ToggleButton selected={selected} onToggle={onToggle} name={locale === 'ar' ? pkg.name_ar : pkg.name_en} />
     </div>
   )
 }
 
-function ToggleButton({ selected, onToggle }: { selected: boolean; onToggle: () => void }) {
+function ToggleButton({ selected, onToggle, name }: { selected: boolean; onToggle: () => void; name: string }) {
   const t = useTranslations('builder')
   return (
     <button
       type="button"
       aria-pressed={selected}
+      aria-label={selected ? t('removeItem', { name }) : t('addItem', { name })}
       onClick={onToggle}
       className={cn(
-        'flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-600',
+        'flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-600',
         selected ? 'border-sea-900 bg-sea-900 text-sand-50' : 'border-sand-300 text-sea-900 hover:border-sea-900/40',
       )}
     >

@@ -145,5 +145,7 @@
   "summaryTransferOnly": "Just the ride — no stay booked",
   "summaryRooms": "{rooms, plural, one {{n} room} other {{n} rooms}} · fits {capacity}",
   "summaryRoomsMeal": "{rooms, plural, one {{n} room} other {{n} rooms}} · {meal}",
-  "summaryExperiences": "{count, plural, one {{n} experience added} other {{n} experiences added}}"
+  "summaryExperiences": "{count, plural, one {{n} experience added} other {{n} experiences added}}",
+  "addItem": "Add {name}",
+  "removeItem": "Remove {name} from your trip"
 }

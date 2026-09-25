@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Check, MessageCircle } from 'lucide-react'
 import { Section } from '@/components/brand'
@@ -26,6 +27,14 @@ export function SuccessState({
 }) {
   const t = useTranslations('builder')
   const common = useTranslations('common')
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  // The form the visitor submitted from is gone; bring the confirmation into
+  // view and give it focus so screen readers announce it.
+  useEffect(() => {
+    headingRef.current?.scrollIntoView({ block: 'center' })
+    headingRef.current?.focus({ preventScroll: true })
+  }, [])
   const whatsappHref = catalog.whatsappNumber
     ? whatsappLink(catalog.whatsappNumber, buildHandoffMessage({ state, catalog, locale, reference: success.reference, total: success.total }))
     : undefined
@@ -37,7 +46,7 @@ export function SuccessState({
           <span aria-hidden className="mx-auto grid size-14 place-items-center rounded-full bg-sun-500 text-on-accent">
             <Check className="h-7 w-7" />
           </span>
-          <h1 className="mt-5 font-display text-3xl font-bold text-sea-900">{t('requestSent')}</h1>
+          <h1 ref={headingRef} tabIndex={-1} className="mt-5 font-display text-3xl font-bold text-sea-900 outline-none">{t('requestSent')}</h1>
           <p className="mt-2.5 text-ink-muted">{t('requestSentHint')}</p>
 
           {success.reference && (

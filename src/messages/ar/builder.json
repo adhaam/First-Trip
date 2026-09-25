@@ -94,8 +94,8 @@
   "addDates": "أضف التواريخ عشان تشوف السعر",
   "total": "الإجمالي",
   "nowNothing": "دلوقتي: مفيش دفع",
-  "afterConfirmation": "بعد تأكيد WEEMAP: {amount} جنيه",
-  "onArrival": "عند الوصول إلى دهب: {amount} جنيه",
+  "afterConfirmation": "بعد تأكيد WEEMAP: {amount} ج.م",
+  "onArrival": "عند الوصول لدهب: {amount} ج.م",
   "updating": "بنحدّث السعر…",
   "quoteError": "ماقدرناش نحدّث السعر. آخر سعر ظاهر لسه موجود.",
   "quoteScheduleError": "التواريخ دي ماعادتش مناسبة للجدول الحالي. اختار تاريخ متاح تاني.",
@@ -145,5 +145,7 @@
   "summaryTransferOnly": "الانتقال فقط — من غير إقامة",
   "summaryRooms": "{rooms, plural, one {غرفة واحدة} two {غرفتين} few {{n} غرف} other {{n} غرفة}} · تكفي {capacity}",
   "summaryRoomsMeal": "{rooms, plural, one {غرفة واحدة} two {غرفتين} few {{n} غرف} other {{n} غرفة}} · {meal}",
-  "summaryExperiences": "{count, plural, one {تجربة واحدة مضافة} two {تجربتين مضافتين} few {{n} تجارب مضافة} other {{n} تجربة مضافة}}"
+  "summaryExperiences": "{count, plural, one {تجربة واحدة مضافة} two {تجربتين مضافتين} few {{n} تجارب مضافة} other {{n} تجربة مضافة}}",
+  "addItem": "أضف {name}",
+  "removeItem": "شيل {name} من رحلتك"
 }
