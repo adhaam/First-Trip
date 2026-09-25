@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 // Creates an option (e.g. "Size") together with its values (e.g. S/M/L/XL)
@@ -13,16 +13,15 @@ const optionSchema = z.object({
 })
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
   const body = await req.json().catch(() => null)
   const validated = optionSchema.safeParse(body)
   if (!validated.success) {
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
   }
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data: option, error: optionError } = await supabase
     .from('commerce_product_options')
     .insert({ product_id: id, name_ar: validated.data.name_ar, name_en: validated.data.name_en, sort_order: validated.data.sort_order })

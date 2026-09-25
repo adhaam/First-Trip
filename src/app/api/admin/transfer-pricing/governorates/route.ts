@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const createSchema = z.object({
@@ -18,9 +18,8 @@ const createSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = createSchema.safeParse(body)
   if (!validated.success) {
@@ -39,7 +38,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('transfer_governorate_pricing')
     .insert(validated.data)

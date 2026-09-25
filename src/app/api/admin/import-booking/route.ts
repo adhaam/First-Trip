@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import * as cheerio from 'cheerio'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 
 // ─── Import a property from a Booking.com listing URL ───
 //
@@ -25,9 +25,8 @@ interface HotelJsonLd {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
 
   const body = await req.json().catch(() => null)
   const parsed = bodySchema.safeParse(body)

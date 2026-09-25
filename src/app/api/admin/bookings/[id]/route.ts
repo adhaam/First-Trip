@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { BOOKING_SOURCES } from '@/lib/booking-sources'
 import { STATUSES } from '@/lib/request-workflow'
@@ -25,9 +25,8 @@ const updateSchema = z.object({
 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
   const body = await req.json().catch(() => null)
   const validated = updateSchema.safeParse(body)
@@ -40,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (trip_date !== undefined) patch.trip_date = trip_date || null
   if (return_date !== undefined) patch.return_date = return_date || null
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const result = await updateAdminStatus({
     readStatus: async (bookingId) => supabase.from('bookings').select('status').eq('id', bookingId).maybeSingle(),
     update: async (bookingId, updatePatch, currentStatus) => {
@@ -65,11 +64,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { error } = await supabase.from('bookings').delete().eq('id', id)
   if (error) {
     console.error('DELETE booking error:', error)

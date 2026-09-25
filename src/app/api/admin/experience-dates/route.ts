@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const dateSchema = z.object({
@@ -14,11 +14,10 @@ const dateSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const experienceId = req.nextUrl.searchParams.get('experience_id')
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   let query = supabase.from('experience_dates').select('*').order('start_date', { ascending: true })
   if (experienceId) query = query.eq('experience_id', experienceId)
   const { data, error } = await query
@@ -27,9 +26,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = dateSchema.safeParse(body)
   if (!validated.success) {
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (validated.data.end_date < validated.data.start_date) {
     return NextResponse.json({ error: 'End date must be on or after start date' }, { status: 400 })
   }
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase.from('experience_dates').insert(validated.data).select().single()
   if (error) return NextResponse.json({ error: 'Failed to create date' }, { status: 500 })
   return NextResponse.json({ date: data }, { status: 201 })

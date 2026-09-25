@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Room Variants API — migration-safe
@@ -36,13 +36,13 @@ function isMissingTable(err: unknown): boolean {
 }
 
 export async function GET(req: NextRequest) {
-  const ok = await requireAdmin(req as Parameters<typeof requireAdmin>[0])
-  if (!ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const gate = await requireStaff(req as Parameters<typeof requireStaff>[0])
+  if (!gate.ok) return gate.response
 
   const accommodationId = req.nextUrl.searchParams.get('accommodation_id')
   if (!accommodationId) return NextResponse.json({ error: 'accommodation_id required' }, { status: 400 })
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from(TABLE)
     .select('*')
@@ -60,14 +60,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const ok = await requireAdmin(req as Parameters<typeof requireAdmin>[0])
-  if (!ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const gate = await requireStaff(req as Parameters<typeof requireStaff>[0])
+  if (!gate.ok) return gate.response
 
   const body = await req.json().catch(() => null)
   const parsed = variantSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from(TABLE)
     .insert(parsed.data)

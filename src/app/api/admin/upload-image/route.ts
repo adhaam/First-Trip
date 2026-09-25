@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 
 export async function POST(req: NextRequest) {
-  const ok = await requireAdmin(req as Parameters<typeof requireAdmin>[0])
-  if (!ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const gate = await requireStaff(req as Parameters<typeof requireStaff>[0])
+  if (!gate.ok) return gate.response
 
   try {
     const formData = await req.formData()
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const filename = `${folder}/${crypto.randomUUID()}.${ext}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const supabase = getSupabaseAdmin()
+    const supabase = getSupabaseAdmin(gate.staff)
 
     const { error } = await supabase.storage
       .from('property-images')

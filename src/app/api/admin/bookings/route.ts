@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { computeQuote } from '@/lib/quote-service'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
@@ -11,10 +11,9 @@ import {
 } from '@/lib/admin-booking-rows'
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const supabase = getSupabaseAdmin()
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
+  const supabase = getSupabaseAdmin(gate.staff)
   // Joined accommodation name so the dashboard can show/filter by hotel
   // without a second round trip per row.
   const { data, error } = await supabase
@@ -34,9 +33,8 @@ export async function GET(req: NextRequest) {
 // booking regardless of where it came from. Admin-only, no rate limit.
 // Validation + row building live in lib/admin-booking-rows.ts (unit tested).
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = manualBookingSchema.safeParse(body)
   if (!validated.success) {
@@ -91,7 +89,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to resolve customer' }, { status: 500 })
   }
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('bookings')
     .insert(buildManualBookingRow(input, pricing, customerId))

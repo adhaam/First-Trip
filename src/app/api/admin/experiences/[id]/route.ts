@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { validateExperiencePublishable } from '@/lib/experience-pricing'
 
@@ -65,9 +65,8 @@ async function writeLinks(
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
   const body = await req.json().catch(() => null)
   const validated = experienceUpdateSchema.safeParse(body)
@@ -75,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
   }
   const { partner_ids, trip_ids, ...fields } = validated.data
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
 
   if (fields.status === 'published') {
     const price = fields.price ?? (await supabase.from('experiences').select('price').eq('id', id).single()).data?.price
@@ -98,11 +97,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { error } = await supabase.from('experiences').delete().eq('id', id)
   if (error) return NextResponse.json({ error: 'Failed to delete experience' }, { status: 500 })
   return NextResponse.json({ success: true })

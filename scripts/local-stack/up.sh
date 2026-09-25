@@ -116,7 +116,7 @@ for f in schema.sql migration_v2.sql migration_v3.sql migration_v4.sql; do
   apply_sql "$ROOT/supabase/$f"
 done
 
-echo "==> Applying numbered migrations (001-033)"
+echo "==> Applying numbered migrations"
 for f in "$ROOT"/supabase/migrations/[0-9][0-9][0-9]_*.sql; do
   apply_sql "$f"
 done

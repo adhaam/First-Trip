@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { STATUSES } from '@/lib/request-workflow'
 import { updateAdminStatus } from '@/lib/admin-status-update'
@@ -12,9 +12,8 @@ const updateSchema = z.object({
 }).strict()
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = updateSchema.safeParse(body)
   if (!validated.success) {
@@ -22,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const result = await updateAdminStatus({
     readStatus: async (requestId) => supabase.from('trip_requests').select('status').eq('id', requestId).maybeSingle(),
     update: async (requestId, patch, currentStatus) => {

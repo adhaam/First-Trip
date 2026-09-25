@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import * as cheerio from 'cheerio'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { AMENITIES_LIBRARY } from '@/lib/amenities'
 import type { MealPlan, MealPlanKey } from '@/lib/types'
 
@@ -136,9 +136,8 @@ function detectType(name: string): 'hotel' | 'chalet' | 'camp' {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
 
   const body = await req.json().catch(() => null)
   const validated = bodySchema.safeParse(body)

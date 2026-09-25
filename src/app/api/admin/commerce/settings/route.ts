@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const settingsSchema = z.object({
@@ -12,19 +12,17 @@ const settingsSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const supabase = getSupabaseAdmin()
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase.from('commerce_settings').select('*').eq('id', 1).single()
   if (error) return NextResponse.json({ error: 'Failed to load commerce settings' }, { status: 500 })
   return NextResponse.json({ settings: data })
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = settingsSchema.safeParse(body)
   if (!validated.success) {
@@ -34,7 +32,7 @@ export async function PATCH(req: NextRequest) {
   // "Do NOT integrate Stripe/Paymob/payment gateways... payment is disabled."
   const safe = { ...validated.data }
   delete safe.online_payment_enabled
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase.from('commerce_settings').update(safe).eq('id', 1).select().single()
   if (error) return NextResponse.json({ error: 'Failed to update commerce settings' }, { status: 500 })
   return NextResponse.json({ settings: data })

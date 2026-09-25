@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 /**
@@ -9,9 +9,8 @@ import { getSupabaseAdmin } from '@/lib/supabase'
  * missing table degrades to a friendly error instead of a 500.
  */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
 
   let body: Record<string, unknown>
@@ -26,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   try {
-    const supabase = getSupabaseAdmin()
+    const supabase = getSupabaseAdmin(gate.staff)
     const { data, error } = await supabase
       .from('newsletter_subscribers')
       .update({ unsubscribed: body.unsubscribed })

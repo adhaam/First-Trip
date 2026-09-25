@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const updateSchema = z.object({
@@ -33,11 +33,10 @@ const updateSchema = z.object({
 })
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const [{ data: product }, { data: variants }, { data: options }, { data: tiers }, { data: collectionLinks }] = await Promise.all([
     supabase.from('commerce_products').select('*').eq('id', id).single(),
     supabase.from('commerce_product_variants').select('*').eq('product_id', id).order('sort_order'),
@@ -56,16 +55,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
   const body = await req.json().catch(() => null)
   const validated = updateSchema.safeParse(body)
   if (!validated.success) {
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
   }
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('commerce_products')
     .update(validated.data)
@@ -79,11 +77,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 // Soft delete / archive — historical order_items keep their product_id
 // (ON DELETE SET NULL) but we never hard-delete a product with orders.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { error } = await supabase
     .from('commerce_products')
     .update({ archived_at: new Date().toISOString(), is_active: false })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const transferTypeEnum = z.enum(['package_bus', 'hiace'])
@@ -17,10 +17,9 @@ const settingsUpdateSchema = z.object({
 
 /** Returns both the base prices and every governorate surcharge, in one call. */
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const supabase = getSupabaseAdmin()
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
+  const supabase = getSupabaseAdmin(gate.staff)
 
   const [settingsRes, govRes] = await Promise.all([
     supabase.from('transfer_settings').select('*').order('transfer_type'),
@@ -47,9 +46,8 @@ export async function GET(req: NextRequest) {
 
 /** Updates the base (Cairo) price for one transfer type. */
 export async function PATCH(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = settingsUpdateSchema.safeParse(body)
   if (!validated.success) {
@@ -64,7 +62,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   }
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('transfer_settings')
     .update(fields)

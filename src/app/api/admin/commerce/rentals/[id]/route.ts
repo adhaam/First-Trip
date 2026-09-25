@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { getTotalInventory, RESERVING_RESERVATION_STATUSES } from '@/lib/rental-availability'
 import { STATUSES } from '@/lib/request-workflow'
@@ -26,16 +26,15 @@ type ReservationRow = {
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
   const body = await req.json().catch(() => null)
   const validated = updateSchema.safeParse(body)
   if (!validated.success) {
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
   }
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const patch: Record<string, unknown> = { ...validated.data }
 
   // Stashed by readStatus below so the update step can re-run the inventory

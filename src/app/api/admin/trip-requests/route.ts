@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { STATUSES } from '@/lib/request-workflow'
 
@@ -8,16 +8,15 @@ function isMissingTripRequestsTable(error: { code?: string } | null) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
 
   const status = req.nextUrl.searchParams.get('status')
   if (status && !(STATUSES.trip_request as readonly string[]).includes(status)) {
     return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 })
   }
 
-  let query = getSupabaseAdmin()
+  let query = getSupabaseAdmin(gate.staff)
     .from('trip_requests')
     .select('*, accommodations(name_ar, name_en)')
     .order('submitted_at', { ascending: false })

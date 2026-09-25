@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const testimonialSchema = z.object({
@@ -18,10 +18,9 @@ const testimonialSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const supabase = getSupabaseAdmin()
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('testimonials')
     .select('*')
@@ -36,9 +35,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = testimonialSchema.safeParse(body)
   if (!validated.success) {
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'At least one language is required' }, { status: 400 })
   }
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('testimonials')
     .insert(validated.data)

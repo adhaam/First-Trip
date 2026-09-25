@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { buildTripPriceSnapshot, effectiveTripPrice } from '@/lib/pricing'
 import { findOrCreateCustomerByPhone, recordCustomerActivity } from '@/lib/customer'
@@ -10,10 +10,9 @@ import {
 } from '@/lib/admin-booking-rows'
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const supabase = getSupabaseAdmin()
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('trip_bookings')
     .select('*, sinai_trips(name_ar, name_en), trip_packages(name_ar, name_en)')
@@ -27,15 +26,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const parsed = adminTripBookingSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten() }, { status: 400 })
   }
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
 
   // Price the booking from the trip's own row, applying any active discount,
   // and freeze the result — the invoice reads this snapshot, and a discount

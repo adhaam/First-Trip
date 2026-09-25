@@ -18,6 +18,8 @@ export const V2_NAMESPACES = [
   'signatureV2',
   'shopV2',
   'communityV2',
+  'ops',
+  'discovery',
 ] as const
 
 export type V2Namespace = (typeof V2_NAMESPACES)[number]

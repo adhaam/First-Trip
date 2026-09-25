@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
 
   try {
-    const supabase = getSupabaseAdmin()
+    const supabase = getSupabaseAdmin(gate.staff)
     const { data, error } = await supabase
       .from('newsletter_subscribers')
       .select('*')

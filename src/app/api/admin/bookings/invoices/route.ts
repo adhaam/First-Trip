@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { getSiteSettings } from '@/lib/data'
 import { generateInvoiceHTML } from '@/lib/invoice-generator'
@@ -32,9 +32,8 @@ const invoiceRequestSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
 
   const body = await req.json().catch(() => null)
   const validated = invoiceRequestSchema.safeParse(body)
@@ -43,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
   const { bookingId, bookingType, type, locale } = validated.data
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
 
   // Only names are embedded from accommodations / sinai_trips / trip_packages
   // — never their price columns. Lines come from the booking's own frozen

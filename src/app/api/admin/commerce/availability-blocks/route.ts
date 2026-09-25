@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 const blockSchema = z.object({
@@ -13,10 +13,9 @@ const blockSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const supabase = getSupabaseAdmin()
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
+  const supabase = getSupabaseAdmin(gate.staff)
   const { searchParams } = new URL(req.url)
   const productId = searchParams.get('product_id')
   let query = supabase.from('rental_availability_blocks').select('*').order('start_date')
@@ -27,9 +26,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const body = await req.json().catch(() => null)
   const validated = blockSchema.safeParse(body)
   if (!validated.success) {
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (validated.data.end_date < validated.data.start_date) {
     return NextResponse.json({ error: 'end_date must be on or after start_date' }, { status: 400 })
   }
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase.from('rental_availability_blocks').insert(validated.data).select().single()
   if (error) return NextResponse.json({ error: 'Failed to create availability block' }, { status: 500 })
   return NextResponse.json({ block: data }, { status: 201 })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { computeQuote, quoteSchema } from '@/lib/quote-service'
 
 // Admin price preview for the manual booking form.
@@ -17,9 +17,8 @@ import { computeQuote, quoteSchema } from '@/lib/quote-service'
 // creation time, so a stale or tampered preview cannot reach the DB.
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
 
   const body = await req.json().catch(() => null)
   const validated = quoteSchema.safeParse(body)

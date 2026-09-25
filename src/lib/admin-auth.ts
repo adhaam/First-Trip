@@ -1,64 +1,129 @@
-// ─── Admin session helpers ───
-// Uses Web Crypto only (crypto.subtle / btoa) so this works in both the
-// Edge middleware runtime and normal Node API routes without polyfills.
+import 'server-only'
+import { NextResponse } from 'next/server'
+import { getSupabaseAdmin } from './supabase'
+import { ADMIN_COOKIE, verifyAdminSessionToken } from './admin-session'
+import { canAccess, isStaffRole, type StaffRole } from './staff-policy'
+
+// ─── Operations Center authorisation (server side, every admin API call) ───
 //
-// Model: a single shared admin password (process.env.ADMIN_PASSWORD).
-// On success we issue a signed, expiring cookie (HMAC-SHA256 with
-// process.env.ADMIN_SESSION_SECRET) instead of a real user session table.
-// This is intentionally simple — it closes the "no auth at all" hole
-// without requiring a full Supabase Auth user setup. If/when there's a
-// need for multiple admin accounts with different permissions, replace
-// this with real Supabase Auth.
+// Model (migration 035): each person has a staff_users row with a role. A
+// signed session cookie names the person and the session_version it was
+// issued for; this guard re-reads the row on every call, so disabling someone,
+// changing their role or password takes effect on their next request.
+//
+// Transition from the pre-M3 shared password (ADMIN_PASSWORD): a 'legacy'
+// session is honoured ONLY while no active owner account exists (or before
+// migration 035 is applied). It exists to let the first owner be created;
+// the moment an owner exists, every legacy session stops working and the
+// shared password can no longer sign in. See docs/m3/OPERATIONS.md.
 
-export const ADMIN_COOKIE = 'admin_session'
-const SESSION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+export { ADMIN_COOKIE } from './admin-session'
 
-function bufToBase64Url(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-  const base64 = btoa(binary)
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+export type StaffSession = {
+  /** staff_users.id, or null for the legacy shared-password session. */
+  id: string | null
+  /** Value recorded as the actor in history / audit (weemap_current_actor). */
+  actor: string
+  email: string | null
+  displayName: string
+  role: StaffRole
+  legacy: boolean
 }
 
-async function sign(payload: string, secret: string): Promise<string> {
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  )
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
-  return bufToBase64Url(sig)
+type GuardRequest = {
+  cookies: { get(name: string): { value: string } | undefined }
+  method?: string
+  url?: string
+  nextUrl?: { pathname: string }
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  return result === 0
+function isMissingTable(error: { code?: string } | null): boolean {
+  return error?.code === '42P01' || error?.code === 'PGRST205'
 }
 
-export async function createAdminSessionToken(): Promise<string | null> {
-  const secret = process.env.ADMIN_SESSION_SECRET
-  if (!secret) return null
-  const exp = Date.now() + SESSION_MS
-  const payload = String(exp)
-  const sig = await sign(payload, secret)
-  return `${payload}.${sig}`
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+/** Resolves the signed-in person from the cookie, or null. Does not check route permissions. */
+export async function getStaffSession(req: Pick<GuardRequest, 'cookies'>): Promise<StaffSession | null> {
+  const claims = await verifyAdminSessionToken(req.cookies.get(ADMIN_COOKIE)?.value)
+  if (!claims) return null
+  const supabase = getSupabaseAdmin()
+
+  if (claims.sid === 'legacy') {
+    const { count, error } = await supabase
+      .from('staff_users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'owner')
+      .eq('is_active', true)
+    if (error && !isMissingTable(error)) {
+      console.error('staff owner lookup failed:', error)
+      return null
+    }
+    if (!error && (count ?? 0) > 0) return null
+    return {
+      id: null, actor: 'legacy-admin', email: null, displayName: 'Shared admin', role: 'owner', legacy: true,
+    }
+  }
+
+  if (!UUID_RE.test(claims.sid)) return null
+  const { data, error } = await supabase
+    .from('staff_users')
+    .select('id, email, display_name, role, is_active, session_version')
+    .eq('id', claims.sid)
+    .maybeSingle()
+  if (error) {
+    if (!isMissingTable(error)) console.error('staff session lookup failed:', error)
+    return null
+  }
+  if (!data || !data.is_active || data.session_version !== claims.ver || !isStaffRole(data.role)) return null
+  return {
+    id: data.id,
+    actor: `staff:${data.id}`,
+    email: data.email,
+    displayName: data.display_name,
+    role: data.role,
+    legacy: false,
+  }
 }
 
-export async function verifyAdminSessionToken(token: string | undefined | null): Promise<boolean> {
-  const secret = process.env.ADMIN_SESSION_SECRET
-  if (!secret || !token) return false
-  const [payload, sig] = token.split('.')
-  if (!payload || !sig) return false
-  if (!Number.isFinite(Number(payload)) || Date.now() > Number(payload)) return false
-  const expectedSig = await sign(payload, secret)
-  return timingSafeEqual(sig, expectedSig)
+function requestPath(req: GuardRequest): string {
+  if (req.nextUrl?.pathname) return req.nextUrl.pathname
+  if (req.url) {
+    try {
+      return new URL(req.url).pathname
+    } catch {
+      return ''
+    }
+  }
+  return ''
 }
 
-// Convenience for API route handlers (Node runtime): checks the cookie on a
-// standard Request/NextRequest-like object.
-export async function requireAdmin(req: { cookies: { get(name: string): { value: string } | undefined } }): Promise<boolean> {
-  const token = req.cookies.get(ADMIN_COOKIE)?.value
-  return verifyAdminSessionToken(token)
+export type StaffGate =
+  | { ok: true; staff: StaffSession }
+  | { ok: false; response: NextResponse }
+
+/**
+ * The admin API guard: authenticated person + role permission for this
+ * method and path (src/lib/staff-policy.ts). 401 when not signed in (or access
+ * revoked), 403 when signed in without permission.
+ */
+export async function requireStaff(req: GuardRequest): Promise<StaffGate> {
+  const staff = await getStaffSession(req)
+  if (!staff) {
+    return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+  const path = requestPath(req)
+  if (!path || !canAccess(staff.role, req.method ?? 'GET', path)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Forbidden', code: 'forbidden', role: staff.role }, { status: 403 }),
+    }
+  }
+  return { ok: true, staff }
+}
+
+/** Boolean-style guard kept for call sites that only need yes/no. Same checks as requireStaff. */
+export async function requireAdmin(req: GuardRequest): Promise<StaffSession | null> {
+  const gate = await requireStaff(req)
+  return gate.ok ? gate.staff : null
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 /**
@@ -9,11 +9,10 @@ import { getSupabaseAdmin } from '@/lib/supabase'
  * so the summary never invents realized revenue from unconfirmed requests.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
 
   const { data: requested } = await supabase.from('customers').select('*').eq('id', id).maybeSingle()
   if (!requested) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
@@ -100,11 +99,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
  * plumbing with no UI-level merge safeguards yet.
  */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireStaff(req)
+  if (!gate.ok) return gate.response
   const { id } = await params
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAdmin(gate.staff)
 
   let body: Record<string, unknown>
   try {
