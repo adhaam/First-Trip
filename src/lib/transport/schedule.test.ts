@@ -5,6 +5,7 @@ import test from 'node:test'
 import { DEFAULT_TRANSPORT_SCHEDULE } from './defaults'
 import {
   checkServiceDate,
+  findStayPattern,
   isRecommendedCheckIn,
   resolveStayPattern,
   returnOptions,
@@ -49,6 +50,28 @@ test('bus uses distinct outbound Sunday/Thursday and return Monday/Friday operat
 
 test('hiace operates on demand every day', () => {
   assert.deepEqual(checkServiceDate(config(), { transferType: 'hiace', direction: 'outbound', date: '2026-03-03' }), { ok: true })
+})
+
+test('findStayPattern selects the lowest-sort active compatible pattern', () => {
+  const schedule = config()
+  schedule.stayPatterns.push(
+    {
+      code: 'any_6d5n', transferType: null, nameAr: '', nameEn: '6 days / 5 nights',
+      durationDays: 6, nights: 5, returnOffsetDays: 6, isActive: true, sortOrder: 3,
+    },
+    {
+      code: 'hiace_6d5n', transferType: 'hiace', nameAr: '', nameEn: '6 days / 5 nights',
+      durationDays: 6, nights: 5, returnOffsetDays: 6, isActive: true, sortOrder: 2,
+    },
+    {
+      code: 'inactive_hiace_6d5n', transferType: 'hiace', nameAr: '', nameEn: '6 days / 5 nights',
+      durationDays: 6, nights: 5, returnOffsetDays: 6, isActive: false, sortOrder: 0,
+    },
+  )
+
+  assert.equal(findStayPattern(schedule, { transferType: 'hiace', durationDays: 6 })?.code, 'hiace_6d5n')
+  assert.equal(findStayPattern(schedule, { transferType: 'package_bus', durationDays: 6 })?.code, 'any_6d5n')
+  assert.equal(findStayPattern(schedule, { transferType: 'hiace', durationDays: 7 }), null)
 })
 
 test('blackouts close scheduled and on-demand services, and beat extras', () => {

@@ -145,7 +145,8 @@ export function toQuoteRequest(input: TripRequestInput, dates: JourneyDates): Qu
   return {
     booking_type: 'package',
     accommodation_id: input.accommodation_id,
-    duration: dates.durationDays === 5 ? 5 : 4,
+    duration: dates.durationDays,
+    nights: dates.nights,
     transfer_type: input.transport_mode,
     transfer_direction: 'round_trip',
     governorate: input.origin_governorate_code,

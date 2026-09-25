@@ -3,6 +3,7 @@ export { todayInCairo } from './today'
 export {
   addDays,
   checkServiceDate,
+  findStayPattern,
   isRecommendedCheckIn,
   patternsFor,
   resolveStayPattern,

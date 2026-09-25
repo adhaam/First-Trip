@@ -1,6 +1,5 @@
-import { nightsForDuration } from '@/lib/pricing'
 import type { BookingInput } from '@/lib/public-booking'
-import { checkServiceDate, resolveStayPattern, type TransportScheduleConfig } from '@/lib/transport/schedule'
+import { checkServiceDate, findStayPattern, resolveStayPattern, type TransportScheduleConfig } from '@/lib/transport/schedule'
 
 export type BookingDateValidationResult =
   | { ok: true; input: BookingInput }
@@ -20,18 +19,6 @@ function serviceDateError(
     `TRANSFER_${direction.toUpperCase()}_UNAVAILABLE`,
     `The selected ${label} date is not available for this transfer${reasonText}.`,
   )
-}
-
-function packagePatternCode(
-  transferType: NonNullable<BookingInput['transfer_type']>,
-  duration: BookingInput['duration'],
-): string | null {
-  if (duration !== 4 && duration !== 5) {
-    return null
-  }
-
-  const prefix = transferType === 'package_bus' ? 'bus' : 'hiace'
-  return `${prefix}_${duration}d${duration - 1}n`
 }
 
 /**
@@ -54,17 +41,21 @@ export function validateBookingDates(
   try {
     if (input.booking_type === 'package') {
       const duration = input.duration
-      if (duration !== 4 && duration !== 5) {
-        return invalidDate('PACKAGE_DURATION_INVALID', 'A package duration of 4 or 5 days is required.')
-      }
-
-      const patternCode = packagePatternCode(input.transfer_type, duration)
-      if (!patternCode) {
-        return invalidDate('PACKAGE_DURATION_INVALID', 'A package duration of 4 or 5 days is required.')
+      const stayPattern = duration == null
+        ? null
+        : findStayPattern(schedule, {
+          transferType: input.transfer_type,
+          durationDays: duration,
+        })
+      if (!stayPattern) {
+        return invalidDate(
+          'PACKAGE_STAY_PATTERN_UNAVAILABLE',
+          'The selected departure date is unavailable for this package.',
+        )
       }
 
       const pattern = resolveStayPattern(schedule, {
-        patternCode,
+        patternCode: stayPattern.code,
         transferType: input.transfer_type,
         outboundDate: input.trip_date,
         originCode: input.governorate,
@@ -73,13 +64,6 @@ export function validateBookingDates(
         return invalidDate(
           'PACKAGE_STAY_PATTERN_UNAVAILABLE',
           'The selected departure date is unavailable for this package.',
-        )
-      }
-
-      if (nightsForDuration(duration) !== pattern.nights) {
-        return invalidDate(
-          'PACKAGE_NIGHTS_MISMATCH',
-          'The configured package stay pattern does not match package pricing.',
         )
       }
 
@@ -94,6 +78,8 @@ export function validateBookingDates(
         ok: true,
         input: {
           ...input,
+          duration: pattern.durationDays,
+          nights: pattern.nights,
           return_date: pattern.returnDate,
         },
       }

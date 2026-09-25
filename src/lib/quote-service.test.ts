@@ -8,7 +8,7 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { computeQuote } from './quote-data'
+import { computeQuote, quoteSchema } from './quote-data'
 import { buildBookingRow } from './public-booking'
 import type { QuoteDataSource, QuoteInput, QuoteResult } from './quote-data'
 import { computePackageTotals } from './pricing'
@@ -395,6 +395,20 @@ test('package: 5-day hiace + meal + upgrade + discounted extra trip + trip packa
     r.lines.map((l) => [l.key, l.amount]),
     [['accommodation', 10800], ['upgrade', 2000], ['transfer', 4000], ['meals', 1200], ['extra_trips', 5600], ['trip_packages', 3000]],
   )
+})
+
+test('package: uses explicitly resolved 6-day pattern nights', async () => {
+  assert.equal(quoteSchema.safeParse({
+    booking_type: 'package', accommodation_id: ACC_ID, duration: 6, nights: 5,
+    start_date: '2026-10-04', num_people: 2,
+  }).success, true)
+  const r = ok(await quote({
+    booking_type: 'package', accommodation_id: ACC_ID, duration: 6, nights: 5,
+    transfer_type: 'hiace', governorate: 'cairo', room_type: 'double', num_people: 2,
+  }))
+  // 5 nights × 2000 + hiace 700 × 2 legs × 2 people
+  assert.equal(r.total, 12800)
+  assert.equal(r.snapshot.nights, 5)
 })
 
 test('package: defaults to hiace, round trip, 4-day, double', async () => {

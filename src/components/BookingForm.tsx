@@ -19,6 +19,7 @@ import {
   nightsForDuration, formatEGP, roomsForPeople, upgradeSubtotal,
 } from '@/lib/pricing'
 import {
+  findStayPattern,
   resolveStayPattern,
   returnOptions,
   upcomingServiceDates,
@@ -323,7 +324,11 @@ export function BookingForm({
   // 4-day: departs Thu, returns Mon | 5-day: departs Sun, returns Fri
   const packageDepartureDates = useMemo(() => {
     const packageDuration = duration === '5' ? 5 : 4
-    const patternCode = `${packageTransferType === 'package_bus' ? 'bus' : 'hiace'}_${packageDuration}d${packageDuration - 1}n`
+    const pattern = findStayPattern(transportSchedule, {
+      transferType: packageTransferType,
+      durationDays: packageDuration,
+    })
+    if (!pattern) return []
     const count = packageTransferType === 'hiace' ? 14 : 8
 
     return upcomingServiceDates(transportSchedule, {
@@ -334,7 +339,7 @@ export function BookingForm({
       count: 190,
     })
       .filter((outboundDate) => resolveStayPattern(transportSchedule, {
-        patternCode,
+        patternCode: pattern.code,
         transferType: packageTransferType,
         outboundDate,
         originCode: packageGov,
@@ -346,9 +351,13 @@ export function BookingForm({
     const base = packageDepartureDate || packageDepartureDates[0]
     if (!base) return ''
     const packageDuration = duration === '5' ? 5 : 4
-    const patternCode = `${packageTransferType === 'package_bus' ? 'bus' : 'hiace'}_${packageDuration}d${packageDuration - 1}n`
+    const stayPattern = findStayPattern(transportSchedule, {
+      transferType: packageTransferType,
+      durationDays: packageDuration,
+    })
+    if (!stayPattern) return ''
     const pattern = resolveStayPattern(transportSchedule, {
-      patternCode,
+      patternCode: stayPattern.code,
       transferType: packageTransferType,
       outboundDate: base,
       originCode: packageGov,

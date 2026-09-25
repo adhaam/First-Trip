@@ -18,7 +18,7 @@ export const bookingSchema = z
     governorate: z.string().max(40).optional(),
     trip_date: isoDate.optional(),
     return_date: isoDate.optional(),
-    duration: z.union([z.literal(4), z.literal(5)]).optional(),
+    duration: z.number().int().min(1).max(30).optional(),
     nights: z.number().int().min(1).max(30).optional(),
     transfer_type: z.enum(['package_bus', 'hiace']).optional(),
     transfer_direction: z.enum(['to_dahab', 'from_dahab', 'round_trip']).optional(),

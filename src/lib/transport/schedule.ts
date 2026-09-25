@@ -163,6 +163,25 @@ export function patternsFor(config: TransportScheduleConfig, transferType: strin
     .sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code))
 }
 
+/**
+ * Finds the sellable stay pattern for a transport type and requested duration.
+ * A null transfer type applies to every transfer. When more than one pattern
+ * matches, the configured sort order is authoritative.
+ */
+export function findStayPattern(
+  config: TransportScheduleConfig,
+  input: { transferType: string; durationDays: number },
+): StayPattern | null {
+  return config.stayPatterns
+    .filter(
+      (pattern) =>
+        pattern.isActive &&
+        pattern.durationDays === input.durationDays &&
+        (pattern.transferType == null || pattern.transferType === input.transferType),
+    )
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code))[0] ?? null
+}
+
 export function resolveStayPattern(
   config: TransportScheduleConfig,
   input: { patternCode: string; transferType: string; outboundDate: string; originCode?: string },

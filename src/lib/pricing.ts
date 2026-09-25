@@ -523,7 +523,10 @@ export function validateAndPriceTripPackages(
   return { subtotal, error: null }
 }
 
-/** 4-day package = 3 nights, 5-day package = 4 nights. */
+/**
+ * Legacy compatibility mapping for historic 4-day and 5-day package inputs.
+ * New package quotes must receive the resolved stay pattern's nights instead.
+ */
 export function nightsForDuration(duration: 4 | 5): number {
   return duration === 5 ? 4 : 3
 }

@@ -74,12 +74,12 @@ export const quoteSchema = z.object({
   // Accommodation (required for package and accommodation-only)
   accommodation_id: z.string().uuid().optional(),
 
-  // Package-specific
-  duration: z.union([z.literal(4), z.literal(5)]).optional(),
+  // Package-specific. `nights` is supplied from the resolved stay pattern.
+  duration: z.number().int().min(1).max(30).optional(),
   extra_trip_ids: z.array(z.string().uuid()).optional(),
   trip_package_ids: z.array(z.string().uuid()).optional(),
 
-  // Accommodation-only
+  // Accommodation-only, and resolved package nights.
   nights: z.number().int().min(1).max(30).optional(),
 
   // Shared dates
@@ -677,7 +677,18 @@ export async function computeQuote(
       code: transferError,
     }
   }
-  const nights = nightsForDuration(input.duration === 5 ? 5 : 4)
+  const legacyNights = input.duration == null || input.duration === 4 || input.duration === 5
+    ? nightsForDuration(input.duration === 5 ? 5 : 4)
+    : undefined
+  const nights = input.nights ?? legacyNights
+  if (nights == null) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Package nights must come from an active stay pattern.',
+      code: 'PACKAGE_NIGHTS_REQUIRED',
+    }
+  }
   const extraTripsSubtotal = extraTrips.reduce((s, t) => s + extraTripCost(t), 0) * numPeople
 
   const tripLines = (): (QuoteLine | null)[] => [

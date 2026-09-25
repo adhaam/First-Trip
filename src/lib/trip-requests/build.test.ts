@@ -76,6 +76,7 @@ test('maps transport + a chosen stay to a package quote request', () => {
   const quoteRequest = toQuoteRequest(input, dates.dates)
   assert.equal(quoteRequest.booking_type, 'package')
   assert.equal(quoteRequest.duration, 4)
+  assert.equal(quoteRequest.nights, 3)
   assert.equal(quoteRequest.transfer_type, 'package_bus')
   assert.equal(quoteRequest.transfer_direction, 'round_trip')
   assert.equal(quoteRequest.governorate, 'CAI')
@@ -84,6 +85,25 @@ test('maps transport + a chosen stay to a package quote request', () => {
   assert.equal(quoteRequest.num_people, 2)
   assert.deepEqual(quoteRequest.extra_trip_ids, ['22222222-2222-2222-2222-222222222222'])
   assert.deepEqual(quoteRequest.trip_package_ids, ['33333333-3333-3333-3333-333333333333'])
+})
+
+test('maps a resolved 6-day hiace pattern to five quote nights', () => {
+  const schedule = structuredClone(DEFAULT_TRANSPORT_SCHEDULE)
+  schedule.stayPatterns.push({
+    code: 'hiace_6d5n', transferType: 'hiace', nameAr: '', nameEn: '6 days / 5 nights',
+    durationDays: 6, nights: 5, returnOffsetDays: 6, departureWeekdays: null, isActive: true, sortOrder: 4,
+  })
+  const input = parseInput({
+    locale: 'en', transport_mode: 'hiace', origin_governorate_code: 'CAI', stay_pattern_code: 'hiace_6d5n',
+    arrival_date: '2026-10-06', adults: 2, accommodation_id: '11111111-1111-1111-1111-111111111111',
+  })
+  const dates = resolveJourneyDates(input, schedule)
+  assert.equal(dates.ok, true)
+  if (!dates.ok) return
+
+  const quoteRequest = toQuoteRequest(input, dates.dates)
+  assert.equal(quoteRequest.duration, 6)
+  assert.equal(quoteRequest.nights, 5)
 })
 
 test('maps stay_only to an accommodation-only quote request', () => {

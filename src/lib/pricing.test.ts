@@ -12,6 +12,7 @@ import {
   extraTripCost,
   quotePackageV2,
   buildPriceSnapshot,
+  nightsForDuration,
   roomsForPeople,
   quoteStay,
 } from './pricing'
@@ -28,6 +29,11 @@ const pricing: TransferPricing = {
     { id: 'g3', transfer_type: 'hiace', governorate_code: 'cairo', name_ar: '', name_en: 'Cairo', price_surcharge: 0, sort_order: 0, is_active: true },
   ],
 }
+
+test('legacy package duration fallback retains the historic 4D/3N and 5D/4N mapping', () => {
+  assert.equal(nightsForDuration(4), 3)
+  assert.equal(nightsForDuration(5), 4)
+})
 
 const acc = {
   price_single_room: 1500,
