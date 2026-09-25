@@ -1,0 +1,46 @@
+import { addDays, isRecommendedCheckIn, patternsFor, resolveStayPattern } from '@/lib/transport'
+import type { TransportScheduleConfig } from '@/lib/transport'
+import type { TransportMode } from '@/lib/trip-requests/schema'
+
+export function patternsForMode(schedule: TransportScheduleConfig, mode: TransportMode | undefined) {
+  return mode && mode !== 'stay_only' ? patternsFor(schedule, mode) : []
+}
+
+export function arrivalOptions(schedule: TransportScheduleConfig, input: { mode?: TransportMode; patternCode?: string; originCode?: string; from: string; count: number }): string[] {
+  if (!input.mode || input.mode === 'stay_only' || !input.patternCode) return []
+
+  const values: string[] = []
+  for (let offset = 0; values.length < input.count && offset <= 190; offset += 1) {
+    const date = addDays(input.from, offset)
+    const result = resolveStayPattern(schedule, { patternCode: input.patternCode, transferType: input.mode, outboundDate: date, originCode: input.originCode })
+    if (result.ok) values.push(date)
+  }
+  return values
+}
+
+export function returnDateFor(schedule: TransportScheduleConfig, input: { mode?: TransportMode; patternCode?: string; originCode?: string; arrivalDate?: string }): string | null {
+  if (!input.mode || input.mode === 'stay_only' || !input.patternCode || !input.arrivalDate) return null
+  const result = resolveStayPattern(schedule, { patternCode: input.patternCode, transferType: input.mode, outboundDate: input.arrivalDate, originCode: input.originCode })
+  return result.ok ? result.returnDate : null
+}
+
+/** Stay-only dates are valid from tomorrow onward; transport dates must resolve a pattern. */
+export function isValidArrival(schedule: TransportScheduleConfig, input: { mode?: TransportMode; patternCode?: string; originCode?: string; arrivalDate?: string; today?: string }) {
+  if (input.mode === 'stay_only') {
+    return Boolean(input.arrivalDate && input.today && input.arrivalDate >= earliestArrival(input.today))
+  }
+  return returnDateFor(schedule, input) !== null
+}
+
+export function stayNights(arrival?: string, departure?: string): number | null {
+  if (!arrival || !departure) return null
+  return Math.max(0, (Date.parse(`${departure}T00:00:00Z`) - Date.parse(`${arrival}T00:00:00Z`)) / 86400000)
+}
+
+export function recommendedCheckIn(schedule: TransportScheduleConfig, date: string) {
+  return isRecommendedCheckIn(schedule, date)
+}
+
+export function earliestArrival(today: string) {
+  return addDays(today, 1)
+}

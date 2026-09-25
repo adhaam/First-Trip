@@ -1,17 +1,21 @@
 import 'server-only'
 
 import { findOrCreateCustomerByPhone } from '@/lib/customer'
-import { paymentPlanForParts, type CombinedPaymentPlan, type PaymentKind } from '@/lib/payment-rules'
+import { paymentPlan, paymentPlanForParts, type CombinedPaymentPlan, type PaymentKind, type PaymentPlan } from '@/lib/payment-rules'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { computeQuote } from '@/lib/quote-service'
 import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { getTransportSchedule } from '@/lib/transport/load'
 import { buildTripRequestRow, resolveJourneyDates, toQuoteRequest, tripRequestPaymentParts } from './build'
-import { tripRequestSchema } from './schema'
+import { tripRequestSchema, type TripRequestQuoteInput } from './schema'
 
 export type CreateTripRequestResult =
   | { ok: true; id: string; reference: string; quoted_total: number; payment_plan: CombinedPaymentPlan }
   | { ok: false; status: number; code: string; error: string; details?: unknown }
+
+export type PriceTripRequestResult =
+  | { ok: true; dates: import('./build').JourneyDates; quote: Extract<import('@/lib/quote-data').QuoteResult, { ok: true }>; parts: import('./build').PaymentPart[]; partPlans: PaymentPlan[]; paymentPlan: CombinedPaymentPlan }
+  | { ok: false; status: number; code: string; error: string }
 
 async function loadPackagePaymentKinds(packageIds: string[]): Promise<Record<string, PaymentKind>> {
   if (packageIds.length === 0 || !isSupabaseConfigured()) return {}
@@ -26,6 +30,20 @@ async function loadPackagePaymentKinds(packageIds: string[]): Promise<Record<str
   return Object.fromEntries(
     (data ?? []).map((row) => [row.id as string, ((row.payment_kind as PaymentKind | null) ?? 'experience_package')]),
   )
+}
+
+/** Prices an already validated journey without creating a customer or database row. */
+export async function priceTripRequest(input: TripRequestQuoteInput): Promise<PriceTripRequestResult> {
+  const schedule = await getTransportSchedule()
+  const datesResult = resolveJourneyDates(input, schedule)
+  if (!datesResult.ok) return { ok: false, status: 400, code: datesResult.code, error: datesResult.error }
+  const quote = await computeQuote(toQuoteRequest(input, datesResult.dates))
+  if (!quote.ok) return { ok: false, status: quote.status, code: quote.code ?? 'PRICING_ERROR', error: quote.error }
+  const packageIds = input.experiences.filter((experience) => experience.kind === 'trip_package').map((experience) => experience.id)
+  const parts = tripRequestPaymentParts(input, quote, await loadPackagePaymentKinds(packageIds))
+  const rules = await getPaymentRules()
+  const partPlans = parts.map((part) => paymentPlan(part.kind, part.total, rules.policies))
+  return { ok: true, dates: datesResult.dates, quote, parts, partPlans, paymentPlan: paymentPlanForParts(parts, rules.policies) }
 }
 
 /**
@@ -44,24 +62,8 @@ export async function createTripRequest(rawInput: unknown): Promise<CreateTripRe
   }
   const input = parsed.data
 
-  const schedule = await getTransportSchedule()
-  const datesResult = resolveJourneyDates(input, schedule)
-  if (!datesResult.ok) {
-    return { ok: false, status: 400, code: datesResult.code, error: datesResult.error }
-  }
-  const dates = datesResult.dates
-
-  const quoteRequest = toQuoteRequest(input, dates)
-  const quote = await computeQuote(quoteRequest)
-  if (!quote.ok) {
-    return { ok: false, status: quote.status, code: quote.code ?? 'PRICING_ERROR', error: quote.error }
-  }
-
-  const packageIds = input.experiences.filter((experience) => experience.kind === 'trip_package').map((experience) => experience.id)
-  const packagePaymentKinds = await loadPackagePaymentKinds(packageIds)
-  const parts = tripRequestPaymentParts(input, quote, packagePaymentKinds)
-  const rules = await getPaymentRules()
-  const paymentPlan = paymentPlanForParts(parts, rules.policies)
+  const priced = await priceTripRequest(input)
+  if (!priced.ok) return priced
 
   const customer = await findOrCreateCustomerByPhone({
     phone: input.contact.phone,
@@ -69,7 +71,7 @@ export async function createTripRequest(rawInput: unknown): Promise<CreateTripRe
     email: input.contact.email || null,
   })
 
-  const row = buildTripRequestRow(input, dates, quote, paymentPlan, customer.id)
+  const row = buildTripRequestRow(input, priced.dates, priced.quote, priced.paymentPlan, customer.id)
 
   const { data, error } = await getSupabaseAdmin()
     .from('trip_requests')
@@ -82,5 +84,5 @@ export async function createTripRequest(rawInput: unknown): Promise<CreateTripRe
     return { ok: false, status: 500, code: 'INSERT_FAILED', error: 'Failed to create trip request.' }
   }
 
-  return { ok: true, id: data.id, reference: data.reference, quoted_total: quote.total, payment_plan: paymentPlan }
+  return { ok: true, id: data.id, reference: data.reference, quoted_total: priced.quote.total, payment_plan: priced.paymentPlan }
 }

@@ -49,8 +49,7 @@ export const contactSchema = z.object({
 })
 export type ContactInput = z.infer<typeof contactSchema>
 
-export const tripRequestSchema = z
-  .object({
+const tripRequestJourneyObjectSchema = z.object({
     locale: z.enum(['ar', 'en']),
     source: z.enum(TRIP_REQUEST_SOURCES).default('website'),
 
@@ -72,17 +71,10 @@ export const tripRequestSchema = z
     // Experiences
     experiences: z.array(experienceSelectionSchema).max(MAX_EXPERIENCES).default([]),
 
-    // Contact
-    contact: contactSchema,
-    notes: z.string().max(500).optional(),
+})
 
-    builder_stage: z.enum(BUILDER_STAGES).default('submitted'),
-
-    // Anti-abuse (mirrors src/lib/public-booking.ts)
-    website: z.string().max(200).optional(),
-    turnstile_token: z.string().optional(),
-  })
-  .superRefine((value, ctx) => {
+/** Shared journey-only validation used by quote previews and submissions. */
+export function refineTripRequestJourney(value: z.infer<typeof tripRequestJourneyObjectSchema>, ctx: z.RefinementCtx) {
     if (value.transport_mode === 'stay_only') {
       if (!value.accommodation_id) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['accommodation_id'], message: 'Accommodation is required for a stay.' })
@@ -109,6 +101,17 @@ export const tripRequestSchema = z
       }
       seen.add(key)
     })
-  })
+}
+
+export const tripRequestQuoteSchema = tripRequestJourneyObjectSchema.superRefine(refineTripRequestJourney)
+
+export const tripRequestSchema = tripRequestJourneyObjectSchema.extend({
+  contact: contactSchema,
+  notes: z.string().max(500).optional(),
+  builder_stage: z.enum(BUILDER_STAGES).default('submitted'),
+  website: z.string().max(200).optional(),
+  turnstile_token: z.string().optional(),
+}).superRefine(refineTripRequestJourney)
 
 export type TripRequestInput = z.infer<typeof tripRequestSchema>
+export type TripRequestQuoteInput = z.infer<typeof tripRequestQuoteSchema>

@@ -1,0 +1,11 @@
+import type { BuilderCatalog, BuilderState } from './types'
+const findName = (ar: boolean, item?: { name_ar: string; name_en: string }) => item ? ar ? item.name_ar : item.name_en : undefined
+export function buildHandoffMessage({ state, catalog, locale, reference, total }: { state: BuilderState; catalog: BuilderCatalog; locale: 'ar' | 'en'; reference?: string; total?: number }) {
+  const ar = locale === 'ar'; const label = (a: string, e: string) => ar ? a : e
+  const origin = catalog.governorates.find((item) => item.code === state.origin_governorate_code)
+  const stay = catalog.accommodations.find((item) => item.id === state.accommodation_id)
+  const mode = state.transport_mode ? (ar ? ({ package_bus: 'باص جماعي', hiace: 'هايس خاص', stay_only: 'إقامة فقط' }[state.transport_mode]) : ({ package_bus: 'Shared bus', hiace: 'Private Hiace', stay_only: 'Stay only' }[state.transport_mode])) : '-'
+  const lines = [label('طلب رحلة WEEMAP', 'WEEMAP trip request'), `${label('الانتقال', 'Transport')}: ${mode}`, origin && `${label('الانطلاق', 'From')}: ${findName(ar, origin)}`, state.arrival_date && `${label('الوصول', 'Arrival')}: ${state.arrival_date}`, state.departure_date && `${label('المغادرة', 'Departure')}: ${state.departure_date}`, `${label('المسافرون', 'Travellers')}: ${state.adults ?? 1} ${label('بالغ', 'adult(s)')}, ${state.children ?? 0} ${label('طفل', 'child(ren)')}`, stay && `${label('الإقامة', 'Stay')}: ${findName(ar, stay)}`, state.room_allocations?.length && `${label('الغرف', 'Rooms')}: ${state.room_allocations.map((room) => `${room.count} ${room.type}`).join(', ')}`, state.meal_plan_key && `${label('الوجبة', 'Meal')}: ${state.meal_plan_key}`, state.experiences?.length && `${label('التجارب', 'Experiences')}: ${state.experiences.map((item) => findName(ar, item.kind === 'trip' ? catalog.trips.find((trip) => trip.id === item.id) : catalog.packages.find((pkg) => pkg.id === item.id)) ?? item.id).join(', ')}`, reference && `${label('المرجع', 'Reference')}: ${reference}`, total != null && `${label('الإجمالي الإرشادي', 'Indicative total')}: ${total} EGP`].filter(Boolean)
+  return lines.join('\n')
+}
+export function whatsappLink(number: string, text: string) { return `https://wa.me/${number.replace(/\D/g, '')}?text=${encodeURIComponent(text)}` }

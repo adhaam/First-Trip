@@ -6,6 +6,7 @@ export {
   contactSchema,
   experienceSelectionSchema,
   roomAllocationSchema,
+  tripRequestQuoteSchema,
   tripRequestSchema,
 } from './schema'
 export type {
@@ -16,6 +17,7 @@ export type {
   RoomAllocationInput,
   TransportMode,
   TripRequestInput,
+  TripRequestQuoteInput,
   TripRequestSource,
 } from './schema'
 
@@ -30,5 +32,5 @@ export type { JourneyDates, JourneyDatesResult, PaymentPart } from './build'
 export { DRAFT_VERSION, parseDraft, serializeDraft, tripRequestDraftSchema } from './draft'
 export type { DraftFields, ParseDraftResult, TripRequestDraft } from './draft'
 
-export { createTripRequest } from './service'
-export type { CreateTripRequestResult } from './service'
+export { createTripRequest, priceTripRequest } from './service'
+export type { CreateTripRequestResult, PriceTripRequestResult } from './service'

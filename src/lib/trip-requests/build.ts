@@ -14,7 +14,7 @@ import type { CombinedPaymentPlan, PaymentKind } from '@/lib/payment-rules'
 import { resolveStayPattern } from '@/lib/transport'
 import type { StayPatternResult, TransportScheduleConfig } from '@/lib/transport'
 import type { PriceSnapshot } from '@/lib/types'
-import type { TripRequestInput } from './schema'
+import type { TripRequestInput, TripRequestQuoteInput } from './schema'
 
 // ─── Journey dates ───
 
@@ -52,7 +52,7 @@ function isoToUtcDays(date: string): number {
  * departure is strictly after arrival. Never invents itinerary days.
  */
 export function resolveJourneyDates(
-  input: TripRequestInput,
+  input: TripRequestQuoteInput,
   schedule: TransportScheduleConfig,
 ): JourneyDatesResult {
   if (input.transport_mode === 'stay_only') {
@@ -108,7 +108,7 @@ export function resolveJourneyDates(
  * becomes a round-trip 'transfer-only'. Experiences (standalone trips and
  * trip packages) are passed through as extra_trip_ids / trip_package_ids.
  */
-export function toQuoteRequest(input: TripRequestInput, dates: JourneyDates): QuoteInput {
+export function toQuoteRequest(input: TripRequestQuoteInput, dates: JourneyDates): QuoteInput {
   const numPeople = input.adults + input.children
   const extraTripIds = input.experiences.filter((experience) => experience.kind === 'trip').map((experience) => experience.id)
   const tripPackageIds = input.experiences.filter((experience) => experience.kind === 'trip_package').map((experience) => experience.id)
@@ -174,7 +174,7 @@ export type PaymentPart = { kind: PaymentKind; total: number }
  * payment_kind (looked up server-side; see service.ts).
  */
 export function tripRequestPaymentParts(
-  input: TripRequestInput,
+  input: TripRequestQuoteInput,
   quote: { total: number; snapshot: PriceSnapshot },
   packagePaymentKinds: Record<string, PaymentKind> = {},
 ): PaymentPart[] {
