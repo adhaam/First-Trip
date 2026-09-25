@@ -105,6 +105,13 @@ export function rentalEndDate(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** YYYY-MM-DD that names a real day (2026-02-30 does not). */
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
 function todayIsoUTC(): string {
   return new Date().toISOString().slice(0, 10)
 }
@@ -214,6 +221,9 @@ export async function createCommerceOrderWithClient(
     } else {
       if (!item.rentalDurationDays || !item.rentalStartDate) {
         return { success: false, error: 'Rental items require a duration and start date' }
+      }
+      if (!isCalendarDate(item.rentalStartDate)) {
+        return { success: false, error: 'Invalid rental start date' }
       }
       if (item.rentalStartDate < today()) {
         return { success: false, error: `${product.name_en} cannot be rented starting in the past` }

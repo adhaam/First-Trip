@@ -41,7 +41,13 @@ recorded in:
    session stops working.
 5. Remove `ADMIN_PASSWORD` from the environment (recommended, not required).
 
-Sessions last 12 hours. Login attempts are rate-limited per IP.
+Sessions last 12 hours. Sign-in attempts are limited per server instance and,
+since M4, in the database for every instance (`staff_login_throttle`, migration
+041): 5 failures for one account from one address, 20 for one account or 30
+from one address within 15 minutes lock that key for 15 minutes. Signing out
+raises the person's `session_version`, so a copied cookie stops working and the
+person is signed out on every device. Admin writes from another site are
+refused (Origin check) on top of the SameSite cookie.
 
 ## Request → booking flow
 
@@ -78,6 +84,19 @@ Trip Builder submit ─► trip_request (new) ─► checking_availability ─�
 - Edit routes reject `payment_status` / `amount_paid` / … with `payment_via_ledger`.
 - Methods are Vodafone Cash, InstaPay, cash, and a card payment link (on request). There is no
   gateway.
+
+## Shop and Rent orders (M4, migration 039)
+
+- Delivery: new → contacted → confirmed → preparing → ready → **out for
+  delivery** → completed. Pickup: … → ready → **completed** (handed over at the
+  shop; never out for delivery). The database enforces it; screens offer only
+  the allowed moves.
+- Cancelling restocks exactly the items that took stock, once, in the same
+  transaction; reopening takes the stock back or refuses (order stays
+  cancelled). Rental confirmations re-check availability under a lock, so two
+  people cannot confirm the last unit.
+- Every status change needs the status the screen showed; a changed order
+  answers "changed while you were looking".
 
 ## Transport configuration
 

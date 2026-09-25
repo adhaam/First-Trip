@@ -19,6 +19,11 @@ import { PaymentsPanel, type PaymentExpectation, type PaymentRecord } from '@/co
 import { HistoryTimeline } from '@/components/admin/ops/HistoryTimeline'
 import { WorkItemTable } from '@/components/admin/ops/WorkItemTable'
 
+/** Same display reference the work queue shows (ops_work_items, migration 036). */
+function displayReference(prefix: 'BK' | 'TB', id: string): string {
+  return `${prefix}-${id.slice(0, 8).toUpperCase()}`
+}
+
 type ItemResponse = {
   item: WorkItem
   record: Record<string, unknown>
@@ -242,10 +247,10 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
                 <p className="mb-1 font-medium text-green-700">{t('convertedLinks')}</p>
                 <ul className="flex flex-col gap-1">
                   {convertResult.booking_id && (
-                    <li><Link href={opsItemHref('accommodation_booking', convertResult.booking_id)} className="text-sea-900 hover:underline">{convertResult.booking_id}</Link></li>
+                    <li><Link href={opsItemHref('accommodation_booking', convertResult.booking_id)} className="text-sea-900 hover:underline" dir="ltr">{displayReference('BK', convertResult.booking_id)}</Link></li>
                   )}
                   {convertResult.trip_booking_ids.map((tbId) => (
-                    <li key={tbId}><Link href={opsItemHref('trip_booking', tbId)} className="text-sea-900 hover:underline">{tbId}</Link></li>
+                    <li key={tbId}><Link href={opsItemHref('trip_booking', tbId)} className="text-sea-900 hover:underline" dir="ltr">{displayReference('TB', tbId)}</Link></li>
                   ))}
                 </ul>
               </div>

@@ -35,6 +35,25 @@ type GuardRequest = {
   method?: string
   url?: string
   nextUrl?: { pathname: string }
+  headers?: { get(name: string): string | null }
+}
+
+/**
+ * CSRF defence in depth (the session cookie is already SameSite=Lax): a
+ * state-changing request that carries an Origin header must come from this
+ * site's own host. Requests without Origin (server-to-server, tests) pass.
+ */
+function crossSiteWrite(req: GuardRequest): boolean {
+  const method = (req.method ?? 'GET').toUpperCase()
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return false
+  const origin = req.headers?.get('origin')
+  if (!origin) return false
+  const host = req.headers?.get('x-forwarded-host') || req.headers?.get('host')
+  try {
+    return !host || new URL(origin).host !== host
+  } catch {
+    return true
+  }
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -105,6 +124,12 @@ export type StaffGate =
  * revoked), 403 when signed in without permission.
  */
 export async function requireStaff(req: GuardRequest): Promise<StaffGate> {
+  if (crossSiteWrite(req)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Forbidden', code: 'cross_site' }, { status: 403 }),
+    }
+  }
   const staff = await getStaffSession(req)
   if (!staff) {
     return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }

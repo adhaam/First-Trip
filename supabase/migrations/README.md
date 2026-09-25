@@ -165,8 +165,99 @@ like once `001` has run.
   normalised text. It must stay identical to `normalizeSearchText()`, which
   `supabase/tests/public_search.sql` checks.
 
+## M4 launch hardening (039–041)
+
+- **039 — commerce workflow integrity.** The order status graph lives in the
+  database (`weemap_commerce_order_guard`): delivery goes ready →
+  out_for_delivery → completed, pickup goes ready → completed and is never
+  out for delivery. Order creation (`weemap_place_commerce_order`), status
+  changes with their stock effects (`weemap_set_commerce_order_status`:
+  restock on cancel, re-reserve on reopen, exactly once) and rental
+  reservation moves (`weemap_update_rental_reservation`: availability checked
+  under the product lock, so two operators can never both confirm the last
+  unit) are each one transaction. Errors are `PT409`/`PT404`/`PT400` with a
+  machine message (`stale_status`, `invalid_transition`,
+  `insufficient_stock:<variant>`, `rental_unavailable:<product>`, …).
+  `src/lib/request-workflow.test.ts` checks the TS graph equals the SQL one.
+- **040 — payment truth guards.** `amount_paid` / `payment_status` change only
+  inside `weemap_record_payment()`. The agreed total cannot drop below the
+  money received (`total_below_paid`), and raising it re-derives paid ↔
+  partial. A row inserted with money already received gets an opening ledger
+  entry, rows with ledger entries cannot be deleted (`has_payments`), and no
+  payment may be dated in the future. **One-off data change:** rows whose
+  `amount_paid` exceeds their ledger balance (money typed in before 036)
+  get one `received` entry for the difference, `recorded_by =
+  'migration:040'`, so `amount_paid = Σ received − Σ refunded` holds for
+  every row. Re-running inserts nothing.
+- **041 — security hardening.** Drops the pre-M1 `authenticated` "Admins can
+  manage …" policies and the anon INSERT policies (bookings, customers,
+  Signature requests, partner inquiries, newsletter). Revokes every write
+  privilege and every WEEMAP function EXECUTE from `anon` /
+  `authenticated`, and SELECT on tables without a public-read policy, and
+  sets the same defaults for future objects. Adds `staff_login_throttle`
+  (sign-in throttle shared by all server instances; hashed keys only) and
+  lets sign-out raise `session_version` (never lower it). The app uses only
+  the service role, so nothing it does changes.
+
+`scripts/db-upgrade-check.sh` proves the production path: schema up to 028,
+legacy-shaped data (money without a ledger, a total below the money
+received, a pickup order already out for delivery), then 029–041, checks,
+a second full re-apply (idempotency), and the application-rollback helper.
+
+## Production procedure — M4 release (029 → 041)
+
+Production is on 028 (confirm in step 2). Apply in one maintenance window,
+immediately followed by the application deploy.
+
+1. **Freeze.** No catalogue or booking edits in the Operations Center during
+   the window (15–30 min). The public site stays up.
+2. **Confirm the starting point** (read-only):
+   `select version, name from supabase_migrations.schema_migrations order by version;`
+   — the latest entry must correspond to `028`; anything newer and unknown is
+   drift: stop.
+3. **Back up** (either, and keep the file):
+   - Dashboard → Database → Backups → confirm a backup from today exists
+     (paid plans), **and/or**
+   - `pg_dump --no-owner --format=custom "<production connection string>" -f weemap-pre-m4.dump`
+     then `pg_restore --list weemap-pre-m4.dump | wc -l` (non-empty) and
+     record row counts of `bookings`, `trip_bookings`, `experience_bookings`,
+     `commerce_orders`, `customers`.
+4. **Apply** `029` … `041` in filename order, each as its own transaction
+   (SQL editor or `psql -v ON_ERROR_STOP=1 -f`). Stop at the first error:
+   everything before it is committed and re-runnable, so fix forward and
+   re-run from the failed file.
+5. **Verify:**
+   ```sql
+   select count(*) from pg_policies where schemaname='public'
+     and (coalesce(qual,'')||coalesce(with_check,'')) like '%authenticated%';   -- 0
+   select has_table_privilege('anon','public.customers','SELECT');             -- false
+   select proname from pg_proc where proname in ('weemap_place_commerce_order',
+     'weemap_set_commerce_order_status','weemap_update_rental_reservation',
+     'weemap_login_throttle_check','weemap_record_payment','weemap_convert_trip_request');  -- 6 rows
+   select count(*) from payment_records where recorded_by = 'migration:040';  -- = rows that had money
+   select count(*) from (select t.id from bookings t left join payment_records p
+     on p.entity_type='accommodation_booking' and p.entity_id=t.id group by t.id, t.amount_paid
+     having coalesce(t.amount_paid,0) <> coalesce(sum(case p.direction when 'received'
+     then p.amount else -p.amount end),0)) x;                                  -- 0
+   select doc_type, count(*) from public_search_documents group by 1;
+   ```
+6. **Deploy** the M4 application (see `docs/m4/RELEASE.md`).
+7. **Bootstrap the owner** (`docs/m3/OPERATIONS.md` → transition): sign in
+   with the shared password (email empty), create the owner, sign out, sign
+   in as the owner. Only then remove `ADMIN_PASSWORD` from Vercel.
+
+**Rollback.** Migrations 029–041 are additive (041 drops only unsafe
+policies) and are not reversed; problems are fixed forward. If the
+application must go back to the pre-M4 deployment, also run
+`supabase/rollback/m4_app_rollback_guards.sql`: the old admin writes
+payments into rows and sends pickup orders out for delivery, which the M4
+guards refuse. It removes only those triggers; data, ledger, history and the
+privilege hardening stay. A full data restore from the step-3 backup is the
+last resort and loses anything written after it.
+
 ## Production preflight for 035–038 (M3)
 
+(Superseded for the launch by the M4 procedure above; kept for reference.)
 Apply after 029–034 and before deploying the M3 code (the admin API needs the
 staff table and RPCs). After applying, create the first owner by signing in
 with the shared `ADMIN_PASSWORD` (email left empty) and adding the owner in

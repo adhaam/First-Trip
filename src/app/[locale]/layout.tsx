@@ -175,10 +175,11 @@ export default async function RootLayout({
               </div>
             </CartProvider>
           </TooltipProvider>
+          {/* Inside the provider: the banner uses translations and locale-aware links. */}
+          <ConsentBanner />
         </NextIntlClientProvider>
         <Analytics />
         <AnalyticsScripts />
-        <ConsentBanner />
       </body>
     </html>
   )

@@ -125,6 +125,7 @@ test('creation refuses bad input before writing anything', async () => {
     { ...input, items: [{ productId: 'p1', quantity: 1 }] },
     { ...input, items: [{ productId: 'p2', quantity: 1, rentalDurationDays: 2, rentalStartDate: '2026-09-01' }] },
     { ...input, items: [{ productId: 'missing', quantity: 1 }] },
+    { ...input, items: [{ productId: 'p2', quantity: 1, rentalDurationDays: 2, rentalStartDate: '2030-02-30' }] },
   ]
   for (const bad of cases) assert.equal((await createCommerceOrderWithClient(bad, deps(db))).success, false)
   assert.equal(calls.length, 0)
