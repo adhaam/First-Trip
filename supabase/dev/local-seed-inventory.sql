@@ -60,28 +60,28 @@ INSERT INTO public.commerce_products (
   '31000000-0000-4000-8000-000000000001', '21000000-0000-4000-8000-000000000004', 'sale',
   'weemap-desert-explorer-tshirt', 'تيشيرت WEEMAP ديزرت إكسبلورر', 'WEEMAP Desert Explorer T-Shirt',
   'تيشيرت قطن ١٠٠٪ بتصميم مستوحى من صحراء سيناء.', '100% cotton t-shirt with a design inspired by the Sinai desert.',
-  ARRAY['https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80'],
+  ARRAY[]::text[],
   350, 'WM-TS-001', true, true, true, true, true, true, 0
 ),
 (
   '31000000-0000-4000-8000-000000000002', '21000000-0000-4000-8000-000000000004', 'sale',
   'sinai-bedouin-shemagh-scarf', 'وشاح بدوي سيناوي', 'Sinai Bedouin Shemagh Scarf',
   'وشاح قطني تقليدي بألوان بدوية أصيلة.', 'A traditional cotton scarf in genuine Bedouin colors.',
-  ARRAY['https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80'],
+  ARRAY[]::text[],
   250, 'WM-SC-001', true, true, true, true, true, false, 1
 ),
 (
   '31000000-0000-4000-8000-000000000003', '21000000-0000-4000-8000-000000000001', 'sale',
   'dahab-dive-mask-snorkel-set', 'طقم قناع وسنوركل دهب', 'Dahab Dive Mask & Snorkel Set',
   'طقم قناع وأنبوب تنفس عالي الجودة مناسب لكل الأعمار.', 'A high-quality mask and snorkel set suitable for all ages.',
-  ARRAY['https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80'],
+  ARRAY[]::text[],
   900, 'WM-DV-001', true, true, true, true, true, true, 2
 ),
 (
   '31000000-0000-4000-8000-000000000004', '21000000-0000-4000-8000-000000000002', 'sale',
   'weemap-insulated-water-bottle', 'ترمس WEEMAP الحراري', 'WEEMAP Insulated Water Bottle',
   'ترمس ستانلس ستيل يحافظ على برودة المياه طوال رحلات الصحراء.', 'A stainless-steel bottle that keeps water cold throughout desert trips.',
-  ARRAY['https://images.unsplash.com/photo-1452022582947-b521d8779ab6?w=1600&q=80'],
+  ARRAY[]::text[],
   300, 'WM-BT-001', true, true, true, true, true, false, 3
 );
 
@@ -129,7 +129,7 @@ INSERT INTO public.commerce_products (
   '32000000-0000-4000-8000-000000000001', '21000000-0000-4000-8000-000000000001', 'rental',
   'full-scuba-diving-gear-set', 'طقم معدات غوص كامل', 'Full Scuba Diving Gear Set',
   'طقم غوص كامل يشمل بدلة وBCD ومنظم، مناسب للغطاسين المعتمدين.', 'A complete scuba set including wetsuit, BCD and regulator, for certified divers.',
-  ARRAY['https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80'],
+  ARRAY[]::text[],
   0, 'WM-RN-DV-001', true, true, true, false,
   1500, ARRAY['id_required', 'dive_certification_required'], true, true, 0
 ),
@@ -137,7 +137,7 @@ INSERT INTO public.commerce_products (
   '32000000-0000-4000-8000-000000000002', '21000000-0000-4000-8000-000000000003', 'rental',
   'mountain-bike-rental', 'إيجار دراجة جبلية', 'Mountain Bike Rental',
   'دراجة جبلية بحالة ممتازة مناسبة لطرق دهب والصحراء المحيطة.', 'A well-maintained mountain bike suitable for Dahab''s roads and surrounding desert.',
-  ARRAY['https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80'],
+  ARRAY[]::text[],
   0, 'WM-RN-BK-001', true, true, true, true,
   500, ARRAY['id_required'], true, false, 1
 ),
@@ -145,7 +145,7 @@ INSERT INTO public.commerce_products (
   '32000000-0000-4000-8000-000000000003', '21000000-0000-4000-8000-000000000003', 'rental',
   'kayak-rental-single', 'إيجار كاياك فردي', 'Kayak Rental (Single)',
   'كاياك فردي مثالي لاستكشاف اللاجونة والساحل الهادئ.', 'A single kayak, perfect for exploring the Lagoon and the calm coastline.',
-  ARRAY['https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80'],
+  ARRAY[]::text[],
   0, 'WM-RN-KY-001', true, true, true, false,
   300, ARRAY['id_required'], true, false, 2
 );

@@ -110,7 +110,16 @@ like once `001` has run.
   primary category; the migration backfills each trip's primary category as
   one of its tags.
 
-## Production preflight for 029–033
+## M2 correction (034)
+
+- **034 — trip packages are Sinai experience packages.** A `trip_package` is
+  a bundle of Sinai trips and is paid like a trip (100% after confirmation):
+  its `payment_kind` is normalised to and constrained to
+  `experience_package`. `stay_package` remains only the internal
+  classification of a transport + stay booking (`bookings`, trip-request
+  payment parts). Apply it together with `029`–`033`.
+
+## Production preflight for 029–034
 
 Before deploying the M1 code (payment kinds, new workflow states, transport
 schedule, trip requests, category tags), run through this checklist:
@@ -119,7 +128,7 @@ schedule, trip requests, category tags), run through this checklist:
    of this README and confirm `001`–`028` match what's in this folder, with
    nothing unknown applied on top.
 2. **Back up / snapshot the database first.**
-3. **Apply `029` → `033` in order, in one maintenance window, before
+3. **Apply `029` → `034` in order, in one maintenance window, before
    deploying the M1 code.** The old CHECK constraints reject the new admin
    statuses and `payment_kind` values, so the code must not go live before
    the migrations are applied. The code does fall back to its built-in

@@ -83,12 +83,8 @@ INSERT INTO public.accommodations (
   'كامب سي بريز البدوي', 'Sea Breeze Bedouin Camp', 'camp', 'budget',
   'كامب بسيط على الشاطئ مباشرة في منطقة المشربة، أكواخ خشبية مفتوحة على البحر وأجواء بدوية أصيلة. مثالي للمسافرين اللي بيدوروا على تجربة حقيقية وميزانية بسيطة من غير ما يفوتهم جمال دهب.',
   'A simple beachfront camp in Mashraba, open wooden huts facing the sea and genuine Bedouin atmosphere. Perfect for travelers who want an authentic experience on a modest budget without missing out on Dahab''s beauty.',
-  ARRAY[
-    'https://images.unsplash.com/photo-1452022582947-b521d8779ab6?w=1600&q=80',
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80',
-    'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80'
-  ],
-  'https://images.unsplash.com/photo-1452022582947-b521d8779ab6?w=1600&q=80',
+  ARRAY[]::text[],
+  '',
   4.3, 'Mashraba, Dahab', 'المشربة، دهب', 'Mashraba, Dahab', 28.5100, 34.5150,
   ARRAY['واي فاي مجاني', 'شاطئ خاص', 'مطعم بدوي', 'إطلالة على البحر'],
   ARRAY['Free Wi-Fi', 'Private beach', 'Bedouin restaurant', 'Sea view'],
@@ -108,13 +104,8 @@ INSERT INTO public.accommodations (
   'شاليهات بلو لاجون', 'Blue Lagoon Chalets', 'chalet', 'lagoon',
   'شاليهات مطلة مباشرة على لاجونة دهب الشهيرة، مثالية لعشاق الكايت سيرف والويند سيرف. كل شاليه فيه تراس خاص وإطلالة على المياه الفيروزية الهادئة.',
   'Chalets directly overlooking Dahab''s famous lagoon, ideal for kitesurfers and windsurfers. Every chalet has a private terrace and a view over the calm turquoise water.',
-  ARRAY[
-    'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80',
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80',
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80',
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80'
-  ],
-  'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80',
+  ARRAY[]::text[],
+  '',
   4.6, 'The Lagoon, Dahab', 'اللاجونة، دهب', 'The Lagoon, Dahab', 28.5350, 34.5180,
   ARRAY['واي فاي مجاني', 'مدرسة كايت سيرف', 'مسبح', 'تراس خاص', 'تكييف'],
   ARRAY['Free Wi-Fi', 'Kitesurf school', 'Swimming pool', 'Private terrace', 'A/C'],
@@ -134,12 +125,8 @@ INSERT INTO public.accommodations (
   'فندق جولدن كوست', 'Golden Coast Hotel', 'hotel', 'standard',
   'فندق ثلاث نجوم في قلب المشربة، على بعد خطوات من المطاعم والمقاهي والشاطئ. غرف مريحة ومطبخ بحري متنوع وموقع يسهل منه الوصول لكل حاجة في دهب.',
   'A three-star hotel in the heart of Mashraba, steps from restaurants, cafés and the beach. Comfortable rooms, a varied seafood-forward kitchen, and a location that puts everything in Dahab within easy reach.',
-  ARRAY[
-    'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80',
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80',
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80'
-  ],
-  'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80',
+  ARRAY[]::text[],
+  '',
   4.2, 'Mashraba, Dahab', 'المشربة، دهب', 'Mashraba, Dahab', 28.5080, 34.5130,
   ARRAY['واي فاي مجاني', 'مطعم', 'مسبح', 'استقبال 24 ساعة', 'تكييف'],
   ARRAY['Free Wi-Fi', 'Restaurant', 'Swimming pool', '24-hour front desk', 'A/C'],
@@ -159,14 +146,8 @@ INSERT INTO public.accommodations (
   'فندق داهاب باي البوتيك', 'Dahab Bay Boutique Hotel', 'hotel', 'premium',
   'فندق بوتيك فاخر في عسلة، بتصميم عصري يمزج بين الطابع السيناوي والراحة الحديثة. غرف واسعة بإطلالة على البحر الأحمر وجبال السعودية من بعيد، ومركز غوص خاص بالفندق.',
   'A luxury boutique hotel in Assalah, modern design blending Sinai character with contemporary comfort. Spacious rooms with Red Sea views (and the Saudi mountains in the distance), plus an in-house dive center.',
-  ARRAY[
-    'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80',
-    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80',
-    'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80',
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80',
-    'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80'
-  ],
-  'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80',
+  ARRAY[]::text[],
+  '',
   4.8, 'Assalah, Dahab', 'عسلة، دهب', 'Assalah, Dahab', 28.5220, 34.5240,
   ARRAY['واي فاي مجاني', 'مركز غوص', 'مسبح إنفينيتي', 'سبا', 'مطعم فاخر', 'تكييف'],
   ARRAY['Free Wi-Fi', 'Dive center', 'Infinity pool', 'Spa', 'Fine-dining restaurant', 'A/C'],
@@ -186,12 +167,8 @@ INSERT INTO public.accommodations (
   'كامب ديزرت بيرل', 'Desert Pearl Camp', 'camp', 'budget',
   'كامب هادي على أطراف دهب، بيجمع بين قرب الصحراء وسهولة الوصول للبحر. مكان مثالي لمحبي مراقبة النجوم والهدوء بعيد عن الزحمة.',
   'A quiet camp on the edge of Dahab, combining desert proximity with easy beach access. Ideal for stargazers and anyone looking for calm away from the crowds.',
-  ARRAY[
-    'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1600&q=80',
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80',
-    'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80'
-  ],
-  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1600&q=80',
+  ARRAY[]::text[],
+  '',
   4.1, 'Asalah Outskirts, Dahab', 'أطراف عسلة، دهب', 'Assalah Outskirts, Dahab', 28.5300, 34.5300,
   ARRAY['واي فاي مجاني', 'مراقبة نجوم', 'مطعم بدوي', 'موقف سيارات'],
   ARRAY['Free Wi-Fi', 'Stargazing deck', 'Bedouin restaurant', 'Parking'],
@@ -210,13 +187,8 @@ INSERT INTO public.accommodations (
   'منتجع لاجون بريز', 'Lagoon Breeze Resort', 'hotel', 'lagoon',
   'منتجع مطل على اللاجونة بغرف واسعة ومسبحين ونادي رياضات مائية داخلي. الاختيار المفضل للعائلات والأزواج اللي عايزين رفاهية مع إطلالة مباشرة على المياه الهادئة.',
   'A lagoon-facing resort with spacious rooms, two pools, and an in-house watersports club. The go-to choice for families and couples who want comfort with a direct view of the calm water.',
-  ARRAY[
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80',
-    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80',
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80',
-    'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80'
-  ],
-  'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80',
+  ARRAY[]::text[],
+  '',
   4.5, 'The Lagoon, Dahab', 'اللاجونة، دهب', 'The Lagoon, Dahab', 28.5400, 34.5220,
   ARRAY['واي فاي مجاني', 'مسبحين', 'نادي رياضات مائية', 'مطعمين', 'سبا', 'تكييف'],
   ARRAY['Free Wi-Fi', 'Two pools', 'Watersports club', 'Two restaurants', 'Spa', 'A/C'],
@@ -268,10 +240,7 @@ INSERT INTO public.sinai_trips (
   'A snorkel trip to Dahab''s two most famous spots — the Blue Hole and the Three Pools. Turquoise water and rich coral reefs, suitable for beginners and experienced snorkelers alike.',
   'بحر وسنوركلينج', 'Sea & Snorkeling',
   (SELECT id FROM public.trip_categories WHERE slug = 'sea-snorkeling'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80',
-    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'نصف يوم', 'Half Day', 900, 650,
   NULL, NULL, '',
   ARRAY['مرشد سياحي', 'معدات سنوركلينج', 'مشروبات خفيفة'],
@@ -285,10 +254,7 @@ INSERT INTO public.sinai_trips (
   'A camel or boat trip to the Ras Abu Galum protected area, snorkeling in pristine water followed by a traditional Bedouin lunch on the beach.',
   'بحر وسنوركلينج', 'Sea & Snorkeling',
   (SELECT id FROM public.trip_categories WHERE slug = 'sea-snorkeling'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80',
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'يوم كامل', 'Full Day', 750, 550,
   NULL, NULL, '',
   ARRAY['ركوب جمال', 'مرشد بدوي', 'غداء بدوي', 'معدات سنوركلينج'],
@@ -302,10 +268,7 @@ INSERT INTO public.sinai_trips (
   'A walk through stunning multicolored rock formations in one of Sinai''s most beautiful canyons — an easy adventure suitable for all ages.',
   'صحراء وسفاري', 'Desert & Safari',
   (SELECT id FROM public.trip_categories WHERE slug = 'desert-safari'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1600&q=80',
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'يوم كامل', 'Full Day', 1100, 800,
   'percentage', 15, 'عرض لفترة محدودة',
   ARRAY['نقل بسيارات دفع رباعي', 'مرشد', 'غداء بدوي'],
@@ -319,10 +282,7 @@ INSERT INTO public.sinai_trips (
   'A night hike to the summit of the sacred Mount Sinai to watch the sunrise over the mountains — an unforgettable, spiritual experience.',
   'جبال وهايكنج', 'Mountains & Hiking',
   (SELECT id FROM public.trip_categories WHERE slug = 'mountains-hiking'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&q=80',
-    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'ليلي', 'Overnight', 1400, 1000,
   NULL, NULL, '',
   ARRAY['نقل ذهاب وعودة', 'مرشد بدوي', 'ماء وشاي على القمة'],
@@ -336,10 +296,7 @@ INSERT INTO public.sinai_trips (
   'Visit one of the oldest continuously operating Christian monasteries in the world, at the foot of Mount Sinai, and learn about its history and treasures.',
   'جبال وهايكنج', 'Mountains & Hiking',
   (SELECT id FROM public.trip_categories WHERE slug = 'mountains-hiking'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1517824806704-9040b037703b?w=1600&q=80',
-    'https://images.unsplash.com/photo-1452022582947-b521d8779ab6?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'يوم كامل', 'Full Day', 950, 700,
   NULL, NULL, '',
   ARRAY['نقل', 'مرشد', 'دخول الدير'],
@@ -353,10 +310,7 @@ INSERT INTO public.sinai_trips (
   'An adventurous walk through narrow white rock walls — a different route from the Colored Canyon, great for photography lovers.',
   'صحراء وسفاري', 'Desert & Safari',
   (SELECT id FROM public.trip_categories WHERE slug = 'desert-safari'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80',
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'يوم كامل', 'Full Day', 950, 700,
   NULL, NULL, '',
   ARRAY['نقل بسيارات دفع رباعي', 'مرشد', 'وجبة خفيفة'],
@@ -370,10 +324,7 @@ INSERT INTO public.sinai_trips (
   'An evening in the desert around a campfire — a traditional Bedouin dinner, herbal tea, and stargazing far from city lights.',
   'الثقافة والتجارب البدوية', 'Culture & Bedouin',
   (SELECT id FROM public.trip_categories WHERE slug = 'culture-bedouin'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80',
-    'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'مسائي', 'Evening', 700, 500,
   'amount', 100, 'خصم ليلة بدوية',
   ARRAY['نقل', 'عشاء بدوي كامل', 'شاي وقهوة بدوية'],
@@ -387,10 +338,7 @@ INSERT INTO public.sinai_trips (
   'Ride quad bikes through the desert around Dahab at sunset — an adrenaline-filled experience ending with a stunning sunset view.',
   'صحراء وسفاري', 'Desert & Safari',
   (SELECT id FROM public.trip_categories WHERE slug = 'desert-safari'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1600&q=80',
-    'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'مسائي', 'Evening', 850, 600,
   NULL, NULL, '',
   ARRAY['دراجة كويد فردية', 'خوذة أمان', 'مرشد'],
@@ -404,10 +352,7 @@ INSERT INTO public.sinai_trips (
   'An introductory kitesurfing lesson in the shallow, calm lagoon water — perfect for complete beginners.',
   'بحر وسنوركلينج', 'Sea & Snorkeling',
   (SELECT id FROM public.trip_categories WHERE slug = 'sea-snorkeling'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80',
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'ساعتين', '2 Hours', 1200, 900,
   NULL, NULL, '',
   ARRAY['معدات كايت سيرف', 'مدرب معتمد', 'تأمين'],
@@ -421,10 +366,7 @@ INSERT INTO public.sinai_trips (
   'A day in Nuweiba between the quiet beach and Wadi El Qura, away from Dahab''s crowds, including free time to swim and relax.',
   'رحلات اليوم الواحد', 'Day Escapes',
   (SELECT id FROM public.trip_categories WHERE slug = 'day-escapes'),
-  ARRAY[
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80',
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80'
-  ],
+  ARRAY[]::text[],
   'يوم كامل', 'Full Day', 1300, 950,
   NULL, NULL, '',
   ARRAY['نقل', 'مرشد', 'غداء', 'وقت حر للسباحة'],
@@ -447,12 +389,12 @@ INSERT INTO public.sinai_trip_category_tags (trip_id, category_id) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 5. Trip Packages — 2 stay_package ("Dahab Stay Packages") +
+-- 5. Trip Packages — Sinai trip packages (all experience_package, migration 034) +
 --    2 experience_package ("Sinai Experience Packages")
 -- ─────────────────────────────────────────────────────────────────────────
 INSERT INTO public.trip_package_categories (id, slug, name_ar, name_en, is_active, sort_order) VALUES
-  ('c1000000-0000-4000-8000-000000000001', 'dahab-stay-packages', 'باقات إقامة دهب', 'Dahab Stay Packages', true, 0),
-  ('c1000000-0000-4000-8000-000000000002', 'sinai-experience-packages', 'باقات تجارب سيناء', 'Sinai Experience Packages', true, 1);
+  ('c1000000-0000-4000-8000-000000000001', 'sea-and-desert', 'بحر وصحرا', 'Sea & Desert', true, 0),
+  ('c1000000-0000-4000-8000-000000000002', 'mountains-and-culture', 'جبال وثقافة', 'Mountains & Culture', true, 1);
 
 INSERT INTO public.trip_packages (
   id, slug, name_ar, name_en, short_description_ar, short_description_en,
@@ -461,25 +403,25 @@ INSERT INTO public.trip_packages (
 ) VALUES
 (
   'c2000000-0000-4000-8000-000000000001',
-  'dahab-weekend-escape',
-  'هروب نهاية الأسبوع في دهب', 'Dahab Weekend Escape',
+  'sea-day-blue-hole-lagoon',
+  'يوم البحر: البلوهول واللاجونة', 'Sea Day: Blue Hole & Lagoon',
   'سنوركلينج في البلوهول ودرس كايت سيرف في اللاجونة.', 'Blue Hole snorkeling plus a lagoon kitesurf lesson.',
-  'باقة مثالية لنهاية أسبوع في دهب تجمع بين أفضل تجربتين بحريتين: سنوركلينج البلوهول والثري بولز، ودرس تجريبي في الكايت سيرف داخل اللاجونة الهادئة.',
-  'The perfect Dahab weekend bundle combining two standout sea experiences: Blue Hole & Three Pools snorkeling, and an introductory kitesurf lesson in the calm lagoon.',
-  'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80',
+  'باكدج يوم بحر يجمع بين أفضل تجربتين بحريتين: سنوركلينج البلوهول والثري بولز، ودرس تجريبي في الكايت سيرف داخل اللاجونة الهادئة.',
+  'A sea-day bundle combining two standout sea experiences: Blue Hole & Three Pools snorkeling, and an introductory kitesurf lesson in the calm lagoon.',
+  '',
   'الأكثر طلبًا', 'Most Popular',
-  'c1000000-0000-4000-8000-000000000001', 'stay_package', true, true, 0
+  'c1000000-0000-4000-8000-000000000001', 'experience_package', true, true, 0
 ),
 (
   'c2000000-0000-4000-8000-000000000002',
-  'dahab-adventure-stay',
-  'إقامة المغامرة في دهب', 'Dahab Adventure Stay',
+  'colored-canyon-sunset-safari',
+  'الكانيون الملون وسفاري الغروب', 'Colored Canyon & Sunset Safari',
   'الكانيون الملون وسفاري الكويد وقت الغروب.', 'Colored Canyon and a sunset quad safari.',
   'باقة للمغامرين اللي عايزين يجمعوا بين جمال الكانيون الملون وإثارة سفاري الكويد الصحراوي وقت الغروب في رحلة واحدة.',
   'A bundle for adventurers who want the beauty of the Colored Canyon and the thrill of a desert quad safari at sunset, in one package.',
-  'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1600&q=80',
+  '',
   '', '',
-  'c1000000-0000-4000-8000-000000000001', 'stay_package', false, true, 1
+  'c1000000-0000-4000-8000-000000000001', 'experience_package', false, true, 1
 ),
 (
   'c2000000-0000-4000-8000-000000000003',
@@ -488,7 +430,7 @@ INSERT INTO public.trip_packages (
   'شروق جبل سيناء، دير سانت كاترين، وعشاء بدوي.', 'Mount Sinai sunrise, St. Catherine, and a Bedouin dinner.',
   'رحلة متكاملة لعشاق الجبال والثقافة: تسلق جبل سيناء لمشاهدة الشروق، زيارة دير سانت كاترين التاريخي، وليلة بدوية تحت النجوم.',
   'A complete journey for mountain and culture lovers: a Mount Sinai sunrise hike, a visit to the historic St. Catherine Monastery, and a Bedouin night under the stars.',
-  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&q=80',
+  '',
   'تجربة كاملة', 'Complete Experience',
   'c1000000-0000-4000-8000-000000000002', 'experience_package', true, true, 2
 ),
@@ -499,7 +441,7 @@ INSERT INTO public.trip_packages (
   'رأس أبو جلوم، الكانيون الأبيض، ورحلة نويبع.', 'Ras Abu Galum, White Canyon, and a Nuweiba day escape.',
   'باقة تجمع بين جمال الساحل البكر في رأس أبو جلوم، مغامرة الكانيون الأبيض، ويوم هروب هادئ في نويبع.',
   'A bundle combining the pristine coastline of Ras Abu Galum, the White Canyon adventure, and a relaxed day escape in Nuweiba.',
-  'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80',
+  '',
   '', '',
   'c1000000-0000-4000-8000-000000000002', 'experience_package', false, true, 3
 );
@@ -530,7 +472,7 @@ INSERT INTO public.community_posts (
   E'دهب مش زي أي مدينة ساحلية تانية على البحر الأحمر. هي مزيج نادر بين الهدوء والمغامرة، بين الجبل والبحر، بين الثقافة البدوية والحياة العصرية البسيطة.\n\nأولاً، الشعاب المرجانية قريبة جدًا من الشاطئ — تقدر تعوم من على الرصيف مباشرة وتشوف عالم تحت الماء مذهل من غير الحاجة لقارب. ثانيًا، الأسعار في دهب لسه معقولة جدًا مقارنة بالغردقة أو شرم الشيخ.\n\nثالثًا، القرب من الصحراء والجبال يعني إنك تقدر تجمع بين يوم غطس ويوم رحلة صحراوية في نفس الأسبوع. رابعًا، أجواء دهب هادية ومريحة، بعيدة عن ضجيج المنتجعات الكبيرة. وأخيرًا، ناسها — الطابع البدوي والضيافة المصرية الأصيلة بتخلي أي زيارة تجربة إنسانية مش مجرد سياحة.',
   E'Dahab isn''t like any other Red Sea coastal town. It''s a rare mix of calm and adventure, mountain and sea, Bedouin culture and simple modern life.\n\nFirst, the coral reefs sit right off the shore — you can swim in straight from the promenade and see an incredible underwater world without needing a boat. Second, prices in Dahab remain very reasonable compared to Hurghada or Sharm El Sheikh.\n\nThird, the proximity to the desert and mountains means you can combine a diving day with a desert trip in the same week. Fourth, Dahab''s atmosphere is calm and relaxed, far from the noise of big resorts. And finally, its people — the Bedouin character and genuine Egyptian hospitality turn any visit into a human experience, not just tourism.',
   'blog',
-  'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80',
+  '',
   0, true, true
 ),
 (
@@ -540,7 +482,7 @@ INSERT INTO public.community_posts (
   E'اللاجونة هي المنطقة المفضلة لمحبي الكايت سيرف والويند سيرف في دهب، لكنها كمان مكان رائع لأي حد عايز يقضي يوم هادي على الشاطئ.\n\nأفضل وقت تزور فيه اللاجونة الصبح بدري قبل ما الريح تقوى، أو قبل الغروب علشان تستمتع بالمنظر. فيه مدارس كايت سيرف كتير هناك بتقدم دروس للمبتدئين بأسعار مختلفة.\n\nلو مش عايز تجرب رياضة مائية، تقدر بس تقعد في أي من الكافيهات المطلة على المياه وتستمتع بالمنظر. المياه في اللاجونة ضحلة وهادية، فهي مكان آمن جدًا للعائلات والأطفال.',
   E'The Lagoon is Dahab''s favorite spot for kitesurfers and windsurfers, but it''s also a wonderful place for anyone who just wants a calm day by the water.\n\nThe best time to visit the Lagoon is early morning before the wind picks up, or just before sunset to enjoy the view. There are many kitesurf schools there offering beginner lessons at various price points.\n\nIf watersports aren''t your thing, you can simply sit at one of the waterfront cafés and enjoy the view. The Lagoon''s water is shallow and calm, making it a very safe spot for families and children.',
   'dahab-guide',
-  'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80',
+  '',
   1, false, true
 ),
 (
@@ -550,7 +492,7 @@ INSERT INTO public.community_posts (
   E'محمية رأس أبو جلوم من أقل الأماكن ازدحامًا على ساحل سيناء، ومن أكتر الأماكن اللي بتدي إحساس حقيقي بجمال المنطقة قبل السياحة.\n\nمفيش طريق سيارات للمكان — إما تروح بالجمل من دهب، أو بالقارب. الرحلة نفسها جزء من التجربة، خصوصًا لو كانت بالجمل عبر الساحل الصخري.\n\nلما توصل، هتلاقي مياه صافية جدًا ومرجان بحالة ممتازة، وقرى بدوية بسيطة بتقدملك غداء طازة. المكان مثالي لمين عايز يهرب من الزحمة ويشوف جمال سيناء الطبيعي.',
   E'Ras Abu Galum protected area is one of the least crowded spots on Sinai''s coast, and one of the places that best captures the region''s beauty before tourism arrived.\n\nThere''s no road for cars — you either go by camel from Dahab, or by boat. The journey itself is part of the experience, especially by camel along the rocky coastline.\n\nOnce you arrive, you''ll find remarkably clear water and coral in excellent condition, plus simple Bedouin villages offering fresh lunch. It''s the perfect place for anyone who wants to escape the crowds and see Sinai''s natural beauty.',
   'hidden-gems',
-  'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80',
+  '',
   2, false, true
 ),
 (
@@ -560,7 +502,7 @@ INSERT INTO public.community_posts (
   E'وصلنا الكامب بعد ما الشمس غابت، والنار كانت مشتعلة والشاي بيغلي فوقها. أحمد، صاحب الكامب، رحب بينا وكأننا أهله من زمان.\n\nالعشاء كان بسيط لكنه لذيذ جدًا — فراخ مشوية على الفحم، أرز، وخضار طازة، وكل حاجة اتعملت على النار من غير أي كهرباء. قعدنا نتكلم عن حياة البدو في سيناء، وإزاي الجيل الجديد بيحاول يحافظ على العادات القديمة مع التغيرات اللي حصلت في المنطقة.\n\nبعد العشاء، اتمدينا على الرمل ونظرنا للسما. مافيش تلوث ضوئي هناك، فالنجوم كانت واضحة بشكل مش طبيعي. لحظة بسيطة، لكنها من أكتر اللحظات اللي هتفضل في ذاكرتنا من الرحلة دي.',
   E'We arrived at the camp after the sun had set, the fire already lit and tea brewing over it. Ahmed, the camp owner, welcomed us like old family.\n\nDinner was simple but delicious — chicken grilled over charcoal, rice, and fresh vegetables, all cooked over the fire with no electricity in sight. We sat talking about Bedouin life in Sinai, and how the new generation is trying to preserve old traditions alongside the region''s changes.\n\nAfter dinner, we lay back on the sand and looked up. There''s no light pollution out there, so the stars were unnaturally clear. A simple moment, but one of the ones that will stay with us longest from that trip.',
   'stories',
-  'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&q=80',
+  '',
   3, false, true
 ),
 (
@@ -570,7 +512,7 @@ INSERT INTO public.community_posts (
   E'البلوهول واحد من أشهر مواقع الغطس في العالم، لكنه كمان محتاج احترام وخبرة كافية، خصوصًا لو نويت تنزل لعمق كبير.\n\nللمبتدئين، فيه مناطق ضحلة وآمنة تمامًا للسنوركلينج والغطس السطحي، وبتديك فرصة تشوف جمال المكان من غير أي مخاطرة. أما الغطاسين المحترفين، فلازم ينزلوا مع مرشد معتمد وميعرفوش المنطقة كويس.\n\nأفضل وقت للزيارة الصبح بدري قبل ما الرياح تقوى والمكان يزدحم. خد معاك مية كفاية وواقي شمس، والأهم — احترم حدود مستواك في الغطس مهما كان المكان مغري.',
   E'The Blue Hole is one of the most famous dive sites in the world, but it also demands respect and adequate experience, especially if you plan to go deep.\n\nFor beginners, there are shallow areas that are entirely safe for snorkeling and surface diving, giving you a chance to see the site''s beauty without any risk. Professional divers should go with a certified guide who knows the area well.\n\nThe best time to visit is early morning before the wind picks up and the site gets crowded. Bring enough water and sunscreen, and — most importantly — respect your diving limits no matter how tempting the site looks.',
   'blog',
-  'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80',
+  '',
   4, false, true
 ),
 (
@@ -580,7 +522,7 @@ INSERT INTO public.community_posts (
   E'دهب مدينة ممكن تزورها طول السنة تقريبًا، لكن كل موسم بيدي تجربة مختلفة شوية.\n\nمن أكتوبر لأبريل، الجو معتدل ومريح جدًا للأنشطة زي الغطس والرحلات الصحراوية والهايكنج — وده أكتر وقت مزدحم بالسياح. الصيف (يونيو-أغسطس) بيبقى حر جدًا في النهار لكنه أفضل وقت لعشاق الكايت سيرف بسبب قوة الرياح.\n\nلو عايز تتجنب الزحمة وتحصل على أسعار أفضل، جرب تزور في مايو أو سبتمبر — الجو لسه كويس والأسعار أقل من موسم الذروة.',
   E'Dahab is a town you can visit almost year-round, but each season offers a slightly different experience.\n\nFrom October to April, the weather is mild and very comfortable for activities like diving, desert trips and hiking — this is also the busiest tourist season. Summer (June-August) gets quite hot during the day but is the best time for kitesurfers thanks to strong winds.\n\nIf you want to avoid crowds and get better prices, try visiting in May or September — the weather is still good and prices are lower than peak season.',
   'dahab-guide',
-  'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80',
+  '',
   5, false, true
 );
 
@@ -614,12 +556,8 @@ INSERT INTO public.experiences (
     {"title_ar":"اليوم الثاني: عشاء الشاطئ", "title_en":"Day 2: Beach Dinner", "description_ar":"عشاء خاص مُعد على الرمال عند الغروب.", "description_en":"A private dinner set up on the sand at sunset."},
     {"title_ar":"اليوم الثالث: جولة القارب", "title_en":"Day 3: Boat Tour", "description_ar":"جولة غروب هادئة على متن قارب خاص.", "description_en":"A calm private sunset boat tour."}
   ]'::jsonb,
-  'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80',
-  ARRAY[
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80',
-    'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80',
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80'
-  ],
+  '',
+  ARRAY[]::text[],
   '٣ أيام / ٢ ليالٍ', '3 Days / 2 Nights', 14500, 'EGP',
   NULL, NULL, '',
   'مميز', 'Featured', true, true, 'published', 0
@@ -642,12 +580,8 @@ INSERT INTO public.experiences (
     {"title_ar":"اليوم الثاني والثالث: الغطسات الموجهة", "title_en":"Day 2-3: Guided Dives", "description_ar":"٦ غطسات في مواقع دهب الشهيرة.", "description_en":"6 dives across Dahab''s famous sites."},
     {"title_ar":"اليوم الرابع: شهادة وتوديع", "title_en":"Day 4: Certification & Farewell", "description_ar":"استلام الشهادة وجلسة توديع.", "description_en":"Certificate handover and farewell session."}
   ]'::jsonb,
-  'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80',
-  ARRAY[
-    'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1600&q=80',
-    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80',
-    'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80'
-  ],
+  '',
+  ARRAY[]::text[],
   '٤ أيام / ٤ ليالٍ', '4 Days / 4 Nights', 22000, 'EGP',
   10, 'percentage', 'حجز مبكر',
   '', '', false, true, 'published', 1
@@ -669,11 +603,8 @@ INSERT INTO public.experiences (
     {"title_ar":"الأيام ١-٥: دروس الكايت", "title_en":"Days 1-5: Kite Lessons", "description_ar":"دروس يومية تدريجية مع مدربين معتمدين.", "description_en":"Progressive daily lessons with certified instructors."},
     {"title_ar":"اليوم ٦: وقت حر", "title_en":"Day 6: Free Time", "description_ar":"استكشاف دهب أو التدريب الحر.", "description_en":"Explore Dahab or practice freely."}
   ]'::jsonb,
-  'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80',
-  ARRAY[
-    'https://images.unsplash.com/photo-1542359649-31e03cd4d909?w=1600&q=80',
-    'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=1600&q=80'
-  ],
+  '',
+  ARRAY[]::text[],
   '٦ أيام / ٦ ليالٍ', '6 Days / 6 Nights', 27500, 'EGP',
   NULL, NULL, '',
   '', '', false, true, 'published', 2
@@ -690,10 +621,10 @@ INSERT INTO public.experience_dates (id, experience_id, start_date, end_date, to
 -- 8. Commerce categories — no products yet (that's local-seed-inventory.sql)
 -- ─────────────────────────────────────────────────────────────────────────
 INSERT INTO public.commerce_categories (id, slug, applies_to, name_ar, name_en, description_ar, description_en, image_url, icon, is_active, is_featured, sort_order) VALUES
-  ('21000000-0000-4000-8000-000000000001', 'diving-gear', 'both', 'معدات الغوص', 'Diving Gear', 'أقنعة وزعانف ومعدات غطس للبيع والإيجار.', 'Masks, fins and diving gear for sale and rent.', 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80', 'anchor', true, true, 0),
-  ('21000000-0000-4000-8000-000000000002', 'camping-gear', 'sale', 'معدات التخييم', 'Camping Gear', 'أدوات ومستلزمات للرحلات الصحراوية والتخييم.', 'Gear and essentials for desert trips and camping.', 'https://images.unsplash.com/photo-1452022582947-b521d8779ab6?w=1600&q=80', 'tent', true, false, 1),
-  ('21000000-0000-4000-8000-000000000003', 'bikes-kayaks', 'rental', 'دراجات وكاياك', 'Bikes & Kayaks', 'دراجات جبلية وكاياك للإيجار.', 'Mountain bikes and kayaks for rent.', 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80', 'bike', true, true, 2),
-  ('21000000-0000-4000-8000-000000000004', 'beachwear', 'sale', 'ملابس الشاطئ', 'Beachwear', 'تيشيرتات وإكسسوارات بطابع سيناوي.', 'T-shirts and accessories with Sinai character.', 'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1600&q=80', 'shirt', true, false, 3);
+  ('21000000-0000-4000-8000-000000000001', 'diving-gear', 'both', 'معدات الغوص', 'Diving Gear', 'أقنعة وزعانف ومعدات غطس للبيع والإيجار.', 'Masks, fins and diving gear for sale and rent.', '', 'anchor', true, true, 0),
+  ('21000000-0000-4000-8000-000000000002', 'camping-gear', 'sale', 'معدات التخييم', 'Camping Gear', 'أدوات ومستلزمات للرحلات الصحراوية والتخييم.', 'Gear and essentials for desert trips and camping.', '', 'tent', true, false, 1),
+  ('21000000-0000-4000-8000-000000000003', 'bikes-kayaks', 'rental', 'دراجات وكاياك', 'Bikes & Kayaks', 'دراجات جبلية وكاياك للإيجار.', 'Mountain bikes and kayaks for rent.', '', 'bike', true, true, 2),
+  ('21000000-0000-4000-8000-000000000004', 'beachwear', 'sale', 'ملابس الشاطئ', 'Beachwear', 'تيشيرتات وإكسسوارات بطابع سيناوي.', 'T-shirts and accessories with Sinai character.', '', 'shirt', true, false, 3);
 
 -- Delivery zones (read by getDeliveryZones()) — small addition for commerce completeness.
 INSERT INTO public.delivery_zones (id, name_ar, name_en, fee_type, fixed_fee, is_active, sort_order) VALUES

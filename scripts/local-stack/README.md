@@ -89,8 +89,10 @@ Deterministic, fixed-UUID, bilingual (Arabic + English) fixtures:
 bottle — with size/color variants and stock) and 3 active rental products
 (scuba gear set, mountain bike, kayak — with 1/3/7-day rental tiers).
 
-All images are `https://images.unsplash.com/photo-<id>?w=1600&q=80` URLs,
-each verified with `curl -sI` to return HTTP 200 before use.
+The fixtures carry **no photos**. Stock imagery of other deserts and coasts
+must never stand in for Sinai, so every fixture record has an empty image and
+the site shows its deliberate neutral media treatment instead. Real WEEMAP
+photography comes from the dashboard in production.
 
 ## Schema surprises found while building this
 

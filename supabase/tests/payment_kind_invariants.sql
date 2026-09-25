@@ -44,7 +44,16 @@ BEGIN
     RAISE EXCEPTION 'experience package stored % instead of experience_package', got;
   END IF;
 
-  -- 1c. Dahab stay package, caller claims 'experience_package' → 'stay_package'.
+  -- 1b'. A trip_package can never be classified 'stay_package' (migration 034):
+  --      Sinai trip packages are always paid like trips.
+  BEGIN
+    UPDATE trip_packages SET payment_kind = 'stay_package' WHERE id = pkg_id;
+    RAISE EXCEPTION 'a trip_package accepted payment_kind stay_package';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  -- 1c. Transport + stay booking (internal stay_package classification),
+  --     caller claims 'experience_package' → 'stay_package'.
   --     ('experience_package' is not a valid bookings kind either.)
   INSERT INTO bookings (customer_name, customer_phone, booking_type, accommodation_id, num_people, total_price, payment_kind)
     VALUES ('A', '0100', 'package', acc_id, 2, 100, 'experience_package') RETURNING id, payment_kind INTO bk_stay, got;
