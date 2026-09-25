@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import { CartCheckoutClient } from '@/components/commerce/CartCheckoutClient'
 import { getDeliveryZones, getSiteSettings } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
@@ -14,11 +14,13 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'shopV2' })
-  return {
+  return pageMetadata({
+    locale,
+    path: '/cart',
     title: t('cartTitle'),
+    description: t('checkoutSubtitle'),
     robots: { index: false, follow: false },
-    alternates: buildAlternates('/cart', locale),
-  }
+  })
 }
 
 export default async function CartPage() {

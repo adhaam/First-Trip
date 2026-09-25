@@ -1,4 +1,10 @@
 {
+  "geoIntro": {
+    "explore": "WEEMAP currently runs {tripCount, plural, =0 {no Sinai trips} one {# Sinai trip} other {# Sinai trips}}, {packageCount, plural, =0 {no trip packages} one {# trip package} other {# trip packages}}, and {communityCount, plural, =0 {no community guides} one {# community guide} other {# community guides}} out of Dahab, South Sinai.",
+    "sinaiTrips": "WEEMAP runs {count, plural, =0 {no Sinai trips} one {# Sinai trip} other {# Sinai trips}} out of Dahab right now, spanning categories like {categories}.",
+    "sinaiTripsPackages": "WEEMAP currently offers {count, plural, =0 {no trip packages} one {# trip package} other {# trip packages}}, each bundling real Sinai trips — like {categories} — into one trip picked up from your stay in Dahab.",
+    "bookDahab": "WEEMAP currently lists {count, plural, =0 {no stays} one {# stay} other {# stays}} in Dahab, including {types}."
+  },
   "linkedTargets": {
     "heading": "Plan it with WEEMAP",
     "planCta": "Add to my trip",

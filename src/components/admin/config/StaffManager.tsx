@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useRouter } from '@/i18n/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,6 +48,7 @@ function errorMessage(t: ReturnType<typeof useTranslations>, code: string | unde
 }
 
 export function StaffManager() {
+  const router = useRouter()
   const t = useTranslations('opsConfig.staff')
   const tCommon = useTranslations('opsConfig.common')
   const { capabilities } = useStaff()
@@ -76,7 +78,7 @@ export function StaffManager() {
     setLoadError('')
     try {
       const res = await fetch('/api/admin/staff')
-      if (res.status === 401) { window.location.href = '/admin'; return }
+      if (res.status === 401) { router.replace('/admin'); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setRows(data.staff || [])
@@ -85,7 +87,7 @@ export function StaffManager() {
     } finally {
       setLoading(false)
     }
-  }, [tCommon])
+  }, [tCommon, router])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch

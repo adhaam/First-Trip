@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Link } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { CheckCircle2, Loader2, ArrowUpRight } from 'lucide-react'
 import { dashboardHref } from '@/components/admin/ops/nav'
 
@@ -44,6 +44,7 @@ const KNOWN_ISSUE_CODES = [
 ]
 
 export function CatalogueHealthPanel() {
+  const router = useRouter()
   const t = useTranslations('opsConfig.catalogueHealth')
   const tCommon = useTranslations('opsConfig.common')
   const locale = useLocale()
@@ -58,7 +59,7 @@ export function CatalogueHealthPanel() {
     setLoadError('')
     try {
       const res = await fetch('/api/admin/ops/catalogue-health')
-      if (res.status === 401) { window.location.href = '/admin'; return }
+      if (res.status === 401) { router.replace('/admin'); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setIssues(data.issues || [])
@@ -67,7 +68,7 @@ export function CatalogueHealthPanel() {
     } finally {
       setLoading(false)
     }
-  }, [tCommon])
+  }, [tCommon, router])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch

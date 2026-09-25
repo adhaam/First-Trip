@@ -34,9 +34,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
       {
         readStatus: async (rowId) => supabase.from(config.table).select('status').eq('id', rowId).maybeSingle(),
         update: async (rowId, patch, currentStatus) => {
-          let query: any = supabase.from(config.table).update(patch).eq('id', rowId)
-          if (currentStatus) query = query.eq('status', currentStatus)
-          return query.select().maybeSingle()
+          const query = supabase.from(config.table).update(patch).eq('id', rowId)
+          const scoped = currentStatus ? query.eq('status', currentStatus) : query
+          return scoped.select().maybeSingle()
         },
       },
       config.domain,

@@ -5,12 +5,41 @@ import { todayInCairo } from '@/lib/transport/today'
 import { paymentPlan, type PaymentKind } from '@/lib/payment-rules'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { resolveActorNames } from '@/lib/staff'
-import { allowedNextStatuses } from '@/lib/request-workflow'
+import { allowedNextStatuses, type RequestStatus } from '@/lib/request-workflow'
 import { isMissingOpsRelation, loadWorkItemByEntity, loadWorkItemsByTripRequest } from '@/lib/ops/server'
 import { OPS_ENTITY_TABLES, type OpsEntityType, type WorkItem } from '@/lib/ops/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Matches the status_history columns selected below. */
+type HistoryRow = {
+  field: string
+  from_value: string | null
+  to_value: string | null
+  actor: string | null
+  changed_at: string
+}
+/** Matches the payment_records columns selected below. */
+type PaymentRow = {
+  id: string
+  direction: string
+  amount: number | string
+  method: string
+  reference: string | null
+  note: string | null
+  received_at: string
+  recorded_by: string | null
+  amount_paid_after: number | string
+}
+/** Matches the audit_log columns selected below. */
+type AuditRow = {
+  id: string
+  occurred_at: string
+  actor: string | null
+  action: string
+  changes: unknown
+}
 
 /** The joined names each entity's record carries, matching how the admin dashboard already reads them. */
 const RECORD_SELECT: Record<OpsEntityType, string> = {
@@ -64,7 +93,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
         .eq('entity_id', id)
         .order('received_at', { ascending: true }),
       gate.staff.role === 'operations'
-        ? Promise.resolve({ data: [] as any[], error: null })
+        ? Promise.resolve({ data: [] as AuditRow[], error: null })
         : supabase.from('audit_log')
           .select('id, occurred_at, actor, action, changes')
           .eq('table_name', table)
@@ -86,13 +115,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
     if (customerResult.error) throw customerResult.error
     if (!recordResult.data) return NextResponse.json({ error: 'Item not found' }, { status: 404 })
 
+    const historyRows = (historyResult.data ?? []) as HistoryRow[]
+    const paymentRows = (paymentsResult.data ?? []) as PaymentRow[]
+    const auditRows = (auditResult.data ?? []) as AuditRow[]
+
     const actors = [
-      ...(historyResult.data ?? []).map((row: any) => row.actor),
-      ...(auditResult.data ?? []).map((row: any) => row.actor),
+      ...historyRows.map((row) => row.actor),
+      ...auditRows.map((row) => row.actor),
     ]
     const names = await resolveActorNames(supabase, actors)
 
-    const history = (historyResult.data ?? []).map((row: any) => ({
+    const history = historyRows.map((row) => ({
       field: row.field,
       from_value: row.from_value,
       to_value: row.to_value,
@@ -101,7 +134,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       changed_at: row.changed_at,
     }))
 
-    const payments = (paymentsResult.data ?? []).map((row: any) => ({
+    const payments = paymentRows.map((row) => ({
       id: row.id,
       direction: row.direction,
       amount: Number(row.amount),
@@ -114,7 +147,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       amount_paid_after: Number(row.amount_paid_after),
     }))
 
-    const audit = (auditResult.data ?? []).map((row: any) => ({
+    const audit = auditRows.map((row) => ({
       id: row.id,
       occurred_at: row.occurred_at,
       action: row.action,
@@ -136,12 +169,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       ? null
       : buildPaymentExpectation(item, rules.policies)
 
-    const allowed_statuses = (allowedNextStatuses as any)(OPS_ENTITY_TABLES[entityType].domain, item.status)
-      .filter((status: string) => status !== item.status)
+    const domain = OPS_ENTITY_TABLES[entityType].domain
+    const allowed_statuses = allowedNextStatuses(domain, item.status as RequestStatus<typeof domain>)
+      .filter((status) => status !== item.status)
+
+    const record = recordResult.data as unknown as Record<string, unknown>
 
     return NextResponse.json({
       item,
-      record: recordResult.data,
+      record,
       history,
       payments,
       audit,
@@ -151,7 +187,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       allowed_statuses,
       payment_allowed: paymentAllowedFor(entityType, item.status),
       can_convert: entityType === 'trip_request'
-        && !(recordResult.data as any).converted_booking_id
+        && !record.converted_booking_id
         && ['awaiting_payment', 'confirmed'].includes(item.status),
     })
   } catch (error) {

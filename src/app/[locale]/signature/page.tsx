@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { SafeImage as Image } from '@/components/SafeImage'
-import { Link } from '@/i18n/navigation'
+import { Link, getPathname } from '@/i18n/navigation'
 import { getExperienceCategories, getExperiences } from '@/lib/experiences'
 import { SignatureClient } from '@/components/SignatureClient'
 import { Eyebrow, Section, SectionHeading } from '@/components/brand'
 import { Reveal } from '@/components/motion/Reveal'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
-import { pageMetadata } from '@/lib/seo'
+import { pageMetadata, SITE_URL } from '@/lib/seo'
+import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
 
 export const revalidate = 60
 
@@ -24,9 +26,26 @@ export default async function SignaturePage({ params }: { params: Promise<{ loca
   const t = await getTranslations({ locale, namespace: 'signatureV2' })
   const [categories, experiences] = await Promise.all([getExperienceCategories(), getExperiences()])
   const heroImage = experiences.find((e) => e.hero_image)?.hero_image || experiences[0]?.gallery?.[0]
+  const ar = locale === 'ar'
+  const pageUrl = `${SITE_URL}${getPathname({ href: '/signature', locale })}`
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: t('title'), url: pageUrl },
+  ])
+  const collectionSchema = getCollectionPageSchema({
+    name: t('title'),
+    description: t('subtitle'),
+    url: pageUrl,
+    items: experiences.map((exp) => ({
+      name: ar ? exp.title_ar || exp.title_en : exp.title_en || exp.title_ar,
+      url: `${SITE_URL}${getPathname({ href: `/signature/${exp.slug}`, locale })}`,
+    })),
+  })
 
   return (
     <div className="bg-sand-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       {/*
         Hand-rolled instead of the shared <PageHero> primitive: PageHero's
         default scrim (from-sea-900/92 via-sea-900/40) leaves the mid/upper

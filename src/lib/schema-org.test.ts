@@ -2,12 +2,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   getBreadcrumbSchema,
+  getCollectionPageSchema,
   getCommerceProductSchema,
   getLodgingBusinessSchema,
   getTouristTripSchema,
   getWebSiteSchema,
 } from './schema-org'
 import { jsonLdScript } from './safe-html'
+import { SITE_URL } from './seo'
+import { getPathname } from '@/i18n/navigation'
 
 test('getWebSiteSchema omits potentialAction when no search URL is given', () => {
   const schema = getWebSiteSchema({ locale: 'ar' })
@@ -106,4 +109,75 @@ test('jsonLdScript escapes line-separator characters that some JS parsers treat 
   const script = jsonLdScript(schema)
   assert.equal(script.includes(' '), false)
   assert.equal(JSON.parse(script).itemListElement[0].name, 'Line Sep')
+})
+
+test('getCollectionPageSchema produces a valid, empty ItemList for an empty catalogue', () => {
+  const schema = getCollectionPageSchema({
+    name: 'Sinai Trip Packages',
+    description: 'Bundled Sinai trips.',
+    url: 'https://weemapsinai.com/sinai-trips/packages',
+    items: [],
+  })
+  assert.equal(schema['@type'], 'CollectionPage')
+  assert.equal(schema.mainEntity['@type'], 'ItemList')
+  assert.deepEqual(schema.mainEntity.itemListElement, [])
+})
+
+test('getCollectionPageSchema numbers items from 1 in the given order, matching what is rendered', () => {
+  const schema = getCollectionPageSchema({
+    name: 'Sinai Trips',
+    url: 'https://weemapsinai.com/sinai-trips',
+    items: [
+      { name: 'Blue Hole Snorkel', url: 'https://weemapsinai.com/sinai-trips/blue-hole-snorkel-a1' },
+      { name: 'Colored Canyon Hike', url: 'https://weemapsinai.com/sinai-trips/colored-canyon-hike-b2' },
+    ],
+  })
+  assert.equal(schema.mainEntity.itemListElement.length, 2)
+  assert.equal(schema.mainEntity.itemListElement[0].position, 1)
+  assert.equal(schema.mainEntity.itemListElement[0].name, 'Blue Hole Snorkel')
+  assert.equal(schema.mainEntity.itemListElement[1].position, 2)
+  assert.equal(schema.mainEntity.itemListElement[1].name, 'Colored Canyon Hike')
+})
+
+test('getCollectionPageSchema omits description when none is given', () => {
+  const schema = getCollectionPageSchema({
+    name: 'Rent in Dahab',
+    url: 'https://weemapsinai.com/rent',
+    items: [],
+  })
+  assert.equal('description' in schema, false)
+})
+
+test('jsonLdScript escapes HTML/JSON-breaking characters in an item name (<, &, quotes) without corrupting the value', () => {
+  const schema = getCollectionPageSchema({
+    name: 'Merch',
+    url: 'https://weemapsinai.com/merch',
+    items: [
+      { name: 'Dive Mask <script>alert("x")</script> & "Fins"', url: 'https://weemapsinai.com/merch/dive-mask' },
+    ],
+  })
+  const script = jsonLdScript(schema)
+  assert.equal(script.includes('</script>'), false)
+  assert.equal(script.includes('<script>'), false)
+  assert.equal(script.includes('&'), false)
+  const parsed = JSON.parse(script)
+  assert.equal(
+    parsed.mainEntity.itemListElement[0].name,
+    'Dive Mask <script>alert("x")</script> & "Fins"',
+  )
+})
+
+test('getCollectionPageSchema: Arabic (default locale) item URLs have no /ar prefix, English URLs are under /en', () => {
+  const arUrl = `${SITE_URL}${getPathname({ href: '/sinai-trips/blue-hole-snorkel-a1', locale: 'ar' })}`
+  const enUrl = `${SITE_URL}${getPathname({ href: '/sinai-trips/blue-hole-snorkel-a1', locale: 'en' })}`
+  assert.equal(arUrl, `${SITE_URL}/sinai-trips/blue-hole-snorkel-a1`)
+  assert.equal(enUrl, `${SITE_URL}/en/sinai-trips/blue-hole-snorkel-a1`)
+
+  const schema = getCollectionPageSchema({
+    name: 'Sinai Trips',
+    url: `${SITE_URL}/sinai-trips`,
+    items: [{ name: 'Blue Hole Snorkel', url: arUrl }],
+  })
+  assert.equal(schema.mainEntity.itemListElement[0].url, arUrl)
+  assert.notEqual(arUrl, enUrl)
 })

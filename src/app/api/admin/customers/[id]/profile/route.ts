@@ -6,6 +6,21 @@ import { isMissingOpsRelation, loadActivity, loadWorkItemsByCustomer } from '@/l
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+/** Matches the payment_records columns selected below. */
+type PaymentRecordRow = {
+  id: string
+  entity_type: string
+  entity_id: string
+  direction: string
+  amount: number | string
+  method: string
+  reference: string | null
+  note: string | null
+  received_at: string
+  recorded_by: string | null
+  amount_paid_after: number | string
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireStaff(req)
   if (!gate.ok) return gate.response
@@ -47,7 +62,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     ])
     if (paymentsResult.error) throw paymentsResult.error
 
-    const payments = (paymentsResult.data ?? []).map((row: any) => ({
+    const paymentRows = (paymentsResult.data ?? []) as PaymentRecordRow[]
+    const payments = paymentRows.map((row) => ({
       ...row,
       amount: Number(row.amount),
       amount_paid_after: Number(row.amount_paid_after),

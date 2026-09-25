@@ -4,7 +4,11 @@ import { getSinaiTrips } from '@/lib/data'
 import { categoryFromSearchParam } from '@/lib/explore'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
 import { Eyebrow, PageHero, Section } from '@/components/brand'
-import { pageMetadata } from '@/lib/seo'
+import { pageMetadata, SITE_URL } from '@/lib/seo'
+import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
+import { getPathname } from '@/i18n/navigation'
+import { getTripRouteSlug } from '@/lib/trips'
 
 export const revalidate = 60
 
@@ -26,18 +30,62 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * canonical id in `src/lib/explore.ts` so a deep link from Home or Community
  * works whether it carries a category id or its friendlier slug.
  */
-export default async function SinaiTripsPage({ searchParams }: Props) {
-  const [trips, search, t] = await Promise.all([getSinaiTrips(), searchParams, getTranslations('explore')])
+export default async function SinaiTripsPage({ params, searchParams }: Props) {
+  const { locale } = await params
+  const [trips, search, t, tDiscovery] = await Promise.all([
+    getSinaiTrips(),
+    searchParams,
+    getTranslations('explore'),
+    getTranslations({ locale, namespace: 'discovery' }),
+  ])
   const category = categoryFromSearchParam(search.category, trips)
+  const ar = locale === 'ar'
+  const pageUrl = `${SITE_URL}${getPathname({ href: '/sinai-trips', locale })}`
+
+  // Real category names actually carried by the loaded trips (never
+  // invented) — first three, in catalogue order, deduplicated by id.
+  const seenCategoryIds = new Set<string>()
+  const categoryNames: string[] = []
+  for (const trip of trips) {
+    if (!trip.category || seenCategoryIds.has(trip.category.id)) continue
+    seenCategoryIds.add(trip.category.id)
+    categoryNames.push(ar ? trip.category.name_ar || trip.category.name_en : trip.category.name_en || trip.category.name_ar)
+    if (categoryNames.length >= 3) break
+  }
+  const geoIntro = tDiscovery('geoIntro.sinaiTrips', {
+    count: trips.length,
+    categories: categoryNames.join(ar ? '، ' : ', '),
+  })
+
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: t('tripsTitle'), url: pageUrl },
+  ])
+  const collectionSchema = getCollectionPageSchema({
+    name: t('tripsTitle'),
+    description: t('tripsLede'),
+    url: pageUrl,
+    items: trips.map((trip) => ({
+      name: ar ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar,
+      url: `${SITE_URL}${getPathname({ href: `/sinai-trips/${getTripRouteSlug(trip)}`, locale })}`,
+    })),
+  })
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       <PageHero
         image={trips[0]?.images?.[0]}
         eyebrow={<Eyebrow tone="light">{t('tripsEyebrow')}</Eyebrow>}
         title={t('tripsTitle')}
         lede={t('tripsLede')}
       />
+      {categoryNames.length > 0 && (
+        <Section tone="paper" size="sm">
+          <p className="max-w-2xl text-base leading-relaxed text-ink-muted">{geoIntro}</p>
+        </Section>
+      )}
       <Section tone="paper">
         <SinaiTripsClient trips={trips} initialCategory={category} />
       </Section>

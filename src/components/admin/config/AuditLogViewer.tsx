@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useRouter } from '@/i18n/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -67,6 +68,7 @@ function ChangesCell({ changes }: { changes: Record<string, unknown> | null }) {
 }
 
 export function AuditLogViewer() {
+  const router = useRouter()
   const t = useTranslations('opsConfig.audit')
   const tCommon = useTranslations('opsConfig.common')
 
@@ -90,7 +92,7 @@ export function AuditLogViewer() {
       if (filters.actor.trim()) params.set('actor', filters.actor.trim())
       if (filters.rowId.trim()) params.set('row_id', filters.rowId.trim())
       const res = await fetch(`/api/admin/audit?${params.toString()}`)
-      if (res.status === 401) { window.location.href = '/admin'; return }
+      if (res.status === 401) { router.replace('/admin'); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setEntries(data.entries || [])
@@ -101,7 +103,7 @@ export function AuditLogViewer() {
     } finally {
       setLoading(false)
     }
-  }, [tCommon])
+  }, [tCommon, router])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch

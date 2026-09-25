@@ -28,16 +28,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function ExplorePage({ params }: Props) {
   const { locale } = await params
-  const [trips, packages, posts, t] = await Promise.all([
+  const [trips, packages, posts, t, tDiscovery] = await Promise.all([
     getSinaiTrips(),
     getTripPackages(),
     getCommunityPosts(),
     getTranslations({ locale, namespace: 'explore' }),
+    getTranslations({ locale, namespace: 'discovery' }),
   ])
 
   const tripCount = t('tripCount', { count: trips.length, n: formatCount(trips.length, locale) })
   const packageCount = t('packageCount', { count: packages.length, n: formatCount(packages.length, locale) })
   const communityCount = t('communityCount', { count: posts.length, n: formatCount(posts.length, locale) })
+  // GEO intro line — real counts only, from the same loaders the grid below
+  // uses, never invented geography/schedules/inclusions.
+  const geoIntro = tDiscovery('geoIntro.explore', {
+    tripCount: trips.length,
+    packageCount: packages.length,
+    communityCount: posts.length,
+  })
 
   const surfaces: {
     href: '/sinai-trips' | '/sinai-trips/packages' | '/community'
@@ -91,6 +99,10 @@ export default async function ExplorePage({ params }: Props) {
           </Link>
         }
       />
+
+      <Section tone="paper" size="sm">
+        <p className="max-w-2xl text-base leading-relaxed text-ink-muted">{geoIntro}</p>
+      </Section>
 
       <Section tone="sand">
         <SectionHeading eyebrow={t('hubEyebrow')} title={t('hubGridTitle')} />

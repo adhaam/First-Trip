@@ -6,9 +6,11 @@ import { EmptyState } from '@/components/EmptyState'
 import { Eyebrow, EditorialCard, PageHero, PaymentTerms, PriceTag, Section, SectionHeading } from '@/components/brand'
 import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { PickupNote } from '@/components/explore/PickupNote'
-import { Link } from '@/i18n/navigation'
+import { Link, getPathname } from '@/i18n/navigation'
 import { getPaymentRules } from '@/lib/payment-rules-load'
-import { pageMetadata } from '@/lib/seo'
+import { pageMetadata, SITE_URL } from '@/lib/seo'
+import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
 import { formatCount } from '@/lib/format'
 
 export const revalidate = 60
@@ -35,15 +37,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function PackagesPage({ params }: Props) {
   const { locale } = await params
-  const [packages, rules, t] = await Promise.all([
+  const [packages, rules, t, tDiscovery] = await Promise.all([
     getTripPackages(),
     getPaymentRules(),
     getTranslations({ locale, namespace: 'explore' }),
+    getTranslations({ locale, namespace: 'discovery' }),
+  ])
+  const ar = locale === 'ar'
+  const pageUrl = `${SITE_URL}${getPathname({ href: '/sinai-trips/packages', locale })}`
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: t('packagesTitle'), url: pageUrl },
   ])
 
   if (!packages.length) {
+    const collectionSchema = getCollectionPageSchema({
+      name: t('packagesTitle'),
+      description: t('packagesLede'),
+      url: pageUrl,
+      items: [],
+    })
     return (
       <Section tone="paper">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
         <EmptyState
           variant="curating"
           title={t('noPackages')}
@@ -67,14 +84,50 @@ export default async function PackagesPage({ params }: Props) {
   const heroName = locale === 'ar' ? hero.name_ar : hero.name_en
   const heroTripCount = hero.trips?.length ?? 0
 
+  // Real names of trips actually bundled into these packages (never
+  // invented) — first three, deduplicated by id.
+  const seenTripIds = new Set<string>()
+  const categoryNames: string[] = []
+  for (const pkg of ordered) {
+    for (const trip of pkg.trips || []) {
+      if (seenTripIds.has(trip.id)) continue
+      seenTripIds.add(trip.id)
+      categoryNames.push(ar ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar)
+      if (categoryNames.length >= 3) break
+    }
+    if (categoryNames.length >= 3) break
+  }
+  const geoIntro = tDiscovery('geoIntro.sinaiTripsPackages', {
+    count: packages.length,
+    categories: categoryNames.join(ar ? '، ' : ', '),
+  })
+
+  const collectionSchema = getCollectionPageSchema({
+    name: t('packagesTitle'),
+    description: t('packagesLede'),
+    url: pageUrl,
+    items: ordered.map((pkg) => ({
+      name: ar ? pkg.name_ar || pkg.name_en : pkg.name_en || pkg.name_ar,
+      url: `${SITE_URL}${getPathname({ href: `/sinai-trips/packages/${pkg.slug}`, locale })}`,
+    })),
+  })
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       <PageHero
         image={hero.image || hero.trips?.[0]?.image || undefined}
         eyebrow={<Eyebrow tone="light">{t('packagesEyebrow')}</Eyebrow>}
         title={t('packagesTitle')}
         lede={t('packagesLede')}
       />
+
+      {categoryNames.length > 0 && (
+        <Section tone="paper" size="sm">
+          <p className="max-w-2xl text-base leading-relaxed text-ink-muted">{geoIntro}</p>
+        </Section>
+      )}
 
       <Section tone="sand" size="sm">
         <div className="grid gap-6 md:grid-cols-[1.1fr_1fr]">

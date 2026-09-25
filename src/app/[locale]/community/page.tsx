@@ -5,7 +5,10 @@ import { getCommunityPosts } from '@/lib/data'
 import { CommunityClient } from '@/components/CommunityClient'
 import { Eyebrow, Section } from '@/components/brand'
 import { Reveal } from '@/components/motion/Reveal'
-import { pageMetadata } from '@/lib/seo'
+import { pageMetadata, SITE_URL } from '@/lib/seo'
+import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
+import { getPathname } from '@/i18n/navigation'
 
 export const revalidate = 60
 
@@ -22,9 +25,31 @@ export default async function CommunityPage({ params }: { params: Promise<{ loca
   const t = await getTranslations({ locale, namespace: 'communityV2' })
   const posts = await getCommunityPosts()
   const heroImage = posts.find((p) => p.image_url)?.image_url || undefined
+  const ar = locale === 'ar'
+  const pageUrl = `${SITE_URL}${getPathname({ href: '/community', locale })}`
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: t('title'), url: pageUrl },
+  ])
+  // Only posts with their own slug have a real, distinct URL
+  // (src/components/CommunityClient.tsx opens un-slugged posts in a preview
+  // modal instead of navigating) — those are the only ones listed here.
+  const collectionSchema = getCollectionPageSchema({
+    name: t('title'),
+    description: t('subtitle'),
+    url: pageUrl,
+    items: posts
+      .filter((post): post is typeof post & { slug: string } => Boolean(post.slug))
+      .map((post) => ({
+        name: ar ? post.title_ar || post.title_en : post.title_en || post.title_ar,
+        url: `${SITE_URL}${getPathname({ href: `/community/${post.slug}`, locale })}`,
+      })),
+  })
 
   return (
     <div className="bg-sand-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       {/*
         Hand-rolled instead of the shared <PageHero> primitive — same
         contrast fix as /signature: PageHero's default scrim is too weak

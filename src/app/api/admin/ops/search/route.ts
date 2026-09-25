@@ -4,6 +4,13 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 import { normalizeOpsQuery } from '@/lib/ops/search'
 import { isMissingOpsRelation, loadWorkItems } from '@/lib/ops/server'
 
+/** Matches the id/name_en/name_ar/is_active columns selected for stays, trips, packages, products. */
+type CatalogueNameRow = { id: string, name_en: string, name_ar: string, is_active: boolean }
+/** Matches the id/title_en/title_ar/status columns selected for signature experiences. */
+type SignatureCatalogueRow = { id: string, title_en: string, title_ar: string, status: string }
+/** Matches the customers columns selected below. */
+type CustomerSearchRow = { id: string, name: string, phone: string, email: string | null, updated_at: string }
+
 export async function GET(req: NextRequest) {
   const gate = await requireStaff(req)
   if (!gate.ok) return gate.response
@@ -37,25 +44,32 @@ export async function GET(req: NextRequest) {
     const errors = [customers.error, stays.error, trips.error, packages.error, signatures.error, products.error]
       .filter(Boolean)
     if (errors.length) throw errors[0]
+    const stayRows = (stays.data ?? []) as CatalogueNameRow[]
+    const tripRows = (trips.data ?? []) as CatalogueNameRow[]
+    const packageRows = (packages.data ?? []) as CatalogueNameRow[]
+    const signatureRows = (signatures.data ?? []) as SignatureCatalogueRow[]
+    const productRows = (products.data ?? []) as CatalogueNameRow[]
+    const customerRows = (customers.data ?? []) as CustomerSearchRow[]
+
     const catalogue = [
-      ...(stays.data ?? []).map((row: any) => (
+      ...stayRows.map((row) => (
         { type: 'stay', ...row, title_en: row.name_en, title_ar: row.name_ar, subtitle: '' }
       )),
-      ...(trips.data ?? []).map((row: any) => (
+      ...tripRows.map((row) => (
         { type: 'trip', ...row, title_en: row.name_en, title_ar: row.name_ar, subtitle: '' }
       )),
-      ...(packages.data ?? []).map((row: any) => (
+      ...packageRows.map((row) => (
         { type: 'package', ...row, title_en: row.name_en, title_ar: row.name_ar, subtitle: '' }
       )),
-      ...(signatures.data ?? []).map((row: any) => (
+      ...signatureRows.map((row) => (
         { type: 'signature', ...row, is_active: row.status === 'published', subtitle: '' }
       )),
-      ...(products.data ?? []).map((row: any) => (
+      ...productRows.map((row) => (
         { type: 'product', ...row, title_en: row.name_en, title_ar: row.name_ar, subtitle: '' }
       )),
     ]
     return NextResponse.json({
-      customers: (customers.data ?? []).map((row: any) => ({ ...row, last_activity_at: row.updated_at })),
+      customers: customerRows.map((row) => ({ ...row, last_activity_at: row.updated_at })),
       items: items.slice(0, 20),
       catalogue,
     })

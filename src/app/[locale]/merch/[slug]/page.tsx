@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
+import { getPathname } from '@/i18n/navigation'
 import { ProductDetailClient } from '@/components/commerce/ProductDetailClient'
 import { getCommerceProductBySlug, getDeliveryZones } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
@@ -25,7 +26,12 @@ export async function generateMetadata({ params }: {
     title,
     description,
     alternates: buildAlternates(`/merch/${slug}`, locale),
-    openGraph: { title, description, images: product.images?.[0] ? [{ url: product.images[0] }] : undefined },
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}${getPathname({ href: `/merch/${slug}`, locale })}`,
+      images: product.images?.[0] ? [{ url: product.images[0] }] : undefined,
+    },
   }
 }
 

@@ -6,7 +6,10 @@ import { PageHero } from '@/components/brand/PageHero'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { Section, SectionHeading } from '@/components/brand/Section'
 import { ButtonLink } from '@/components/ButtonLink'
-import { pageMetadata } from '@/lib/seo'
+import { pageMetadata, SITE_URL } from '@/lib/seo'
+import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
+import { getPathname } from '@/i18n/navigation'
 import { WHATSAPP_NUMBER } from '@/lib/constants'
 
 export const revalidate = 60
@@ -28,18 +31,54 @@ export async function generateMetadata({ params }: {
   })
 }
 
+// Real accommodation type labels (Accommodation['type']) in each locale — the
+// same three types the booking form/admin use, never invented copy.
+const TYPE_LABELS: Record<'hotel' | 'chalet' | 'camp', { ar: string; en: string }> = {
+  hotel: { ar: 'فنادق', en: 'hotels' },
+  chalet: { ar: 'شاليهات', en: 'chalets' },
+  camp: { ar: 'كمبات', en: 'camps' },
+}
+
 export default async function BookDahabPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'stays' })
+  const [t, tDiscovery] = await Promise.all([
+    getTranslations({ locale, namespace: 'stays' }),
+    getTranslations({ locale, namespace: 'discovery' }),
+  ])
   const [accommodations, settings] = await Promise.all([
     getAccommodations(),
     getSiteSettings(),
   ])
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
   const heroImage = accommodations[0]?.image_url || accommodations[0]?.images?.[0] || '/media/heroposter.webp'
+  const ar = locale === 'ar'
+  const pageUrl = `${SITE_URL}${getPathname({ href: '/book-dahab', locale })}`
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: t('hero.title'), url: pageUrl },
+  ])
+  const collectionSchema = getCollectionPageSchema({
+    name: t('hero.title'),
+    description: t('hero.lede'),
+    url: pageUrl,
+    items: accommodations.map((acc) => ({
+      name: ar ? acc.name_ar || acc.name_en : acc.name_en || acc.name_ar,
+      url: `${SITE_URL}${getPathname({ href: `/book-dahab/${acc.id}`, locale })}`,
+    })),
+  })
+
+  // Real accommodation types actually present in the loaded catalogue.
+  const presentTypes = [...new Set(accommodations.map((acc) => acc.type))]
+  const typeNames = presentTypes.map((type) => TYPE_LABELS[type][ar ? 'ar' : 'en'])
+  const geoIntro = tDiscovery('geoIntro.bookDahab', {
+    count: accommodations.length,
+    types: typeNames.join(ar ? '، ' : ', '),
+  })
 
   return (
     <div className="bg-sand-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       <PageHero
         image={heroImage}
         eyebrow={<Eyebrow coords={DAHAB_COORDS}>{t('hero.eyebrow')}</Eyebrow>}
@@ -58,7 +97,10 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
       />
 
       <Section tone="paper" size="sm">
-        <p className="max-w-2xl text-base leading-relaxed text-ink-muted">{t('intro.body')}</p>
+        {typeNames.length > 0 && (
+          <p className="max-w-2xl text-base leading-relaxed text-ink-muted">{geoIntro}</p>
+        )}
+        <p className="mt-2 max-w-2xl text-base leading-relaxed text-ink-muted">{t('intro.body')}</p>
       </Section>
 
       <Section tone="sand">

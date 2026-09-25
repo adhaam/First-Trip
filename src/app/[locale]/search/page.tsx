@@ -4,7 +4,7 @@ import { Link } from '@/i18n/navigation'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { MapPin, Mountain, Route, ShoppingBag, Package, BookOpen } from 'lucide-react'
 import { Section, SectionHeading } from '@/components/brand'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 import { runSearch } from '@/lib/discovery/search'
 import type { SearchResult, SearchResultType } from '@/lib/discovery/search'
 import { formatAmount, formatCount } from '@/lib/format'
@@ -22,15 +22,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const { q } = await searchParams
   const t = await getTranslations({ locale, namespace: 'discovery' })
   const title = q ? t('search.resultsTitleFor', { query: q }) : t('search.resultsTitle')
-  return {
+  return pageMetadata({
+    locale,
+    path: '/search',
     title,
     description: t('search.metaDescription'),
-    alternates: buildAlternates('/search', locale),
     // A query-driven results page is never a stable canonical destination
     // for crawlers to index — the same content it can find already has its
     // own indexed detail/listing pages. `follow` so links out are still crawled.
     robots: { index: false, follow: true },
-  }
+  })
 }
 
 const TYPE_ICON: Record<SearchResultType, typeof MapPin> = {

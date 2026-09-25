@@ -4,7 +4,7 @@ import { Link } from '@/i18n/navigation'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { ArrowBack } from '@/components/brand/DirectionalIcon'
 import { SignatureBuildWizard } from '@/components/signature/SignatureBuildWizard'
-import { buildAlternates } from '@/lib/seo'
+import { pageMetadata } from '@/lib/seo'
 
 export const revalidate = 60
 
@@ -13,14 +13,15 @@ export async function generateMetadata({ params }: {
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'signatureV2' })
-  return {
+  return pageMetadata({
+    locale,
+    path: '/signature/build',
     title: t('buildTitle'),
     description: t('buildBody'),
-    alternates: buildAlternates('/signature/build', locale),
     // A custom-request wizard, not a distinct catalog entity to rank —
     // matches /cart and the prefilled /plan variant.
     robots: { index: false, follow: true },
-  }
+  })
 }
 
 export default async function BuildYourSignaturePage({ params }: { params: Promise<{ locale: string }> }) {

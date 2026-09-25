@@ -149,6 +149,37 @@ export function getBreadcrumbSchema(items: { name: string; url: string }[]) {
 }
 
 /**
+ * CollectionPage for a list page that renders real entities (trips,
+ * accommodations, products, …). `items` must be EXACTLY the entities the
+ * page actually rendered, in the order shown — never a superset/subset and
+ * never prices or facts not already visible on the page. Empty `items`
+ * still produces a valid, empty ItemList (the empty-catalogue state).
+ */
+export function getCollectionPageSchema(input: {
+  name: string
+  description?: string | null
+  url: string
+  items: { name: string; url: string }[]
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: input.name,
+    ...(input.description ? { description: input.description } : {}),
+    url: input.url,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: input.items.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.name,
+        url: item.url,
+      })),
+    },
+  }
+}
+
+/**
  * Stay detail page. `address`/`priceRange` are only included when derived
  * from real DB fields the page actually shows — never invented when the
  * accommodation row doesn't carry them.

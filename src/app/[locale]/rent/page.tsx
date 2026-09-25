@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { pageMetadata } from '@/lib/seo'
+import { pageMetadata, SITE_URL } from '@/lib/seo'
+import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
+import { jsonLdScript } from '@/lib/safe-html'
+import { getPathname } from '@/i18n/navigation'
 import { RentClient } from '@/components/RentClient'
 import { getCommerceCategories, getCommerceProducts, getSiteSettings } from '@/lib/data'
 
@@ -16,11 +19,35 @@ export async function generateMetadata({ params }: {
   return pageMetadata({ locale, path: '/rent', title: t('rentTitle'), description: t('rentLede') })
 }
 
-export default async function RentPage() {
-  const [products, categories, settings] = await Promise.all([
+export default async function RentPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  const [products, categories, settings, t] = await Promise.all([
     getCommerceProducts('rental'),
     getCommerceCategories(),
     getSiteSettings(),
+    getTranslations({ locale, namespace: 'shopV2' }),
   ])
-  return <RentClient products={products} categories={categories} whatsapp={settings?.whatsapp_number} />
+  const ar = locale === 'ar'
+  const pageUrl = `${SITE_URL}${getPathname({ href: '/rent', locale })}`
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
+    { name: t('rentTitle'), url: pageUrl },
+  ])
+  const collectionSchema = getCollectionPageSchema({
+    name: t('rentTitle'),
+    description: t('rentLede'),
+    url: pageUrl,
+    items: products.map((product) => ({
+      name: ar ? product.name_ar || product.name_en : product.name_en || product.name_ar,
+      url: `${SITE_URL}${getPathname({ href: `/rent/${product.slug}`, locale })}`,
+    })),
+  })
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
+      <RentClient products={products} categories={categories} whatsapp={settings?.whatsapp_number} />
+    </>
+  )
 }
