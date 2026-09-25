@@ -7,6 +7,7 @@
 // them (BookDahabClient, the stay detail sections) can never disagree about
 // what "starting price" or "active meal plan" means.
 
+import { roomPerPersonPrice, type RoomType } from './pricing'
 import type { Accommodation, AccommodationType, MealPlan } from './types'
 
 // ─── List filtering & sorting ───
@@ -17,18 +18,28 @@ export type StaySortKey = 'default' | 'price-asc' | 'price-desc'
 const STAY_TYPES: AccommodationType[] = ['hotel', 'chalet', 'camp']
 
 /**
- * The lowest configured room rate — what every card, the sort, and the
- * detail page's "from" price all read. Falls back to the legacy per-person
- * `price_per_night` only when no room rate is configured at all. Zero/blank
- * rates are excluded — an unset room type is not a real "from EGP 0" price.
+ * The one "from" price every stay surface shows (cards, detail, sort, Home,
+ * Trip Builder): the lowest per-person nightly base rate across the configured
+ * room types — a double at 1,600 per room is 800 per person. Falls back to the
+ * legacy per-person `price_per_night` only when no room rate is configured.
+ * Display only; the server quote is what a request is priced at.
  */
-export function startingRoomRate(
+export function fromPricePerPersonPerNight(
   acc: Pick<Accommodation, 'price_single_room' | 'price_double_room' | 'price_triple_room' | 'price_per_night'>,
 ): number {
-  const rates = [acc.price_single_room, acc.price_double_room, acc.price_triple_room]
-    .map(Number)
-    .filter((price) => price > 0)
+  const types: RoomType[] = ['single', 'double', 'triple']
+  const rates = types
+    .filter((type) => Number(roomPriceField(acc, type)) > 0)
+    .map((type) => roomPerPersonPrice(acc, type))
+    .filter((price) => Number.isFinite(price) && price > 0)
   return rates.length ? Math.min(...rates) : Number(acc.price_per_night) || 0
+}
+
+function roomPriceField(
+  acc: Pick<Accommodation, 'price_single_room' | 'price_double_room' | 'price_triple_room'>,
+  type: RoomType,
+) {
+  return type === 'single' ? acc.price_single_room : type === 'double' ? acc.price_double_room : acc.price_triple_room
 }
 
 export function filterAccommodationsByType(list: Accommodation[], filter: StayFilterKey): Accommodation[] {
@@ -45,7 +56,7 @@ export function accommodationTypeCounts(list: Accommodation[]): Record<Accommoda
 }
 
 /**
- * Sorts by the same value the card displays (startingRoomRate), so "Price ↑"
+ * Sorts by the same value the card displays (fromPricePerPersonPerNight), so "Price ↑"
  * is never contradicted by what the customer reads on the card. Missing/zero
  * prices always sort last, in both directions — they are not "the cheapest".
  * `default` preserves the server's own order (sort_order ASC).
@@ -53,8 +64,8 @@ export function accommodationTypeCounts(list: Accommodation[]): Record<Accommoda
 export function sortAccommodations(list: Accommodation[], sortBy: StaySortKey): Accommodation[] {
   if (sortBy === 'default') return [...list]
   return [...list].sort((a, b) => {
-    const pa = startingRoomRate(a)
-    const pb = startingRoomRate(b)
+    const pa = fromPricePerPersonPerNight(a)
+    const pb = fromPricePerPersonPerNight(b)
     if (pa === 0 && pb === 0) return 0
     if (pa === 0) return 1
     if (pb === 0) return -1

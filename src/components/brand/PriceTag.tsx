@@ -8,6 +8,7 @@ const UNIT_KEY = {
   night: 'unitNight',
   room: 'unitRoom',
   trip: 'unitTrip',
+  personNight: 'unitPersonNight',
 } as const
 
 /**

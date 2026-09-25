@@ -8,7 +8,7 @@ import {
   resolveTierKey,
   roomRateRows,
   sortAccommodations,
-  startingRoomRate,
+  fromPricePerPersonPerNight,
 } from './stays'
 import type { Accommodation, MealPlan } from './types'
 
@@ -39,26 +39,27 @@ function acc(overrides: Partial<Accommodation>): Accommodation {
   }
 }
 
-// ─── startingRoomRate ───
+// ─── fromPricePerPersonPerNight ───
 
-test('startingRoomRate picks the lowest configured room rate', () => {
+test('fromPricePerPersonPerNight is the lowest per-person nightly rate across room types', () => {
+  // single 1200/person, double 1800/2 = 900, triple 2400/3 = 800
   assert.equal(
-    startingRoomRate({ price_single_room: 1200, price_double_room: 1800, price_triple_room: 2400, price_per_night: 0 }),
-    1200,
+    fromPricePerPersonPerNight({ price_single_room: 1200, price_double_room: 1800, price_triple_room: 2400, price_per_night: 0 }),
+    800,
   )
 })
 
-test('startingRoomRate falls back to price_per_night when no room rate is configured', () => {
+test('fromPricePerPersonPerNight falls back to price_per_night when no room rate is configured', () => {
   assert.equal(
-    startingRoomRate({ price_single_room: 0, price_double_room: 0, price_triple_room: 0, price_per_night: 900 }),
+    fromPricePerPersonPerNight({ price_single_room: 0, price_double_room: 0, price_triple_room: 0, price_per_night: 900 }),
     900,
   )
 })
 
-test('startingRoomRate ignores zero/blank rates mixed with real ones', () => {
+test('fromPricePerPersonPerNight ignores zero/blank rates mixed with real ones', () => {
   assert.equal(
-    startingRoomRate({ price_single_room: 0, price_double_room: 1500, price_triple_room: 0, price_per_night: 0 }),
-    1500,
+    fromPricePerPersonPerNight({ price_single_room: 0, price_double_room: 1500, price_triple_room: 0, price_per_night: 0 }),
+    750,
   )
 })
 
@@ -92,7 +93,7 @@ test('sortAccommodations "default" preserves incoming (server) order', () => {
   assert.deepEqual(sortAccommodations(list, 'default').map((a) => a.id), ['b', 'a'])
 })
 
-test('sortAccommodations "price-asc" orders by startingRoomRate, cheapest first', () => {
+test('sortAccommodations "price-asc" orders by fromPricePerPersonPerNight, cheapest first', () => {
   const list = [
     acc({ id: 'mid', price_per_night: 500 }),
     acc({ id: 'cheap', price_per_night: 100 }),

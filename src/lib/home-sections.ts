@@ -1,3 +1,4 @@
+import { fromPricePerPersonPerNight } from './stays'
 // ─── Home V2 — pure section-selection logic ───
 //
 // "Which items render, in which section" is a product decision, not a
@@ -11,7 +12,7 @@
 // are the single source of truth and are simply called.
 
 import type { Accommodation, Experience, ExperienceDate, SinaiTrip, TripPackage } from './types'
-import { effectiveTripPrice, roomPerPersonPrice, type RoomType } from './pricing'
+import { effectiveTripPrice } from './pricing'
 import { paymentKindFor, type PaymentKind } from './payment-rules'
 import { deriveTripCategoryChips, tripMatchesCategoryChip, type TripCategoryChip } from './trip-categories'
 
@@ -192,12 +193,14 @@ export function stayFromPricePerPersonPerNight(acc: {
   price_double_room: number
   price_single_room: number
   price_triple_room?: number
+  price_per_night?: number
 }): number {
-  const types: RoomType[] = ['double', 'single', 'triple']
-  const prices = types
-    .map((type) => roomPerPersonPrice(acc, type))
-    .filter((price) => Number.isFinite(price) && price > 0)
-  return prices.length ? Math.min(...prices) : 0
+  return fromPricePerPersonPerNight({
+    price_single_room: acc.price_single_room,
+    price_double_room: acc.price_double_room,
+    price_triple_room: acc.price_triple_room ?? 0,
+    price_per_night: acc.price_per_night ?? 0,
+  })
 }
 
 // ─── Signature moment — never reuse the hero photo ───

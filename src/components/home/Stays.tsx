@@ -50,7 +50,7 @@ export function Stays({ lineup }: { lineup: StaysLineup }) {
               <PriceTag
                 amount={stayFromPricePerPersonPerNight(lineup.hero)}
                 from
-                unit="night"
+                unit="personNight"
                 size="sm"
                 tone="light"
               />
@@ -66,7 +66,7 @@ export function Stays({ lineup }: { lineup: StaysLineup }) {
                 image={acc.image_url || acc.images?.[0] || '/media/heroposter.webp'}
                 title={ar ? acc.name_ar : acc.name_en}
                 size="sm"
-                meta={<PriceTag amount={stayFromPricePerPersonPerNight(acc)} from unit="night" size="sm" tone="light" />}
+                meta={<PriceTag amount={stayFromPricePerPersonPerNight(acc)} from unit="personNight" size="sm" tone="light" />}
               />
             </Reveal>
           ))}

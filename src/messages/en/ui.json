@@ -17,5 +17,6 @@
   "paymentNothingOnline": "Nothing is charged online.",
   "paymentUnknown": "Payment terms confirmed with your quote.",
   "whatsappFloatLabel": "WhatsApp",
-  "whatsappFloatAriaLabel": "Chat with WEEMAP on WhatsApp"
+  "whatsappFloatAriaLabel": "Chat with WEEMAP on WhatsApp",
+  "unitPersonNight": "per person / night"
 }

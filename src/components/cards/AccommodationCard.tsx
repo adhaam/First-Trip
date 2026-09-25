@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Star, MapPin, Hotel, Home, Tent, type LucideIcon } from 'lucide-react'
 import { ACCOMMODATION_TAGS } from '@/lib/constants'
-import { startingRoomRate } from '@/lib/stays'
+import { fromPricePerPersonPerNight } from '@/lib/stays'
 import { GlowCard } from '@/components/motion/Reveal'
 import { PriceTag } from '@/components/brand/PriceTag'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
@@ -43,7 +43,7 @@ export function AccommodationCard({
   const tag = ACCOMMODATION_TAGS[acc.type]
   const TypeIcon = TYPE_ICON[acc.type]
   const cover = acc.image_url || acc.images?.[0] || '/media/heroposter.webp'
-  const fromRate = startingRoomRate(acc)
+  const fromRate = fromPricePerPersonPerNight(acc)
   const name = ar ? acc.name_ar : acc.name_en
   const location = ar ? acc.location_ar || acc.location : acc.location_en || acc.location
 
@@ -94,7 +94,7 @@ export function AccommodationCard({
           </p>
 
           <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-            <PriceTag amount={fromRate} from unit="night" size="md" />
+            <PriceTag amount={fromRate} from unit="personNight" size="md" />
 
             <span
               aria-hidden

@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { fromPricePerPersonPerNight } from '@/lib/stays'
+
 import { getAccommodations, getSinaiTrips, getSiteSettings, getTransferPricing } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
@@ -22,9 +24,6 @@ async function roomUpgradesByAccommodation(ids: string[]): Promise<Map<string, R
   return grouped
 }
 
-function fromNightlyRate(item: { price_double_room: number; price_single_room: number; price_triple_room: number }) {
-  return Math.min(...[item.price_double_room / 2, item.price_single_room, item.price_triple_room / 3].filter((price) => Number.isFinite(price) && price > 0), 0) || 0
-}
 
 export async function getTripBuilderCatalog(): Promise<BuilderCatalog> {
   const [accommodations, trips, packages, transferPricing, schedule, paymentRules, settings] = await Promise.all([getAccommodations(), getSinaiTrips(), getTripPackages(), getTransferPricing(), getTransportSchedule(), getPaymentRules(), getSiteSettings()])
@@ -40,7 +39,7 @@ export async function getTripBuilderCatalog(): Promise<BuilderCatalog> {
     schedule, today: todayInCairo(), paymentPolicies: paymentRules.policies, whatsappNumber: settings?.whatsapp_number,
     governorates,
     transferServices: services,
-    accommodations: accommodations.map((item) => ({ id: item.id, name_ar: item.name_ar, name_en: item.name_en, type: item.type, ...(item.tier ? { tier: item.tier } : {}), image: item.image_url ?? item.images[0] ?? '', images: item.images, rating: item.rating, location_ar: item.location_ar ?? item.location, location_en: item.location_en ?? item.location, ...(item.latitude != null ? { latitude: item.latitude } : {}), ...(item.longitude != null ? { longitude: item.longitude } : {}), from_price_per_person_per_night: fromNightlyRate(item), meal_plans: item.meal_plans.filter((meal) => meal.is_active), room_upgrades: (upgrades.get(item.id) ?? []).map(({ id, name_ar, name_en, extra_price_per_night }) => ({ id, name_ar, name_en, extra_price_per_night })) })),
+    accommodations: accommodations.map((item) => ({ id: item.id, name_ar: item.name_ar, name_en: item.name_en, type: item.type, ...(item.tier ? { tier: item.tier } : {}), image: item.image_url ?? item.images[0] ?? '', images: item.images, rating: item.rating, location_ar: item.location_ar ?? item.location, location_en: item.location_en ?? item.location, ...(item.latitude != null ? { latitude: item.latitude } : {}), ...(item.longitude != null ? { longitude: item.longitude } : {}), from_price_per_person_per_night: fromPricePerPersonPerNight(item), meal_plans: item.meal_plans.filter((meal) => meal.is_active), room_upgrades: (upgrades.get(item.id) ?? []).map(({ id, name_ar, name_en, extra_price_per_night }) => ({ id, name_ar, name_en, extra_price_per_night })) })),
     trips: trips.map((item) => ({ id: item.id, name_ar: item.name_ar, name_en: item.name_en, image: item.images[0] ?? '', duration_ar: item.duration, duration_en: item.duration_en, price: item.price, category_slugs: item.category_tags?.map((category) => category.slug) ?? [], category_labels: item.category_tags?.map((category) => ({ ar: category.name_ar, en: category.name_en })) ?? [] })),
     packages: packages.map((item) => ({ id: item.id, slug: item.slug, name_ar: item.name_ar, name_en: item.name_en, image: item.image, payment_kind: item.payment_kind ?? 'experience_package', ...(item.totals ? { public_total: item.totals.publicTotal, package_total: item.totals.packageTotal } : {}), trip_count: item.trips?.length ?? 0 })),
   }

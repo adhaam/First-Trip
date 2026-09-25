@@ -119,7 +119,7 @@ function AccommodationCard({
       <div className="p-3.5">
         <p className="font-display text-sm font-bold leading-snug text-sea-900">{locale === 'ar' ? stay.name_ar : stay.name_en}</p>
         <p className="mt-0.5 text-xs capitalize text-ink-subtle">{stay.type}{stay.tier ? ` · ${stay.tier}` : ''}</p>
-        <PriceTag amount={stay.from_price_per_person_per_night} from unit="night" size="sm" className="mt-2.5" />
+        <PriceTag amount={stay.from_price_per_person_per_night} from unit="personNight" size="sm" className="mt-2.5" />
       </div>
     </button>
   )

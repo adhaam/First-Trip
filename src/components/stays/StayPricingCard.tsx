@@ -10,7 +10,7 @@ import type { PaymentPolicy } from '@/lib/payment-rules'
 /**
  * The desktop sidebar action card / mobile sticky-bar summary source for a
  * stay's detail page. Purely presentational — every number it shows was
- * computed by the server (startingRoomRate in lib/stays.ts) or is the raw
+ * computed by the server (fromPricePerPersonPerNight in lib/stays.ts) or is the raw
  * payment policy from the DB (PaymentTerms), never derived here.
  */
 export function StayPricingCard({
@@ -32,7 +32,7 @@ export function StayPricingCard({
     <div className="space-y-5">
       <div className="overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card">
         <div className="p-6">
-          <PriceTag amount={fromPrice} from unit="night" size="lg" />
+          <PriceTag amount={fromPrice} from unit="personNight" size="lg" />
           <p className="mt-1 text-xs text-ink-subtle">{t('detail.fromContext')}</p>
           <p className="mt-4 text-xs leading-relaxed text-ink-subtle">
             {hasSeasonalRates ? t('detail.seasonalNote') : t('detail.noSeasonalNote')}

@@ -9,7 +9,7 @@ import {
   getSiteSettings,
 } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
-import { startingRoomRate } from '@/lib/stays'
+import { fromPricePerPersonPerNight } from '@/lib/stays'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
 import { getProductSchema } from '@/lib/schema-org'
@@ -52,7 +52,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     name: locale === 'ar' ? accommodation.name_ar || accommodation.name_en : accommodation.name_en || accommodation.name_ar,
     description: locale === 'ar' ? accommodation.description_ar : accommodation.description_en,
     image: accommodation.image_url || accommodation.images?.[0] || `${SITE_URL}/brand/logo.png`,
-    price: startingRoomRate(accommodation),
+    price: fromPricePerPersonPerNight(accommodation),
   })
 
   return (

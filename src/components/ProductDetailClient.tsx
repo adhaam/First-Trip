@@ -21,7 +21,7 @@ import { MapPreview } from '@/components/MapPreview'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
 import { formatCount } from '@/lib/format'
-import { resolveTierKey, startingRoomRate } from '@/lib/stays'
+import { resolveTierKey, fromPricePerPersonPerNight } from '@/lib/stays'
 import type { Accommodation, CommunityPost, SinaiTrip } from '@/lib/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 
@@ -69,7 +69,7 @@ export function ProductDetailClient({
   // teaser that leads nowhere.
   const linkableGuides = communityPosts.filter((post) => post.slug)
 
-  const fromPrice = startingRoomRate(accommodation)
+  const fromPrice = fromPricePerPersonPerNight(accommodation)
   const hasSeasonalRates = Boolean(accommodation.seasonal_rates?.length)
   const coords =
     accommodation.latitude != null && accommodation.longitude != null
@@ -208,7 +208,7 @@ export function ProductDetailClient({
         what keeps its cards from ending up under the fixed bar on mobile.
       */}
       <StickyActionBar
-        summary={<PriceTag amount={fromPrice} from unit="night" size="sm" />}
+        summary={<PriceTag amount={fromPrice} from unit="personNight" size="sm" />}
         action={
           <div className="flex items-center gap-2.5">
             <a
