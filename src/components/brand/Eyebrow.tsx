@@ -27,7 +27,7 @@ export function Eyebrow({
     <span
       className={cn(
         'eyebrow',
-        tone === 'light' ? 'text-sun-300' : 'text-sun-700',
+        tone === 'light' ? 'text-sun-200' : 'text-sun-700',
         className,
       )}
     >
@@ -37,7 +37,7 @@ export function Eyebrow({
         <span
           className={cn(
             'ltr-only font-mono text-[0.65rem] normal-case tracking-normal',
-            tone === 'light' ? 'text-sun-200/70' : 'text-sun-700/70',
+            tone === 'light' ? 'text-sun-200/85' : 'text-sun-700',
           )}
         >
           · {coords}

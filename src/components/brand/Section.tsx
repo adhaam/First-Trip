@@ -79,7 +79,7 @@ export function SectionHeading({
           <span
             className={cn(
               'eyebrow mb-3',
-              tone === 'light' ? 'text-sun-300' : 'text-sun-700',
+              tone === 'light' ? 'text-sun-200' : 'text-sun-700',
             )}
           >
             <span aria-hidden className="h-px w-6 bg-current" />

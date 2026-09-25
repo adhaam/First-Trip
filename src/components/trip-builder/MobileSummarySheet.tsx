@@ -52,7 +52,7 @@ export function MobileSummarySheet({
               href={whatsappHref}
               target="_blank"
               rel="noreferrer"
-              className="flex min-h-11 items-center justify-center gap-2 rounded-full border-[1.5px] border-[#128c4a] text-sm font-semibold text-[#128c4a]"
+              className="flex min-h-11 items-center justify-center gap-2 rounded-full border-[1.5px] border-[#0f7a3f] text-sm font-semibold text-[#0f7a3f]"
             >
               <MessageCircle className="h-4 w-4" aria-hidden />
               {t('whatsapp')}

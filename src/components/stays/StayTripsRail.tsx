@@ -20,7 +20,7 @@ export function StayTripsRail({ trips }: { trips: SinaiTrip[] }) {
   if (trips.length === 0) return null
 
   return (
-    <Rail label={t('detail.tripsHint')}>
+    <Rail label={t('detail.tripsHint')} tone="light">
       {trips.slice(0, RAIL_LIMIT).map((trip) => (
         <div key={trip.id} className="rail-snap-item w-[82vw] shrink-0 sm:w-80">
           <TripCard trip={trip} />

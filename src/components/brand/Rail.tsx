@@ -19,10 +19,13 @@ export function Rail({
   label,
   children,
   className,
+  tone = 'ink',
 }: {
   label: string
   children: ReactNode
   className?: string
+  /** 'light' on night/sea sections, so the label and arrows stay legible. */
+  tone?: 'ink' | 'light'
 }) {
   const ui = useTranslations('ui')
   const trackRef = useRef<HTMLDivElement>(null)
@@ -59,14 +62,17 @@ export function Rail({
   return (
     <div className={cn('relative', className)}>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-ink-subtle">{label}</h3>
+        <h3 className={cn('text-sm font-semibold', tone === 'light' ? 'text-sand-100' : 'text-ink-subtle')}>{label}</h3>
         <div className="hidden items-center gap-1.5 sm:flex">
           <button
             type="button"
             onClick={() => scrollByAmount(-1)}
             disabled={!canPrev}
             aria-label={ui('railPrev')}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-sand-300 text-ink-muted transition-colors hover:bg-sand-100 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500"
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500',
+              tone === 'light' ? 'border-sand-100/40 text-sand-50 hover:bg-white/10' : 'border-sand-300 text-ink-muted hover:bg-sand-100 hover:text-ink',
+            )}
           >
             <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
           </button>
@@ -75,7 +81,10 @@ export function Rail({
             onClick={() => scrollByAmount(1)}
             disabled={!canNext}
             aria-label={ui('railNext')}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-sand-300 text-ink-muted transition-colors hover:bg-sand-100 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500"
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-500',
+              tone === 'light' ? 'border-sand-100/40 text-sand-50 hover:bg-white/10' : 'border-sand-300 text-ink-muted hover:bg-sand-100 hover:text-ink',
+            )}
           >
             <ChevronRight className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
           </button>

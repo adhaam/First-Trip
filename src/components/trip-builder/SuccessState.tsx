@@ -67,7 +67,7 @@ export function SuccessState({
                 href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-12 items-center justify-center gap-2 rounded-full border-[1.5px] border-[#128c4a] text-sm font-semibold text-[#128c4a] transition-colors hover:bg-[#128c4a]/5"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-full border-[1.5px] border-[#0f7a3f] text-sm font-semibold text-[#0f7a3f] transition-colors hover:bg-[#0f7a3f]/5"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden />
                 {t('whatsapp')}

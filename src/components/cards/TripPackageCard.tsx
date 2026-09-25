@@ -58,8 +58,8 @@ export function TripPackageCard({ pkg, className }: { pkg: TripPackage; classNam
 
             <span
               className={cn(
-                'absolute start-3 top-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[0.7rem] font-semibold text-on-accent shadow',
-                lane === 'stay' ? 'bg-sea-700' : 'bg-sun-500',
+                'absolute start-3 top-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[0.7rem] font-semibold shadow',
+                lane === 'stay' ? 'bg-sea-700 text-sand-50' : 'bg-sun-500 text-on-accent',
               )}
             >
               <LaneIcon className="h-3 w-3" aria-hidden />
