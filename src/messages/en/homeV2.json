@@ -30,7 +30,7 @@
       "title": "Packages",
       "body": "More of Sinai bundled together, at a better price than booking separately."
     },
-    "signature": {
+    "editions": {
       "title": "Something special",
       "body": "A complete journey, built around one idea — honeymoons, diving, deep adventure."
     },
@@ -102,13 +102,6 @@
     "title": "Sinai trip packages",
     "subtitle": "Real Sinai trips and experiences, bundled together at a better total than booking each apart — paid after confirmation.",
     "cta": "All packages"
-  },
-  "signature": {
-    "eyebrow": "WEEMAP Signature",
-    "title": "Tell us the experience. We'll build the journey.",
-    "body": "Some trips shouldn't be built piece by piece. Signature Experiences bring the place, the activity and the right partners together around one idea.",
-    "cta": "Explore Signature Experiences",
-    "imageAlt": "A Signature experience in Sinai"
   },
   "community": {
     "eyebrow": "Community",

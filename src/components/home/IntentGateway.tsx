@@ -13,7 +13,7 @@ const INTENTS = [
   { key: 'stay', href: '/book-dahab', icon: Building2, emphasis: false },
   { key: 'trips', href: '/sinai-trips', icon: Mountain, emphasis: false },
   { key: 'packages', href: '/sinai-trips/packages', icon: Package, emphasis: false },
-  { key: 'signature', href: '/signature', icon: Sparkles, emphasis: false },
+  { key: 'editions', href: '/editions', icon: Sparkles, emphasis: false },
   { key: 'rent', href: '/rent', icon: Bike, emphasis: false },
 ] as const
 

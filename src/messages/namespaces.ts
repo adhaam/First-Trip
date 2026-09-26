@@ -16,6 +16,7 @@ export const V2_NAMESPACES = [
   'stays',
   'explore',
   'signatureV2',
+  'editions',
   'shopV2',
   'communityV2',
   'ops',

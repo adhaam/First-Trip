@@ -12,6 +12,7 @@ import { fromPricePerPersonPerNight } from './stays'
 // are the single source of truth and are simply called.
 
 import type { Accommodation, Experience, ExperienceDate, SinaiTrip, TripPackage } from './types'
+import { BOOKABLE_STATUSES, type PublicEdition } from './editions'
 import { effectiveTripPrice } from './pricing'
 import { deriveTripCategoryChips, tripMatchesCategoryChip, type TripCategoryChip } from './trip-categories'
 
@@ -204,6 +205,25 @@ export function stayFromPricePerPersonPerNight(acc: {
  */
 export function selectSignatureImage(experiences: readonly Experience[], fallback: string | null): string | null {
   return experiences.find((experience) => Boolean(experience.hero_image))?.hero_image || fallback
+}
+
+// ─── Editions teaser — a single dated pick, never the six-card grid ───
+
+/**
+ * The homepage Editions teaser shows the "This month in Sinai" dated
+ * heading only when a real, publicly visible, currently bookable Edition
+ * has a start_date — never a generic "coming soon" row promoted to that
+ * heading. Picks the soonest upcoming start_date so the teaser reflects
+ * what a visitor could actually join next. Returns null when nothing
+ * qualifies, in which case the teaser renders its fallback heading/body
+ * instead (see editions.homeTeaser in editions.json) — it never falls back
+ * to showing all six concepts.
+ */
+export function selectFeaturedEdition(editions: readonly PublicEdition[]): PublicEdition | null {
+  const dated = editions
+    .filter((e) => (BOOKABLE_STATUSES as readonly string[]).includes(e.status) && Boolean(e.start_date))
+    .sort((a, b) => (a.start_date as string).localeCompare(b.start_date as string))
+  return dated[0] || null
 }
 
 // ─── Shop & Rent — only when there's real inventory ───

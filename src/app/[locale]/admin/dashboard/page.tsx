@@ -7,7 +7,7 @@ import { Link, useRouter } from '@/i18n/navigation'
 import {
   LayoutDashboard, ListChecks, Inbox, Users, Search as SearchIcon,
   ClipboardList, MapPinned, Sparkles, UserPlus,
-  Building2, Bus, Mountain, Package, Tags, Handshake, ShoppingBag, HeartPulse,
+  Building2, Bus, Mountain, Package, Tags, Handshake, ShoppingBag, HeartPulse, CalendarDays,
   MessageSquareText, Quote, Settings, Mail,
   ShieldCheck, History, UserCog,
   LogOut, Menu, X, type LucideIcon,
@@ -36,6 +36,7 @@ import { NewsletterManager } from '@/components/admin/NewsletterManager'
 import { TripBookingsManager } from '@/components/admin/TripBookingsManager'
 import { CommerceManager } from '@/components/admin/CommerceManager'
 import { TripPackageManager } from '@/components/admin/TripPackageManager'
+import { EditionManager } from '@/components/admin/EditionManager'
 import { PackageCategoryManager } from '@/components/admin/PackageCategoryManager'
 import { ExperienceManager } from '@/components/admin/ExperienceManager'
 import { ExperienceCategoryManager } from '@/components/admin/ExperienceCategoryManager'
@@ -78,6 +79,7 @@ function buildNavGroups(capabilities: StaffCapabilities, role: string | undefine
         { icon: Bus, key: 'transfers', labelKey: 'transfersPricing', href: dashboardHref('transfers') },
         { icon: Mountain, key: 'sinai-trips', labelKey: 'sinaiTrips', href: dashboardHref('sinai-trips') },
         { icon: Package, key: 'trip-packages', labelKey: 'tripPackages', href: dashboardHref('trip-packages') },
+        { icon: CalendarDays, key: 'editions', labelKey: 'editions', href: dashboardHref('editions') },
         { icon: Tags, key: 'package-categories', labelKey: 'packageCategories', href: dashboardHref('package-categories') },
         { icon: Sparkles, key: 'signature-experiences', labelKey: 'signatureExperiences', href: dashboardHref('signature-experiences') },
         { icon: Tags, key: 'signature-categories', labelKey: 'signatureCategories', href: dashboardHref('signature-categories') },
@@ -336,6 +338,7 @@ function SectionBody({ section, searchParams }: { section: string; searchParams:
     case 'transfers': return <TransferPricingManager />
     case 'sinai-trips': return <SinaiTripManager />
     case 'trip-packages': return <TripPackageManager />
+    case 'editions': return <EditionManager />
     case 'package-categories': return <PackageCategoryManager />
     case 'signature-experiences': return <ExperienceManager />
     case 'signature-categories': return <ExperienceCategoryManager />

@@ -1,0 +1,81 @@
+{
+  "landing": {
+    "eyebrow": "WEEMAP EDITIONS",
+    "heroTitle": "Trips worth traveling for.",
+    "heroBody": "Limited departures built around one reason to go: learn something, reset, chase an adventure, or show up for a night worth building a trip around. Each Edition has its own dates, program and group — curated by WEEMAP, sometimes with people we trust.",
+    "upcomingTitle": "Upcoming Editions",
+    "upcomingSubtitle": "Pick the reason. We'll shape the trip around it.",
+    "comingTitle": "On the way",
+    "comingBody": "New Editions are added when the timing, people and experience are right — not just to fill a calendar.",
+    "customTitle": "Got your own group in mind?",
+    "customBody": "We can shape a private Edition around your group, goal or occasion.",
+    "customButton": "Build it with WEEMAP"
+  },
+  "filters": {
+    "all": "All",
+    "LEARN": "Learn",
+    "RETREAT": "Retreat",
+    "ADVENTURE": "Adventure",
+    "MUSIC_EVENT": "Music & Events",
+    "SPECIAL": "Special Editions"
+  },
+  "status": {
+    "COMING_SOON": "Coming Soon",
+    "OPEN": "Booking Open",
+    "GUARANTEED": "Departure Guaranteed",
+    "FEW_SPOTS": "Few Spots",
+    "SOLD_OUT": "Sold Out",
+    "WAITLIST": "Waitlist",
+    "COMPLETED": "Completed"
+  },
+  "card": {
+    "from": "From",
+    "perPerson": "per person",
+    "viewEdition": "View Edition",
+    "joinEdition": "Join this Edition",
+    "askEdition": "Ask about this Edition",
+    "notifyEdition": "Tell me when it opens",
+    "inCollaborationWith": "In collaboration with",
+    "spots": "Spots",
+    "smallGroup": "Small group"
+  },
+  "detail": {
+    "whyThisEdition": "Why this Edition",
+    "theProgram": "The program",
+    "whatsIncluded": "What's included",
+    "whatsNotIncluded": "What's not included",
+    "whoItsFor": "Who it's for",
+    "level": "Level",
+    "stay": "Stay",
+    "priceAndPayment": "Price & payment",
+    "goodToKnow": "Good to know",
+    "inCollaborationWith": "In collaboration with",
+    "joinEdition": "Join this Edition",
+    "askEdition": "Ask about this Edition"
+  },
+  "payment": {
+    "percentDeposit": "{value}% deposit to secure your place.",
+    "fixedDeposit": "{amount} EGP deposit to secure your place.",
+    "balanceDue": "Remaining balance due {days} days before the Edition.",
+    "payInFull": "Full payment to secure your place."
+  },
+  "requestForm": {
+    "title": "Ask for this Edition",
+    "customerName": "Full name",
+    "phone": "WhatsApp number",
+    "email": "Email (optional)",
+    "travelers": "Number of travelers",
+    "requestedStartDate": "Preferred date (optional)",
+    "message": "Tell us more",
+    "submit": "Send request",
+    "successTitle": "Request received. We'll confirm availability and the next step with you."
+  },
+  "homeTeaser": {
+    "datedHeading": "This month in Sinai",
+    "fallbackHeading": "WEEMAP Editions",
+    "fallbackBody": "Limited journeys built around a reason to go."
+  },
+  "nav": {
+    "editions": "Editions"
+  }
+}

@@ -11,13 +11,14 @@ import {
 } from '@/lib/data'
 import { getTripPackages } from '@/lib/trip-packages'
 import { getExperiences } from '@/lib/experiences'
+import { listPublicEditions } from '@/lib/editions-data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import {
   selectCategoryTiles,
   selectCuratedPicks,
+  selectFeaturedEdition,
   selectHomePackages,
   selectShopRentVisibility,
-  selectSignatureImage,
   selectStaysLineup,
 } from '@/lib/home-sections'
 
@@ -56,6 +57,7 @@ export default async function HomePage() {
     merchProducts,
     rentalProducts,
     paymentRules,
+    editions,
   ] = await Promise.all([
     getAccommodations(),
     getSinaiTrips(),
@@ -67,6 +69,7 @@ export default async function HomePage() {
     getCommerceProducts('sale'),
     getCommerceProducts('rental'),
     getPaymentRules(),
+    listPublicEditions(),
   ])
 
   const curatedPicks = selectCuratedPicks({
@@ -79,9 +82,7 @@ export default async function HomePage() {
   const categoryTiles = selectCategoryTiles(trips)
   const homePackages = selectHomePackages(packages)
   const shopRentVisibility = selectShopRentVisibility(merchProducts.length, rentalProducts.length)
-  // Never the homepage hero's own poster — a real Signature Experience photo
-  // when one exists, otherwise a different existing brand asset.
-  const signatureImage = selectSignatureImage(experiences, null)
+  const featuredEdition = selectFeaturedEdition(editions)
 
   return (
     <HomeClient
@@ -94,7 +95,7 @@ export default async function HomePage() {
       categoryTiles={categoryTiles}
       packages={homePackages}
       shopRentVisibility={shopRentVisibility}
-      signatureImage={signatureImage}
+      featuredEdition={featuredEdition}
     />
   )
 }

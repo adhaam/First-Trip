@@ -7,7 +7,7 @@ import { TripBuilderTeaser } from './TripBuilderTeaser'
 import { Stays } from './Stays'
 import { ExploreCategories } from './ExploreCategories'
 import { SinaiPackages } from './SinaiPackages'
-import { SignatureMoment } from './SignatureMoment'
+import { EditionsTeaser } from './EditionsTeaser'
 import { CommunitySpread } from './CommunitySpread'
 import { ShopRent } from './ShopRent'
 import { TrustSpread } from './TrustSpread'
@@ -15,6 +15,7 @@ import { FinalCta } from './FinalCta'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 import type { CategoryTile, CuratedPick, ShopRentVisibility, StaysLineup } from '@/lib/home-sections'
 import type { CommunityPost, SiteSettings, Testimonial, TripPackage } from '@/lib/types'
+import type { PublicEdition } from '@/lib/editions'
 
 interface Props {
   settings: SiteSettings | null
@@ -26,7 +27,7 @@ interface Props {
   categoryTiles: CategoryTile[]
   packages: TripPackage[]
   shopRentVisibility: ShopRentVisibility
-  signatureImage: string | null
+  featuredEdition: PublicEdition | null
 }
 
 /**
@@ -46,7 +47,7 @@ export function HomeClient({
   categoryTiles,
   packages,
   shopRentVisibility,
-  signatureImage,
+  featuredEdition,
 }: Props) {
   return (
     <div className="overflow-x-clip">
@@ -57,7 +58,7 @@ export function HomeClient({
       <Stays lineup={staysLineup} />
       <ExploreCategories tiles={categoryTiles} />
       <SinaiPackages packages={packages} policies={policies} />
-      <SignatureMoment image={signatureImage} />
+      <EditionsTeaser featuredEdition={featuredEdition} />
       <CommunitySpread posts={posts} />
       <ShopRent visibility={shopRentVisibility} />
       <TrustSpread testimonials={testimonials} />

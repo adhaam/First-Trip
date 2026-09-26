@@ -90,5 +90,5 @@
   "requestFailed": "Something went wrong. Please try again or reach us on WhatsApp.",
   "startOver": "Build another brief",
   "notice": "This is a request, not an instant confirmation — nothing is charged online.",
-  "waMessagePrefill": "Hi, I just sent a Signature brief: {idea}"
+  "waMessagePrefill": "Hi, I just sent a custom Edition brief: {idea}"
 }

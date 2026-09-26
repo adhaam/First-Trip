@@ -11,21 +11,23 @@ export const EMAIL = 'info@weemapsinai.com'
 // here before: they render differently on every platform, never take the brand
 // colour, and are read out literally by screen readers.
 //
-// IA per docs/m2/BRIEF.md: primary nav is Stay · Explore · Signature · Shop ·
+// IA per docs/m2/BRIEF.md: primary nav is Stay · Explore · Editions · Shop ·
 // Rent, plus the "Build your trip" CTA. `primary` marks the four plain links
-// that sit directly in the desktop bar (Stay, Signature, Shop, Rent) — Explore
+// that sit directly in the desktop bar (Stay, Editions, Shop, Rent) — Explore
 // is a popover the Header renders separately, and Build your trip is the
 // distinctly-styled CTA button, so neither is `primary`. `popover` marks the
 // three items listed inside that Explore popover. `group` drives the mobile
-// drawer's section headings, which is why Signature appears there under
-// "Explore" even though it also gets its own primary desktop link.
+// drawer's section headings, which is why Editions appears there under
+// "Explore" even though it also gets its own primary desktop link. Editions
+// replaced the public Signature entry point (/signature now redirects, see
+// next.config.ts) — historical /signature/[slug] experience links still work.
 export const NAV_ITEMS: NavItem[] = [
   { href: '/plan', icon: 'compass', group: 'plan', cta: true },
   { href: '/book-dahab', icon: 'bed', primary: true, group: 'plan' },
   { href: '/sinai-trips', icon: 'mountain', group: 'explore', popover: true, descriptionKey: 'tripsDesc' },
   { href: '/sinai-trips/packages', icon: 'package', group: 'explore', popover: true, descriptionKey: 'packagesDesc' },
   { href: '/community', icon: 'users', group: 'explore', popover: true, descriptionKey: 'communityDesc' },
-  { href: '/signature', icon: 'sparkles', primary: true, group: 'explore' },
+  { href: '/editions', icon: 'sparkles', primary: true, group: 'explore' },
   { href: '/merch', icon: 'bag', primary: true, group: 'shop' },
   { href: '/rent', icon: 'bike', primary: true, group: 'shop' },
   { href: '/about', icon: 'book', group: 'weemap' },
@@ -40,7 +42,7 @@ export const NAV_LABEL_KEYS: Record<string, string> = {
   '/sinai-trips': 'trips',
   '/sinai-trips/packages': 'packages',
   '/community': 'community',
-  '/signature': 'signature',
+  '/editions': 'editions',
   '/merch': 'shop',
   '/rent': 'rent',
   '/about': 'about',

@@ -4,6 +4,7 @@ import {
   isFallbackCurated,
   selectCategoryTiles,
   selectCuratedPicks,
+  selectFeaturedEdition,
   selectHomePackages,
   selectShopRentVisibility,
   selectSignatureImage,
@@ -12,6 +13,7 @@ import {
   stayFromPricePerPersonPerNight,
 } from './home-sections'
 import type { Accommodation, Experience, ExperienceDate, SinaiTrip, TripPackage } from './types'
+import type { PublicEdition } from './editions'
 
 const NOW = new Date('2026-01-15T00:00:00')
 
@@ -289,6 +291,41 @@ test('selectSignatureImage prefers the first experience with a hero image, and n
   assert.equal(selectSignatureImage([withoutImage, withImage], '/media/og-cover.jpg'), '/media/signature-e2.jpg')
   assert.equal(selectSignatureImage([withoutImage], '/media/og-cover.jpg'), '/media/og-cover.jpg')
   assert.equal(selectSignatureImage([], '/media/og-cover.jpg'), '/media/og-cover.jpg')
+})
+
+// ─── Editions teaser ───
+
+function edition(overrides: Partial<PublicEdition>): PublicEdition {
+  return {
+    id: 'e1', slug: 'deep-blue', title_en: 'Deep Blue', title_ar: 'ديب بلو',
+    short_description_en: '', short_description_ar: '', full_description_en: '', full_description_ar: '',
+    category: 'LEARN', status: 'COMING_SOON', featured: false, published: true, sort_order: 1,
+    hero_image_url: null, start_date: null, end_date: null, location_en: null, location_ar: null,
+    price_per_person_egp: null, payment_mode: null, deposit_value: null, balance_due_days_before_start: null,
+    max_group_size: null, level_en: null, level_ar: null, who_for_en: null, who_for_ar: null,
+    stay_en: null, stay_ar: null, good_to_know_en: null, good_to_know_ar: null,
+    includes: [], excludes: [], program: [],
+    partner_name: null, partner_logo_url: null, partner_role_en: null, partner_role_ar: null, partner_url: null,
+    ...overrides,
+  }
+}
+
+test('selectFeaturedEdition returns null when no bookable Edition has a start_date', () => {
+  const comingSoon = edition({ id: 'e1', status: 'COMING_SOON', start_date: null })
+  const openNoDate = edition({ id: 'e2', status: 'OPEN', start_date: null })
+  assert.equal(selectFeaturedEdition([comingSoon, openNoDate]), null)
+})
+
+test('selectFeaturedEdition never returns a Coming Soon Edition even if it somehow has a start_date', () => {
+  const comingSoonWithDate = edition({ id: 'e1', status: 'COMING_SOON', start_date: '2026-10-01' })
+  assert.equal(selectFeaturedEdition([comingSoonWithDate]), null)
+})
+
+test('selectFeaturedEdition picks the soonest upcoming dated bookable Edition', () => {
+  const later = edition({ id: 'e1', status: 'OPEN', start_date: '2026-12-01' })
+  const sooner = edition({ id: 'e2', status: 'FEW_SPOTS', start_date: '2026-10-05' })
+  const result = selectFeaturedEdition([later, sooner])
+  assert.equal(result?.id, 'e2')
 })
 
 // ─── shop/rent visibility ───

@@ -10,11 +10,14 @@ import { MapPin, Phone, Mail } from 'lucide-react'
 import { ArrowUpForward } from '@/components/brand/DirectionalIcon'
 import type { SiteSettings } from '@/lib/types'
 
-// Same IA as the header (Stay · Explore · Signature · Shop · Rent), just laid
+// Same IA as the header (Stay · Explore · Editions · Shop · Rent), just laid
 // out as a sitemap rather than a bar + popover. "Explore" here means the
 // column heading, not the header's popover component.
 const LINK_GROUPS = [
-  { titleKey: 'explore', links: ['/book-dahab', '/sinai-trips', '/sinai-trips/packages', '/signature', '/merch', '/rent'] },
+  {
+    titleKey: 'explore',
+    links: ['/book-dahab', '/sinai-trips', '/sinai-trips/packages', '/editions', '/merch', '/rent'],
+  },
   { titleKey: 'footerColumnCompany', links: ['/community', '/about', '/partner'] },
   { titleKey: 'footerColumnSupport', links: ['/policy'] },
 ] as const

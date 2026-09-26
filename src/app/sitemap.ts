@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { getAccommodations, getSinaiTrips, getCommerceProducts, getCommunityPosts } from '@/lib/data'
 import { getTripPackages } from '@/lib/trip-packages'
 import { getExperiences } from '@/lib/experiences'
+import { listPublicEditions } from '@/lib/editions-data'
 import { getPathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { SITE_URL } from '@/lib/seo'
@@ -19,9 +20,11 @@ const STATIC_PAGES: { path: string; priority: number; changeFrequency: 'daily' |
   { path: '/sinai-trips/packages', priority: 0.7, changeFrequency: 'weekly' },
   // Explore is the doorway into Trips/Packages/Community — indexable hub page.
   { path: '/explore', priority: 0.6, changeFrequency: 'weekly' },
-  // Signature Experiences is a top-level nav item, a homepage feature section
-  // and a full product line with its own detail routes — it was absent here.
-  { path: '/signature', priority: 0.7, changeFrequency: 'weekly' },
+  // WEEMAP Editions is the top-level nav item, a homepage feature section
+  // and a full product line with its own detail routes — replaces the
+  // former /signature entry point (which now redirects, see next.config.ts;
+  // /signature/[slug] experience detail pages are still indexed below).
+  { path: '/editions', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/community', priority: 0.7, changeFrequency: 'weekly' },
   // /plan (Build Your Trip) is a real, indexable destination when reached
   // with no prefill — the empty builder itself is a useful landing page.
@@ -121,6 +124,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       entries.push({
         url: localizedUrl(path, locale),
         lastModified: experience.updated_at ? new Date(experience.updated_at) : new Date(experience.created_at),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+        alternates: localizedAlternates(path),
+      })
+    }
+  }
+
+  // Real Edition detail pages — listPublicEditions() already scopes to
+  // published, non-HIDDEN rows. PublicEdition carries no created_at/
+  // updated_at (that's an internal-only column, see src/lib/editions.ts),
+  // so lastModified falls back to build time rather than guessing one.
+  const editions = await listPublicEditions().catch(() => [])
+  for (const locale of routing.locales) {
+    for (const edition of editions) {
+      const path = `/editions/${edition.slug}`
+      entries.push({
+        url: localizedUrl(path, locale),
+        lastModified: new Date(),
         changeFrequency: 'weekly' as const,
         priority: 0.7,
         alternates: localizedAlternates(path),

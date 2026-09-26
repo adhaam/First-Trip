@@ -1,0 +1,81 @@
+{
+  "landing": {
+    "eyebrow": "إصدارات WEEMAP",
+    "heroTitle": "رحلات تستاهل تسافر عشانها.",
+    "heroBody": "مواعيد محدودة، وكل إصدار معمول حوالين سبب واضح للسفر: تتعلم حاجة، تفصل، تدخل مغامرة، أو تسافر عشان ليلة تستاهل. كل إصدار له مواعيده وبرنامجه ومجموعته، WEEMAP بترتبه من أوله لآخره، وأحيانًا بالتعاون مع ناس بنثق في شغلهم.",
+    "upcomingTitle": "الإصدارات الجاية",
+    "upcomingSubtitle": "اختار السبب اللي مسافر عشانه، وإحنا نرتب الرحلة حواليه.",
+    "comingTitle": "جايين قريب",
+    "comingBody": "بننزل إصدار جديد لما التوقيت والناس والتجربة يكونوا صح، مش لمجرد نملأ التقويم.",
+    "customTitle": "عندك جروب وفكرة في دماغك؟",
+    "customBody": "نقدر نرتب إصدار خاص حوالين جروبك أو الهدف من الرحلة أو المناسبة.",
+    "customButton": "خلّينا نرتبها"
+  },
+  "filters": {
+    "all": "الكل",
+    "LEARN": "تعلّم",
+    "RETREAT": "ريتريت",
+    "ADVENTURE": "مغامرة",
+    "MUSIC_EVENT": "موسيقى وفعاليات",
+    "SPECIAL": "إصدارات خاصة"
+  },
+  "status": {
+    "COMING_SOON": "قريبًا",
+    "OPEN": "الحجز مفتوح",
+    "GUARANTEED": "الرحلة مؤكدة",
+    "FEW_SPOTS": "أماكن محدودة",
+    "SOLD_OUT": "اكتمل العدد",
+    "WAITLIST": "قائمة انتظار",
+    "COMPLETED": "انتهت"
+  },
+  "card": {
+    "from": "يبدأ من",
+    "perPerson": "للفرد",
+    "viewEdition": "شوف التفاصيل",
+    "joinEdition": "احجز مكانك",
+    "askEdition": "اسأل عن الإصدار",
+    "notifyEdition": "عرفني لما يفتح",
+    "inCollaborationWith": "بالتعاون مع",
+    "spots": "أماكن",
+    "smallGroup": "مجموعة صغيرة"
+  },
+  "detail": {
+    "whyThisEdition": "ليه الإصدار ده؟",
+    "theProgram": "البرنامج",
+    "whatsIncluded": "المشمول",
+    "whatsNotIncluded": "غير المشمول",
+    "whoItsFor": "مناسب لمين؟",
+    "level": "المستوى",
+    "stay": "الإقامة",
+    "priceAndPayment": "السعر والدفع",
+    "goodToKnow": "مهم تعرف",
+    "inCollaborationWith": "بالتعاون مع",
+    "joinEdition": "احجز مكانك",
+    "askEdition": "اسأل عن الإصدار"
+  },
+  "payment": {
+    "percentDeposit": "مقدم {value}% لتأكيد مكانك.",
+    "fixedDeposit": "مقدم {amount} جنيه لتأكيد مكانك.",
+    "balanceDue": "المبلغ المتبقي يُستحق قبل بداية الإصدار بـ{days} أيام.",
+    "payInFull": "الدفع بالكامل لتأكيد مكانك."
+  },
+  "requestForm": {
+    "title": "اسأل عن الإصدار",
+    "customerName": "الاسم بالكامل",
+    "phone": "رقم الواتساب",
+    "email": "الإيميل (اختياري)",
+    "travelers": "عدد المسافرين",
+    "requestedStartDate": "الميعاد المفضل (اختياري)",
+    "message": "عايز تقول لنا حاجة زيادة؟",
+    "submit": "بعت الطلب",
+    "successTitle": "وصلنا طلبك. هنأكد معاك التوافر والخطوة الجاية."
+  },
+  "homeTeaser": {
+    "datedHeading": "الشهر ده في سيناء",
+    "fallbackHeading": "إصدارات WEEMAP",
+    "fallbackBody": "رحلات محدودة، كل واحدة معمولة حوالين سبب يستاهل السفر."
+  },
+  "nav": {
+    "editions": "الإصدارات"
+  }
+}

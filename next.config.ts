@@ -46,6 +46,35 @@ const nextConfig: NextConfig = {
         destination: 'https://weemapsinai.com/:path*',
         permanent: true,
       },
+      // WEEMAP Editions replaces the public "Signature" landing/build entry
+      // points. `/:locale(en|ar)` only matches a request that actually
+      // carries a locale segment — Arabic (the default locale, localePrefix
+      // 'as-needed', see src/i18n/routing.ts) is served with NO /ar prefix,
+      // so the exact, unprefixed source below covers Arabic while the
+      // locale-matcher source covers English (and a future non-default
+      // locale) in one pass. `/signature/[slug]` (historical experience
+      // links) is deliberately NOT redirected — these sources only match
+      // the exact landing/build paths, never a slug suffix.
+      {
+        source: '/signature',
+        destination: '/editions',
+        permanent: true,
+      },
+      {
+        source: '/:locale(en|ar)/signature',
+        destination: '/:locale/editions',
+        permanent: true,
+      },
+      {
+        source: '/signature/build',
+        destination: '/editions/custom',
+        permanent: true,
+      },
+      {
+        source: '/:locale(en|ar)/signature/build',
+        destination: '/:locale/editions/custom',
+        permanent: true,
+      },
     ]
   },
   images: {

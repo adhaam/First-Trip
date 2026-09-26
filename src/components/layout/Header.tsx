@@ -98,7 +98,7 @@ export function Header() {
     pathname === '/en/admin' ||
     pathname.startsWith('/en/admin/')
 
-  // Stay · Explore · Signature · Shop · Rent, plus the "Build your trip" CTA.
+  // Stay · Explore · Editions · Shop · Rent, plus the "Build your trip" CTA.
   // Explore is a popover (Trips / Packages / Community), not a plain link, so
   // it isn't in this list — it's spliced in after the first item below. The
   // CTA is styled distinctly rather than looped as a plain nav link too.
