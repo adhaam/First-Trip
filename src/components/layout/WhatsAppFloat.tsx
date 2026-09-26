@@ -35,8 +35,10 @@ export function WhatsAppFloat({ number }: { number?: string | null }) {
     pathname.startsWith('/admin/') ||
     pathname === '/en/admin' ||
     pathname.startsWith('/en/admin/')
+  const routeWithoutLocale = pathname.replace(/^\/(?:ar|en)(?=\/|$)/, '') || '/'
+  const isActiveConversionFlow = routeWithoutLocale === '/plan' || routeWithoutLocale === '/signature/build'
 
-  if (isAdminRoute) return null
+  if (isAdminRoute || isActiveConversionFlow) return null
 
   return (
     <a

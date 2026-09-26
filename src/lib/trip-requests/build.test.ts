@@ -4,10 +4,85 @@ import test from 'node:test'
 import { DEFAULT_PAYMENT_POLICIES, paymentPlanForParts } from '@/lib/payment-rules'
 import { DEFAULT_TRANSPORT_SCHEDULE } from '@/lib/transport'
 import type { PriceSnapshot } from '@/lib/types'
-import { buildTripRequestRow, resolveJourneyDates, toQuoteRequest, tripRequestPaymentParts } from './build'
+import { applyQuotedExperienceSelections, buildTripRequestRow, normalizeExperienceSelections, resolveJourneyDates, toQuoteRequest, tripRequestPaymentParts } from './build'
 import { tripRequestSchema, type TripRequestInput } from './schema'
 
 const baseContact = { name: 'Nour Ahmed', phone: '01012345678' }
+
+test('normalizes trip → containing package while preserving unrelated trips', () => {
+  const input = parseInput({
+    locale: 'en', transport_mode: 'hiace', origin_governorate_code: 'CAI',
+    stay_pattern_code: 'hiace_5d4n', arrival_date: '2026-10-06', adults: 2,
+    experiences: [
+      { kind: 'trip', id: '11111111-1111-4111-8111-111111111111' },
+      { kind: 'trip', id: '22222222-2222-4222-8222-222222222222' },
+      { kind: 'trip_package', id: '33333333-3333-4333-8333-333333333333' },
+    ],
+  })
+  const normalized = normalizeExperienceSelections(input, [{
+    id: '33333333-3333-4333-8333-333333333333',
+    tripIds: ['11111111-1111-4111-8111-111111111111'],
+  }])
+  assert.deepEqual(normalized.experiences.map((item) => [item.kind, item.id]), [
+    ['trip', '22222222-2222-4222-8222-222222222222'],
+    ['trip_package', '33333333-3333-4333-8333-333333333333'],
+  ])
+})
+
+test('normalization is order-independent and removes multiple covered standalone trips', () => {
+  const input = parseInput({
+    locale: 'en', transport_mode: 'hiace', origin_governorate_code: 'CAI',
+    stay_pattern_code: 'hiace_5d4n', arrival_date: '2026-10-06', adults: 2,
+    experiences: [
+      { kind: 'trip_package', id: '33333333-3333-4333-8333-333333333333' },
+      { kind: 'trip', id: '11111111-1111-4111-8111-111111111111' },
+      { kind: 'trip', id: '22222222-2222-4222-8222-222222222222' },
+    ],
+  })
+  const normalized = normalizeExperienceSelections(input, [{
+    id: '33333333-3333-4333-8333-333333333333',
+    tripIds: ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'],
+  }])
+  assert.deepEqual(normalized.experiences, [{ kind: 'trip_package', id: '33333333-3333-4333-8333-333333333333' }])
+})
+
+test('quote-normalized selections become the persisted trip-request experiences', () => {
+  const covered = '11111111-1111-4111-8111-111111111111'
+  const unrelated = '22222222-2222-4222-8222-222222222222'
+  const pkg = '33333333-3333-4333-8333-333333333333'
+  const input = parseInput({
+    locale: 'en', transport_mode: 'hiace', origin_governorate_code: 'CAI',
+    stay_pattern_code: 'hiace_5d4n', arrival_date: '2026-10-06', adults: 2,
+    experiences: [
+      { kind: 'trip', id: covered },
+      { kind: 'trip', id: unrelated, preferred_date: '2026-10-07' },
+      { kind: 'trip_package', id: pkg },
+    ],
+  })
+  const normalized = applyQuotedExperienceSelections(input, {
+    extraTripIds: [unrelated],
+    tripPackageIds: [pkg],
+  })
+  const dates = resolveJourneyDates(normalized, DEFAULT_TRANSPORT_SCHEDULE)
+  assert.equal(dates.ok, true)
+  if (!dates.ok) return
+  const snapshot: PriceSnapshot = {
+    extra_trips: [{ trip_id: unrelated, name_en: 'Unrelated', price: 100 }],
+    trip_packages: [{ package_id: pkg, name_en: 'Package', trip_names_en: ['Covered'], total: 500 }],
+    total: 700,
+    computed_at: '2026-09-25T00:00:00.000Z',
+  }
+  const row = buildTripRequestRow(normalized, dates.dates, {
+    ok: true, response: {}, lines: [], numPeople: 2, perPerson: 350, total: 700,
+    normalizedSelections: { extraTripIds: [unrelated], tripPackageIds: [pkg] },
+    isPriced: true, snapshot,
+  }, paymentPlanForParts([], DEFAULT_PAYMENT_POLICIES), 'customer-1')
+  assert.deepEqual(row.experiences, [
+    { kind: 'trip', id: unrelated, preferred_date: '2026-10-07' },
+    { kind: 'trip_package', id: pkg },
+  ])
+  assert.deepEqual(snapshot.extra_trips?.map((trip) => trip.trip_id), [unrelated])
+})
 
 function parseInput(overrides: Record<string, unknown>): TripRequestInput {
   const result = tripRequestSchema.safeParse({ contact: baseContact, ...overrides })
@@ -180,6 +255,7 @@ test('buildTripRequestRow sets exactly the insertable trip_requests columns', ()
     numPeople: 2,
     perPerson: 2000,
     total: 4000,
+    normalizedSelections: { extraTripIds: [], tripPackageIds: [] },
     isPriced: true,
     snapshot,
   }

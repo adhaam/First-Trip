@@ -115,7 +115,6 @@ export default async function TripDetail({ params }: Props) {
         image={images[0]}
         eyebrow={<Eyebrow tone="light">{tags.map((tag) => (ar ? tag.name_ar : tag.name_en)).filter(Boolean).join(' · ')}</Eyebrow>}
         title={name}
-        lede={description}
         actions={
           <Link href="/sinai-trips" className="inline-flex min-h-11 items-center rounded-full border border-white/40 px-5 font-semibold text-white">
             {t('backToTrips')}

@@ -10,6 +10,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { computeQuote, quoteSchema } from './quote-data'
 import { buildBookingRow } from './public-booking'
+import { buildManualBookingRow, manualBookingSchema, resolveManualBookingPricing } from './admin-booking-rows'
+import { bookingSchema } from './public-booking'
 import type { QuoteDataSource, QuoteInput, QuoteResult } from './quote-data'
 import { computePackageTotals } from './pricing'
 import type { TripPriceInput } from './pricing'
@@ -466,16 +468,58 @@ test('rejects: missing accommodation_id (400), unknown accommodation (404)', asy
   assert.equal(!b.ok && b.status, 404)
 })
 
-test('rejects: unavailable trip package, and a trip also selected individually', async () => {
+test('rejects an unavailable trip package and normalizes a tampered overlapping standalone trip', async () => {
   const a = await quote({
     booking_type: 'package', accommodation_id: ACC_ID, governorate: 'cairo', num_people: 2, trip_package_ids: [P_FAKE],
   })
   assert.equal(!a.ok && a.status, 400)
-  const b = await quote({
+  const b = ok(await quote({
     booking_type: 'package', accommodation_id: ACC_ID, governorate: 'cairo', num_people: 2,
     trip_package_ids: [P1], extra_trip_ids: [PT1],
+  }))
+  assert.deepEqual(b.snapshot.extra_trips, [])
+  assert.equal(b.snapshot.extra_trips_subtotal, 0)
+  assert.equal(b.snapshot.trip_packages?.[0].package_id, P1)
+  assertSnapshotSumsToTotal(b)
+})
+
+test('public booking persistence uses the quote-normalized selections, not tampered raw IDs', async () => {
+  const result = ok(await quote({
+    booking_type: 'package', accommodation_id: ACC_ID, duration: 4, nights: 3,
+    transfer_type: 'package_bus', governorate: 'cairo', num_people: 2,
+    trip_package_ids: [P1, P1], extra_trip_ids: [PT1, T1, PT1],
+  }))
+  const input = bookingSchema.parse({
+    customer_name: 'Public Customer', customer_phone: '01012345678',
+    booking_type: 'package', accommodation_id: ACC_ID, duration: 4,
+    trip_date: '2026-10-04', transfer_type: 'package_bus', governorate: 'cairo', num_people: 2,
+    trip_package_ids: [P1, P1], extra_trip_ids: [PT1, T1, PT1],
   })
-  assert.equal(!b.ok && b.status, 400)
+  const row = buildBookingRow(input, result)
+  assert.deepEqual(result.normalizedSelections, { extraTripIds: [T1], tripPackageIds: [P1] })
+  assert.deepEqual(row.extra_trip_ids, [T1])
+  assert.deepEqual(row.trip_package_ids, [P1])
+  assert.deepEqual(result.snapshot.extra_trips?.map((trip) => trip.trip_id), [T1])
+})
+
+test('admin booking persistence uses the same normalized IDs as its authoritative quote', async () => {
+  const result = ok(await quote({
+    booking_type: 'package', accommodation_id: ACC_ID, duration: 4, nights: 3,
+    transfer_type: 'package_bus', governorate: 'cairo', num_people: 2,
+    trip_package_ids: [P1], extra_trip_ids: [PT1, T2],
+  }))
+  const input = manualBookingSchema.parse({
+    customer_name: 'Manual Customer', customer_phone: '01012345678',
+    booking_type: 'package', accommodation_id: ACC_ID, duration: 4,
+    trip_date: '2026-10-04', transfer_type: 'package_bus', governorate: 'cairo', num_people: 2,
+    trip_package_ids: [P1], extra_trip_ids: [PT1, T2],
+  })
+  const pricingResult = resolveManualBookingPricing(input, result)
+  const row = buildManualBookingRow(input, pricingResult, 'customer-1')
+  assert.deepEqual(result.normalizedSelections, { extraTripIds: [T2], tripPackageIds: [P1] })
+  assert.deepEqual(row.extra_trip_ids, [T2])
+  assert.deepEqual(row.trip_package_ids, [P1])
+  assert.deepEqual(result.snapshot.extra_trips?.map((trip) => trip.trip_id), [T2])
 })
 
 test('inactive or foreign upgrade tiers are never charged', async () => {

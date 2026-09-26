@@ -27,7 +27,7 @@ const fixture: BuilderCatalog = {
     { id: ids.otherStay, name_ar: '', name_en: '', type: '', image: '', images: [], rating: 0, location_ar: '', location_en: '', from_price_per_person_per_night: 0, meal_plans: [], room_upgrades: [] },
   ],
   trips: [{ id: ids.trip, name_ar: '', name_en: '', image: '', duration_ar: '', duration_en: '', price: 0, category_slugs: [], category_labels: [] }],
-  packages: [{ id: ids.package, slug: '', name_ar: '', name_en: '', image: '', payment_kind: 'experience_package', trip_count: 1 }],
+  packages: [{ id: ids.package, slug: '', name_ar: '', name_en: '', image: '', payment_kind: 'experience_package', trip_count: 1, trip_ids: [ids.trip] }],
   paymentPolicies: [],
 }
 
@@ -81,4 +81,12 @@ test('experience selection is capped at ten', () => {
   let state = initialBuilderState()
   for (let index = 0; index < 11; index += 1) state = builderReducer(state, { type: 'toggleExperience', kind: 'trip', id: `id-${index}` })
   assert.equal(state.experiences?.length, 10)
+})
+
+test('automatic experience removal is idempotent and never re-adds a covered trip', () => {
+  const selected = { ...initialBuilderState(), experiences: [{ kind: 'trip' as const, id: ids.trip }] }
+  const once = builderReducer(selected, { type: 'removeExperience', kind: 'trip', id: ids.trip })
+  const twice = builderReducer(once, { type: 'removeExperience', kind: 'trip', id: ids.trip })
+  assert.deepEqual(once.experiences, [])
+  assert.deepEqual(twice.experiences, [])
 })

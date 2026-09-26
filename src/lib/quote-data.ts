@@ -133,6 +133,8 @@ export type QuoteResult =
       numPeople: number
       perPerson: number
       total: number
+      /** Exact catalogue IDs represented by this quote and its frozen snapshot. */
+      normalizedSelections: { extraTripIds: string[]; tripPackageIds: string[] }
       /** False when the underlying pricing tables have not been configured yet. */
       isPriced: boolean
       snapshot: PriceSnapshot
@@ -205,20 +207,19 @@ async function priceSelectedExperiences(
   numPeople: number,
   now?: Date,
 ): Promise<PricedExperiencesResult> {
-  const extraIds = Array.from(new Set(input.extra_trip_ids || []))
-  const extraTrips = extraIds.length > 0 ? await source.getExtraTrips(extraIds) : []
-  if (extraTrips.length !== extraIds.length) {
-    return { ok: false, error: 'One or more extra trips are unavailable.', code: 'EXTRA_TRIP_UNAVAILABLE' }
-  }
-
   const packageIds = Array.from(new Set(input.trip_package_ids || []))
   const selectedPackages = packageIds.length > 0 ? await source.getTripPackages(packageIds) : []
   if (selectedPackages.length !== packageIds.length) {
     return { ok: false, error: 'One or more selected Trip Packages are unavailable.' }
   }
-  const { subtotal: packagesPerPersonSubtotal, error: packagesError } =
-    validateAndPriceTripPackages(selectedPackages, extraIds)
+  const requestedExtraIds = Array.from(new Set(input.extra_trip_ids || []))
+  const { subtotal: packagesPerPersonSubtotal, error: packagesError, normalizedExtraTripIds } =
+    validateAndPriceTripPackages(selectedPackages, requestedExtraIds)
   if (packagesError) return { ok: false, error: packagesError }
+  const extraTrips = normalizedExtraTripIds.length > 0 ? await source.getExtraTrips(normalizedExtraTripIds) : []
+  if (extraTrips.length !== normalizedExtraTripIds.length) {
+    return { ok: false, error: 'One or more extra trips are unavailable.', code: 'EXTRA_TRIP_UNAVAILABLE' }
+  }
 
   return {
     ok: true,
@@ -364,6 +365,10 @@ export async function computeQuote(
         computed_at: computedAt,
       },
       lines,
+      normalizedSelections: {
+        extraTripIds: experiences.extraTrips.map((trip) => trip.id),
+        tripPackageIds: experiences.selectedPackages.map((pkg) => pkg.id),
+      },
       numPeople: quote.numPeople,
       perPerson: total / quote.numPeople,
       total,
@@ -491,6 +496,10 @@ export async function computeQuote(
             computed_at: computedAt,
           },
           lines,
+          normalizedSelections: {
+            extraTripIds: experiences.extraTrips.map((trip) => trip.id),
+            tripPackageIds: experiences.selectedPackages.map((pkg) => pkg.id),
+          },
           numPeople,
           perPerson: total / numPeople,
           total,
@@ -560,6 +569,10 @@ export async function computeQuote(
           computed_at: computedAt,
         },
         lines,
+        normalizedSelections: {
+          extraTripIds: experiences.extraTrips.map((trip) => trip.id),
+          tripPackageIds: experiences.selectedPackages.map((pkg) => pkg.id),
+        },
         numPeople,
         perPerson: total / numPeople,
         total,
@@ -612,6 +625,10 @@ export async function computeQuote(
         },
         ...experienceLines(experiences, numPeople, opts.now),
       ]),
+      normalizedSelections: {
+        extraTripIds: experiences.extraTrips.map((trip) => trip.id),
+        tripPackageIds: experiences.selectedPackages.map((pkg) => pkg.id),
+      },
       numPeople,
       perPerson: total / numPeople,
       total,
@@ -636,23 +653,23 @@ export async function computeQuote(
   const extraIds = Array.from(new Set(input.extra_trip_ids || []))
 
   const includedTrips: TripPriceInput[] = []
-  let extraTrips: TripPriceInput[] = []
-  if (extraIds.length > 0) {
-    extraTrips = await source.getExtraTrips(extraIds)
-    if (extraTrips.length !== extraIds.length) {
-      return { ok: false, status: 400, error: 'One or more extra trips are unavailable.', code: 'EXTRA_TRIP_UNAVAILABLE' }
-    }
-  }
 
   const packageIds = Array.from(new Set(input.trip_package_ids || []))
   const selectedPackages = packageIds.length > 0 ? await source.getTripPackages(packageIds) : []
   if (selectedPackages.length !== packageIds.length) {
     return { ok: false, status: 400, error: 'One or more selected Trip Packages are unavailable.' }
   }
-  const { subtotal: packagesPerPersonSubtotal, error: packagesError } =
+  const { subtotal: packagesPerPersonSubtotal, error: packagesError, normalizedExtraTripIds } =
     validateAndPriceTripPackages(selectedPackages, extraIds)
   if (packagesError) {
     return { ok: false, status: 400, error: packagesError }
+  }
+  let extraTrips: TripPriceInput[] = []
+  if (normalizedExtraTripIds.length > 0) {
+    extraTrips = await source.getExtraTrips(normalizedExtraTripIds)
+    if (extraTrips.length !== normalizedExtraTripIds.length) {
+      return { ok: false, status: 400, error: 'One or more extra trips are unavailable.', code: 'EXTRA_TRIP_UNAVAILABLE' }
+    }
   }
   const packagesSubtotal = packagesPerPersonSubtotal * numPeople
   const tripPackagesResponse = selectedPackages.map((p) => ({
@@ -753,6 +770,7 @@ export async function computeQuote(
         },
         transferLine(transferQuote),
       ]),
+      normalizedSelections: { extraTripIds: [], tripPackageIds: [] },
       numPeople,
       perPerson: total / numPeople,
       total,
@@ -846,6 +864,10 @@ export async function computeQuote(
         mealLine(nights, mealTotal),
         ...tripLines(),
       ]),
+      normalizedSelections: {
+        extraTripIds: extraTrips.map((trip) => trip.id),
+        tripPackageIds: selectedPackages.map((pkg) => pkg.id),
+      },
       numPeople,
       perPerson: total / numPeople,
       total,
@@ -956,6 +978,10 @@ export async function computeQuote(
       mealLine(quote.nights, quote.mealSubtotal),
       ...tripLines(),
     ]),
+    normalizedSelections: {
+      extraTripIds: extraTrips.map((trip) => trip.id),
+      tripPackageIds: selectedPackages.map((pkg) => pkg.id),
+    },
     numPeople: quote.numPeople,
     perPerson: total / quote.numPeople,
     total,

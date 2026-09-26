@@ -76,6 +76,7 @@ export type BuilderAction =
   | { type: 'setMeal'; key?: string }
   | { type: 'setUpgrade'; id?: string }
   | { type: 'toggleExperience'; kind: 'trip' | 'trip_package'; id: string }
+  | { type: 'removeExperience'; kind: 'trip' | 'trip_package'; id: string }
   | { type: 'setNotes'; notes?: string }
   | { type: 'setContact'; contact: Partial<NonNullable<DraftFields['contact']>> }
   | { type: 'reset' }
@@ -191,6 +192,11 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       next.experiences = experiences
       break
     }
+    case 'removeExperience':
+      next.experiences = (next.experiences ?? []).filter(
+        (item) => item.kind !== action.kind || item.id !== action.id,
+      )
+      break
     case 'setNotes':
       next.notes = action.notes
       break

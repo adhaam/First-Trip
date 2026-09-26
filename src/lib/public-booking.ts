@@ -69,7 +69,11 @@ export const bookingSchema = z
 export type BookingInput = z.infer<typeof bookingSchema>
 
 /** Maps public booking input to the DB row; quote values remain authoritative. */
-export function buildBookingRow(input: BookingInput, quote: { total: number; snapshot: PriceSnapshot }) {
+export function buildBookingRow(input: BookingInput, quote: {
+  total: number
+  snapshot: PriceSnapshot
+  normalizedSelections: { extraTripIds: string[]; tripPackageIds: string[] }
+}) {
   const rest = { ...input }
   const customerEmail = rest.customer_email
   delete rest.customer_email
@@ -79,6 +83,8 @@ export function buildBookingRow(input: BookingInput, quote: { total: number; sna
   delete rest.turnstile_token
   return {
     ...rest,
+    extra_trip_ids: quote.normalizedSelections.extraTripIds,
+    trip_package_ids: quote.normalizedSelections.tripPackageIds,
     customer_email: customerEmail || null,
     total_price: quote.total,
     price_snapshot: quote.snapshot,

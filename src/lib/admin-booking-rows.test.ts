@@ -28,6 +28,7 @@ const tripSnapshot: TripBookingPriceSnapshot = {
 }
 
 const quoteSnapshot: PriceSnapshot = { total: 5000, num_people: 2, computed_at: '2026-09-25T00:00:00.000Z' }
+const noSelections = { extraTripIds: [] as string[], tripPackageIds: [] as string[] }
 
 const existingCustomer = {
   id: 'cust-existing',
@@ -120,7 +121,7 @@ test('admin trip booking override keeps the computed breakdown alongside the agr
 
 test('manual booking row carries customer_id and never includes request-only fields', () => {
   const input = manualInput({ price_override: false, price_override_reason: 'x' })
-  const row = buildManualBookingRow(input, { totalPrice: 5000, priceSnapshot: quoteSnapshot }, 'cust-7')
+  const row = buildManualBookingRow(input, { totalPrice: 5000, priceSnapshot: quoteSnapshot, normalizedSelections: noSelections }, 'cust-7')
   assert.equal(row.customer_id, 'cust-7')
   assert.equal(row.total_price, 5000)
   assert.equal(row.price_snapshot, quoteSnapshot)
@@ -134,14 +135,14 @@ test('manual booking row carries customer_id and never includes request-only fie
 
 test('manual booking row turns empty optional strings into nulls', () => {
   const input = manualInput({ customer_email: '', accommodation_id: '', governorate: '', trip_date: '', return_date: '', meal_plan_key: '' })
-  const row = buildManualBookingRow(input, { totalPrice: undefined, priceSnapshot: null }, 'c')
+  const row = buildManualBookingRow(input, { totalPrice: undefined, priceSnapshot: null, normalizedSelections: null }, 'c')
   for (const k of ['customer_email', 'accommodation_id', 'governorate', 'trip_date', 'return_date', 'meal_plan_key', 'total_price']) {
     assert.equal(row[k], null, k)
   }
 })
 
 test('manual pricing: computed total wins over a typed one unless explicitly overridden', () => {
-  const quote = { ok: true as const, total: 5000, snapshot: quoteSnapshot }
+  const quote = { ok: true as const, total: 5000, snapshot: quoteSnapshot, normalizedSelections: noSelections }
   assert.equal(resolveManualBookingPricing({ total_price: 1 }, quote).totalPrice, 5000)
 
   const overridden = resolveManualBookingPricing({ total_price: 4000, price_override: true, price_override_reason: 'deal' }, quote)
@@ -152,10 +153,10 @@ test('manual pricing: computed total wins over a typed one unless explicitly ove
 })
 
 test('manual pricing: no date keeps the typed total; a failed quote keeps it and reports why', () => {
-  assert.deepEqual(resolveManualBookingPricing({ total_price: 300 }, null), { totalPrice: 300, priceSnapshot: null, pricingNote: null })
+  assert.deepEqual(resolveManualBookingPricing({ total_price: 300 }, null), { totalPrice: 300, priceSnapshot: null, pricingNote: null, normalizedSelections: null })
   assert.deepEqual(
     resolveManualBookingPricing({ total_price: 300 }, { ok: false, error: 'no rates' }),
-    { totalPrice: 300, priceSnapshot: null, pricingNote: 'no rates' },
+    { totalPrice: 300, priceSnapshot: null, pricingNote: 'no rates', normalizedSelections: null },
   )
 })
 
@@ -166,7 +167,7 @@ test('manual booking for a known phone links the existing customer without clobb
   const input = manualInput()
 
   const customer = await findOrCreateCustomerWithClient(client, bookingCustomerInput(input))
-  const row = buildManualBookingRow(input, { totalPrice: 5000, priceSnapshot: quoteSnapshot }, customer.id)
+  const row = buildManualBookingRow(input, { totalPrice: 5000, priceSnapshot: quoteSnapshot, normalizedSelections: noSelections }, customer.id)
 
   assert.equal(row.customer_id, 'cust-existing')
   assert.equal(tables.customers.length, 1, 'no duplicate customer created')

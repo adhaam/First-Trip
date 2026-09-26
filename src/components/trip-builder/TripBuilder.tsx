@@ -2,7 +2,7 @@
 
 import { useEffect, useReducer, useRef, useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import { BedDouble, CalendarDays, Home, MapPinned, MessageCircle, Route, Send, Sparkles, Users } from 'lucide-react'
+import { BedDouble, CalendarDays, ChevronUp, Home, MapPinned, MessageCircle, Route, Send, Sparkles, Users } from 'lucide-react'
 import { EmptyState } from '@/components/EmptyState'
 import { Section, StickyActionBar } from '@/components/brand'
 import { formatAmount } from '@/lib/format'
@@ -275,9 +275,10 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
 
       <StickyActionBar
         summary={
-          <button type="button" onClick={() => setSummarySheetOpen(true)} className="min-h-11 text-start">
+          <button type="button" onClick={() => setSummarySheetOpen(true)} aria-haspopup="dialog" className="min-h-11 text-start">
             <span className="block text-xs font-medium text-ink-subtle">{t('yourTrip')}</span>
             <span className="block text-sm font-bold text-sea-900">{quoteState.quote ? `${formatAmount(quoteState.quote.total, locale)} ${common('egp')}` : t('addDates')}</span>
+            <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-sun-800">{t('viewBreakdown')}<ChevronUp className="h-3.5 w-3.5" aria-hidden /></span>
           </button>
         }
         action={

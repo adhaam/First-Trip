@@ -16,6 +16,51 @@ import type { StayPatternResult, TransportScheduleConfig } from '@/lib/transport
 import type { PriceSnapshot } from '@/lib/types'
 import type { TripRequestInput, TripRequestQuoteInput } from './schema'
 
+export type PackageMembership = { id: string; tripIds: readonly string[] }
+
+/**
+ * Removes standalone trips already covered by a selected package. This is
+ * deliberately ID-only and preserves all unrelated selections and dates.
+ */
+export function normalizeExperienceSelections<T extends TripRequestQuoteInput>(
+  input: T,
+  memberships: readonly PackageMembership[],
+): T {
+  const selectedPackageIds = new Set(
+    input.experiences.filter((item) => item.kind === 'trip_package').map((item) => item.id),
+  )
+  const coveredTripIds = new Set(
+    memberships
+      .filter((membership) => selectedPackageIds.has(membership.id))
+      .flatMap((membership) => [...membership.tripIds]),
+  )
+  if (!input.experiences.some((item) => item.kind === 'trip' && coveredTripIds.has(item.id))) return input
+  return {
+    ...input,
+    experiences: input.experiences.filter((item) => item.kind !== 'trip' || !coveredTripIds.has(item.id)),
+  }
+}
+
+/** Reconciles request selections to the exact IDs represented by a quote. */
+export function applyQuotedExperienceSelections<T extends TripRequestQuoteInput>(
+  input: T,
+  selections: { extraTripIds: readonly string[]; tripPackageIds: readonly string[] },
+): T {
+  const allowedTrips = new Set(selections.extraTripIds)
+  const allowedPackages = new Set(selections.tripPackageIds)
+  const seen = new Set<string>()
+  return {
+    ...input,
+    experiences: input.experiences.filter((item) => {
+      const allowed = item.kind === 'trip' ? allowedTrips.has(item.id) : allowedPackages.has(item.id)
+      const key = `${item.kind}:${item.id}`
+      if (!allowed || seen.has(key)) return false
+      seen.add(key)
+      return true
+    }),
+  }
+}
+
 // ─── Journey dates ───
 
 export type JourneyDates = {

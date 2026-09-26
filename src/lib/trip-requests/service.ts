@@ -6,7 +6,7 @@ import { getPaymentRules } from '@/lib/payment-rules-load'
 import { computeQuote } from '@/lib/quote-service'
 import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { getTransportSchedule } from '@/lib/transport/load'
-import { buildTripRequestRow, resolveJourneyDates, toQuoteRequest, tripRequestPaymentParts } from './build'
+import { applyQuotedExperienceSelections, buildTripRequestRow, resolveJourneyDates, toQuoteRequest, tripRequestPaymentParts } from './build'
 import { tripRequestSchema, type TripRequestQuoteInput } from './schema'
 
 export type CreateTripRequestResult =
@@ -14,7 +14,7 @@ export type CreateTripRequestResult =
   | { ok: false; status: number; code: string; error: string; details?: unknown }
 
 export type PriceTripRequestResult =
-  | { ok: true; dates: import('./build').JourneyDates; quote: Extract<import('@/lib/quote-data').QuoteResult, { ok: true }>; parts: import('./build').PaymentPart[]; partPlans: PaymentPlan[]; paymentPlan: CombinedPaymentPlan }
+  | { ok: true; input: TripRequestQuoteInput; dates: import('./build').JourneyDates; quote: Extract<import('@/lib/quote-data').QuoteResult, { ok: true }>; parts: import('./build').PaymentPart[]; partPlans: PaymentPlan[]; paymentPlan: CombinedPaymentPlan }
   | { ok: false; status: number; code: string; error: string }
 
 async function loadPackagePaymentKinds(packageIds: string[]): Promise<Record<string, PaymentKind>> {
@@ -39,11 +39,12 @@ export async function priceTripRequest(input: TripRequestQuoteInput): Promise<Pr
   if (!datesResult.ok) return { ok: false, status: 400, code: datesResult.code, error: datesResult.error }
   const quote = await computeQuote(toQuoteRequest(input, datesResult.dates))
   if (!quote.ok) return { ok: false, status: quote.status, code: quote.code ?? 'PRICING_ERROR', error: quote.error }
-  const packageIds = input.experiences.filter((experience) => experience.kind === 'trip_package').map((experience) => experience.id)
-  const parts = tripRequestPaymentParts(input, quote, await loadPackagePaymentKinds(packageIds))
+  const normalizedInput = applyQuotedExperienceSelections(input, quote.normalizedSelections)
+  const packageIds = normalizedInput.experiences.filter((experience) => experience.kind === 'trip_package').map((experience) => experience.id)
+  const parts = tripRequestPaymentParts(normalizedInput, quote, await loadPackagePaymentKinds(packageIds))
   const rules = await getPaymentRules()
   const partPlans = parts.map((part) => paymentPlan(part.kind, part.total, rules.policies))
-  return { ok: true, dates: datesResult.dates, quote, parts, partPlans, paymentPlan: paymentPlanForParts(parts, rules.policies) }
+  return { ok: true, input: normalizedInput, dates: datesResult.dates, quote, parts, partPlans, paymentPlan: paymentPlanForParts(parts, rules.policies) }
 }
 
 /**
@@ -71,7 +72,7 @@ export async function createTripRequest(rawInput: unknown): Promise<CreateTripRe
     email: input.contact.email || null,
   })
 
-  const row = buildTripRequestRow(input, priced.dates, priced.quote, priced.paymentPlan, customer.id)
+  const row = buildTripRequestRow({ ...input, experiences: priced.input.experiences }, priced.dates, priced.quote, priced.paymentPlan, customer.id)
 
   const { data, error } = await getSupabaseAdmin()
     .from('trip_requests')

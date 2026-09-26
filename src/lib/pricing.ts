@@ -501,28 +501,27 @@ export function computePackageTotals(trips: { price: number; package_price?: num
 export function validateAndPriceTripPackages(
   packages: { id: string; name_en: string; totals?: PackageTotals; trips?: { id: string; name_en: string }[] }[],
   extraTripIds: string[],
-): { subtotal: number; error: string | null } {
+): { subtotal: number; error: string | null; normalizedExtraTripIds: string[] } {
   for (const p of packages) {
     if (!p.totals?.isValid) {
-      return { subtotal: 0, error: `Trip package "${p.name_en}" is not currently bookable.` }
+      return { subtotal: 0, error: `Trip package "${p.name_en}" is not currently bookable.`, normalizedExtraTripIds: [] }
     }
   }
   const tripToPackage = new Map<string, string>()
   for (const p of packages) {
     for (const t of p.trips || []) {
       if (tripToPackage.has(t.id)) {
-        return { subtotal: 0, error: `Trip "${t.name_en}" appears in more than one selected Trip Package.` }
+        return { subtotal: 0, error: `Trip "${t.name_en}" appears in more than one selected Trip Package.`, normalizedExtraTripIds: [] }
       }
       tripToPackage.set(t.id, p.name_en)
     }
   }
-  for (const id of extraTripIds) {
-    if (tripToPackage.has(id)) {
-      return { subtotal: 0, error: `A selected trip is already included in a selected Trip Package.` }
-    }
-  }
+  // A package keeps its full catalogue price. Any standalone selection for
+  // one of its member trips is removed from the billable standalone set.
+  // IDs come from the authoritative package relationship, never labels.
+  const normalizedExtraTripIds = extraTripIds.filter((id) => !tripToPackage.has(id))
   const subtotal = packages.reduce((sum, p) => sum + (p.totals?.packageTotal ?? 0), 0)
-  return { subtotal, error: null }
+  return { subtotal, error: null, normalizedExtraTripIds }
 }
 
 /**

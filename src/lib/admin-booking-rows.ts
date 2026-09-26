@@ -96,7 +96,7 @@ export function bookingCustomerInput(input: {
 
 /** The subset of computeQuote()'s result this module relies on. */
 export type ManualQuoteOutcome =
-  | { ok: true; total: number; snapshot: PriceSnapshot }
+  | { ok: true; total: number; snapshot: PriceSnapshot; normalizedSelections: { extraTripIds: string[]; tripPackageIds: string[] } }
   | { ok: false; error: string }
 
 export interface ManualBookingPricing {
@@ -104,6 +104,7 @@ export interface ManualBookingPricing {
   priceSnapshot: PriceSnapshot | null
   /** Set when a quote was attempted but failed and the typed total was kept. */
   pricingNote: string | null
+  normalizedSelections: { extraTripIds: string[]; tripPackageIds: string[] } | null
 }
 
 /**
@@ -116,8 +117,8 @@ export function resolveManualBookingPricing(
   input: Pick<ManualBookingInput, 'total_price' | 'price_override' | 'price_override_reason'>,
   quote: ManualQuoteOutcome | null,
 ): ManualBookingPricing {
-  if (!quote) return { totalPrice: input.total_price, priceSnapshot: null, pricingNote: null }
-  if (!quote.ok) return { totalPrice: input.total_price, priceSnapshot: null, pricingNote: quote.error }
+  if (!quote) return { totalPrice: input.total_price, priceSnapshot: null, pricingNote: null, normalizedSelections: null }
+  if (!quote.ok) return { totalPrice: input.total_price, priceSnapshot: null, pricingNote: quote.error, normalizedSelections: null }
 
   if (input.price_override && input.total_price !== undefined) {
     return {
@@ -130,15 +131,16 @@ export function resolveManualBookingPricing(
         total: input.total_price,
       },
       pricingNote: null,
+      normalizedSelections: quote.normalizedSelections,
     }
   }
-  return { totalPrice: quote.total, priceSnapshot: quote.snapshot, pricingNote: null }
+  return { totalPrice: quote.total, priceSnapshot: quote.snapshot, pricingNote: null, normalizedSelections: quote.normalizedSelections }
 }
 
 /** The `bookings` row inserted for a manual (staff-entered) booking. */
 export function buildManualBookingRow(
   input: ManualBookingInput,
-  pricing: Pick<ManualBookingPricing, 'totalPrice' | 'priceSnapshot'>,
+  pricing: Pick<ManualBookingPricing, 'totalPrice' | 'priceSnapshot' | 'normalizedSelections'>,
   customerId: string,
 ): Record<string, unknown> {
   // price_override / price_override_reason are request-only (they live in
@@ -161,8 +163,8 @@ export function buildManualBookingRow(
     trip_date: trip_date || null,
     return_date: return_date || null,
     meal_plan_key: meal_plan_key || null,
-    extra_trip_ids: extra_trip_ids || [],
-    trip_package_ids: trip_package_ids || [],
+    extra_trip_ids: pricing.normalizedSelections?.extraTripIds ?? extra_trip_ids ?? [],
+    trip_package_ids: pricing.normalizedSelections?.tripPackageIds ?? trip_package_ids ?? [],
     total_price: pricing.totalPrice ?? null,
     price_snapshot: pricing.priceSnapshot,
   }

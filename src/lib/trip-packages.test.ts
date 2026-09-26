@@ -72,11 +72,23 @@ test('rejects two selected packages that share a trip (package vs package overla
   assert.equal(result.subtotal, 0)
 })
 
-test('rejects an individually-selected extra trip that is already inside a selected package', () => {
+test('normalizes an individually-selected extra trip already inside a selected package', () => {
   const pkgA = makePkg('a', 'Package A', [{ id: 't1', price: 600, package_price: 400 }])
   const result = validateAndPriceTripPackages([pkgA], ['t1'])
-  assert.ok(result.error)
-  assert.equal(result.subtotal, 0)
+  assert.equal(result.error, null)
+  assert.equal(result.subtotal, 400)
+  assert.deepEqual(result.normalizedExtraTripIds, [])
+})
+
+test('normalizes multiple overlaps and preserves unrelated standalone trips', () => {
+  const pkgA = makePkg('a', 'Package A', [
+    { id: 't1', price: 600, package_price: 400 },
+    { id: 't2', price: 500, package_price: 300 },
+  ])
+  const result = validateAndPriceTripPackages([pkgA], ['t1', 't3', 't2'])
+  assert.equal(result.error, null)
+  assert.equal(result.subtotal, 700)
+  assert.deepEqual(result.normalizedExtraTripIds, ['t3'])
 })
 
 test('multiple valid, non-overlapping packages sum correctly', () => {

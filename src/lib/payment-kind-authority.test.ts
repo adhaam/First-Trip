@@ -152,7 +152,7 @@ test("Dahab stay package: client-supplied payment_kind 'experience_package' neve
   const parsed = bookingSchema.parse(body)
   assert.ok(!('payment_kind' in parsed), 'parsed input must not carry payment_kind')
 
-  const quote = { total: 4000, snapshot: { total: 4000, computed_at: '2026-09-25T00:00:00.000Z' } as PriceSnapshot }
+  const quote = { total: 4000, snapshot: { total: 4000, computed_at: '2026-09-25T00:00:00.000Z' } as PriceSnapshot, normalizedSelections: { extraTripIds: [], tripPackageIds: [] } }
   const row = buildBookingRow(parsed, quote)
   assert.ok(!('payment_kind' in row), 'inserted bookings row must not carry payment_kind')
 
@@ -188,7 +188,7 @@ test("admin manual booking: staff-supplied payment_kind never reaches the insert
   } as Record<string, unknown>)
   assert.ok(!('payment_kind' in input), 'parsed admin input must not carry payment_kind')
 
-  const row = buildManualBookingRow(input, { totalPrice: 2000, priceSnapshot: null }, 'cust-1')
+  const row = buildManualBookingRow(input, { totalPrice: 2000, priceSnapshot: null, normalizedSelections: null }, 'cust-1')
   assert.ok(!('payment_kind' in row), 'inserted bookings row must not carry payment_kind')
 })
 
