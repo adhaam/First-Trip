@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
   }
   const supabase = getSupabaseAdmin(gate.staff)
   try {
-    const table = OPS_ENTITY_TABLES[entityType].table
+    const table = OPS_ENTITY_TABLES[entityType]!.table
     const { data, error } = await supabase
       .from(table)
       .update({ internal_notes: body.data.internal_notes })

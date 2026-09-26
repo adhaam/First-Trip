@@ -16,9 +16,11 @@ import type { PaymentPolicy } from '@/lib/payment-rules'
 import type { CategoryTile, CuratedPick, ShopRentVisibility, StaysLineup } from '@/lib/home-sections'
 import type { CommunityPost, SiteSettings, Testimonial, TripPackage } from '@/lib/types'
 import type { PublicEdition } from '@/lib/editions'
+import type { SitePage } from '@/lib/site-pages-core'
 
 interface Props {
   settings: SiteSettings | null
+  homeSitePage: SitePage | null
   posts: CommunityPost[]
   testimonials: Testimonial[]
   policies: PaymentPolicy[]
@@ -39,6 +41,7 @@ interface Props {
  */
 export function HomeClient({
   settings,
+  homeSitePage,
   posts,
   testimonials,
   policies,
@@ -51,7 +54,7 @@ export function HomeClient({
 }: Props) {
   return (
     <div className="overflow-x-clip">
-      <Hero settings={settings} />
+      <Hero settings={settings} sitePage={homeSitePage} />
       <IntentGateway />
       <Curated picks={curatedPicks} />
       <TripBuilderTeaser />

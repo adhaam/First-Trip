@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { getSinaiTrips } from '@/lib/data'
+import { getSitePage } from '@/lib/site-pages'
+import { pickCopy } from '@/lib/site-pages-core'
 import { categoryFromSearchParam } from '@/lib/explore'
 import { SinaiTripsClient } from '@/components/SinaiTripsClient'
 import { Eyebrow, PageHero, Section } from '@/components/brand'
@@ -32,15 +34,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function SinaiTripsPage({ params, searchParams }: Props) {
   const { locale } = await params
-  const [trips, search, t, tDiscovery] = await Promise.all([
+  const [trips, search, t, tDiscovery, sitePage] = await Promise.all([
     getSinaiTrips(),
     searchParams,
     getTranslations('explore'),
     getTranslations({ locale, namespace: 'discovery' }),
+    getSitePage('sinai_trips'),
   ])
   const category = categoryFromSearchParam(search.category, trips)
   const ar = locale === 'ar'
   const pageUrl = `${SITE_URL}${getPathname({ href: '/sinai-trips', locale })}`
+  const heroEyebrow = pickCopy(
+    locale,
+    { en: sitePage?.eyebrow_en, ar: sitePage?.eyebrow_ar },
+    t('tripsEyebrow'),
+  )
+  const heroTitle = pickCopy(locale, { en: sitePage?.title_en, ar: sitePage?.title_ar }, t('tripsTitle'))
+  const heroBody = pickCopy(locale, { en: sitePage?.body_en, ar: sitePage?.body_ar }, t('tripsLede'))
 
   // Real category names actually carried by the loaded trips (never
   // invented) — first three, in catalogue order, deduplicated by id.
@@ -76,10 +86,10 @@ export default async function SinaiTripsPage({ params, searchParams }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       <PageHero
-        image={trips[0]?.images?.[0]}
-        eyebrow={<Eyebrow tone="light">{t('tripsEyebrow')}</Eyebrow>}
-        title={t('tripsTitle')}
-        lede={t('tripsLede')}
+        image={sitePage?.hero_image_url || '/media/heroposter.webp'}
+        eyebrow={<Eyebrow tone="light">{heroEyebrow}</Eyebrow>}
+        title={heroTitle}
+        lede={heroBody}
       />
       {categoryNames.length > 0 && (
         <Section tone="paper" size="sm">

@@ -42,7 +42,7 @@ type AuditRow = {
 }
 
 /** The joined names each entity's record carries, matching how the admin dashboard already reads them. */
-const RECORD_SELECT: Record<OpsEntityType, string> = {
+const RECORD_SELECT: Partial<Record<OpsEntityType, string>> = {
   accommodation_booking: '*, accommodations(name_ar, name_en)',
   trip_booking: '*, sinai_trips(name_ar, name_en), trip_packages(name_ar, name_en)',
   signature_request: '*, experiences(title_ar, title_en), experience_dates(start_date, end_date)',
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
   if (!(type in OPS_ENTITY_TABLES)) return NextResponse.json({ error: 'Unknown item type' }, { status: 404 })
   if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid id', code: 'invalid' }, { status: 400 })
   const entityType = type as OpsEntityType
-  const { table } = OPS_ENTITY_TABLES[entityType]
+  const { table } = OPS_ENTITY_TABLES[entityType]!
   const supabase = getSupabaseAdmin(gate.staff)
 
   try {
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       relatedRows,
       rules,
     ] = await Promise.all([
-      supabase.from(table).select(RECORD_SELECT[entityType]).eq('id', id).maybeSingle(),
+      supabase.from(table).select(RECORD_SELECT[entityType]!).eq('id', id).maybeSingle(),
       supabase.from('status_history')
         .select('field, from_value, to_value, actor, changed_at')
         .eq('entity_id', id)
@@ -169,7 +169,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       ? null
       : buildPaymentExpectation(item, rules.policies)
 
-    const domain = OPS_ENTITY_TABLES[entityType].domain
+    const domain = OPS_ENTITY_TABLES[entityType]!.domain
     const record = recordResult.data as unknown as Record<string, unknown>
     const allowed_statuses = allowedNextStatuses(domain, item.status as RequestStatus<typeof domain>, {
       fulfillmentMethod: entityType === 'commerce_order' ? (record.fulfillment_method as string) : null,

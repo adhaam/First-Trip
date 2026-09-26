@@ -11,7 +11,7 @@ const TARGET_TYPE_LABELS: Record<CommunityLinkTargetType, { ar: string; en: stri
   stay: { ar: 'إقامة', en: 'Stay' },
   trip: { ar: 'رحلة سيناء', en: 'Sinai Trip' },
   trip_package: { ar: 'باقة رحلات', en: 'Trip Package' },
-  signature_experience: { ar: 'تجربة سيجنتشر', en: 'Signature Experience' },
+  signature_experience: { ar: 'تجربة سابقة', en: 'Earlier Experience' },
 }
 
 // Endpoint + array key for each catalog this editor lets an admin pick from.

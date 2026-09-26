@@ -3,6 +3,7 @@
   "nav": {
     "groups": {
       "operations": "العمليات",
+      "workspaces": "مساحات العمل",
       "bookings": "الحجوزات",
       "catalogue": "الكتالوج",
       "content": "المحتوى",
@@ -15,9 +16,12 @@
       "tripRequests": "طلبات مخطط الرحلات",
       "customers": "العملاء",
       "search": "بحث",
+      "bookings": "الحجوزات",
+      "catalogue": "الكتالوج",
+      "website": "الموقع",
+      "settings": "الإعدادات",
       "dahabBookings": "حجوزات دهب",
       "sinaiTripBookings": "حجوزات رحلات سيناء",
-      "signatureRequests": "طلبات التجارب المميزة",
       "partnerInquiries": "طلبات الشراكة",
       "accommodations": "أماكن الإقامة",
       "transfersPricing": "أسعار النقل",
@@ -25,8 +29,6 @@
       "tripPackages": "باقات الرحلات",
       "editions": "الإصدارات",
       "packageCategories": "تصنيفات الباقات",
-      "signatureExperiences": "التجارب المميزة",
-      "signatureCategories": "تصنيفات التجارب المميزة",
       "partners": "الشركاء",
       "commerce": "المتجر",
       "catalogueHealth": "سلامة الكتالوج",
@@ -35,6 +37,29 @@
       "transportSchedule": "جدول النقل",
       "siteSettings": "إعدادات الموقع",
       "newsletter": "النشرة البريدية",
+      "bookingsTabNeedsAction": "يحتاج إجراء",
+      "bookingsTabTripRequests": "طلبات الرحلات",
+      "bookingsTabStays": "الإقامة",
+      "bookingsTabTrips": "الرحلات",
+      "bookingsTabExperienceRequests": "طلبات تجارب سابقة",
+      "bookingsTabPartnerInquiries": "طلبات الشراكة",
+      "bookingsTabArchive": "طلبات تجارب سابقة (أرشيف)",
+      "catalogueTabStays": "الإقامة",
+      "catalogueTabTrips": "الرحلات",
+      "catalogueTabPackages": "الباقات",
+      "catalogueSubTabPackageCategories": "تصنيفات الباقات",
+      "catalogueTabExperiences": "تجارب سابقة",
+      "catalogueTabTransfers": "النقل",
+      "catalogueTabPartners": "الشركاء",
+      "catalogueTabHealth": "السلامة",
+      "websiteTabManager": "إدارة الموقع",
+      "websiteTabCommunity": "المجتمع",
+      "websiteTabTestimonials": "آراء العملاء",
+      "websiteTabNewsletter": "النشرة البريدية",
+      "settingsTabSiteSettings": "إعدادات الموقع",
+      "settingsTabStaff": "الموظفون",
+      "settingsTabAudit": "سجل التدقيق",
+      "settingsTabMyAccount": "حسابي",
       "staff": "الموظفون",
       "auditLog": "سجل المراجعة",
       "myAccount": "حسابي"
@@ -338,7 +363,8 @@
     "ready": "جاهز",
     "out_for_delivery": "في الطريق للتسليم",
     "completed": "مكتمل",
-    "cancelled": "ملغي"
+    "cancelled": "ملغي",
+    "closed": "مغلق"
   },
   "paymentStatus": {
     "unpaid": "غير مدفوع",
@@ -351,7 +377,7 @@
   "nextAction": {
     "start_availability_check": "بدء التحقق من التوفر",
     "confirm_availability": "تأكيد التوفر",
-    "plan_signature": "تخطيط التجربة",
+    "plan_signature": "تخطيط تجربة",
     "agree_alternative": "الاتفاق على بديل",
     "convert_to_booking": "تحويل إلى حجز",
     "collect_payment": "تحصيل الدفعة",
@@ -363,7 +389,8 @@
     "mark_ready": "وضع علامة جاهز",
     "hand_over": "تسليم",
     "complete_delivery": "إتمام التسليم",
-    "none": "لا يوجد إجراء"
+    "none": "لا يوجد إجراء",
+    "confirm_or_close": "أكّد أو أغلق"
   },
   "attention": {
     "unpaid_close_to_service": "غير مدفوع والخدمة قريبة",
@@ -375,9 +402,10 @@
   "entityType": {
     "accommodation_booking": "حجز دهب",
     "trip_booking": "حجز رحلة سيناء",
-    "signature_request": "طلب تجربة مميزة",
+    "signature_request": "طلب تجربة سابقة",
     "trip_request": "طلب مخطط الرحلات",
-    "commerce_order": "طلب متجر"
+    "commerce_order": "طلب متجر",
+    "edition_request": "طلب تجربة"
   },
   "method": {
     "vodafonecash": "فودافون كاش",

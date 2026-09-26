@@ -1,0 +1,81 @@
+{
+  "title": "Website",
+  "tabs": {
+    "pages": "Pages",
+    "homepage": "Homepage merchandising",
+    "seo": "SEO",
+    "navigation": "Navigation & footer"
+  },
+  "pages": {
+    "intro": "One entry per landing page. Set a hero image and, optionally, override its headline copy. Leave any field empty to use the designed text.",
+    "heroImage": "Hero image",
+    "heroImageAlt": "Hero image alt text",
+    "heroImageAltEn": "Alt text (English)",
+    "heroImageAltAr": "Alt text (Arabic)",
+    "upload": "Upload image",
+    "uploading": "Uploading…",
+    "uploadError": "Unable to upload the image. Please try again.",
+    "clear": "Clear",
+    "noImageSet": "No image set — the page uses its designed default.",
+    "copyOverrides": "Copy overrides",
+    "copyOverridesHint": "Leave empty to use the designed text.",
+    "homeHeadlineFixed": "The homepage headline is fixed by design.",
+    "eyebrow": "Eyebrow",
+    "eyebrowEn": "Eyebrow (English)",
+    "eyebrowAr": "Eyebrow (Arabic)",
+    "titleField": "Title",
+    "titleEn": "Title (English)",
+    "titleAr": "Title (Arabic)",
+    "body": "Body copy",
+    "bodyEn": "Body copy (English)",
+    "bodyAr": "Body copy (Arabic)",
+    "defaultPlaceholder": "Designed default: \"{value}\"",
+    "save": "Save page",
+    "saved": "Saved",
+    "saveError": "Save failed",
+    "loadError": "Failed to load pages",
+    "openEditor": "Edit",
+    "closeEditor": "Close",
+    "pageKeys": {
+      "home": "Homepage",
+      "stay": "Stay in Dahab",
+      "explore": "Explore hub",
+      "sinai_trips": "Sinai Trips",
+      "packages": "Trip Packages",
+      "experiences": "Experiences",
+      "shop": "Shop",
+      "rent": "Rent",
+      "community": "Community"
+    }
+  },
+  "homepage": {
+    "intro": "Choose which stays and trips lead the homepage. Leave everything unchecked to let WEEMAP pick automatically.",
+    "autoRuleTitle": "How automatic picks work",
+    "autoRuleStays": "With no featured stays chosen, the homepage shows the current lineup ranked by the site's own ordering — never invented.",
+    "autoRuleTrips": "With no featured trips chosen, the \"Happening now\" rail fills itself from real signals — a trip marked featured, a live discount, or the soonest upcoming date — falling back to a curated pick only when nothing else qualifies.",
+    "featuredStays": "Featured stays (empty = automatic)",
+    "featuredTrips": "Featured trips (empty = automatic)",
+    "save": "Save selection",
+    "saved": "Saved",
+    "saveError": "Save failed",
+    "loadError": "Failed to load"
+  },
+  "seo": {
+    "intro": "Global defaults used when a page has nothing more specific of its own.",
+    "derivedNote": "Trips, packages, stays, experiences and products always derive their SEO title and description from their own record — these fields only cover pages that have no such record (the homepage, and any page without a dedicated SEO title).",
+    "siteTitle": "Site title (empty = default)",
+    "descriptionEn": "Site description (English)",
+    "descriptionAr": "Site description (Arabic)",
+    "shareImage": "Social share image URL",
+    "save": "Save SEO settings",
+    "saved": "Saved",
+    "saveError": "Save failed",
+    "loadError": "Failed to load"
+  },
+  "navigation": {
+    "intro": "Navigation & footer",
+    "navExplainer": "The site navigation is part of the designed layout and isn't editable here — changing it needs a code change.",
+    "footerExplainer": "The footer's contact details (WhatsApp, phone, email, social links, address) come from Settings.",
+    "footerLink": "Go to Settings"
+  }
+}

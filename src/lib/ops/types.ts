@@ -6,6 +6,7 @@ export type OpsEntityType =
   | 'signature_request'
   | 'trip_request'
   | 'commerce_order'
+  | 'edition_request'
 
 export type NextAction =
   | 'start_availability_check'
@@ -22,6 +23,7 @@ export type NextAction =
   | 'mark_ready'
   | 'hand_over'
   | 'complete_delivery'
+  | 'confirm_or_close'
   | 'none'
 
 export type AttentionCode =
@@ -89,7 +91,16 @@ export const STALE_HOURS: Record<string, number> = {
   awaiting_payment: 72,
 }
 
-export const OPS_ENTITY_TABLES: Record<OpsEntityType, { table: string, domain: RequestDomain }> = {
+/**
+ * Generic item-detail plumbing (status transitions, notes, the record join) for entity types whose
+ * writes go through the shared request-workflow domain model. edition_request is deliberately absent:
+ * its status/notes updates go through PATCH /api/admin/edition-requests/[id] and its own admin panel
+ * (EditionRequestsPanel), not the generic ops item routes — a full generic detail view would need to
+ * duplicate that panel's own transition rules for no benefit. It still appears in the queue/today lists
+ * (via ops_work_items) and search; its work-item links point at the Bookings workspace's Experience
+ * requests tab instead of a generic item-detail page (see workItemHref in components/admin/ops/nav.ts).
+ */
+export const OPS_ENTITY_TABLES: Partial<Record<OpsEntityType, { table: string, domain: RequestDomain }>> = {
   accommodation_booking: { table: 'bookings', domain: 'accommodation_booking' },
   trip_booking: { table: 'trip_bookings', domain: 'trip_booking' },
   signature_request: { table: 'experience_bookings', domain: 'signature_request' },

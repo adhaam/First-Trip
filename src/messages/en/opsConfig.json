@@ -227,7 +227,7 @@
       "staff_users": "Staff",
       "bookings": "Stay bookings",
       "trip_bookings": "Trip bookings",
-      "experience_bookings": "Signature requests",
+      "experience_bookings": "Earlier experience requests",
       "commerce_orders": "Commerce orders",
       "commerce_rentals": "Rentals",
       "payment_records": "Payments",
@@ -240,7 +240,7 @@
       "accommodations": "Accommodations",
       "sinai_trips": "Sinai trips",
       "trip_packages": "Trip packages",
-      "experiences": "Signature experiences",
+      "experiences": "Earlier experiences",
       "commerce_products": "Commerce products"
     }
   },
@@ -253,7 +253,7 @@
       "accommodation": "Accommodation",
       "sinai_trip": "Sinai trip",
       "trip_package": "Trip package",
-      "signature_experience": "Signature experience",
+      "signature_experience": "Earlier experience",
       "commerce_product": "Commerce product"
     },
     "issues": {

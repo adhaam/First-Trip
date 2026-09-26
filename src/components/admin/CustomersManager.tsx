@@ -215,7 +215,10 @@ export function CustomersManager() {
                   {[
                     { label: ar ? 'حجوزات الإقامة' : 'Accommodation', value: detail.summary.accommodationBookingsCount },
                     { label: ar ? 'رحلات سيناء' : 'Trip bookings', value: detail.summary.tripBookingsCount },
-                    { label: ar ? 'التجارب المميزة' : 'Signature', value: detail.summary.signatureBookingsCount },
+                    {
+                      label: ar ? 'تجارب سابقة' : 'Earlier experiences',
+                      value: detail.summary.signatureBookingsCount,
+                    },
                     { label: ar ? 'طلبات المتجر' : 'Merch orders', value: detail.summary.merchOrdersCount },
                     { label: ar ? 'الإيجارات' : 'Rentals', value: detail.summary.rentalsCount },
                   ].map((s) => (
@@ -240,11 +243,13 @@ export function CustomersManager() {
                     <Row key={b.id} left={b.sinai_trips ? (ar ? b.sinai_trips.name_ar : b.sinai_trips.name_en) : '—'} mid={b.status} right={(b.final_price ?? b.quoted_price) ? `${b.final_price ?? b.quoted_price} ${ar ? 'ج.م' : 'EGP'}` : '—'} />
                   ))}
                 </Section>
-                <Section title={ar ? 'التجارب المميزة (Signature)' : 'Signature experience requests'}>
+                <Section title={ar ? 'طلبات تجارب سابقة' : 'Earlier experience requests'}>
                   {detail.experienceBookings.map((b) => (
                     <Row
                       key={b.id}
-                      left={b.experiences ? (ar ? b.experiences.title_ar : b.experiences.title_en) : (ar ? 'ابنِ تجربتك' : 'Build Your Signature')}
+                      left={b.experiences
+                        ? (ar ? b.experiences.title_ar : b.experiences.title_en)
+                        : (ar ? 'تخطيط تجربة' : 'Plan experience')}
                       mid={b.status}
                       right={b.quoted_price ? `${b.quoted_price} ${b.currency || (ar ? 'ج.م' : 'EGP')}` : '—'}
                     />

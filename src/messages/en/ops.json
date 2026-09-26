@@ -3,6 +3,7 @@
   "nav": {
     "groups": {
       "operations": "Operations",
+      "workspaces": "Workspaces",
       "bookings": "Bookings",
       "catalogue": "Catalogue",
       "content": "Content",
@@ -15,9 +16,12 @@
       "tripRequests": "Trip Builder requests",
       "customers": "Customers",
       "search": "Search",
+      "bookings": "Bookings",
+      "catalogue": "Catalogue",
+      "website": "Website",
+      "settings": "Settings",
       "dahabBookings": "Dahab bookings",
       "sinaiTripBookings": "Sinai trip bookings",
-      "signatureRequests": "Signature requests",
       "partnerInquiries": "Partner inquiries",
       "accommodations": "Accommodations",
       "transfersPricing": "Transfers pricing",
@@ -25,8 +29,6 @@
       "tripPackages": "Trip packages",
       "editions": "Editions",
       "packageCategories": "Package categories",
-      "signatureExperiences": "Signature experiences",
-      "signatureCategories": "Signature categories",
       "partners": "Partners",
       "commerce": "Commerce",
       "catalogueHealth": "Catalogue health",
@@ -35,6 +37,29 @@
       "transportSchedule": "Transport schedule",
       "siteSettings": "Site settings",
       "newsletter": "Newsletter",
+      "bookingsTabNeedsAction": "Needs action",
+      "bookingsTabTripRequests": "Trip requests",
+      "bookingsTabStays": "Stays",
+      "bookingsTabTrips": "Trips",
+      "bookingsTabExperienceRequests": "Earlier experience requests",
+      "bookingsTabPartnerInquiries": "Partner inquiries",
+      "bookingsTabArchive": "Earlier experience requests (archive)",
+      "catalogueTabStays": "Stays",
+      "catalogueTabTrips": "Trips",
+      "catalogueTabPackages": "Packages",
+      "catalogueSubTabPackageCategories": "Package categories",
+      "catalogueTabExperiences": "Earlier experiences",
+      "catalogueTabTransfers": "Transfers",
+      "catalogueTabPartners": "Partners",
+      "catalogueTabHealth": "Health",
+      "websiteTabManager": "Website manager",
+      "websiteTabCommunity": "Community",
+      "websiteTabTestimonials": "Testimonials",
+      "websiteTabNewsletter": "Newsletter",
+      "settingsTabSiteSettings": "Site settings",
+      "settingsTabStaff": "Staff",
+      "settingsTabAudit": "Audit log",
+      "settingsTabMyAccount": "My account",
       "staff": "Staff",
       "auditLog": "Audit log",
       "myAccount": "My account"
@@ -338,7 +363,8 @@
     "ready": "Ready",
     "out_for_delivery": "Out for delivery",
     "completed": "Completed",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "closed": "Closed"
   },
   "paymentStatus": {
     "unpaid": "Unpaid",
@@ -363,7 +389,8 @@
     "mark_ready": "Mark ready",
     "hand_over": "Hand over",
     "complete_delivery": "Complete delivery",
-    "none": "Nothing to do"
+    "none": "Nothing to do",
+    "confirm_or_close": "Confirm or close"
   },
   "attention": {
     "unpaid_close_to_service": "Unpaid, service is close",
@@ -375,9 +402,10 @@
   "entityType": {
     "accommodation_booking": "Dahab booking",
     "trip_booking": "Sinai trip booking",
-    "signature_request": "Signature request",
+    "signature_request": "Earlier experience request",
     "trip_request": "Trip Builder request",
-    "commerce_order": "Commerce order"
+    "commerce_order": "Commerce order",
+    "edition_request": "Experience request"
   },
   "method": {
     "vodafonecash": "Vodafone Cash",

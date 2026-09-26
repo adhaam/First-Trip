@@ -17,6 +17,16 @@ export function opsItemHref(type: OpsEntityType, id: string): string {
   return dashboardHref('ops-item', { type, id })
 }
 
+/**
+ * Where a work-item row should link to. edition_request has no generic item-detail page (see
+ * OPS_ENTITY_TABLES in src/lib/ops/types.ts) — it links to the Bookings workspace's own Experience
+ * requests tab (EditionRequestsPanel) instead of /admin/dashboard?section=ops-item.
+ */
+export function workItemHref(type: OpsEntityType, id: string): string {
+  if (type === 'edition_request') return dashboardHref('bookings', { tab: 'experience-requests' })
+  return opsItemHref(type, id)
+}
+
 export function customerHref(id: string): string {
   return dashboardHref('customer', { id })
 }

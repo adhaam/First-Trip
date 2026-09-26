@@ -19,13 +19,21 @@ const COMMERCE_NEXT_ACTION: Record<string, NextAction> = {
   out_for_delivery: 'complete_delivery',
 }
 
+/** edition_requests.status (migration 044): new/contacted need staff action, confirmed/closed don't. */
+const EDITION_REQUEST_NEXT_ACTION: Record<string, NextAction> = {
+  new: 'contact_customer',
+  contacted: 'confirm_or_close',
+  confirmed: 'none',
+  closed: 'none',
+}
+
 type DeriveContext = { passed: boolean, outstanding_now: number | null }
 
 /**
  * next_action precedence (see docs/m3/OPS_API_CONTRACT.md):
  *   a. cancelled -> refund_due (money held) or none
  *   b. completed -> none
- *   c. commerce_order -> mapped purely by status; payments never drive commerce actions
+ *   c. commerce_order / edition_request -> mapped purely by status; payments never drive these
  *   d. trip_request -> converted rows only ever need mark_completed/none; unconverted
  *      rows with confirmed availability need convert_to_booking before anything else
  *   e. confirmed and the service date has passed -> mark_completed
@@ -38,6 +46,7 @@ function deriveNextAction(row: WorkItemRow, ctx: DeriveContext): NextAction {
   if (row.status === 'completed') return 'none'
 
   if (row.entity_type === 'commerce_order') return COMMERCE_NEXT_ACTION[row.status] ?? 'none'
+  if (row.entity_type === 'edition_request') return EDITION_REQUEST_NEXT_ACTION[row.status] ?? 'none'
 
   if (row.entity_type === 'trip_request') {
     if (row.payment_status === 'converted') {

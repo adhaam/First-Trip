@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { getAccommodations, getSiteSettings } from '@/lib/data'
+import { getSitePage } from '@/lib/site-pages'
+import { pickCopy } from '@/lib/site-pages-core'
 import { BookDahabClient } from '@/components/BookDahabClient'
 import { PageHero } from '@/components/brand/PageHero'
 import { Eyebrow } from '@/components/brand/Eyebrow'
@@ -45,12 +47,21 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
     getTranslations({ locale, namespace: 'stays' }),
     getTranslations({ locale, namespace: 'discovery' }),
   ])
-  const [accommodations, settings] = await Promise.all([
+  const [accommodations, settings, sitePage] = await Promise.all([
     getAccommodations(),
     getSiteSettings(),
+    getSitePage('stay'),
   ])
   const whatsapp = (settings?.whatsapp_number || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
-  const heroImage = accommodations[0]?.image_url || accommodations[0]?.images?.[0] || '/media/heroposter.webp'
+  // Owner-controlled hero (Website admin) — never a catalogue[0] cascade.
+  const heroImage = sitePage?.hero_image_url || '/media/heroposter.webp'
+  const heroEyebrow = pickCopy(
+    locale,
+    { en: sitePage?.eyebrow_en, ar: sitePage?.eyebrow_ar },
+    t('hero.eyebrow'),
+  )
+  const heroTitle = pickCopy(locale, { en: sitePage?.title_en, ar: sitePage?.title_ar }, t('hero.title'))
+  const heroBody = pickCopy(locale, { en: sitePage?.body_en, ar: sitePage?.body_ar }, t('hero.lede'))
   const ar = locale === 'ar'
   const pageUrl = `${SITE_URL}${getPathname({ href: '/book-dahab', locale })}`
   const breadcrumbSchema = getBreadcrumbSchema([
@@ -81,9 +92,9 @@ export default async function BookDahabPage({ params }: { params: Promise<{ loca
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       <PageHero
         image={heroImage}
-        eyebrow={<Eyebrow coords={DAHAB_COORDS}>{t('hero.eyebrow')}</Eyebrow>}
-        title={t('hero.title')}
-        lede={t('hero.lede')}
+        eyebrow={<Eyebrow coords={DAHAB_COORDS}>{heroEyebrow}</Eyebrow>}
+        title={heroTitle}
+        lede={heroBody}
         actions={
           <>
             <ButtonLink href="/plan" variant="sun" size="lg">

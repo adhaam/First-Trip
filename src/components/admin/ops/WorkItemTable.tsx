@@ -5,7 +5,7 @@ import { Link } from '@/i18n/navigation'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatAmount, formatCount, formatDateShort, formatReference } from '@/lib/format'
 import type { WorkItem } from '@/lib/ops/types'
-import { customerHref, opsItemHref } from '@/components/admin/ops/nav'
+import { customerHref, workItemHref } from '@/components/admin/ops/nav'
 import { AttentionChips, EntityTypeLabel, NextActionLabel, PaymentPill, StatusPill, WaitingLabel, useItemTitle } from '@/components/admin/ops/pills'
 
 /** Shared row list for the work queue, today view sections and a customer profile. */
@@ -49,7 +49,7 @@ export function WorkItemTable({
               <TableRow key={`${item.entity_type}:${item.entity_id}`} className="relative">
                 <TableCell className="font-medium">
                   <Link
-                    href={opsItemHref(item.entity_type, item.entity_id)}
+                    href={workItemHref(item.entity_type, item.entity_id)}
                     className="static after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
                   >
                     {formatReference(item.reference)}
@@ -99,7 +99,7 @@ export function WorkItemTable({
                 <TableCell className="relative z-10 min-w-[130px] whitespace-normal text-sm">
                   {item.next_action !== 'none' ? (
                     <Link
-                      href={opsItemHref(item.entity_type, item.entity_id)}
+                      href={workItemHref(item.entity_type, item.entity_id)}
                       className="font-medium text-sea-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
                     >
                       <NextActionLabel action={item.next_action} />
@@ -122,7 +122,7 @@ export function WorkItemTable({
         {items.map((item) => (
           <li key={`${item.entity_type}:${item.entity_id}`} className="relative rounded-lg border p-3">
             <Link
-              href={opsItemHref(item.entity_type, item.entity_id)}
+              href={workItemHref(item.entity_type, item.entity_id)}
               className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
               aria-label={`${formatReference(item.reference)} — ${titleOf(item)}`}
             />

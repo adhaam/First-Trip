@@ -6,7 +6,7 @@ import { Search, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
-import { customerHref, dashboardHref, opsItemHref } from '@/components/admin/ops/nav'
+import { customerHref, dashboardHref, workItemHref } from '@/components/admin/ops/nav'
 import { EntityTypeLabel } from '@/components/admin/ops/pills'
 import type { OpsEntityType } from '@/lib/ops/types'
 
@@ -103,7 +103,7 @@ export function OpsSearch() {
               {results.items.length > 0 && (
                 <ResultGroup title={t('items')}>
                   {results.items.map((item) => (
-                    <Link key={`${item.entity_type}:${item.entity_id}`} href={opsItemHref(item.entity_type, item.entity_id)} className="block rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                    <Link key={`${item.entity_type}:${item.entity_id}`} href={workItemHref(item.entity_type, item.entity_id)} className="block rounded-md px-2 py-1.5 text-sm hover:bg-muted">
                       <span className="font-medium" dir="ltr">{item.reference}</span>{' '}
                       <span className="text-muted-foreground"><EntityTypeLabel type={item.entity_type} /> · {item.customer_name}</span>
                     </Link>

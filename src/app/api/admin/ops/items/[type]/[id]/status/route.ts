@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
     return NextResponse.json({ error: 'Invalid data', code: 'invalid', details: body.error.flatten() }, { status: 400 })
   }
   const entityType = type as OpsEntityType
-  const config = OPS_ENTITY_TABLES[entityType]
+  const config = OPS_ENTITY_TABLES[entityType]!
   const supabase = getSupabaseAdmin(gate.staff)
   try {
     const { data: current, error } = await supabase.from(config.table).select('status').eq('id', id).maybeSingle()

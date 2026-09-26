@@ -8,7 +8,7 @@ import { filterByView, sortForView } from '@/lib/ops/work-items'
 
 const VIEWS = ['needs_action', 'awaiting_payment', 'upcoming', 'stale', 'exceptions', 'all'] as const
 const ENTITY_TYPES = [
-  'accommodation_booking', 'trip_booking', 'signature_request', 'trip_request', 'commerce_order',
+  'accommodation_booking', 'trip_booking', 'signature_request', 'trip_request', 'commerce_order', 'edition_request',
 ] as const
 
 const querySchema = z.object({

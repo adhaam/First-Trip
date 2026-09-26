@@ -7,6 +7,8 @@ import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { PickupNote } from '@/components/explore/PickupNote'
 import { Link, getPathname } from '@/i18n/navigation'
 import { getPaymentRules } from '@/lib/payment-rules-load'
+import { getSitePage } from '@/lib/site-pages'
+import { pickCopy } from '@/lib/site-pages-core'
 import { pageMetadata, SITE_URL } from '@/lib/seo'
 import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
 import { jsonLdScript } from '@/lib/safe-html'
@@ -36,14 +38,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function PackagesPage({ params }: Props) {
   const { locale } = await params
-  const [packages, rules, t, tDiscovery] = await Promise.all([
+  const [packages, rules, t, tDiscovery, sitePage] = await Promise.all([
     getTripPackages(),
     getPaymentRules(),
     getTranslations({ locale, namespace: 'explore' }),
     getTranslations({ locale, namespace: 'discovery' }),
+    getSitePage('packages'),
   ])
   const ar = locale === 'ar'
   const pageUrl = `${SITE_URL}${getPathname({ href: '/sinai-trips/packages', locale })}`
+  const heroEyebrow = pickCopy(
+    locale,
+    { en: sitePage?.eyebrow_en, ar: sitePage?.eyebrow_ar },
+    t('packagesEyebrow'),
+  )
+  const heroTitle = pickCopy(locale, { en: sitePage?.title_en, ar: sitePage?.title_ar }, t('packagesTitle'))
+  const heroBody = pickCopy(locale, { en: sitePage?.body_en, ar: sitePage?.body_ar }, t('packagesLede'))
   const breadcrumbSchema = getBreadcrumbSchema([
     { name: ar ? 'الرئيسية' : 'Home', url: `${SITE_URL}${getPathname({ href: '/', locale })}` },
     { name: t('packagesTitle'), url: pageUrl },
@@ -114,10 +124,10 @@ export default async function PackagesPage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
       <PageHero
-        image={hero.image || hero.trips?.[0]?.image || undefined}
-        eyebrow={<Eyebrow tone="light">{t('packagesEyebrow')}</Eyebrow>}
-        title={t('packagesTitle')}
-        lede={t('packagesLede')}
+        image={sitePage?.hero_image_url || '/media/heroposter.webp'}
+        eyebrow={<Eyebrow tone="light">{heroEyebrow}</Eyebrow>}
+        title={heroTitle}
+        lede={heroBody}
       />
 
       {categoryNames.length > 0 && (

@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { SafeImage as Image } from '@/components/SafeImage'
 import { getCommunityPosts } from '@/lib/data'
+import { getSitePage } from '@/lib/site-pages'
+import { pickCopy } from '@/lib/site-pages-core'
 import { CommunityClient } from '@/components/CommunityClient'
 import { Eyebrow, Section } from '@/components/brand'
 import { Reveal } from '@/components/motion/Reveal'
@@ -24,8 +26,15 @@ export async function generateMetadata({ params }: {
 export default async function CommunityPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'communityV2' })
-  const posts = await getCommunityPosts()
-  const heroImage = posts.find((p) => p.image_url)?.image_url || undefined
+  const [posts, sitePage] = await Promise.all([getCommunityPosts(), getSitePage('community')])
+  const heroImage = sitePage?.hero_image_url || '/media/heroposter.webp'
+  const heroEyebrow = pickCopy(
+    locale,
+    { en: sitePage?.eyebrow_en, ar: sitePage?.eyebrow_ar },
+    t('eyebrow'),
+  )
+  const heroTitle = pickCopy(locale, { en: sitePage?.title_en, ar: sitePage?.title_ar }, t('title'))
+  const heroBody = pickCopy(locale, { en: sitePage?.body_en, ar: sitePage?.body_ar }, t('subtitle'))
   const ar = locale === 'ar'
   const pageUrl = `${SITE_URL}${getPathname({ href: '/community', locale })}`
   const breadcrumbSchema = getBreadcrumbSchema([
@@ -70,11 +79,15 @@ export default async function CommunityPage({ params }: { params: Promise<{ loca
 
         <div className="container-main relative py-12 sm:py-16 md:py-20">
           <Reveal always className="mx-auto max-w-2xl">
-            <Eyebrow tone="light" className="justify-center">{t('eyebrow')}</Eyebrow>
+            <Eyebrow tone="light" className="justify-center">
+              {heroEyebrow}
+            </Eyebrow>
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-tight text-white drop-shadow-sm sm:text-5xl md:text-6xl">
-              {t('title')}
+              {heroTitle}
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">{t('subtitle')}</p>
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">
+              {heroBody}
+            </p>
           </Reveal>
         </div>
       </section>

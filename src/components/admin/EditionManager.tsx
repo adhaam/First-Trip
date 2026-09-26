@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale } from 'next-intl'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +12,6 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react'
 import {
   EDITION_CATEGORIES, EDITION_STATUSES, EDITION_PAYMENT_MODES,
@@ -20,7 +20,8 @@ import {
 import { EditionCopyListEditor } from '@/components/admin/editions/EditionCopyListEditor'
 import { EditionProgramEditor } from '@/components/admin/editions/EditionProgramEditor'
 import { EditionWorksheetPanel } from '@/components/admin/editions/EditionWorksheetPanel'
-import { EditionRequestsPanel } from '@/components/admin/editions/EditionRequestsPanel'
+import { editionCategoryLabel, editionStatusLabel } from '@/lib/editions-labels'
+import { dashboardHref } from '@/components/admin/ops/nav'
 
 type PartnerOption = { id: string; name: string }
 
@@ -143,7 +144,7 @@ export function EditionManager() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm(ar ? 'حذف هذا الإصدار؟' : 'Delete this Edition?')) return
+    if (!window.confirm(ar ? 'حذف هذه التجربة؟' : 'Delete this Experience?')) return
     try {
       await api(`/api/admin/editions/${id}`, { method: 'DELETE' })
       await load()
@@ -158,18 +159,24 @@ export function EditionManager() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="editions">
-        <TabsList>
-          <TabsTrigger value="editions">Editions</TabsTrigger>
-          <TabsTrigger value="requests">Edition requests</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="editions" className="space-y-4">
+      <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{ar ? 'إصدارات WEEMAP' : 'WEEMAP Editions'}</h2>
+            <div>
+              <h2 className="text-lg font-semibold">
+                {ar ? 'تجارب WEEMAP المميزة' : 'WEEMAP Experiences'}
+              </h2>
+              <Link
+                href={dashboardHref('bookings', { tab: 'experience-requests' })}
+                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+              >
+                {ar
+                  ? 'طلبات التجارب موجودة في الحجوزات'
+                  : 'Experience requests are in Bookings'}
+              </Link>
+            </div>
             <Button onClick={handleAdd}>
               <Plus className="h-4 w-4" />
-              {ar ? 'إصدار جديد' : 'New Edition'}
+              {ar ? 'تجربة جديدة' : 'New Experience'}
             </Button>
           </div>
 
@@ -192,8 +199,8 @@ export function EditionManager() {
                   {editions.map((edition) => (
                     <TableRow key={edition.id}>
                       <TableCell>{ar ? edition.title_ar : edition.title_en}</TableCell>
-                      <TableCell>{edition.category}</TableCell>
-                      <TableCell><Badge>{edition.status}</Badge></TableCell>
+                      <TableCell>{editionCategoryLabel(edition.category, locale)}</TableCell>
+                      <TableCell><Badge>{editionStatusLabel(edition.status, locale)}</Badge></TableCell>
                       <TableCell>{edition.published ? 'Yes' : 'No'}</TableCell>
                       <TableCell>{edition.sort_order}</TableCell>
                       <TableCell className="text-right">
@@ -209,7 +216,7 @@ export function EditionManager() {
                   {editions.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        {ar ? 'لا توجد إصدارات بعد' : 'No Editions yet'}
+                        {ar ? 'لا توجد تجارب بعد' : 'No Experiences yet'}
                       </TableCell>
                     </TableRow>
                   )}
@@ -217,19 +224,14 @@ export function EditionManager() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="requests">
-          <EditionRequestsPanel />
-        </TabsContent>
-      </Tabs>
+      </div>
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
           <Card className="my-8 w-full max-w-3xl">
             <CardContent className="space-y-6 p-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{editingId ? 'Edit Edition' : 'New Edition'}</h3>
+                <h3 className="text-lg font-semibold">{editingId ? (ar ? 'تعديل التجربة' : 'Edit Experience') : (ar ? 'تجربة جديدة' : 'New Experience')}</h3>
                 <Button size="icon" variant="ghost" onClick={() => setShowForm(false)}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -257,7 +259,9 @@ export function EditionManager() {
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {EDITION_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {EDITION_CATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c}>{editionCategoryLabel(c, locale)}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -283,7 +287,9 @@ export function EditionManager() {
                     <Select value={form.status} onValueChange={(v) => updateField('status', v as typeof form.status)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {EDITION_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {EDITION_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>{editionStatusLabel(s, locale)}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

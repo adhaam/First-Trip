@@ -19,11 +19,25 @@ interface Props {
   categories: CommerceCategory[]
   collections: (CommerceCollection & { product_ids: string[] })[]
   whatsapp?: string | null
+  /** Owner-controlled hero image override (site_pages 'shop', Website admin). */
+  heroImage?: string
+  heroEyebrow?: string
+  heroTitle?: string
+  heroBody?: string
 }
 
 const SORTS: CatalogSort[] = ['featured', 'price_asc', 'price_desc', 'name']
 
-export function MerchClient({ products, categories, collections, whatsapp }: Props) {
+export function MerchClient({
+  products,
+  categories,
+  collections,
+  whatsapp,
+  heroImage,
+  heroEyebrow,
+  heroTitle,
+  heroBody,
+}: Props) {
   const locale = useLocale()
   const ar = locale === 'ar'
   const shop = useTranslations('shopV2')
@@ -49,10 +63,10 @@ export function MerchClient({ products, categories, collections, whatsapp }: Pro
   return (
     <div className="bg-sand-50">
       <PageHero
-        image="/media/heroposter.webp"
-        eyebrow={<Eyebrow tone="light">{shop('merchEyebrow')}</Eyebrow>}
-        title={shop('merchTitle')}
-        lede={shop('merchLede')}
+        image={heroImage || '/media/heroposter.webp'}
+        eyebrow={<Eyebrow tone="light">{heroEyebrow || shop('merchEyebrow')}</Eyebrow>}
+        title={heroTitle || shop('merchTitle')}
+        lede={heroBody || shop('merchLede')}
         size="md"
       />
 

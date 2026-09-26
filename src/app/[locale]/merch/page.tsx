@@ -6,6 +6,8 @@ import { jsonLdScript } from '@/lib/safe-html'
 import { getPathname } from '@/i18n/navigation'
 import { MerchClient } from '@/components/MerchClient'
 import { getCommerceCategories, getCommerceCollections, getCommerceProducts, getSiteSettings } from '@/lib/data'
+import { getSitePage } from '@/lib/site-pages'
+import { pickCopy } from '@/lib/site-pages-core'
 
 // Admin-activated inventory must appear with no redeploy: matches the
 // revalidate window used by /book-dahab and /sinai-trips.
@@ -22,14 +24,22 @@ export async function generateMetadata({ params }: {
 
 export default async function MerchPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  const [products, categories, settings, t] = await Promise.all([
+  const [products, categories, settings, t, sitePage] = await Promise.all([
     getCommerceProducts('sale'),
     getCommerceCategories(),
     getSiteSettings(),
     getTranslations({ locale, namespace: 'shopV2' }),
+    getSitePage('shop'),
   ])
   const productIds = new Set(products.map((p) => p.id))
   const collections = await getCommerceCollections(productIds)
+  const heroEyebrow = pickCopy(
+    locale,
+    { en: sitePage?.eyebrow_en, ar: sitePage?.eyebrow_ar },
+    t('merchEyebrow'),
+  )
+  const heroTitle = pickCopy(locale, { en: sitePage?.title_en, ar: sitePage?.title_ar }, t('merchTitle'))
+  const heroBody = pickCopy(locale, { en: sitePage?.body_en, ar: sitePage?.body_ar }, t('merchLede'))
   const ar = locale === 'ar'
   const pageUrl = `${SITE_URL}${getPathname({ href: '/merch', locale })}`
   const breadcrumbSchema = getBreadcrumbSchema([
@@ -50,7 +60,16 @@ export default async function MerchPage({ params }: { params: Promise<{ locale: 
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionSchema) }} />
-      <MerchClient products={products} categories={categories} collections={collections} whatsapp={settings?.whatsapp_number} />
+      <MerchClient
+        products={products}
+        categories={categories}
+        collections={collections}
+        whatsapp={settings?.whatsapp_number}
+        heroImage={sitePage?.hero_image_url || undefined}
+        heroEyebrow={heroEyebrow}
+        heroTitle={heroTitle}
+        heroBody={heroBody}
+      />
     </>
   )
 }

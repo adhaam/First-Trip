@@ -17,11 +17,24 @@ interface Props {
   products: CommerceProduct[]
   categories: CommerceCategory[]
   whatsapp?: string | null
+  /** Owner-controlled hero image override (site_pages 'rent', Website admin). */
+  heroImage?: string
+  heroEyebrow?: string
+  heroTitle?: string
+  heroBody?: string
 }
 
 const SORTS: CatalogSort[] = ['featured', 'price_asc', 'price_desc', 'name']
 
-export function RentClient({ products, categories, whatsapp }: Props) {
+export function RentClient({
+  products,
+  categories,
+  whatsapp,
+  heroImage,
+  heroEyebrow,
+  heroTitle,
+  heroBody,
+}: Props) {
   const locale = useLocale()
   const ar = locale === 'ar'
   const shop = useTranslations('shopV2')
@@ -51,10 +64,10 @@ export function RentClient({ products, categories, whatsapp }: Props) {
   return (
     <div className="bg-sand-50">
       <PageHero
-        image="/media/heroposter.webp"
-        eyebrow={<Eyebrow tone="light">{shop('rentEyebrow')}</Eyebrow>}
-        title={shop('rentTitle')}
-        lede={shop('rentLede')}
+        image={heroImage || '/media/heroposter.webp'}
+        eyebrow={<Eyebrow tone="light">{heroEyebrow || shop('rentEyebrow')}</Eyebrow>}
+        title={heroTitle || shop('rentTitle')}
+        lede={heroBody || shop('rentLede')}
         size="md"
       />
 

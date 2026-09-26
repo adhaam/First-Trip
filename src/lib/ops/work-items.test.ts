@@ -45,6 +45,27 @@ test('c. commerce_order next_action is mapped purely by status, never by payment
   assert.equal(derive({ entity_type: 'commerce_order', status: 'confirmed' }).next_action, 'prepare_order')
 })
 
+test('c. edition_request next_action is mapped purely by status: new/contacted need action, confirmed/closed do not', () => {
+  assert.equal(derive({ entity_type: 'edition_request', status: 'new', payment_kind: null }).next_action, 'contact_customer')
+  assert.equal(derive({ entity_type: 'edition_request', status: 'contacted', payment_kind: null }).next_action, 'confirm_or_close')
+  assert.equal(derive({ entity_type: 'edition_request', status: 'confirmed', payment_kind: null }).next_action, 'none')
+  assert.equal(derive({ entity_type: 'edition_request', status: 'closed', payment_kind: null }).next_action, 'none')
+})
+
+test('c. edition_request needs_action follows next_action, not payment (edition_requests carry no payment_kind)', () => {
+  const newRequest = derive({ entity_type: 'edition_request', status: 'new', payment_kind: null, amount_total: null })
+  const contacted = derive({ entity_type: 'edition_request', status: 'contacted', payment_kind: null, amount_total: null })
+  const confirmed = derive({ entity_type: 'edition_request', status: 'confirmed', payment_kind: null, amount_total: null })
+  const closed = derive({ entity_type: 'edition_request', status: 'closed', payment_kind: null, amount_total: null })
+  assert.equal(newRequest.needs_action, true)
+  assert.equal(contacted.needs_action, true)
+  assert.equal(confirmed.needs_action, false)
+  assert.equal(closed.needs_action, false)
+  // No payment_kind -> no policy pricing derived for an Experience request.
+  assert.equal(newRequest.upfront_due, null)
+  assert.equal(newRequest.outstanding_now, null)
+})
+
 test('d. trip_request: converted rows never need conversion again', () => {
   assert.equal(
     derive({ entity_type: 'trip_request', status: 'awaiting_payment', payment_status: 'converted' }).next_action,

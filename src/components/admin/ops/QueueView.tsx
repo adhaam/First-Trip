@@ -19,7 +19,7 @@ import { WorkItemTable } from '@/components/admin/ops/WorkItemTable'
 import { dashboardHref } from '@/components/admin/ops/nav'
 
 const VIEWS = ['needs_action', 'awaiting_payment', 'upcoming', 'stale', 'exceptions', 'all'] as const
-const ENTITY_TYPES: OpsEntityType[] = ['accommodation_booking', 'trip_booking', 'signature_request', 'trip_request', 'commerce_order']
+const ENTITY_TYPES: OpsEntityType[] = ['accommodation_booking', 'trip_booking', 'signature_request', 'trip_request', 'commerce_order', 'edition_request']
 const PAYMENT_STATUSES = ['unpaid', 'partial', 'paid', 'refunded'] as const
 const ALL_STATUSES = Array.from(new Set(Object.values(STATUSES).flat()))
 

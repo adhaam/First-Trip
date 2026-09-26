@@ -11,6 +11,7 @@ import { Reveal } from '@/components/motion/Reveal'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
 import { cn } from '@/lib/utils'
 import type { SiteSettings } from '@/lib/types'
+import { pickCopy, type SitePage } from '@/lib/site-pages-core'
 
 const WIDE_QUERY = '(min-width: 1024px)'
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
@@ -61,24 +62,30 @@ function useHeroVideoEnabled(): boolean {
  * wide, `prefers-reduced-motion` is off, and the connection isn't
  * Save-Data/2g — see the decision inside `useHeroVideoEnabled`. Dashboard
  * copy (Site Settings → Homepage) overrides the brand default when set.
+ *
+ * `sitePage` (site_pages 'home', Website admin → Pages) can additionally
+ * override the hero image and disables the brand video in that case — a
+ * custom photo replaces the cinematic loop rather than sitting behind it.
  */
-export function Hero({ settings }: { settings: SiteSettings | null }) {
+export function Hero({ settings, sitePage }: { settings: SiteSettings | null; sitePage?: SitePage | null }) {
   const t = useTranslations('homeV2.hero')
   const locale = useLocale()
   const ar = locale === 'ar'
-  const posterSrc = '/media/heroposter.webp'
+  const posterSrc = sitePage?.hero_image_url || '/media/heroposter.webp'
+  const hasCustomHeroImage = Boolean(sitePage?.hero_image_url)
 
   const [videoReady, setVideoReady] = useState(false)
-  const playVideo = useHeroVideoEnabled()
+  const playVideo = useHeroVideoEnabled() && !hasCustomHeroImage
   const revealVideo = () => setVideoReady(true)
 
   // The headline is the brand line and never changes. Owner-editable hero copy
-  // (Site Settings → Homepage) still has a home: it becomes the lede.
+  // (Site Settings → Homepage, then Website admin → Pages) overrides the
+  // brand default when set — it becomes the lede.
   const ownerLede = [
     ar ? settings?.hero_heading_ar : settings?.hero_heading_en,
     ar ? settings?.hero_subheading_ar : settings?.hero_subheading_en,
   ].filter(Boolean).join(' — ')
-  const lede = ownerLede || t('lede')
+  const lede = pickCopy(locale, { en: sitePage?.body_en, ar: sitePage?.body_ar }, ownerLede || t('lede'))
 
   const primaryLabel = (ar ? settings?.primary_cta_label_ar : settings?.primary_cta_label_en) || t('primaryCta')
   const secondaryLabel = (ar ? settings?.secondary_cta_label_ar : settings?.secondary_cta_label_en) || t('secondaryCta')

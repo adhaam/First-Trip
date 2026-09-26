@@ -101,7 +101,7 @@ export function ExperienceRequestsManager() {
                   <TableCell className="font-medium">{r.full_name}</TableCell>
                   <TableCell className="text-gray-600">
                     {r.experiences ? (ar ? r.experiences.title_ar : r.experiences.title_en) : (
-                      <Badge variant="outline" className="text-weemap-orange border-weemap-orange">{ar ? 'ابنِ تجربتك' : 'Build Your Signature'}</Badge>
+                      <Badge variant="outline" className="text-weemap-orange border-weemap-orange">{ar ? 'ابنِ تجربتك' : 'Build Your Own'}</Badge>
                     )}
                   </TableCell>
                   <TableCell dir="ltr" className="text-gray-500">{r.phone}</TableCell>

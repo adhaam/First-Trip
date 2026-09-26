@@ -9,6 +9,8 @@ import { Link } from '@/i18n/navigation'
 import { pageMetadata } from '@/lib/seo'
 import { formatCount } from '@/lib/format'
 import { NEUTRAL_MEDIA } from '@/lib/media'
+import { getSitePage } from '@/lib/site-pages'
+import { pickCopy } from '@/lib/site-pages-core'
 
 export const revalidate = 60
 
@@ -29,12 +31,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function ExplorePage({ params }: Props) {
   const { locale } = await params
-  const [trips, packages, posts, t, tDiscovery] = await Promise.all([
+  const [trips, packages, posts, t, tDiscovery, sitePage] = await Promise.all([
     getSinaiTrips(),
     getTripPackages(),
     getCommunityPosts(),
     getTranslations({ locale, namespace: 'explore' }),
     getTranslations({ locale, namespace: 'discovery' }),
+    getSitePage('explore'),
   ])
 
   const tripCount = t('tripCount', { count: trips.length, n: formatCount(trips.length, locale) })
@@ -82,15 +85,22 @@ export default async function ExplorePage({ params }: Props) {
     },
   ]
 
-  const heroImage = trips[0]?.images?.[0] || packages[0]?.image || posts[0]?.image_url || undefined
+  const heroImage = sitePage?.hero_image_url || '/media/heroposter.webp'
+  const heroEyebrow = pickCopy(
+    locale,
+    { en: sitePage?.eyebrow_en, ar: sitePage?.eyebrow_ar },
+    t('hubEyebrow'),
+  )
+  const heroTitle = pickCopy(locale, { en: sitePage?.title_en, ar: sitePage?.title_ar }, t('hubTitle'))
+  const heroBody = pickCopy(locale, { en: sitePage?.body_en, ar: sitePage?.body_ar }, t('hubLede'))
 
   return (
     <>
       <PageHero
         image={heroImage}
-        eyebrow={<Eyebrow tone="light">{t('hubEyebrow')}</Eyebrow>}
-        title={t('hubTitle')}
-        lede={t('hubLede')}
+        eyebrow={<Eyebrow tone="light">{heroEyebrow}</Eyebrow>}
+        title={heroTitle}
+        lede={heroBody}
         actions={
           <Link
             href="/plan"

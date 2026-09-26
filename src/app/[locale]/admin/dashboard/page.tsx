@@ -5,113 +5,97 @@ import { useLocale, useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { Link, useRouter } from '@/i18n/navigation'
 import {
-  LayoutDashboard, ListChecks, Inbox, Users, Search as SearchIcon,
-  ClipboardList, MapPinned, Sparkles, UserPlus,
-  Building2, Bus, Mountain, Package, Tags, Handshake, ShoppingBag, HeartPulse, CalendarDays,
-  MessageSquareText, Quote, Settings, Mail,
-  ShieldCheck, History, UserCog,
+  LayoutDashboard, ListChecks, Users, Search as SearchIcon,
+  Package2, ShoppingBag, Globe, Settings,
   LogOut, Menu, X, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/brand/Logo'
 import { StaffContext, type SignedInStaff, type StaffCapabilities } from '@/components/admin/ops/StaffContext'
-import { dashboardHref, queueHref } from '@/components/admin/ops/nav'
+import { dashboardHref } from '@/components/admin/ops/nav'
 import { OpsSearch } from '@/components/admin/ops/OpsSearch'
 import { TodayView } from '@/components/admin/ops/TodayView'
 import { QueueView } from '@/components/admin/ops/QueueView'
 import { ItemDetail } from '@/components/admin/ops/ItemDetail'
 import { CustomerProfile } from '@/components/admin/ops/CustomerProfile'
-import { MyAccountView } from '@/components/admin/ops/MyAccountView'
+import { BookingsWorkspace } from '@/components/admin/ops/BookingsWorkspace'
+import { CatalogueWorkspace } from '@/components/admin/ops/CatalogueWorkspace'
+import { WebsiteWorkspace } from '@/components/admin/ops/WebsiteWorkspace'
+import { SettingsWorkspace } from '@/components/admin/ops/SettingsWorkspace'
 import type { OpsEntityType } from '@/lib/ops/types'
 
-import { AccommodationManager } from '@/components/admin/AccommodationManager'
-import { SinaiTripManager } from '@/components/admin/SinaiTripManager'
-import { CommunityPostManager } from '@/components/admin/CommunityPostManager'
-import { SiteSettingsManager } from '@/components/admin/SiteSettingsManager'
-import { BookingsManager } from '@/components/admin/BookingsManager'
 import { CustomersManager } from '@/components/admin/CustomersManager'
-import { TransferPricingManager } from '@/components/admin/TransferPricingManager'
-import { TestimonialsManager } from '@/components/admin/TestimonialsManager'
-import { NewsletterManager } from '@/components/admin/NewsletterManager'
-import { TripBookingsManager } from '@/components/admin/TripBookingsManager'
 import { CommerceManager } from '@/components/admin/CommerceManager'
-import { TripPackageManager } from '@/components/admin/TripPackageManager'
-import { EditionManager } from '@/components/admin/EditionManager'
-import { PackageCategoryManager } from '@/components/admin/PackageCategoryManager'
-import { ExperienceManager } from '@/components/admin/ExperienceManager'
-import { ExperienceCategoryManager } from '@/components/admin/ExperienceCategoryManager'
-import { ExperiencePartnerManager } from '@/components/admin/ExperiencePartnerManager'
-import { ExperienceRequestsManager } from '@/components/admin/ExperienceRequestsManager'
-import { PartnerInquiriesManager } from '@/components/admin/PartnerInquiriesManager'
-import { StaffManager } from '@/components/admin/config/StaffManager'
-import { TransportScheduleManager } from '@/components/admin/config/TransportScheduleManager'
-import { AuditLogViewer } from '@/components/admin/config/AuditLogViewer'
-import { CatalogueHealthPanel } from '@/components/admin/config/CatalogueHealthPanel'
 
 type NavItem = { icon: LucideIcon; key: string; labelKey: string; href: string }
 type NavGroup = { key: string; labelKey: string; items: NavItem[] }
 
-function buildNavGroups(capabilities: StaffCapabilities, role: string | undefined): NavGroup[] {
-  const groups: NavGroup[] = [
+// Legacy ?section= values that predate the workspace/tab restructure, mapped to
+// their new home so old links (Today tiles, work-items, ItemDetail, OpsSearch,
+// emails, bookmarks) keep landing in the right place. Each maps to a workspace
+// section plus the default tab that workspace should open on when no ?tab= is
+// given explicitly.
+const LEGACY_SECTION_MAP: Record<string, { section: string; tab: string }> = {
+  // Bare ?section=bookings (no ?tab=) predates tabs and meant "Dahab bookings" (Stays).
+  // New links to the workspace always pass an explicit ?tab=, so they skip this default.
+  bookings: { section: 'bookings', tab: 'stays' },
+  'trip-bookings': { section: 'bookings', tab: 'trips' },
+  'signature-requests': { section: 'bookings', tab: 'experience-requests-archive' },
+  'partner-inquiries': { section: 'bookings', tab: 'partner-inquiries' },
+  'trip-requests-queue': { section: 'bookings', tab: 'trip-requests' },
+  accommodations: { section: 'catalogue', tab: 'stays' },
+  transfers: { section: 'catalogue', tab: 'transfers' },
+  'transport-schedule': { section: 'catalogue', tab: 'transfers' },
+  'sinai-trips': { section: 'catalogue', tab: 'trips' },
+  'trip-packages': { section: 'catalogue', tab: 'packages' },
+  'package-categories': { section: 'catalogue', tab: 'packages' },
+  editions: { section: 'catalogue', tab: 'experiences' },
+  'signature-experiences': { section: 'catalogue', tab: 'experiences' },
+  'signature-categories': { section: 'catalogue', tab: 'experiences' },
+  'experience-partners': { section: 'catalogue', tab: 'partners' },
+  'catalogue-health': { section: 'catalogue', tab: 'health' },
+  community: { section: 'website', tab: 'community' },
+  testimonials: { section: 'website', tab: 'testimonials' },
+  newsletter: { section: 'website', tab: 'newsletter' },
+  settings: { section: 'settings', tab: 'site-settings' },
+  staff: { section: 'settings', tab: 'staff' },
+  audit: { section: 'settings', tab: 'audit' },
+  'my-account': { section: 'settings', tab: 'my-account' },
+}
+
+function buildNavGroups(): NavGroup[] {
+  return [
     {
       key: 'operations', labelKey: 'operations',
       items: [
         { icon: LayoutDashboard, key: 'today', labelKey: 'today', href: dashboardHref('today') },
-        { icon: ListChecks, key: 'queue', labelKey: 'queue', href: queueHref('needs_action') },
-        { icon: Inbox, key: 'trip-requests-queue', labelKey: 'tripRequests', href: queueHref('needs_action', { type: 'trip_request' }) },
-        { icon: Users, key: 'customers', labelKey: 'customers', href: dashboardHref('customers') },
         { icon: SearchIcon, key: 'search', labelKey: 'search', href: dashboardHref('today') },
       ],
     },
     {
-      key: 'bookings', labelKey: 'bookings',
+      key: 'workspaces', labelKey: 'workspaces',
       items: [
-        { icon: ClipboardList, key: 'bookings', labelKey: 'dahabBookings', href: dashboardHref('bookings') },
-        { icon: MapPinned, key: 'trip-bookings', labelKey: 'sinaiTripBookings', href: dashboardHref('trip-bookings') },
-        { icon: Sparkles, key: 'signature-requests', labelKey: 'signatureRequests', href: dashboardHref('signature-requests') },
-        { icon: UserPlus, key: 'partner-inquiries', labelKey: 'partnerInquiries', href: dashboardHref('partner-inquiries') },
-      ],
-    },
-    {
-      key: 'catalogue', labelKey: 'catalogue',
-      items: [
-        { icon: Building2, key: 'accommodations', labelKey: 'accommodations', href: dashboardHref('accommodations') },
-        { icon: Bus, key: 'transfers', labelKey: 'transfersPricing', href: dashboardHref('transfers') },
-        { icon: Mountain, key: 'sinai-trips', labelKey: 'sinaiTrips', href: dashboardHref('sinai-trips') },
-        { icon: Package, key: 'trip-packages', labelKey: 'tripPackages', href: dashboardHref('trip-packages') },
-        { icon: CalendarDays, key: 'editions', labelKey: 'editions', href: dashboardHref('editions') },
-        { icon: Tags, key: 'package-categories', labelKey: 'packageCategories', href: dashboardHref('package-categories') },
-        { icon: Sparkles, key: 'signature-experiences', labelKey: 'signatureExperiences', href: dashboardHref('signature-experiences') },
-        { icon: Tags, key: 'signature-categories', labelKey: 'signatureCategories', href: dashboardHref('signature-categories') },
-        { icon: Handshake, key: 'experience-partners', labelKey: 'partners', href: dashboardHref('experience-partners') },
+        {
+          icon: ListChecks, key: 'bookings', labelKey: 'bookings',
+          href: dashboardHref('bookings', { tab: 'needs-action' }),
+        },
+        {
+          icon: Package2, key: 'catalogue', labelKey: 'catalogue',
+          href: dashboardHref('catalogue', { tab: 'stays' }),
+        },
+        { icon: Users, key: 'customers', labelKey: 'customers', href: dashboardHref('customers') },
         { icon: ShoppingBag, key: 'commerce', labelKey: 'commerce', href: dashboardHref('commerce') },
-        { icon: HeartPulse, key: 'catalogue-health', labelKey: 'catalogueHealth', href: dashboardHref('catalogue-health') },
-      ],
-    },
-    {
-      key: 'content', labelKey: 'content',
-      items: [
-        { icon: MessageSquareText, key: 'community', labelKey: 'community', href: dashboardHref('community') },
-        { icon: Quote, key: 'testimonials', labelKey: 'testimonials', href: dashboardHref('testimonials') },
-      ],
-    },
-    {
-      key: 'settings', labelKey: 'settings',
-      items: [
-        { icon: Bus, key: 'transport-schedule', labelKey: 'transportSchedule', href: dashboardHref('transport-schedule') },
-        { icon: Settings, key: 'settings', labelKey: 'siteSettings', href: dashboardHref('settings') },
-        { icon: Mail, key: 'newsletter', labelKey: 'newsletter', href: dashboardHref('newsletter') },
+        {
+          icon: Globe, key: 'website', labelKey: 'website',
+          href: dashboardHref('website', { tab: 'website-manager' }),
+        },
+        {
+          icon: Settings, key: 'settings', labelKey: 'settings',
+          href: dashboardHref('settings', { tab: 'site-settings' }),
+        },
       ],
     },
   ]
-
-  const teamItems: NavItem[] = []
-  if (capabilities.manageStaff) teamItems.push({ icon: UserCog, key: 'staff', labelKey: 'staff', href: dashboardHref('staff') })
-  if (role !== 'operations') teamItems.push({ icon: History, key: 'audit', labelKey: 'auditLog', href: dashboardHref('audit') })
-  teamItems.push({ icon: ShieldCheck, key: 'my-account', labelKey: 'myAccount', href: dashboardHref('my-account') })
-  groups.push({ key: 'team', labelKey: 'team', items: teamItems })
-
-  return groups
 }
 
 export default function AdminDashboardPage() {
@@ -170,8 +154,11 @@ function DashboardShell() {
     }
   }, [sidebarOpen])
 
-  const section = searchParams.get('section') || 'today'
-  const navGroups = buildNavGroups(capabilities, staff?.role)
+  const rawSection = searchParams.get('section') || 'today'
+  const legacy = LEGACY_SECTION_MAP[rawSection]
+  const section = legacy?.section ?? rawSection
+  const defaultTab = legacy?.tab
+  const navGroups = buildNavGroups()
 
   const signOut = async () => {
     setSigningOut(true)
@@ -217,7 +204,7 @@ function DashboardShell() {
                 <div className="space-y-1">
                   {group.items.map((item) => {
                     const Icon = item.icon
-                    const isCurrent = section === item.key || (item.key === 'queue' && section === 'queue')
+                    const isCurrent = section === item.key || (item.key === 'bookings' && section === 'queue')
                     return (
                       <Link
                         key={item.key}
@@ -300,6 +287,9 @@ function DashboardShell() {
             <SectionBody
               section={section}
               searchParams={searchParams}
+              legacyDefaultTab={defaultTab}
+              capabilities={capabilities}
+              role={staff?.role}
             />
           </main>
         </div>
@@ -313,7 +303,15 @@ function RoleLabel({ role }: { role: string }) {
   return <>{t.has(role) ? t(role) : role}</>
 }
 
-function SectionBody({ section, searchParams }: { section: string; searchParams: URLSearchParams }) {
+function SectionBody({
+  section, searchParams, legacyDefaultTab, capabilities, role,
+}: {
+  section: string
+  searchParams: URLSearchParams
+  legacyDefaultTab?: string
+  capabilities: StaffCapabilities
+  role: string | undefined
+}) {
   const t = useTranslations('ops.common')
   switch (section) {
     case 'today': return <TodayView />
@@ -330,29 +328,18 @@ function SectionBody({ section, searchParams }: { section: string; searchParams:
       return <CustomerProfile id={id} />
     }
     case 'customers': return <CustomersManager />
-    case 'bookings': return <BookingsManager />
-    case 'trip-bookings': return <TripBookingsManager />
-    case 'signature-requests': return <ExperienceRequestsManager />
-    case 'partner-inquiries': return <PartnerInquiriesManager />
-    case 'accommodations': return <AccommodationManager />
-    case 'transfers': return <TransferPricingManager />
-    case 'sinai-trips': return <SinaiTripManager />
-    case 'trip-packages': return <TripPackageManager />
-    case 'editions': return <EditionManager />
-    case 'package-categories': return <PackageCategoryManager />
-    case 'signature-experiences': return <ExperienceManager />
-    case 'signature-categories': return <ExperienceCategoryManager />
-    case 'experience-partners': return <ExperiencePartnerManager />
+    case 'bookings': return <BookingsWorkspace defaultTab={legacyDefaultTab ?? 'needs-action'} />
+    case 'catalogue': return <CatalogueWorkspace defaultTab={legacyDefaultTab ?? 'stays'} />
     case 'commerce': return <CommerceManager />
-    case 'catalogue-health': return <CatalogueHealthPanel />
-    case 'community': return <CommunityPostManager />
-    case 'testimonials': return <TestimonialsManager />
-    case 'transport-schedule': return <TransportScheduleManager />
-    case 'settings': return <SiteSettingsManager />
-    case 'newsletter': return <NewsletterManager />
-    case 'staff': return <StaffManager />
-    case 'audit': return <AuditLogViewer />
-    case 'my-account': return <MyAccountView />
+    case 'website': return <WebsiteWorkspace defaultTab={legacyDefaultTab ?? 'website-manager'} />
+    case 'settings':
+      return (
+        <SettingsWorkspace
+          defaultTab={legacyDefaultTab ?? 'site-settings'}
+          capabilities={capabilities}
+          role={role}
+        />
+      )
     default: return <TodayView />
   }
 }

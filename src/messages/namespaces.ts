@@ -22,6 +22,7 @@ export const V2_NAMESPACES = [
   'ops',
   'opsConfig',
   'discovery',
+  'website',
 ] as const
 
 export type V2Namespace = (typeof V2_NAMESPACES)[number]

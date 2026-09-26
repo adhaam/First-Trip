@@ -227,7 +227,7 @@
       "staff_users": "الموظفون",
       "bookings": "حجوزات الإقامة",
       "trip_bookings": "حجوزات الرحلات",
-      "experience_bookings": "طلبات التجارب الخاصة",
+      "experience_bookings": "طلبات تجارب سابقة",
       "commerce_orders": "طلبات المتجر",
       "commerce_rentals": "الإيجارات",
       "payment_records": "المدفوعات",
@@ -240,7 +240,7 @@
       "accommodations": "أماكن الإقامة",
       "sinai_trips": "رحلات سيناء",
       "trip_packages": "باقات الرحلات",
-      "experiences": "التجارب الخاصة",
+      "experiences": "تجارب سابقة",
       "commerce_products": "منتجات المتجر"
     }
   },
@@ -253,7 +253,7 @@
       "accommodation": "إقامة",
       "sinai_trip": "رحلة سيناء",
       "trip_package": "باقة رحلة",
-      "signature_experience": "تجربة خاصة",
+      "signature_experience": "تجربة سابقة",
       "commerce_product": "منتج متجر"
     },
     "issues": {

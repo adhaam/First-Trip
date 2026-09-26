@@ -13,6 +13,7 @@ import { getTripPackages } from '@/lib/trip-packages'
 import { getExperiences } from '@/lib/experiences'
 import { listPublicEditions } from '@/lib/editions-data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
+import { getSitePage } from '@/lib/site-pages'
 import {
   selectCategoryTiles,
   selectCuratedPicks,
@@ -58,6 +59,7 @@ export default async function HomePage() {
     rentalProducts,
     paymentRules,
     editions,
+    homeSitePage,
   ] = await Promise.all([
     getAccommodations(),
     getSinaiTrips(),
@@ -70,6 +72,7 @@ export default async function HomePage() {
     getCommerceProducts('rental'),
     getPaymentRules(),
     listPublicEditions(),
+    getSitePage('home'),
   ])
 
   const curatedPicks = selectCuratedPicks({
@@ -87,6 +90,7 @@ export default async function HomePage() {
   return (
     <HomeClient
       settings={settings}
+      homeSitePage={homeSitePage}
       posts={posts}
       testimonials={testimonials}
       policies={paymentRules.policies}

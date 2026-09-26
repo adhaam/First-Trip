@@ -79,8 +79,8 @@ export function ExperienceCategoryManager() {
     <div className="space-y-4">
       <p className="text-sm text-gray-500">
         {ar
-          ? 'تصنيفات Signature Experiences — قابلة للتعديل من غير أي تعديل في الكود.'
-          : 'Signature Experiences categories — editable without code changes.'}
+          ? 'تصنيفات التجارب السابقة — قابلة للتعديل من غير أي تعديل في الكود.'
+          : 'Earlier experiences categories — editable without code changes.'}
       </p>
       <Card>
         <CardContent className="p-4 grid gap-3 sm:grid-cols-2">
