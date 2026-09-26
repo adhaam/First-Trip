@@ -1,9 +1,8 @@
 import type { Metadata } from 'next'
-import { NEUTRAL_MEDIA } from '@/lib/media'
 import { getTranslations } from 'next-intl/server'
 import { getTripPackages } from '@/lib/trip-packages'
 import { EmptyState } from '@/components/EmptyState'
-import { Eyebrow, EditorialCard, PageHero, PaymentTerms, PriceTag, Section, SectionHeading } from '@/components/brand'
+import { Eyebrow, PageHero, PaymentTerms, Section, SectionHeading } from '@/components/brand'
 import { TripPackageCard } from '@/components/cards/TripPackageCard'
 import { PickupNote } from '@/components/explore/PickupNote'
 import { Link, getPathname } from '@/i18n/navigation'
@@ -11,7 +10,6 @@ import { getPaymentRules } from '@/lib/payment-rules-load'
 import { pageMetadata, SITE_URL } from '@/lib/seo'
 import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/schema-org'
 import { jsonLdScript } from '@/lib/safe-html'
-import { formatCount } from '@/lib/format'
 
 export const revalidate = 60
 
@@ -82,8 +80,6 @@ export default async function PackagesPage({ params }: Props) {
   // selectHomePackages, which several sections would otherwise duplicate).
   const ordered = [...packages].sort((a, b) => Number(b.featured) - Number(a.featured))
   const [hero, ...rest] = ordered
-  const heroName = locale === 'ar' ? hero.name_ar : hero.name_en
-  const heroTripCount = hero.trips?.length ?? 0
 
   // Real names of trips actually bundled into these packages (never
   // invented) — first three, deduplicated by id.
@@ -147,15 +143,7 @@ export default async function PackagesPage({ params }: Props) {
         <SectionHeading eyebrow={t('packagesCatalogueMark')} title={t('packagesCatalogueTitle')} />
 
         <div className="space-y-6">
-          <EditorialCard
-            href={`/sinai-trips/packages/${hero.slug}`}
-            image={hero.image || hero.trips?.[0]?.image || NEUTRAL_MEDIA}
-            title={heroName}
-            kicker={t('packageTripsCount', { count: heroTripCount, n: formatCount(heroTripCount, locale) })}
-            meta={<PriceTag amount={hero.totals?.packageTotal ?? 0} unit="person" tone="light" size="sm" />}
-            size="lg"
-            priority
-          />
+          <TripPackageCard pkg={hero} featured />
 
           {rest.length > 0 && (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

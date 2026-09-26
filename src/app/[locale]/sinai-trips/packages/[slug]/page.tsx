@@ -73,6 +73,7 @@ export default async function PackageDetail({ params }: Props) {
 
   const ar = locale === 'ar'
   const name = ar ? pkg.name_ar : pkg.name_en
+  const badge = (ar ? pkg.badge_ar : pkg.badge_en) || t('packageBadge')
   const description = (ar ? pkg.description_ar : pkg.description_en) || ''
   const short = (ar ? pkg.short_description_ar : pkg.short_description_en) || ''
   const trips = pkg.trips || []
@@ -108,7 +109,7 @@ export default async function PackageDetail({ params }: Props) {
         image={cover}
         eyebrow={
           <Eyebrow tone="light">
-            <Route className="h-4 w-4" /> {t('packageBadge')}
+            <Route className="h-4 w-4" /> {badge}
           </Eyebrow>
         }
         title={name}
@@ -185,7 +186,7 @@ export default async function PackageDetail({ params }: Props) {
       )}
 
       <StickyActionBar
-        summary={<span>{t('packageBadge')}</span>}
+        summary={<span>{badge}</span>}
         action={
           <a href="#request" className="inline-flex min-h-11 items-center rounded-full bg-sun-500 px-5 font-semibold text-on-accent">
             {t('request')}
