@@ -2,25 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { PAGE_KEYS } from '@/lib/site-pages-core'
-
-// Same URL shape allowed for site_settings hero/media fields — local path or
-// an https URL from the storage host actually used by upload-image (Supabase
-// storage) — never an arbitrary external URL.
-const mediaUrlSchema = z.string().max(1000).refine(value => {
-  if (!value) return true
-  if (value.startsWith('/') && !value.startsWith('//')) return true
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:' && url.hostname.endsWith('.supabase.co')
-  } catch {
-    return false
-  }
-}, 'Use a local path or an image URL from the configured Supabase storage')
+import { isAllowedMediaUrl, isHeroUrlAcceptable, PAGE_KEYS } from '@/lib/site-pages-core'
 
 const sitePageSchema = z.object({
   page_key: z.enum(PAGE_KEYS),
-  hero_image_url: mediaUrlSchema.nullable().optional(),
+  hero_image_url: z.string().max(1000).nullable().optional(),
   hero_image_alt_en: z.string().max(300).nullable().optional(),
   hero_image_alt_ar: z.string().max(300).nullable().optional(),
   eyebrow_en: z.string().max(160).nullable().optional(),
@@ -76,6 +62,29 @@ export async function PUT(req: NextRequest) {
   }
   const { page_key, ...fields } = validated.data
   const supabase = getSupabaseAdmin(gate.staff)
+  const nextHeroUrl = fields.hero_image_url
+  if (typeof nextHeroUrl === 'string' && nextHeroUrl && !isAllowedMediaUrl(nextHeroUrl)) {
+    const { data: current, error: readError } = await supabase
+      .from('site_pages')
+      .select('hero_image_url')
+      .eq('page_key', page_key)
+      .maybeSingle()
+    if (readError) {
+      console.error('PUT site_pages read error:', readError)
+      return NextResponse.json({ error: 'Failed to save page' }, { status: 500 })
+    }
+    if (!isHeroUrlAcceptable(nextHeroUrl, current?.hero_image_url)) {
+      return NextResponse.json({
+        error: 'Invalid data',
+        details: {
+          formErrors: [],
+          fieldErrors: {
+            hero_image_url: ['Use a local path or an image URL from the configured Supabase storage'],
+          },
+        },
+      }, { status: 400 })
+    }
+  }
   const { data, error } = await supabase
     .from('site_pages')
     .upsert(

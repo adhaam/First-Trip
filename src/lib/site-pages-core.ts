@@ -54,6 +54,21 @@ export function isPageKey(value: string): value is PageKey {
   return (PAGE_KEYS as readonly string[]).includes(value)
 }
 
+export function isAllowedMediaUrl(value: string): boolean {
+  if (!value) return true
+  if (value.startsWith('/') && !value.startsWith('//')) return true
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && url.hostname.endsWith('.supabase.co')
+  } catch {
+    return false
+  }
+}
+
+export function isHeroUrlAcceptable(next: string, stored: string | null | undefined): boolean {
+  return isAllowedMediaUrl(next) || next === stored
+}
+
 /**
  * Picks the owner override for the current locale when set, else the
  * designed i18n fallback. Every column on site_pages is nullable — an empty

@@ -3,6 +3,8 @@ import test from 'node:test'
 import {
   PAGE_FIELDS,
   PAGE_KEYS,
+  isAllowedMediaUrl,
+  isHeroUrlAcceptable,
   isPageKey,
   pickCopy,
   pickHeroImage,
@@ -35,6 +37,27 @@ test('isPageKey accepts every declared page key and rejects unknown strings', ()
 
 test('PAGE_FIELDS covers every declared page key', () => {
   assert.deepEqual(Object.keys(PAGE_FIELDS).sort(), [...PAGE_KEYS].sort())
+})
+
+test('isAllowedMediaUrl accepts a local path', () => {
+  assert.equal(isAllowedMediaUrl('/media/community.webp'), true)
+})
+
+test('isAllowedMediaUrl accepts a Supabase URL', () => {
+  assert.equal(isAllowedMediaUrl('https://project.supabase.co/storage/v1/object/public/hero.webp'), true)
+})
+
+test('isHeroUrlAcceptable rejects a new external URL', () => {
+  assert.equal(isHeroUrlAcceptable('https://commons.wikimedia.org/new.jpg', null), false)
+})
+
+test('isHeroUrlAcceptable accepts an unchanged external URL', () => {
+  const url = 'https://commons.wikimedia.org/existing.jpg'
+  assert.equal(isHeroUrlAcceptable(url, url), true)
+})
+
+test('isHeroUrlAcceptable accepts an empty URL', () => {
+  assert.equal(isHeroUrlAcceptable('', 'https://commons.wikimedia.org/existing.jpg'), true)
 })
 
 test('pickCopy returns the locale override when non-empty', () => {
