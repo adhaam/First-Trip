@@ -1,14 +1,14 @@
 {
   "landing": {
-    "eyebrow": "WEEMAP EDITIONS",
-    "heroTitle": "Trips worth traveling for.",
-    "heroBody": "Limited departures built around one reason to go: learn something, reset, chase an adventure, or show up for a night worth building a trip around. Each Edition has its own dates, program and group — curated by WEEMAP, sometimes with people we trust.",
-    "upcomingTitle": "Upcoming Editions",
+    "eyebrow": "WEEMAP EXPERIENCES",
+    "heroTitle": "More than a trip. A reason to go.",
+    "heroBody": "Limited departures built around one reason to go: learn something, reset, chase an adventure, or show up for a night worth building a trip around. Each experience has its own dates, program and group — curated by WEEMAP, sometimes with people we trust.",
+    "upcomingTitle": "Upcoming experiences",
     "upcomingSubtitle": "Pick the reason. We'll shape the trip around it.",
     "comingTitle": "On the way",
-    "comingBody": "New Editions are added when the timing, people and experience are right — not just to fill a calendar.",
+    "comingBody": "New experiences are added when the timing, people and experience are right — not just to fill a calendar.",
     "customTitle": "Got your own group in mind?",
-    "customBody": "We can shape a private Edition around your group, goal or occasion.",
+    "customBody": "We can shape a private experience around your group, goal or occasion.",
     "customButton": "Build it with WEEMAP"
   },
   "filters": {
@@ -17,7 +17,7 @@
     "RETREAT": "Retreat",
     "ADVENTURE": "Adventure",
     "MUSIC_EVENT": "Music & Events",
-    "SPECIAL": "Special Editions"
+    "SPECIAL": "Special experiences"
   },
   "status": {
     "COMING_SOON": "Coming Soon",
@@ -31,16 +31,16 @@
   "card": {
     "from": "From",
     "perPerson": "per person",
-    "viewEdition": "View Edition",
-    "joinEdition": "Join this Edition",
-    "askEdition": "Ask about this Edition",
+    "viewEdition": "View experience",
+    "joinEdition": "Join this experience",
+    "askEdition": "Ask about this experience",
     "notifyEdition": "Tell me when it opens",
     "inCollaborationWith": "In collaboration with",
     "spots": "Spots",
     "smallGroup": "Small group"
   },
   "detail": {
-    "whyThisEdition": "Why this Edition",
+    "whyThisEdition": "Why this experience",
     "theProgram": "The program",
     "whatsIncluded": "What's included",
     "whatsNotIncluded": "What's not included",
@@ -50,17 +50,17 @@
     "priceAndPayment": "Price & payment",
     "goodToKnow": "Good to know",
     "inCollaborationWith": "In collaboration with",
-    "joinEdition": "Join this Edition",
-    "askEdition": "Ask about this Edition"
+    "joinEdition": "Join this experience",
+    "askEdition": "Ask about this experience"
   },
   "payment": {
     "percentDeposit": "{value}% deposit to secure your place.",
     "fixedDeposit": "{amount} EGP deposit to secure your place.",
-    "balanceDue": "Remaining balance due {days} days before the Edition.",
+    "balanceDue": "Remaining balance due {days} days before the experience.",
     "payInFull": "Full payment to secure your place."
   },
   "requestForm": {
-    "title": "Ask for this Edition",
+    "title": "Ask about this experience",
     "customerName": "Full name",
     "phone": "WhatsApp number",
     "email": "Email (optional)",
@@ -72,10 +72,10 @@
   },
   "homeTeaser": {
     "datedHeading": "This month in Sinai",
-    "fallbackHeading": "WEEMAP Editions",
+    "fallbackHeading": "WEEMAP Experiences",
     "fallbackBody": "Limited journeys built around a reason to go."
   },
   "nav": {
-    "editions": "Editions"
+    "editions": "Experiences"
   }
 }

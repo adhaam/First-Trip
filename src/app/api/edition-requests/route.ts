@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     // write a request row at all.
     const edition = await getPublicEditionForRequest(validated.data.edition_id)
     if (!edition) {
-      return NextResponse.json({ error: 'This Edition is not available' }, { status: 404 })
+      return NextResponse.json({ error: 'This experience is not available' }, { status: 404 })
     }
 
     const supabase = getSupabaseAdmin()
