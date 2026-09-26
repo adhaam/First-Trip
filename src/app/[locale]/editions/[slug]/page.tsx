@@ -181,7 +181,11 @@ export default async function EditionDetailPage({ params }: PageProps) {
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-2xl border border-sand-200 bg-white p-6 shadow-sm">
               <h2 className="font-display text-lg font-bold text-sea-900">
-                {intent === 'ASK' ? t('detail.askEdition') : t('detail.joinEdition')}
+                {intent === 'NOTIFY'
+                  ? t('card.notifyEdition')
+                  : intent === 'ASK'
+                    ? t('detail.askEdition')
+                    : t('detail.joinEdition')}
               </h2>
               <div className="mt-4">
                 <EditionRequestForm editionId={edition.id} intent={intent} locale={isAr ? 'ar' : 'en'} />
