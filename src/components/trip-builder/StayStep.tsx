@@ -10,6 +10,7 @@ import type { BuilderAction } from '@/lib/trip-builder/state'
 import type { BuilderCatalog, BuilderState, CatalogAccommodation } from '@/lib/trip-builder/types'
 import { cn } from '@/lib/utils'
 import { handleRadioGroupKeyDown } from './controls'
+import { StayQuickView } from './StayQuickView'
 
 /** Section 4 — stay. Optional ("just the ride") for a transport mode; required for stay-only. */
 export function StayStep({
@@ -88,14 +89,19 @@ function AccommodationCard({
 }) {
   const t = useTranslations('builder')
   return (
-    <button
-      type="button"
+    <div
       role="radio"
       aria-checked={active}
       tabIndex={active ? 0 : -1}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
       className={cn(
-        'group w-64 shrink-0 overflow-hidden rounded-2xl border-[1.5px] bg-white text-start transition-colors sm:w-auto sm:shrink',
+        'group w-64 shrink-0 cursor-pointer overflow-hidden rounded-2xl border-[1.5px] bg-white text-start transition-colors sm:w-auto sm:shrink',
         active ? 'border-sun-600 ring-1 ring-sun-200' : 'border-sand-300 hover:border-sea-900/40',
       )}
     >
@@ -119,8 +125,11 @@ function AccommodationCard({
       <div className="p-3.5">
         <p className="font-display text-sm font-bold leading-snug text-sea-900">{locale === 'ar' ? stay.name_ar : stay.name_en}</p>
         <p className="mt-0.5 text-xs capitalize text-ink-subtle">{stay.type}{stay.tier ? ` · ${stay.tier}` : ''}</p>
-        <PriceTag amount={stay.from_price_per_person_per_night} from unit="personNight" size="sm" className="mt-2.5" />
+        <div className="mt-2.5 flex items-center justify-between gap-2">
+          <PriceTag amount={stay.from_price_per_person_per_night} from unit="personNight" size="sm" />
+          <StayQuickView stay={stay} locale={locale} active={active} onSelect={onClick} />
+        </div>
       </div>
-    </button>
+    </div>
   )
 }

@@ -24,6 +24,7 @@ export type NextAction =
   | 'hand_over'
   | 'complete_delivery'
   | 'confirm_or_close'
+  | 'reconcile_payments'
   | 'none'
 
 export type AttentionCode =
@@ -64,6 +65,8 @@ export type WorkItem = {
   attention: AttentionCode[]
   upfront_due: number | null
   outstanding_now: number | null
+  journey_component: boolean
+  converted: boolean
 }
 
 export type Activity = {

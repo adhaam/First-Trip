@@ -10,7 +10,7 @@
  * for the server-side orchestration.
  */
 import type { QuoteInput, QuoteResult } from '@/lib/quote-data'
-import type { CombinedPaymentPlan, PaymentKind } from '@/lib/payment-rules'
+import type { PaymentKind, PaymentPlan } from '@/lib/payment-rules'
 import { resolveStayPattern } from '@/lib/transport'
 import type { StayPatternResult, TransportScheduleConfig } from '@/lib/transport'
 import type { PriceSnapshot } from '@/lib/types'
@@ -90,16 +90,49 @@ function isoToUtcDays(date: string): number {
   return Date.UTC(year, month - 1, day) / 86_400_000
 }
 
+/** Server-side cap on a customer-chosen hiace stay length. */
+export const MAX_CUSTOM_HIACE_NIGHTS = 30
+
 /**
  * Resolves the arrival/departure dates for a journey. Transport modes derive
  * the return date from the commercial stay pattern (never trusted from the
  * client); stay_only accepts any valid dates the customer chose, provided
  * departure is strictly after arrival. Never invents itinerary days.
+ *
+ * A hiace journey may instead be a "Customize" booking: stay_pattern_code is
+ * absent and departure_date is client-chosen. This is re-validated here
+ * (mode must be hiace, both dates strictly future, departure after arrival,
+ * a sane max length) rather than trusted from the client — nights are always
+ * derived from the two dates, never accepted as a client-supplied number.
  */
 export function resolveJourneyDates(
   input: TripRequestQuoteInput,
   schedule: TransportScheduleConfig,
+  now: Date = new Date(),
 ): JourneyDatesResult {
+  if (input.transport_mode === 'hiace' && !input.stay_pattern_code) {
+    if (!input.departure_date) {
+      return { ok: false, code: 'DEPARTURE_DATE_REQUIRED', error: 'A departure date is required for a custom trip.' }
+    }
+    const todayDays = Math.floor(now.getTime() / 86_400_000)
+    const arrivalDays = isoToUtcDays(input.arrival_date)
+    const departureDays = isoToUtcDays(input.departure_date)
+    if (arrivalDays <= todayDays) {
+      return { ok: false, code: 'ARRIVAL_DATE_MUST_BE_FUTURE', error: 'The arrival date must be in the future.' }
+    }
+    if (departureDays <= arrivalDays) {
+      return { ok: false, code: 'INVALID_STAY_DATES', error: 'Departure date must be after the arrival date.' }
+    }
+    const nights = departureDays - arrivalDays
+    if (nights > MAX_CUSTOM_HIACE_NIGHTS) {
+      return { ok: false, code: 'CUSTOM_TRIP_TOO_LONG', error: `A custom trip cannot exceed ${MAX_CUSTOM_HIACE_NIGHTS} nights.` }
+    }
+    return {
+      ok: true,
+      dates: { arrivalDate: input.arrival_date, departureDate: input.departure_date, nights, durationDays: nights + 1 },
+    }
+  }
+
   if (input.transport_mode === 'stay_only') {
     if (!input.departure_date) {
       return { ok: false, code: 'DEPARTURE_DATE_REQUIRED', error: 'A departure date is required for a stay.' }
@@ -256,7 +289,7 @@ export function buildTripRequestRow(
   input: TripRequestInput,
   dates: JourneyDates,
   quote: Extract<QuoteResult, { ok: true }>,
-  paymentPlan: CombinedPaymentPlan,
+  paymentPlan: PaymentPlan,
   customerId: string,
 ) {
   return {

@@ -4,7 +4,7 @@ import type { BuilderCatalog, BuilderState } from './types'
 export type QuoteView = {
   total: number
   lines: { key: string; label_ar: string; label_en: string; detail_ar?: string; detail_en?: string; amount: number }[]
-  payment: { combined: PaymentPlan; parts: { kind: PaymentPlan['kind']; total: number; plan: PaymentPlan }[] }
+  payment: PaymentPlan
 }
 
 export function weekdayHint(catalog: BuilderCatalog, mode?: string, locale: 'ar' | 'en' = 'en') {
@@ -19,8 +19,8 @@ export function weekdayHint(catalog: BuilderCatalog, mode?: string, locale: 'ar'
 
 export function paymentRows(quote: QuoteView | null) {
   if (!quote) return []
-  const afterConfirmation = quote.payment.combined.upfrontAmount
-  const onArrival = quote.payment.combined.balanceAmount
+  const afterConfirmation = quote.payment.upfrontAmount
+  const onArrival = quote.payment.balanceAmount
   return [
     ...(afterConfirmation != null ? [{ key: 'after_confirmation', amount: afterConfirmation }] : []),
     ...(onArrival != null && onArrival > 0 ? [{ key: 'on_arrival', amount: onArrival }] : []),

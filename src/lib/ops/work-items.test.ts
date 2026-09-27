@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DEFAULT_PAYMENT_POLICIES } from '@/lib/payment-rules'
-import { deriveWorkItem, filterByView, isJourneyItem, isTripItem, todayCounts, type WorkItemRow } from './work-items'
+import {
+  deriveWorkItem, filterByView, isCommercialItem, isJourneyItem, isTripItem, todayCounts, type WorkItemRow,
+} from './work-items'
 import type { AttentionCode } from './types'
+import {
+  journeyNoPaymentParent, journeyPackageComponent, journeyParentStayAnd3Trips, journeyStayAnd3Trips,
+  journeyStayComponent, journeyTransportOnlyComponent, journeyTransportOnlyParent, journeyTripComponent1,
+  journeyWithPackageParent, legacyJourneyNeedingReconcile, standalonePackage, standaloneTransfer, standaloneTrip,
+} from './__fixtures__/journeys'
 
 const NOW = new Date('2026-09-25T12:00:00Z')
 const TODAY = '2026-09-25'
@@ -14,6 +21,7 @@ const base: WorkItemRow = {
   start_date: '2026-10-02', end_date: '2026-10-04', people: 2, title_en: '', title_ar: '',
   transfer_type: null, source: 'website', trip_request_id: null,
   created_at: '2026-09-20T00:00:00Z', updated_at: '2026-09-20T00:00:00Z',
+  journey_component: false, converted: false,
 }
 
 const derive = (patch: Partial<WorkItemRow> = {}) => deriveWorkItem(
@@ -67,13 +75,17 @@ test('c. edition_request needs_action follows next_action, not payment (edition_
 })
 
 test('d. trip_request: converted rows never need conversion again', () => {
+  // A converted journey behaves like any other payable booking: awaiting_payment still owes money.
   assert.equal(
-    derive({ entity_type: 'trip_request', status: 'awaiting_payment', payment_status: 'converted' }).next_action,
-    'none',
+    derive({
+      entity_type: 'trip_request', status: 'awaiting_payment', payment_status: 'partial',
+      converted: true, amount_paid: 8960,
+    }).next_action,
+    'collect_payment',
   )
   assert.equal(
     derive({
-      entity_type: 'trip_request', status: 'confirmed', payment_status: 'converted',
+      entity_type: 'trip_request', status: 'confirmed', payment_status: 'partial', converted: true,
       start_date: '2026-09-10', end_date: '2026-09-20',
     }).next_action,
     'mark_completed',
@@ -93,6 +105,28 @@ test('d. trip_request: unconverted with confirmed availability needs conversion 
     }).next_action,
     'convert_to_booking',
   )
+})
+
+test('d. trip_request: converted but not commercial (legacy payment_status "converted") needs reconcile_payments', () => {
+  const item = derive({
+    entity_type: 'trip_request', status: 'confirmed', payment_status: 'converted', converted: true,
+    start_date: '2026-09-10', end_date: '2026-09-20',
+  })
+  assert.equal(item.next_action, 'reconcile_payments')
+  assert.equal(item.needs_action, true)
+})
+
+test('journey component rows never collect_payment or refund_due, regardless of status', () => {
+  const collectCandidate = derive({
+    entity_type: 'accommodation_booking', journey_component: true, status: 'awaiting_payment',
+  })
+  assert.equal(collectCandidate.next_action, 'none')
+  const refundCandidate = derive({
+    entity_type: 'trip_booking', journey_component: true, status: 'cancelled', amount_paid: 500,
+  })
+  assert.equal(refundCandidate.next_action, 'none')
+  assert.equal(refundCandidate.attention.includes('refund_due'), false)
+  assert.equal(collectCandidate.attention.includes('unpaid_close_to_service'), false)
 })
 
 test('e. confirmed and the service date has passed -> mark_completed', () => {
@@ -187,7 +221,7 @@ test('upcoming excludes cancelled rows even inside the window', () => {
 test('arrivals are stays/transfers and unconverted requests; trips are never arrivals', () => {
   const stay = derive({ status: 'confirmed', start_date: '2026-09-25' })
   const trip = derive({ entity_type: 'trip_booking', status: 'confirmed', start_date: '2026-09-25' })
-  const converted = derive({ entity_type: 'trip_request', status: 'confirmed', payment_status: 'converted' })
+  const converted = derive({ entity_type: 'trip_request', status: 'confirmed', converted: true })
   const cancelled = derive({ status: 'cancelled', start_date: '2026-09-25' })
   assert.equal(isJourneyItem(stay), true)
   assert.equal(isJourneyItem(trip), false)
@@ -197,4 +231,73 @@ test('arrivals are stays/transfers and unconverted requests; trips are never arr
   const counts = todayCounts([stay, trip, cancelled], '2026-09-25')
   assert.equal(counts.arrivals_today, 1)
   assert.equal(counts.trips_today, 1)
+})
+
+const deriveRow = (row: WorkItemRow) => deriveWorkItem(row, { now: NOW, today: TODAY, policies: DEFAULT_PAYMENT_POLICIES })
+
+test('journey: one commercial row per journey in every view (BYT stay + 3 trips)', () => {
+  const items = journeyStayAnd3Trips.map(deriveRow)
+  assert.equal(items.filter(isCommercialItem).length, 1)
+  for (const view of ['all', 'needs_action', 'awaiting_payment', 'stale', 'exceptions', 'upcoming'] as const) {
+    const shown = filterByView(items, view, TODAY)
+    assert(shown.length <= 1, `view ${view} should surface at most the one commercial journey row`)
+    for (const item of shown) assert.equal(item.journey_component, false)
+  }
+})
+
+test('journey: children never collect_payment, even when their own math would owe money', () => {
+  const stayComponent = deriveRow(journeyStayComponent)
+  const tripComponent = deriveRow(journeyTripComponent1)
+  assert.equal(stayComponent.next_action, 'none')
+  assert.equal(tripComponent.next_action, 'none')
+  assert.equal(stayComponent.needs_action, false)
+  assert.equal(tripComponent.needs_action, false)
+})
+
+test('journey: parent upfront_due is 50% of the journey total (payment_kind "journey")', () => {
+  const parent = deriveRow(journeyParentStayAnd3Trips)
+  assert.equal(parent.upfront_due, 6000)
+  assert.equal(parent.outstanding_now, 0) // amount_paid 6000 already covers the 50% upfront
+})
+
+test('journey: transport-only and package-only journeys also collapse to one commercial row', () => {
+  const transportItems = [journeyTransportOnlyParent, journeyTransportOnlyComponent].map(deriveRow)
+  assert.equal(transportItems.filter(isCommercialItem).length, 1)
+  assert.equal(deriveRow(journeyTransportOnlyComponent).next_action, 'none')
+
+  const packageItems = [journeyWithPackageParent, journeyPackageComponent].map(deriveRow)
+  assert.equal(packageItems.filter(isCommercialItem).length, 1)
+  assert.equal(deriveRow(journeyPackageComponent).next_action, 'none')
+})
+
+test('standalone trip/package/transfer are priced at 100% upfront, not the journey 50%', () => {
+  assert.equal(deriveRow(standaloneTrip).upfront_due, 1500)
+  assert.equal(deriveRow(standaloneTrip).outstanding_now, 1500)
+  assert.equal(deriveRow(standalonePackage).upfront_due, 3000)
+  assert.equal(deriveRow(standaloneTransfer).upfront_due, 800)
+})
+
+test('journey with no payment terms yet: converted with legacy marker needs reconcile_payments', () => {
+  const item = deriveRow(journeyNoPaymentParent)
+  assert.equal(item.next_action, 'reconcile_payments')
+  assert.equal(item.needs_action, true)
+  assert.equal(item.upfront_due, null) // amount_total is null, so no policy amount can be derived
+})
+
+test('legacy journey needing manual financial review maps to reconcile_payments', () => {
+  const item = deriveRow(legacyJourneyNeedingReconcile)
+  assert.equal(item.next_action, 'reconcile_payments')
+  assert.equal(item.needs_action, true)
+})
+
+test('journey: trips_today counts component trip_bookings, unlike every other today-count', () => {
+  const items = [journeyParentStayAnd3Trips, journeyStayComponent, journeyTripComponent1].map(deriveRow)
+  const counts = todayCounts(items, '2026-10-06') // journeyTripComponent1.start_date
+  assert.equal(counts.trips_today, 1)
+})
+
+test('journey: arrivals are not double-counted (component stay counts, converted parent does not)', () => {
+  const items = [journeyParentStayAnd3Trips, journeyStayComponent].map(deriveRow)
+  const counts = todayCounts(items, '2026-10-05') // both share this start_date
+  assert.equal(counts.arrivals_today, 1)
 })

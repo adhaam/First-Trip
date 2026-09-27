@@ -153,6 +153,9 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
     }
     case 'setPattern':
       next.stay_pattern_code = action.pattern
+      // A preset pattern derives its own return date; a custom hiace booking
+      // (action.pattern undefined) keeps any client-chosen departure_date.
+      if (action.pattern) delete next.departure_date
       invalidateArrival(next, action.catalog)
       break
     case 'setArrival':
@@ -167,6 +170,7 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       const previousSuggestion = suggestRooms(previousPeople)
       next.adults = Math.max(1, Math.floor(action.adults) || 1)
       next.children = Math.max(0, Math.floor(action.children) || 0)
+      next.travellers_confirmed = true
       if (state.accommodation_id && (!state.room_allocations || sameAllocations(state.room_allocations, previousSuggestion))) {
         next.room_allocations = suggestRooms(people)
       }

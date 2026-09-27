@@ -13,9 +13,12 @@ export function TravellersStep({ state, locale, dispatch }: { state: BuilderStat
   const children = state.children ?? 0
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <Stepper label={t('adults')} hint={t('adultsHint')} value={adults} min={1} max={20} locale={locale} onChange={(next) => dispatch({ type: 'setTravelers', adults: next, children })} />
-      <Stepper label={t('children')} hint={t('childrenHint')} value={children} min={0} max={20} locale={locale} onChange={(next) => dispatch({ type: 'setTravelers', adults, children: next })} />
+    <div className="space-y-3">
+      {!state.travellers_confirmed && <p className="text-sm text-ink-subtle">{t('travellersConfirmHint')}</p>}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Stepper label={t('adults')} hint={t('adultsHint')} value={adults} min={1} max={20} locale={locale} onChange={(next) => dispatch({ type: 'setTravelers', adults: next, children })} />
+        <Stepper label={t('children')} hint={t('childrenHint')} value={children} min={0} max={20} locale={locale} onChange={(next) => dispatch({ type: 'setTravelers', adults, children: next })} />
+      </div>
     </div>
   )
 }

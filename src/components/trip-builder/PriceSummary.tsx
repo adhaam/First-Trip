@@ -1,39 +1,15 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { PaymentTerms } from '@/components/brand'
 import { formatAmount, localizeDigits } from '@/lib/format'
-import type { PaymentKind } from '@/lib/payment-rules'
 import { paymentRows, type QuoteView } from '@/lib/trip-builder/view'
 import { cn } from '@/lib/utils'
 
 /**
  * Literal-key switches, not `t(dynamicVariable)` — see the note in
- * `JourneySection.tsx`. `part.kind` and `errorKey` are both runtime values
- * (the server's response / `quoteErrorKey()`), so every branch here is
- * spelled out as its own `t('literal')` call.
+ * `JourneySection.tsx`. `errorKey` is a runtime value (`quoteErrorKey()`),
+ * so every branch here is spelled out as its own `t('literal')` call.
  */
-/**
- * `stay_package` is never labelled "Stay package" here — it is the Trip
- * Builder's internal classification for "WEEMAP transport + a stay",
- * produced once a visitor combines the two (see docs/m2/BRIEF.md "Package
- * semantics"). It is labelled as what the customer actually bought.
- */
-function usePaymentKindLabel(kind: PaymentKind): string {
-  const t = useTranslations('builder')
-  switch (kind) {
-    case 'stay': return t('paymentKindStay')
-    case 'stay_package': return t('paymentKindStayPackage')
-    case 'transfer': return t('paymentKindTransfer')
-    case 'experience_package': return t('paymentKindExperiencePackage')
-    case 'trip':
-    case 'signature':
-    case 'commerce':
-    case 'rental':
-    default: return t('paymentKindTrip')
-  }
-}
-
 function useQuoteErrorText(errorKey: string): string {
   const t = useTranslations('builder')
   switch (errorKey) {
@@ -53,14 +29,12 @@ export function PriceSummary({
   quote,
   refreshing,
   errorKey,
-  policies,
   locale,
   className,
 }: {
   quote: QuoteView | null
   refreshing: boolean
   errorKey: string
-  policies: import('@/lib/payment-rules').PaymentPolicy[]
   locale: 'ar' | 'en'
   className?: string
 }) {
@@ -105,16 +79,6 @@ export function PriceSummary({
             ))}
           </div>
 
-          {quote.payment.parts.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-subtle">{t('paymentBreakdown')}</p>
-              <div className="space-y-2.5">
-                {quote.payment.parts.map((part, index) => (
-                  <PaymentPartRow key={`${part.kind}-${index}`} kind={part.kind} policies={policies} />
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -125,15 +89,5 @@ export function PriceSummary({
         </p>
       )}
     </section>
-  )
-}
-
-function PaymentPartRow({ kind, policies }: { kind: PaymentKind; policies: import('@/lib/payment-rules').PaymentPolicy[] }) {
-  const label = usePaymentKindLabel(kind)
-  return (
-    <div className="text-xs">
-      <p className="font-semibold text-sea-900">{label}</p>
-      <PaymentTerms kind={kind} policies={policies} compact />
-    </div>
   )
 }

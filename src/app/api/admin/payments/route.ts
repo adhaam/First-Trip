@@ -11,7 +11,7 @@ import { mapRpcError } from '@/lib/ops/rpc-errors'
 const FUTURE_TOLERANCE_MS = 5 * 60 * 1000
 
 const paymentSchema = z.object({
-  entity_type: z.enum(['accommodation_booking', 'trip_booking', 'signature_request', 'commerce_order']),
+  entity_type: z.enum(['accommodation_booking', 'trip_booking', 'signature_request', 'commerce_order', 'trip_request']),
   entity_id: z.string().uuid(),
   direction: z.enum(['received', 'refunded']),
   amount: z.number().positive().max(10_000_000)
@@ -32,8 +32,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid data', code: 'invalid', details: parsed.error.flatten() }, { status: 400 })
   }
   const body = parsed.data
+  const supabase = getSupabaseAdmin(gate.staff)
 
-  const { data, error } = await getSupabaseAdmin(gate.staff).rpc('weemap_record_payment', {
+  // A journey component (a bookings/trip_bookings row converted off a trip_request) never pays
+  // directly — its money belongs to the parent journey (migration 049). The DB guard (rpc-errors'
+  // component_of_journey) is authoritative; this check just saves the round trip for the common case.
+  const componentTable = body.entity_type === 'accommodation_booking'
+    ? 'bookings'
+    : body.entity_type === 'trip_booking'
+      ? 'trip_bookings'
+      : null
+  if (componentTable) {
+    const { data: row, error: rowError } = await supabase
+      .from(componentTable).select('trip_request_id').eq('id', body.entity_id).maybeSingle()
+    if (rowError) {
+      console.error('record payment component lookup error:', rowError)
+      return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
+    }
+    if (row?.trip_request_id) {
+      return NextResponse.json({ error: 'component_of_journey', code: 'component_of_journey' }, { status: 409 })
+    }
+  }
+
+  const { data, error } = await supabase.rpc('weemap_record_payment', {
     p_entity_type: body.entity_type,
     p_entity_id: body.entity_id,
     p_direction: body.direction,

@@ -255,7 +255,7 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
             <div className="sticky top-24 space-y-4">
               <div className="rounded-3xl border-[1.5px] border-sand-300 bg-white p-5 shadow-sm">
                 <p className="mb-3.5 font-display text-lg font-bold text-sea-900">{t('yourTrip')}</p>
-                <PriceSummary quote={quoteState.quote} refreshing={quoteState.refreshing} errorKey={quoteState.errorKey} policies={catalog.paymentPolicies} locale={locale} />
+                <PriceSummary quote={quoteState.quote} refreshing={quoteState.refreshing} errorKey={quoteState.errorKey} locale={locale} />
               </div>
               {whatsappHint && (
                 <a
@@ -297,7 +297,6 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
         quote={quoteState.quote}
         refreshing={quoteState.refreshing}
         errorKey={quoteState.errorKey}
-        policies={catalog.paymentPolicies}
       />
     </main>
   )

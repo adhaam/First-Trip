@@ -85,6 +85,21 @@ export function NextActionLabel({ action }: { action: WorkItem['next_action'] })
   return <>{t(action)}</>
 }
 
+/** Marks a converted trip_request row as the commercial row for its journey. */
+export function JourneyBadge({ className }: { className?: string }) {
+  const t = useTranslations('ops.item')
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full bg-sea-100 px-2 py-0.5 text-xs font-medium text-sea-800 whitespace-nowrap',
+        className,
+      )}
+    >
+      {t('journeyBadge')}
+    </span>
+  )
+}
+
 export function EntityTypeLabel({ type }: { type: OpsEntityType }) {
   const t = useTranslations('ops.entityType')
   return <>{t(type)}</>

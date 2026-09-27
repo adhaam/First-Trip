@@ -6,7 +6,7 @@ import { getPaymentRules } from '@/lib/payment-rules-load'
 import { resolveActorNames } from '@/lib/staff'
 import { todayInCairo } from '@/lib/transport/today'
 import { normalizeOpsQuery } from './search'
-import { deriveWorkItem, type OpsView, type WorkItemRow } from './work-items'
+import { deriveWorkItem, isCommercialItem, type OpsView, type WorkItemRow } from './work-items'
 import type { Activity, OpsEntityType, WorkItem } from './types'
 
 type Filters = {
@@ -22,6 +22,12 @@ type Filters = {
   transferOnly?: boolean
   q?: string
   today?: string
+  /**
+   * Include journey-component rows (bookings/trip_bookings converted off a trip_request). Queue and
+   * search work the parent journey item alone — its components carry no separate staff action or
+   * money (see isCommercialItem). Today needs them for arrivals/departures/trips counting.
+   */
+  includeComponents?: boolean
 }
 
 export function isMissingOpsRelation(error: unknown): boolean {
@@ -75,7 +81,8 @@ export async function loadWorkItems(supabase: SupabaseClient, filters: Filters =
     const seen = new Set(rows.map((row) => row.entity_id))
     for (const refund of refunds ?? []) if (!seen.has(refund.entity_id)) rows.push(refund)
   }
-  return deriveRows(supabase, rows, filters.today)
+  const derivedRows = await deriveRows(supabase, rows, filters.today)
+  return filters.includeComponents ? derivedRows : derivedRows.filter(isCommercialItem)
 }
 
 /** Shared derivation step: the latest status_history change per row plus current payment rules. */

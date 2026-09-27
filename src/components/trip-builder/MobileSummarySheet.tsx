@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl'
 import { MessageCircle } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import type { PaymentPolicy } from '@/lib/payment-rules'
 import { buildHandoffMessage, whatsappLink } from '@/lib/trip-builder/whatsapp'
 import type { BuilderCatalog, BuilderState } from '@/lib/trip-builder/types'
 import type { QuoteView } from '@/lib/trip-builder/view'
@@ -20,7 +19,6 @@ export function MobileSummarySheet({
   quote,
   refreshing,
   errorKey,
-  policies,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -30,7 +28,6 @@ export function MobileSummarySheet({
   quote: QuoteView | null
   refreshing: boolean
   errorKey: string
-  policies: PaymentPolicy[]
 }) {
   const t = useTranslations('builder')
   const whatsappHref = catalog.whatsappNumber
@@ -45,7 +42,7 @@ export function MobileSummarySheet({
           <OverviewTimeline state={state} catalog={catalog} locale={locale} />
           <div className="border-t border-sand-200 pt-5">
             <p className="mb-3 font-display text-base font-bold text-sea-900">{t('stepPriceTitle')}</p>
-            <PriceSummary quote={quote} refreshing={refreshing} errorKey={errorKey} policies={policies} locale={locale} />
+            <PriceSummary quote={quote} refreshing={refreshing} errorKey={errorKey} locale={locale} />
           </div>
           {whatsappHref && (
             <a

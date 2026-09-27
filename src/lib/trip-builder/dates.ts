@@ -29,7 +29,16 @@ export function isValidArrival(schedule: TransportScheduleConfig, input: { mode?
   if (input.mode === 'stay_only') {
     return Boolean(input.arrivalDate && input.today && input.arrivalDate >= earliestArrival(input.today))
   }
+  // Custom hiace: any future date is a valid departure (no preset pattern).
+  if (input.mode === 'hiace' && !input.patternCode) {
+    return Boolean(input.arrivalDate && input.today && input.arrivalDate >= earliestArrival(input.today))
+  }
   return returnDateFor(schedule, input) !== null
+}
+
+/** For a custom hiace booking: the return date must be strictly after the chosen departure. */
+export function isValidCustomReturn(arrivalDate?: string, departureDate?: string): boolean {
+  return Boolean(arrivalDate && departureDate && departureDate > arrivalDate)
 }
 
 export function stayNights(arrival?: string, departure?: string): number | null {
@@ -57,6 +66,9 @@ export function journeyNights(
   input: { mode?: TransportMode; patternCode?: string; originCode?: string; arrivalDate?: string; departureDate?: string },
 ): number | null {
   if (input.mode === 'stay_only') return stayNights(input.arrivalDate, input.departureDate)
+  // Custom hiace: no preset pattern, nights are derived from the two dates
+  // the customer chose (same as stay_only), mirroring resolveJourneyDates.
+  if (input.mode === 'hiace' && !input.patternCode) return stayNights(input.arrivalDate, input.departureDate)
   if (!input.mode || !input.patternCode || !input.arrivalDate) return null
   const result = resolveStayPattern(schedule, {
     patternCode: input.patternCode,

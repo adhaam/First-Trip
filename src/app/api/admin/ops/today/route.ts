@@ -14,11 +14,13 @@ export async function GET(req: NextRequest) {
   }
   const supabase = getSupabaseAdmin(gate.staff)
   try {
-    const items = await loadWorkItems(supabase, { view: 'all', today: date })
+    // includeComponents: true — arrivals/departures/trips-today need journey-component rows
+    // (bookings/trip_bookings converted off a trip_request) counted alongside standalone ones.
+    const items = await loadWorkItems(supabase, { view: 'all', today: date, includeComponents: true })
     // A converted trip_request's arrival/departure is already represented by the concrete
     // bookings it produced; keep only the unconverted request so the day isn't double-counted.
     const active = items.filter((item) => (
-      item.status !== 'cancelled' && !(item.entity_type === 'trip_request' && item.payment_status === 'converted')
+      item.status !== 'cancelled' && !(item.entity_type === 'trip_request' && item.converted)
     ))
     const upcoming = filterByView(active, 'upcoming', date)
     return NextResponse.json({

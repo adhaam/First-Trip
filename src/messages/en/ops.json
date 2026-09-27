@@ -240,7 +240,18 @@
     "noExperiences": "No experiences on this request.",
     "noRoomAllocations": "No room allocation on record.",
     "noQuoteLines": "No quote lines recorded.",
-    "noRelatedBookings": "No bookings created from this request yet."
+    "noRelatedBookings": "No bookings created from this request yet.",
+    "journeyBadge": "Journey",
+    "partOfJourney": "Part of journey",
+    "componentsPanel": "Components",
+    "reconcilePaymentsWarning": "Payments were recorded on components before journey payments existed - manual financial review required.",
+    "componentKind": {
+      "stay": "Stay",
+      "transport": "Transport",
+      "stayTransport": "Stay + transport",
+      "trip": "Sinai trip",
+      "package": "Package"
+    }
   },
   "payment": {
     "title": "Payments",
@@ -283,7 +294,10 @@
       "overpayment": "That amount is more than what's owed.",
       "refund_exceeds_paid": "That refund is more than the amount already paid.",
       "invalid_amount": "Enter a valid amount.",
-      "generic": "Couldn't record this payment."
+      "generic": "Couldn't record this payment.",
+      "journey_not_commercial": "This journey has no commercial terms yet.",
+      "journey_component_price_locked": "This component's price is locked to the journey - record the payment on the journey instead.",
+      "component_of_journey": "This is part of a journey - record payments on the journey (WR-...) instead."
     }
   },
   "customer": {
@@ -390,7 +404,8 @@
     "hand_over": "Hand over",
     "complete_delivery": "Complete delivery",
     "none": "Nothing to do",
-    "confirm_or_close": "Confirm or close"
+    "confirm_or_close": "Confirm or close",
+    "reconcile_payments": "Reconcile payments"
   },
   "attention": {
     "unpaid_close_to_service": "Unpaid, service is close",

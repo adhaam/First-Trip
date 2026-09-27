@@ -83,6 +83,16 @@ test('experience selection is capped at ten', () => {
   assert.equal(state.experiences?.length, 10)
 })
 
+test('travellers_confirmed starts unset and flips true on any traveller interaction', () => {
+  const initial = initialBuilderState()
+  assert.equal(initial.travellers_confirmed, undefined)
+  const confirmedAtOne = builderReducer(initial, { type: 'setTravelers', adults: 1, children: 0 })
+  assert.equal(confirmedAtOne.travellers_confirmed, true)
+  const changed = builderReducer(confirmedAtOne, { type: 'setTravelers', adults: 3, children: 1 })
+  assert.equal(changed.travellers_confirmed, true)
+  assert.equal(changed.adults, 3)
+})
+
 test('automatic experience removal is idempotent and never re-adds a covered trip', () => {
   const selected = { ...initialBuilderState(), experiences: [{ kind: 'trip' as const, id: ids.trip }] }
   const once = builderReducer(selected, { type: 'removeExperience', kind: 'trip', id: ids.trip })

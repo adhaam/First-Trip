@@ -36,7 +36,7 @@ export type PaymentRecord = {
 export function PaymentsPanel({
   entityType, entityId, expectation, payments, paymentAllowed, currentStatus, onChanged,
 }: {
-  entityType: Exclude<OpsEntityType, 'trip_request'>
+  entityType: OpsEntityType
   entityId: string
   expectation: PaymentExpectation
   payments: PaymentRecord[]

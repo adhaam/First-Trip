@@ -104,9 +104,16 @@ export function Stepper({
         >
           <Minus className="h-4 w-4" aria-hidden />
         </button>
-        <span className="min-w-6 text-center text-sm font-bold tabular-nums text-sea-900" aria-live="polite">
+        <button
+          type="button"
+          aria-label={`${label}: ${formatNumber(value, locale)}`}
+          aria-labelledby={labelId}
+          onClick={() => onChange(value)}
+          className="min-w-6 rounded-md text-center text-sm font-bold tabular-nums text-sea-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-600"
+          aria-live="polite"
+        >
           {formatNumber(value, locale)}
-        </span>
+        </button>
         <button
           type="button"
           aria-label={`${label} +`}

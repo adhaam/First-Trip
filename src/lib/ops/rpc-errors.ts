@@ -25,6 +25,12 @@ const BY_MESSAGE: Record<string, number> = {
   total_below_paid: 409,
   amount_paid_exceeds_total: 422,
   has_payments: 409,
+  // Migration 049 (journeys): a journey component can't take its own payments or price edits, and
+  // a converted-but-not-commercial journey (legacy payment_status 'converted') can't take payments
+  // until it has been reconciled.
+  component_of_journey: 409,
+  journey_not_commercial: 409,
+  journey_component_price_locked: 422,
 }
 
 // Function or table not there yet: the code is deployed before migration 036.

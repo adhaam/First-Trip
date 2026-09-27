@@ -35,6 +35,8 @@ export const tripRequestDraftSchema = z
     departure_date: isoDate.optional(),
     adults: z.number().int().min(1).optional(),
     children: z.number().int().min(0).optional(),
+    /** True only once the visitor explicitly interacted with the Travellers step (tap/±). */
+    travellers_confirmed: z.boolean().optional(),
 
     accommodation_id: z.string().uuid().optional(),
     room_allocations: z.array(roomAllocationSchema).optional(),

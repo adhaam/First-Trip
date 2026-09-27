@@ -17,8 +17,9 @@ function config(): TransportScheduleConfig {
   return structuredClone(DEFAULT_TRANSPORT_SCHEDULE)
 }
 
-test('migration 029 seed and defaults agree on weekly rules and stay patterns', () => {
+test('migration 029 + 050 seeds and defaults agree on weekly rules and stay patterns', () => {
   const sql = readFileSync('supabase/migrations/029_transport_schedule.sql', 'utf8')
+    + readFileSync('supabase/migrations/050_stay_patterns_8d7n_and_custom.sql', 'utf8')
   const seededRules = [...sql.matchAll(/\('package_bus',\s*'(outbound|return)',\s*(\d+),/g)]
     .map((match) => ({ direction: match[1], weekday: Number(match[2]) }))
   assert.deepEqual(
@@ -27,10 +28,12 @@ test('migration 029 seed and defaults agree on weekly rules and stay patterns', 
   )
 
   const seededPatterns = [...sql.matchAll(
-    /\('([^']+)',\s*'([^']+)',\s*'[^']*',\s*'[^']*',\s*(\d+),\s*(\d+),\s*(\d+),\s*(ARRAY\[(\d+)\]::SMALLINT\[\]|NULL),\s*(\d+)\)/g,
+    /\('([^']+)',\s*'([^']+)',\s*'[^']*',\s*'[^']*',\s*(\d+),\s*(\d+),\s*(\d+),\s*(ARRAY\[([\d,\s]+)\]::SMALLINT\[\]|NULL),\s*(\d+)\)/g,
   )].map((match) => ({
     code: match[1], transferType: match[2], durationDays: Number(match[3]), nights: Number(match[4]),
-    returnOffsetDays: Number(match[5]), departureWeekdays: match[6] === 'NULL' ? null : [Number(match[7])], sortOrder: Number(match[8]),
+    returnOffsetDays: Number(match[5]),
+    departureWeekdays: match[6] === 'NULL' ? null : match[7].split(',').map(Number),
+    sortOrder: Number(match[8]),
   }))
   assert.deepEqual(
     DEFAULT_TRANSPORT_SCHEDULE.stayPatterns.map(({ code, transferType, durationDays, nights, returnOffsetDays, departureWeekdays, sortOrder }) => ({
@@ -146,4 +149,37 @@ test('recommended check-in weekdays are guidance only', () => {
   assert.equal(isRecommendedCheckIn(schedule, '2026-03-02'), true)
   assert.equal(isRecommendedCheckIn(schedule, '2026-03-06'), true)
   assert.equal(isRecommendedCheckIn(schedule, '2026-03-04'), false)
+})
+
+test('bus 8D/7N runs Thursday → following Friday and Sunday → following Monday only', () => {
+  const schedule = config()
+  const bus = (outboundDate: string) =>
+    resolveStayPattern(schedule, { patternCode: 'bus_8d7n', transferType: 'package_bus', outboundDate })
+  assert.deepEqual(bus('2026-03-05'), { ok: true, returnDate: '2026-03-13', nights: 7, durationDays: 8 })
+  assert.deepEqual(bus('2026-03-01'), { ok: true, returnDate: '2026-03-09', nights: 7, durationDays: 8 })
+  assert.deepEqual(bus('2026-03-03'), { ok: false, reason: 'invalid_departure_weekday' })
+})
+
+test('hiace 8D/7N is on demand on any day', () => {
+  assert.deepEqual(
+    resolveStayPattern(config(), { patternCode: 'hiace_8d7n', transferType: 'hiace', outboundDate: '2026-03-03' }),
+    { ok: true, returnDate: '2026-03-11', nights: 7, durationDays: 8 },
+  )
+})
+
+test('WEEMAP Bus commercial patterns are exactly Thu 4D/3N, Sun 5D/4N and Thu/Sun 8D/7N', () => {
+  const schedule = config()
+  const bus = (patternCode: string, outboundDate: string) =>
+    resolveStayPattern(schedule, { patternCode, transferType: 'package_bus', outboundDate })
+  // 2026-03-05 is a Thursday, 2026-03-01 a Sunday.
+  assert.deepEqual(bus('bus_4d3n', '2026-03-05'), { ok: true, returnDate: '2026-03-09', nights: 3, durationDays: 4 })
+  assert.deepEqual(bus('bus_4d3n', '2026-03-01'), { ok: false, reason: 'invalid_departure_weekday' })
+  assert.deepEqual(bus('bus_5d4n', '2026-03-01'), { ok: true, returnDate: '2026-03-06', nights: 4, durationDays: 5 })
+  assert.deepEqual(bus('bus_5d4n', '2026-03-05'), { ok: false, reason: 'invalid_departure_weekday' })
+  assert.deepEqual(bus('bus_8d7n', '2026-03-05'), { ok: true, returnDate: '2026-03-13', nights: 7, durationDays: 8 })
+  assert.deepEqual(bus('bus_8d7n', '2026-03-01'), { ok: true, returnDate: '2026-03-09', nights: 7, durationDays: 8 })
+  const busPatterns = schedule.stayPatterns.filter((pattern) => pattern.transferType === 'package_bus')
+  assert.deepEqual(busPatterns.map(({ code, departureWeekdays }) => [code, departureWeekdays]), [
+    ['bus_4d3n', [4]], ['bus_5d4n', [0]], ['bus_8d7n', [0, 4]],
+  ])
 })

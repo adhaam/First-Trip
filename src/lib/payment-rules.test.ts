@@ -24,8 +24,13 @@ function insertValues(table: 'payment_policies' | 'payment_methods') {
   )
 }
 
-test('default payment policies exactly mirror the 030 migration seed', () => {
+const journeyMigration = readFileSync(
+  new URL('../../supabase/migrations/049_journey_commercial_ownership.sql', import.meta.url), 'utf8')
+
+test('default payment policies exactly mirror the 030 seed plus the 049 journey policy', () => {
   const rows = insertValues('payment_policies').map(([booking_kind, upfront_percent, upfront_due, balance_due]) => ({ booking_kind, upfront_percent, upfront_due, balance_due }))
+  assert.match(journeyMigration, /\('journey', 50, 'after_confirmation', 'on_arrival'\)/)
+  rows.push({ booking_kind: 'journey', upfront_percent: 50, upfront_due: 'after_confirmation', balance_due: 'on_arrival' })
   assert.deepEqual(DEFAULT_PAYMENT_POLICIES, rows)
 })
 
@@ -94,6 +99,25 @@ test('combined plans add a stay package, experience package, and trip independen
     upfrontAmount: 2300, balanceAmount: 1000, upfrontDue: 'after_confirmation',
     balanceDue: null, payableNow: false,
   })
+})
+
+test('Build Your Trip journey plan: a 6,000 stay part + a 3,000 trips part quotes 50/50 on the whole 9,000 total', () => {
+  const plan = paymentPlan('journey', 6000 + 3000)
+  assert.deepEqual(plan, {
+    kind: 'journey', rule: 'policy', upfrontPercent: 50,
+    upfrontAmount: 4500, balanceAmount: 4500, upfrontDue: 'after_confirmation',
+    balanceDue: 'on_arrival', payableNow: false,
+  })
+})
+
+test('a standalone trip, experience package, or transfer booking stays fully due after confirmation', () => {
+  for (const kind of ['trip', 'experience_package', 'transfer'] as const) {
+    const plan = paymentPlan(kind, 3000)
+    assert.equal(plan.upfrontPercent, 100)
+    assert.equal(plan.upfrontAmount, 3000)
+    assert.equal(plan.balanceAmount, 0)
+    assert.equal(plan.balanceDue, null)
+  }
 })
 
 test('invalid totals are rejected', () => {

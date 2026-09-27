@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { SafeImage } from '@/components/SafeImage'
 import { Chip, ChipRail } from '@/components/brand'
 import { formatAmount } from '@/lib/format'
-import { filterTripsByCategory, tripCategories } from '@/lib/trip-builder/experiences'
+import { filterTripsByCategory, packageIncludedSummary, tripCategories } from '@/lib/trip-builder/experiences'
 import type { BuilderAction } from '@/lib/trip-builder/state'
 import type { BuilderCatalog, BuilderState, CatalogPackage } from '@/lib/trip-builder/types'
 import { cn } from '@/lib/utils'
@@ -121,7 +121,7 @@ export function ExperiencesStep({
           <p className="mb-2.5 text-sm font-semibold text-sea-900">{t('experiencesPackages')}</p>
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
             {catalog.packages.map((pkg) => (
-              <PackageCard key={pkg.id} pkg={pkg} locale={locale} selected={isSelected('trip_package', pkg.id)} onToggle={() => togglePackage(pkg)} />
+              <PackageCard key={pkg.id} pkg={pkg} trips={catalog.trips} locale={locale} selected={isSelected('trip_package', pkg.id)} onToggle={() => togglePackage(pkg)} />
             ))}
           </div>
         </div>
@@ -148,10 +148,11 @@ function ExperienceCard({ image, title, meta, selected, includedInPackage, onTog
   )
 }
 
-function PackageCard({ pkg, locale, selected, onToggle }: { pkg: CatalogPackage; locale: 'ar' | 'en'; selected: boolean; onToggle: () => void }) {
+function PackageCard({ pkg, trips, locale, selected, onToggle }: { pkg: CatalogPackage; trips: BuilderCatalog['trips']; locale: 'ar' | 'en'; selected: boolean; onToggle: () => void }) {
   const t = useTranslations('builder')
   const common = useTranslations('common')
   const total = pkg.public_total ?? pkg.package_total
+  const included = packageIncludedSummary(pkg, trips, locale)
   return (
     <div className={cn('grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 rounded-2xl border-[1.5px] p-3 min-[380px]:grid-cols-[4rem_minmax(0,1fr)_auto]', selected ? 'border-sun-600 bg-sun-50' : 'border-sand-300 bg-white')}>
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-sand-200 min-[380px]:h-16 min-[380px]:w-16">
@@ -162,6 +163,12 @@ function PackageCard({ pkg, locale, selected, onToggle }: { pkg: CatalogPackage;
           {t('packageCardBadge')}
         </span>
         <p className="mt-1 break-words font-display text-sm font-bold leading-snug text-sea-900">{locale === 'ar' ? pkg.name_ar : pkg.name_en}</p>
+        {included.names.length > 0 && (
+          <p className="truncate text-xs text-ink-subtle">
+            {included.names.join(' · ')}
+            {included.extra > 0 ? ` ${t('packageIncludesExtra', { extra: included.extra })}` : ''}
+          </p>
+        )}
         <p className="break-words text-xs text-ink-subtle">{total != null ? `${formatAmount(total, locale)} ${common('egp')}` : ''}</p>
         {selected && <p className="mt-0.5 text-xs font-medium text-sun-700">{t('dateArranged')}</p>}
       </div>

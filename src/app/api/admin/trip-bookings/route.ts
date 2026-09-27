@@ -13,11 +13,17 @@ export async function GET(req: NextRequest) {
   const gate = await requireStaff(req)
   if (!gate.ok) return gate.response
   const supabase = getSupabaseAdmin(gate.staff)
-  const { data, error } = await supabase
+  let query = supabase
     .from('trip_bookings')
     .select('*, sinai_trips(name_ar, name_en), trip_packages(name_ar, name_en)')
     .order('created_at', { ascending: false })
     .limit(300)
+  // Journey components (converted off a trip_request, migration 049) are worked from the journey's
+  // own detail screen, not this list — they'd otherwise show up twice with no separate action.
+  if (req.nextUrl.searchParams.get('include_components') !== 'true') {
+    query = query.is('trip_request_id', null)
+  }
+  const { data, error } = await query
   if (error) {
     console.error('GET trip_bookings error:', error)
     return NextResponse.json({ error: 'Failed to load trip bookings' }, { status: 500 })

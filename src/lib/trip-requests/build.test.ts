@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { DEFAULT_PAYMENT_POLICIES, paymentPlanForParts } from '@/lib/payment-rules'
+import { DEFAULT_PAYMENT_POLICIES, paymentPlan, paymentPlanForParts } from '@/lib/payment-rules'
 import { DEFAULT_TRANSPORT_SCHEDULE } from '@/lib/transport'
 import type { PriceSnapshot } from '@/lib/types'
 import { applyQuotedExperienceSelections, buildTripRequestRow, normalizeExperienceSelections, resolveJourneyDates, toQuoteRequest, tripRequestPaymentParts } from './build'
@@ -76,7 +76,7 @@ test('quote-normalized selections become the persisted trip-request experiences'
     ok: true, response: {}, lines: [], numPeople: 2, perPerson: 350, total: 700,
     normalizedSelections: { extraTripIds: [unrelated], tripPackageIds: [pkg] },
     isPriced: true, snapshot,
-  }, paymentPlanForParts([], DEFAULT_PAYMENT_POLICIES), 'customer-1')
+  }, paymentPlan('journey', 700, DEFAULT_PAYMENT_POLICIES), 'customer-1')
   assert.deepEqual(row.experiences, [
     { kind: 'trip', id: unrelated, preferred_date: '2026-10-07' },
     { kind: 'trip_package', id: pkg },
@@ -89,6 +89,20 @@ function parseInput(overrides: Record<string, unknown>): TripRequestInput {
   assert.equal(result.success, true, JSON.stringify(!result.success && result.error.flatten()))
   if (!result.success) throw new Error('unreachable')
   return result.data
+}
+
+/**
+ * Builds a resolveJourneyDates input directly (bypassing schema validation)
+ * for cases the schema also rejects on its own — resolveJourneyDates
+ * re-validates independently as defense in depth, and this exercises that
+ * path in isolation.
+ */
+function rawCustomHiaceInput(overrides: { arrival_date: string; departure_date: string }): TripRequestInput {
+  return {
+    locale: 'en', source: 'website', transport_mode: 'hiace', origin_governorate_code: 'CAI',
+    arrival_date: overrides.arrival_date, departure_date: overrides.departure_date,
+    adults: 2, children: 0, experiences: [], contact: baseContact, builder_stage: 'submitted',
+  } as TripRequestInput
 }
 
 // ─── resolveJourneyDates ───
@@ -135,6 +149,47 @@ test('resolves stay_only dates as-is (never inventing itinerary days)', () => {
   assert.equal(result.ok, true)
   if (!result.ok) return
   assert.deepEqual(result.dates, { arrivalDate: '2026-10-10', departureDate: '2026-10-13', nights: 3, durationDays: 4 })
+})
+
+test('resolves a custom hiace booking from arbitrary future dates (no preset pattern)', () => {
+  const input = parseInput({
+    locale: 'en', transport_mode: 'hiace', origin_governorate_code: 'CAI',
+    arrival_date: '2026-10-07', departure_date: '2026-10-12', adults: 2,
+  })
+  const result = resolveJourneyDates(input, DEFAULT_TRANSPORT_SCHEDULE, new Date('2026-09-27T00:00:00Z'))
+  assert.equal(result.ok, true)
+  if (!result.ok) return
+  assert.deepEqual(result.dates, { arrivalDate: '2026-10-07', departureDate: '2026-10-12', nights: 5, durationDays: 6 })
+})
+
+test('rejects a custom hiace booking whose return is not after the departure', () => {
+  // resolveJourneyDates re-validates independently of the schema (defense in
+  // depth), so this builds the shape directly rather than through parseInput
+  // — the schema already rejects this input on its own (see schema.test.ts).
+  const input = rawCustomHiaceInput({ arrival_date: '2026-10-07', departure_date: '2026-10-07' })
+  const result = resolveJourneyDates(input, DEFAULT_TRANSPORT_SCHEDULE, new Date('2026-09-27T00:00:00Z'))
+  assert.equal(result.ok, false)
+  if (result.ok) return
+  assert.equal(result.code, 'INVALID_STAY_DATES')
+})
+
+test('rejects a custom hiace booking whose arrival date is in the past', () => {
+  const input = parseInput({
+    locale: 'en', transport_mode: 'hiace', origin_governorate_code: 'CAI',
+    arrival_date: '2026-09-01', departure_date: '2026-09-05', adults: 2,
+  })
+  const result = resolveJourneyDates(input, DEFAULT_TRANSPORT_SCHEDULE, new Date('2026-09-27T00:00:00Z'))
+  assert.equal(result.ok, false)
+  if (result.ok) return
+  assert.equal(result.code, 'ARRIVAL_DATE_MUST_BE_FUTURE')
+})
+
+test('rejects a custom hiace booking longer than the max nights cap', () => {
+  const input = rawCustomHiaceInput({ arrival_date: '2026-10-07', departure_date: '2026-11-20' })
+  const result = resolveJourneyDates(input, DEFAULT_TRANSPORT_SCHEDULE, new Date('2026-09-27T00:00:00Z'))
+  assert.equal(result.ok, false)
+  if (result.ok) return
+  assert.equal(result.code, 'CUSTOM_TRIP_TOO_LONG')
 })
 
 // ─── toQuoteRequest ───
@@ -259,9 +314,9 @@ test('buildTripRequestRow sets exactly the insertable trip_requests columns', ()
     isPriced: true,
     snapshot,
   }
-  const paymentPlan = paymentPlanForParts([{ kind: 'stay_package' as const, total: 4000 }], DEFAULT_PAYMENT_POLICIES)
+  const plan = paymentPlan('journey', 4000, DEFAULT_PAYMENT_POLICIES)
 
-  const row = buildTripRequestRow(input, dates.dates, quote, paymentPlan, 'cust-1')
+  const row = buildTripRequestRow(input, dates.dates, quote, plan, 'cust-1')
 
   const expectedInsertable = allColumns.filter((column) => !GENERATED_COLUMNS.has(column)).sort()
   assert.deepEqual(Object.keys(row).sort(), expectedInsertable)

@@ -7,6 +7,7 @@ import { getPaymentRules } from '@/lib/payment-rules-load'
 import { resolveActorNames } from '@/lib/staff'
 import { allowedNextStatuses, type RequestStatus } from '@/lib/request-workflow'
 import { isMissingOpsRelation, loadWorkItemByEntity, loadWorkItemsByTripRequest, loadRequestJourney } from '@/lib/ops/server'
+import { paymentAllowedFor } from '@/lib/ops/payment-allowed'
 import { OPS_ENTITY_TABLES, type OpsEntityType, type WorkItem } from '@/lib/ops/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 
@@ -50,15 +51,6 @@ const RECORD_SELECT: Partial<Record<OpsEntityType, string>> = {
   commerce_order: '*, commerce_order_items(*, rental_reservations(*)), delivery_zones(name_ar, name_en)',
 }
 
-/** Mirrors the paid_states arrays in weemap_record_payment() (migration 036). trip_request never takes money. */
-function paymentAllowedFor(type: OpsEntityType, status: string): boolean {
-  if (type === 'trip_request') return false
-  if (type === 'commerce_order') {
-    return ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'completed'].includes(status)
-  }
-  return ['awaiting_payment', 'confirmed', 'completed'].includes(status)
-}
-
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string, id: string }> }) {
   const gate = await requireStaff(req)
   if (!gate.ok) return gate.response
@@ -74,6 +66,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
     const item = await loadWorkItemByEntity(supabase, entityType, id, today)
     if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 })
 
+    // A journey_component's siblings come from its parent's trip_request_id; the parent itself
+    // (entityType === 'trip_request') has no trip_request_id of its own, so look up by its own id.
+    const journeyQueryId = entityType === 'trip_request' ? id : item.trip_request_id
+
     const [
       recordResult,
       historyResult,
@@ -82,6 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       customerResult,
       relatedRows,
       rules,
+      journeyParentResult,
     ] = await Promise.all([
       supabase.from(table).select(RECORD_SELECT[entityType]!).eq('id', id).maybeSingle(),
       supabase.from('status_history')
@@ -91,6 +88,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       supabase.from('payment_records')
         .select('id, direction, amount, method, reference, note, received_at, recorded_by, amount_paid_after')
         .eq('entity_id', id)
+        .eq('entity_type', entityType)
         .order('received_at', { ascending: true }),
       gate.staff.role === 'operations'
         ? Promise.resolve({ data: [] as AuditRow[], error: null })
@@ -102,10 +100,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       item.customer_id
         ? supabase.from('customers').select('id, name, phone, email').eq('id', item.customer_id).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
-      item.trip_request_id
-        ? loadWorkItemsByTripRequest(supabase, item.trip_request_id, today)
+      journeyQueryId
+        ? loadWorkItemsByTripRequest(supabase, journeyQueryId, today)
         : Promise.resolve([] as WorkItem[]),
       getPaymentRules(),
+      // The parent journey's id/reference, for a component item to link back to it.
+      item.journey_component && item.trip_request_id
+        ? supabase.from('trip_requests').select('id, reference').eq('id', item.trip_request_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ])
 
     if (recordResult.error) throw recordResult.error
@@ -164,8 +166,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
         row.entity_type !== 'trip_request' && !(row.entity_type === entityType && row.entity_id === id)
       )),
     }
+    // The journey's converted children, for a trip_request's detail screen. Empty for anything else.
+    const components = entityType === 'trip_request' ? related.items : []
+    const journeyParent = journeyParentResult.data as { id: string, reference: string } | null
 
-    const payment_expectation = entityType === 'trip_request' || !item.payment_kind || item.amount_total === null
+    const payment_expectation = !item.payment_kind || item.amount_total === null
+      || (entityType === 'trip_request' && !item.converted)
       ? null
       : buildPaymentExpectation(item, rules.policies)
 
@@ -187,10 +193,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       customer: customerResult.data ?? null,
       payment_expectation,
       allowed_statuses,
-      payment_allowed: paymentAllowedFor(entityType, item.status),
+      payment_allowed: paymentAllowedFor(item, record),
       can_convert: entityType === 'trip_request'
         && !record.converted_booking_id
         && ['awaiting_payment', 'confirmed'].includes(item.status),
+      ...(entityType === 'trip_request' ? { components } : {}),
+      ...(item.journey_component && journeyParent ? { journey: journeyParent } : {}),
     })
   } catch (error) {
     console.error('ops item detail error:', error)

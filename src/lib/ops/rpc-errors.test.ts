@@ -29,3 +29,12 @@ test('unknown errors are not mapped (the route returns a 500)', () => {
   // A message that merely contains a code is not that code.
   assert.equal(mapRpcError({ message: 'overpayment happened somewhere' }), null)
 })
+
+test('journey (migration 049) RPC errors map to client errors', () => {
+  assert.deepEqual(mapRpcError({ message: 'component_of_journey' }), { status: 409, code: 'component_of_journey' })
+  assert.deepEqual(mapRpcError({ message: 'journey_not_commercial' }), { status: 409, code: 'journey_not_commercial' })
+  assert.deepEqual(
+    mapRpcError({ message: 'journey_component_price_locked' }),
+    { status: 422, code: 'journey_component_price_locked' },
+  )
+})

@@ -45,10 +45,7 @@ export async function POST(req: NextRequest) {
       lines: result.quote.lines.map(({ key, label_ar, label_en, detail_ar, detail_en, amount }) => ({
         key, label_ar, label_en, ...(detail_ar ? { detail_ar } : {}), ...(detail_en ? { detail_en } : {}), amount,
       })),
-      payment: {
-        combined: result.paymentPlan,
-        parts: result.parts.map((part, index) => ({ kind: part.kind, total: part.total, plan: result.partPlans[index] })),
-      },
+      payment: result.paymentPlan,
     })
   } catch (error) {
     console.error('Trip request quote API error:', error)

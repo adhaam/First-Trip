@@ -7,6 +7,7 @@ export type PaymentKind =
   | 'signature'
   | 'commerce'
   | 'rental'
+  | 'journey'
 
 export type PaymentPolicy = {
   booking_kind: PaymentKind
@@ -32,6 +33,7 @@ export const DEFAULT_PAYMENT_POLICIES: readonly PaymentPolicy[] = [
   { booking_kind: 'transfer', upfront_percent: 100, upfront_due: 'after_confirmation', balance_due: null },
   { booking_kind: 'trip', upfront_percent: 100, upfront_due: 'after_confirmation', balance_due: null },
   { booking_kind: 'experience_package', upfront_percent: 100, upfront_due: 'after_confirmation', balance_due: null },
+  { booking_kind: 'journey', upfront_percent: 50, upfront_due: 'after_confirmation', balance_due: 'on_arrival' },
 ]
 
 /** The seed values in supabase/migrations/030_payment_policies.sql. */

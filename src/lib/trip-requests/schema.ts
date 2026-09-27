@@ -11,6 +11,14 @@ import { z } from 'zod'
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
+/** Server-side cap on a customer-chosen hiace stay length (see refineTripRequestJourney). */
+export const MAX_CUSTOM_HIACE_NIGHTS = 30
+
+function isoDaysSinceEpoch(date: string): number {
+  const [year, month, day] = date.split('-').map(Number)
+  return Date.UTC(year, month - 1, day) / 86_400_000
+}
+
 export const TRANSPORT_MODES = ['package_bus', 'hiace', 'stay_only'] as const
 export type TransportMode = (typeof TRANSPORT_MODES)[number]
 
@@ -88,8 +96,23 @@ export function refineTripRequestJourney(value: z.infer<typeof tripRequestJourne
       if (!value.origin_governorate_code) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['origin_governorate_code'], message: 'Origin governorate is required.' })
       }
-      if (!value.stay_pattern_code) {
+      // A hiace journey may skip stay_pattern_code and instead carry an
+      // explicit departure_date: a "Customize" booking with customer-chosen
+      // dates. Only hiace supports this (departureWeekdays is null/on-demand
+      // for it); package_bus must always use a preset pattern.
+      const isCustomHiace = value.transport_mode === 'hiace' && !value.stay_pattern_code && Boolean(value.departure_date)
+      if (!value.stay_pattern_code && !isCustomHiace) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['stay_pattern_code'], message: 'A stay pattern is required for this transport mode.' })
+      } else if (isCustomHiace) {
+        if (value.departure_date! <= value.arrival_date) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['departure_date'], message: 'Departure date must be after the arrival date.' })
+        } else {
+          const arrivalDays = isoDaysSinceEpoch(value.arrival_date)
+          const departureDays = isoDaysSinceEpoch(value.departure_date!)
+          if (departureDays - arrivalDays > MAX_CUSTOM_HIACE_NIGHTS) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['departure_date'], message: `A custom trip cannot exceed ${MAX_CUSTOM_HIACE_NIGHTS} nights.` })
+          }
+        }
       }
     }
 

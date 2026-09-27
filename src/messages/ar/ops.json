@@ -240,7 +240,18 @@
     "noExperiences": "لا توجد تجارب مرتبطة بهذا الطلب.",
     "noRoomAllocations": "لا يوجد توزيع غرف مسجّل.",
     "noQuoteLines": "لا توجد تفاصيل سعر مسجّلة.",
-    "noRelatedBookings": "لم يتم إنشاء أي حجوزات من هذا الطلب بعد."
+    "noRelatedBookings": "لم يتم إنشاء أي حجوزات من هذا الطلب بعد.",
+    "journeyBadge": "رحلة",
+    "partOfJourney": "جزء من رحلة",
+    "componentsPanel": "المكوّنات",
+    "reconcilePaymentsWarning": "تم تسجيل مدفوعات على المكوّنات قبل وجود مدفوعات الرحلة — مطلوب مراجعة مالية يدوية.",
+    "componentKind": {
+      "stay": "إقامة",
+      "transport": "مواصلات",
+      "stayTransport": "إقامة + مواصلات",
+      "trip": "رحلة سيناء",
+      "package": "باكدج"
+    }
   },
   "payment": {
     "title": "المدفوعات",
@@ -283,7 +294,10 @@
       "overpayment": "هذا المبلغ أكبر من المستحق.",
       "refund_exceeds_paid": "هذا الاسترداد أكبر من المبلغ المدفوع بالفعل.",
       "invalid_amount": "أدخل مبلغاً صحيحاً.",
-      "generic": "تعذّر تسجيل هذه الدفعة."
+      "generic": "تعذّر تسجيل هذه الدفعة.",
+      "journey_not_commercial": "لا توجد شروط تجارية لهذه الرحلة بعد.",
+      "journey_component_price_locked": "سعر هذا المكوّن مقفول على الرحلة — سجّل الدفعة على الرحلة بدلاً من ذلك.",
+      "component_of_journey": "هذا جزء من رحلة — سجّل الدفعات على الرحلة (WR-...) بدلاً من ذلك."
     }
   },
   "customer": {
@@ -390,7 +404,8 @@
     "hand_over": "تسليم",
     "complete_delivery": "إتمام التسليم",
     "none": "لا يوجد إجراء",
-    "confirm_or_close": "أكّد أو أغلق"
+    "confirm_or_close": "أكّد أو أغلق",
+    "reconcile_payments": "مطابقة المدفوعات"
   },
   "attention": {
     "unpaid_close_to_service": "غير مدفوع والخدمة قريبة",

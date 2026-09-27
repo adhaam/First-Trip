@@ -8,7 +8,19 @@ type DerivedFields =
 export type WorkItemRow = Omit<WorkItem, DerivedFields>
 
 /** payment_kind values priced by payment_policies. Everything else (signature, commerce, rental) is per-quote. */
-const POLICY_PAYMENT_KINDS: readonly string[] = ['stay', 'stay_package', 'transfer', 'trip', 'experience_package']
+const POLICY_PAYMENT_KINDS: readonly string[] = [
+  'stay', 'stay_package', 'transfer', 'trip', 'experience_package', 'journey',
+]
+
+/**
+ * The single commercial item that represents money and staff action for a journey: everything except
+ * its own journey_component rows (bookings/trip_bookings that belong to a converted Build Your Trip
+ * trip_request). Every queue view and today-count except trips_today/arrivals/departures is scoped
+ * to commercial items only, so a Build Your Trip journey shows up once, not once per component.
+ */
+export function isCommercialItem(item: WorkItemRow | WorkItem): boolean {
+  return !item.journey_component
+}
 
 const COMMERCE_NEXT_ACTION: Record<string, NextAction> = {
   new: 'contact_customer',
@@ -34,24 +46,37 @@ type DeriveContext = { passed: boolean, outstanding_now: number | null }
  *   a. cancelled -> refund_due (money held) or none
  *   b. completed -> none
  *   c. commerce_order / edition_request -> mapped purely by status; payments never drive these
- *   d. trip_request -> converted rows only ever need mark_completed/none; unconverted
- *      rows with confirmed availability need convert_to_booking before anything else
- *   e. confirmed and the service date has passed -> mark_completed
- *   f. payment collection (awaiting_payment, or confirmed with money still owed)
- *   g. availability / planning workflow
- *   h. otherwise nothing for staff to do
+ *   d. journey_component (bookings/trip_bookings belonging to a Build Your Trip trip_request) -> never
+ *      collect_payment or refund_due; fulfillment/payment is handled from the parent, so always none
+ *   e. trip_request -> a converted row carrying the legacy 'converted' payment_status marker (not yet
+ *      made commercial) needs reconcile_payments; other converted rows behave like a payable booking;
+ *      unconverted rows with confirmed availability need convert_to_booking before anything else
+ *   f. confirmed and the service date has passed -> mark_completed
+ *   g. payment collection (awaiting_payment, or confirmed with money still owed)
+ *   h. availability / planning workflow
+ *   i. otherwise nothing for staff to do
  */
 function deriveNextAction(row: WorkItemRow, ctx: DeriveContext): NextAction {
+  // A journey component's payment and fulfillment are handled from its parent trip_request, never
+  // here -- this takes precedence over every other rule, including cancelled/completed.
+  if (row.journey_component) return 'none'
+
   if (row.status === 'cancelled') return (row.amount_paid ?? 0) > 0 ? 'refund_due' : 'none'
   if (row.status === 'completed') return 'none'
 
   if (row.entity_type === 'commerce_order') return COMMERCE_NEXT_ACTION[row.status] ?? 'none'
   if (row.entity_type === 'edition_request') return EDITION_REQUEST_NEXT_ACTION[row.status] ?? 'none'
 
+  if (row.entity_type === 'trip_request' && row.converted) {
+    // Legacy marker: the journey was converted before it had commercial terms -> needs manual review.
+    if (row.payment_status === 'converted') return 'reconcile_payments'
+    if (row.status === 'confirmed' && ctx.passed) return 'mark_completed'
+    if (row.status === 'awaiting_payment') return 'collect_payment'
+    if (row.status === 'confirmed' && (ctx.outstanding_now ?? 0) > 0) return 'collect_payment'
+    return 'none'
+  }
+
   if (row.entity_type === 'trip_request') {
-    if (row.payment_status === 'converted') {
-      return row.status === 'confirmed' && ctx.passed ? 'mark_completed' : 'none'
-    }
     if (row.status === 'awaiting_payment' || row.status === 'confirmed') return 'convert_to_booking'
     // else: fall through to the shared payment / availability rules below
   }
@@ -101,14 +126,15 @@ export function deriveWorkItem(
 
   const attention: AttentionCode[] = []
   if (
-    ['confirmed', 'awaiting_payment'].includes(row.status)
+    !row.journey_component
+    && ['confirmed', 'awaiting_payment'].includes(row.status)
     && (outstanding_now ?? 0) > 0
     && daysAway !== null && daysAway >= 0 && daysAway <= 2
   ) {
     attention.push('unpaid_close_to_service')
   }
   if (row.status === 'confirmed' && passed) attention.push('service_passed_not_completed')
-  if (row.status === 'cancelled' && (row.amount_paid ?? 0) > 0) attention.push('refund_due')
+  if (!row.journey_component && row.status === 'cancelled' && (row.amount_paid ?? 0) > 0) attention.push('refund_due')
   if (stale) attention.push('stale')
   if (
     row.transfer_type
@@ -129,14 +155,15 @@ export function deriveWorkItem(
 export type OpsView = 'needs_action' | 'awaiting_payment' | 'upcoming' | 'stale' | 'exceptions' | 'all'
 
 export function filterByView(items: WorkItem[], view: OpsView, today: string): WorkItem[] {
-  if (view === 'all') return items
-  if (view === 'needs_action') return items.filter((item) => item.needs_action)
-  if (view === 'awaiting_payment') return items.filter((item) => item.next_action === 'collect_payment')
-  if (view === 'stale') return items.filter((item) => item.stale)
-  if (view === 'exceptions') return items.filter((item) => item.attention.some((code) => code !== 'stale'))
+  const commercial = items.filter(isCommercialItem)
+  if (view === 'all') return commercial
+  if (view === 'needs_action') return commercial.filter((item) => item.needs_action)
+  if (view === 'awaiting_payment') return commercial.filter((item) => item.next_action === 'collect_payment')
+  if (view === 'stale') return commercial.filter((item) => item.stale)
+  if (view === 'exceptions') return commercial.filter((item) => item.attention.some((code) => code !== 'stale'))
   // upcoming: start_date in (today, today+7], not cancelled
   const upperBound = addDays(today, 7)
-  return items.filter((item) => (
+  return commercial.filter((item) => (
     item.status !== 'cancelled' && !!item.start_date && item.start_date > today && item.start_date <= upperBound
   ))
 }
@@ -149,14 +176,15 @@ export function sortForView(items: WorkItem[], view: OpsView): WorkItem[] {
 }
 
 /**
- * Arrivals / departures are stays and transfers (and requests not yet
- * converted — a converted request is represented by its bookings). Trips and
- * Signature experiences are "trips today", never arrivals.
+ * Arrivals / departures are stays and transfers (accommodation_booking rows, including journey
+ * components) and requests not yet converted — a converted request is represented by its bookings
+ * (its component accommodation_booking rows), so the parent trip_request itself does not count.
+ * Trips and Signature experiences are "trips today", never arrivals.
  */
 export function isJourneyItem(item: WorkItem): boolean {
   if (item.status === 'cancelled') return false
   if (item.entity_type === 'accommodation_booking') return true
-  return item.entity_type === 'trip_request' && item.payment_status !== 'converted'
+  return item.entity_type === 'trip_request' && !item.converted
 }
 
 export function isTripItem(item: WorkItem): boolean {
@@ -164,16 +192,19 @@ export function isTripItem(item: WorkItem): boolean {
 }
 
 export function todayCounts(items: WorkItem[], today: string) {
+  const commercial = items.filter(isCommercialItem)
   return {
     needs_action: filterByView(items, 'needs_action', today).length,
-    new_requests: items.filter((item) => ['new', 'pending', 'contacted'].includes(item.status)).length,
-    awaiting_availability: items.filter((item) => item.status === 'checking_availability').length,
-    alternatives_required: items.filter((item) => item.status === 'alternatives_required').length,
+    new_requests: commercial.filter((item) => ['new', 'pending', 'contacted'].includes(item.status)).length,
+    awaiting_availability: commercial.filter((item) => item.status === 'checking_availability').length,
+    alternatives_required: commercial.filter((item) => item.status === 'alternatives_required').length,
     awaiting_payment: filterByView(items, 'awaiting_payment', today).length,
+    // Arrivals/departures include journey component bookings (isJourneyItem), unlike every other count.
     arrivals_today: items.filter((item) => isJourneyItem(item) && item.start_date === today).length,
     departures_today: items.filter((item) => isJourneyItem(item) && item.end_date === today).length,
+    // trips_today includes component trip_bookings, unlike every other count.
     trips_today: items.filter((item) => isTripItem(item) && item.start_date === today).length,
-    transfers_attention: items.filter((item) => item.attention.includes('transfer_unconfirmed')).length,
+    transfers_attention: commercial.filter((item) => item.attention.includes('transfer_unconfirmed')).length,
     stale: filterByView(items, 'stale', today).length,
     exceptions: filterByView(items, 'exceptions', today).length,
   }

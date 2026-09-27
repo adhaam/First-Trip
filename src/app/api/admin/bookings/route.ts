@@ -16,11 +16,17 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseAdmin(gate.staff)
   // Joined accommodation name so the dashboard can show/filter by hotel
   // without a second round trip per row.
-  const { data, error } = await supabase
+  let query = supabase
     .from('bookings')
     .select('*, accommodations(name_ar, name_en)')
     .order('created_at', { ascending: false })
     .limit(1000)
+  // Journey components (converted off a trip_request, migration 049) are worked from the journey's
+  // own detail screen, not this list — they'd otherwise show up twice with no separate action.
+  if (req.nextUrl.searchParams.get('include_components') !== 'true') {
+    query = query.is('trip_request_id', null)
+  }
+  const { data, error } = await query
   if (error) {
     console.error('GET bookings error:', error)
     return NextResponse.json({ error: 'Failed to load bookings' }, { status: 500 })

@@ -6,7 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatAmount, formatCount, formatDateShort, formatReference } from '@/lib/format'
 import type { WorkItem } from '@/lib/ops/types'
 import { customerHref, workItemHref } from '@/components/admin/ops/nav'
-import { AttentionChips, EntityTypeLabel, NextActionLabel, PaymentPill, StatusPill, WaitingLabel, useItemTitle } from '@/components/admin/ops/pills'
+import {
+  AttentionChips, EntityTypeLabel, JourneyBadge, NextActionLabel, PaymentPill, StatusPill, WaitingLabel, useItemTitle,
+} from '@/components/admin/ops/pills'
 
 /** Shared row list for the work queue, today view sections and a customer profile. */
 export function WorkItemTable({
@@ -79,7 +81,12 @@ export function WorkItemTable({
                   {item.start_date ? formatDateShort(item.start_date, locale) : tCommon('none')}
                   {item.people ? <span className="ms-1 text-muted-foreground">· {formatCount(item.people, locale)}</span> : null}
                 </TableCell>
-                <TableCell className="min-w-[160px] max-w-[220px] whitespace-normal text-sm">{titleOf(item)}</TableCell>
+                <TableCell className="min-w-[160px] max-w-[220px] whitespace-normal text-sm">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <span>{titleOf(item)}</span>
+                    {item.entity_type === 'trip_request' && item.converted && <JourneyBadge />}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
                     <StatusPill status={item.status} />
@@ -130,6 +137,7 @@ export function WorkItemTable({
               <div className="min-w-0">
                 <p className="font-medium">{formatReference(item.reference)}</p>
                 <p className="truncate text-sm text-muted-foreground">{titleOf(item)}</p>
+                {item.entity_type === 'trip_request' && item.converted && <JourneyBadge className="mt-1" />}
               </div>
               <StatusPill status={item.status} />
             </div>

@@ -9,11 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Loader2, RotateCcw } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
-import { formatDate } from '@/lib/format'
+import { formatAmount, formatDate } from '@/lib/format'
 import type { OpsEntityType, WorkItem } from '@/lib/ops/types'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
 import { customerHref, opsItemHref } from '@/components/admin/ops/nav'
-import { EntityTypeLabel, NextActionLabel, PaymentPill, StatusPill, useItemTitle } from '@/components/admin/ops/pills'
+import { EntityTypeLabel, JourneyBadge, NextActionLabel, PaymentPill, StatusPill, useItemTitle } from '@/components/admin/ops/pills'
 import { TripRequestPanel } from '@/components/admin/ops/TripRequestPanel'
 import { PaymentsPanel, type PaymentExpectation, type PaymentRecord } from '@/components/admin/ops/PaymentsPanel'
 import { HistoryTimeline } from '@/components/admin/ops/HistoryTimeline'
@@ -36,6 +36,24 @@ type ItemResponse = {
   allowed_statuses: string[]
   payment_allowed: boolean
   can_convert: boolean
+  /** trip_request only: children created by conversion (payment_allowed is always false on these). */
+  components?: WorkItem[]
+  /** journey_component items only: the parent trip_request this item belongs to. */
+  journey?: { id: string; reference: string } | null
+}
+
+/** Derives the staff-facing kind label key for a journey component row. */
+function componentKindKey(item: Pick<WorkItem, 'entity_type' | 'subtype'>): string {
+  if (item.entity_type === 'accommodation_booking') {
+    if (item.subtype === 'transfer-only') return 'transport'
+    if (item.subtype === 'package') return 'stayTransport'
+    return 'stay'
+  }
+  if (item.entity_type === 'trip_booking') {
+    if (item.subtype === 'package') return 'package'
+    return 'trip'
+  }
+  return 'stay'
 }
 
 export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
@@ -212,10 +230,49 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
 
       {type === 'trip_request' && <TripRequestPanel record={data.record} />}
 
+      {item.journey_component && data.journey && (
+        <p className="text-sm text-muted-foreground">
+          {t('partOfJourney')}{' '}
+          <Link href={opsItemHref('trip_request', data.journey.id)} className="font-medium text-sea-900 hover:underline" dir="ltr">
+            {data.journey.reference}
+          </Link>
+        </p>
+      )}
+
       {data.related.items.length > 0 && (
         <section className="rounded-lg border bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-gray-900">{t('confirmedBookingsPanel')}</h2>
           <WorkItemTable items={data.related.items} emptyMessage={t('noRelatedBookings')} />
+        </section>
+      )}
+
+      {type === 'trip_request' && item.converted && (data.components?.length ?? 0) > 0 && (
+        <section className="rounded-lg border bg-white p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-900">{t('componentsPanel')}</h2>
+            <JourneyBadge />
+          </div>
+          <div className="flex flex-col divide-y">
+            {(data.components ?? []).map((component) => (
+              <div key={`${component.entity_type}:${component.entity_id}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div className="min-w-0">
+                  <Link href={opsItemHref(component.entity_type, component.entity_id)} className="font-medium text-sea-900 hover:underline" dir="ltr">
+                    {component.reference}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    <ComponentKindLabel item={component} />
+                    {component.start_date ? ` · ${formatDate(component.start_date, locale)}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusPill status={component.status} />
+                  {component.amount_total != null && (
+                    <span className="text-sm text-muted-foreground">{formatAmount(component.amount_total, locale)}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -261,7 +318,13 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
         )}
       </section>
 
-      {type !== 'trip_request' && (
+      {item.next_action === 'reconcile_payments' && (
+        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900">{t('reconcilePaymentsWarning')}</p>
+        </section>
+      )}
+
+      {!item.journey_component && item.next_action !== 'reconcile_payments' && (type !== 'trip_request' || item.converted) && (
         <PaymentsPanel
           entityType={type}
           entityId={id}
@@ -317,6 +380,11 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
       </Dialog>
     </div>
   )
+}
+
+function ComponentKindLabel({ item }: { item: Pick<WorkItem, 'entity_type' | 'subtype'> }) {
+  const t = useTranslations('ops.item.componentKind')
+  return <>{t(componentKindKey(item))}</>
 }
 
 function StatusLabel({ status }: { status: string }) {

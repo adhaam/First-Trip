@@ -128,3 +128,41 @@ test('honeypot and turnstile fields are accepted but optional', () => {
   const result = tripRequestSchema.safeParse(transport({ website: '', turnstile_token: 'abc' }))
   assert.equal(result.success, true)
 })
+
+// ─── Custom hiace dates ("Customize" — no stay_pattern_code) ───
+
+test('accepts a custom hiace request with no stay_pattern_code but a later departure_date', () => {
+  const input = transport({
+    transport_mode: 'hiace', stay_pattern_code: undefined,
+    arrival_date: '2026-10-07', departure_date: '2026-10-12',
+  })
+  const result = tripRequestSchema.safeParse(input)
+  assert.equal(result.success, true)
+})
+
+test('rejects a custom hiace request whose departure_date is not after arrival_date', () => {
+  const input = transport({
+    transport_mode: 'hiace', stay_pattern_code: undefined,
+    arrival_date: '2026-10-07', departure_date: '2026-10-07',
+  })
+  const result = tripRequestSchema.safeParse(input)
+  assert.equal(result.success, false)
+})
+
+test('rejects a custom hiace request longer than the max nights cap', () => {
+  const input = transport({
+    transport_mode: 'hiace', stay_pattern_code: undefined,
+    arrival_date: '2026-10-07', departure_date: '2026-11-20',
+  })
+  const result = tripRequestSchema.safeParse(input)
+  assert.equal(result.success, false)
+})
+
+test('rejects a package_bus request without a stay_pattern_code even with a departure_date (custom is hiace-only)', () => {
+  const input = transport({
+    transport_mode: 'package_bus', stay_pattern_code: undefined,
+    arrival_date: '2026-10-07', departure_date: '2026-10-12',
+  })
+  const result = tripRequestSchema.safeParse(input)
+  assert.equal(result.success, false)
+})

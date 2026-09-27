@@ -21,7 +21,9 @@ export function sectionStatus(state: BuilderState, catalog: BuilderCatalog): Rec
       : stayOnly
         ? hasValidStayRange(state) ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'stay_dates_required' }
         : state.stay_pattern_code && state.arrival_date ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'transport_dates_required' },
-    travelers: (state.adults ?? 0) >= 1 ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'adult_required' },
+    travelers: (state.adults ?? 0) >= 1 && state.travellers_confirmed
+      ? { status: 'complete', reason: 'selected' }
+      : { status: 'needs_input', reason: state.travellers_confirmed ? 'adult_required' : 'travellers_confirmation_required' },
     stay: hasStay
       ? stay ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'stay_unavailable' }
       : stayOnly ? { status: 'needs_input', reason: 'stay_required' } : { status: 'optional', reason: 'transfer_only_allowed' },
@@ -44,7 +46,7 @@ export function quoteReadiness(state: BuilderState): { ready: boolean; missing: 
     if (!state.origin_governorate_code) missing.push('origin')
     if (!state.stay_pattern_code || !state.arrival_date) missing.push('dates')
   }
-  if ((state.adults ?? 0) < 1) missing.push('travelers')
+  if ((state.adults ?? 0) < 1 || !state.travellers_confirmed) missing.push('travelers')
   return { ready: missing.length === 0, missing }
 }
 

@@ -14,7 +14,7 @@ import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
 
 const METHODS = ['vodafonecash', 'instapay', 'cash', 'card_link', 'bank_transfer', 'other'] as const
 
-type PayableEntityType = Exclude<OpsEntityType, 'trip_request'>
+type PayableEntityType = OpsEntityType
 
 export function RecordPaymentDialog({
   open, onOpenChange, direction, entityType, entityId, currentAmountPaid, onRecorded,
