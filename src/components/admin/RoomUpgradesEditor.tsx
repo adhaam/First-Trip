@@ -9,10 +9,6 @@
  *
  * Migration-safe: shows a "migration required" notice if the DB table does not
  * exist yet. DO NOT apply Migration 011 without explicit approval.
- *
- * NOTE: This file is intentionally kept at the RoomVariantsEditor path so the
- * existing AccommodationManager import continues to work. The export is named
- * RoomUpgradesEditor; AccommodationManager imports it by that name.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -339,6 +335,3 @@ export function RoomUpgradesEditor({ accommodationId, locale }: {
     </div>
   )
 }
-
-// Keep backward compat alias so AccommodationManager import doesn't break
-export { RoomUpgradesEditor as RoomVariantsEditor }

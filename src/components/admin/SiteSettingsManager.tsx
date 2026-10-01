@@ -87,7 +87,6 @@ export function SiteSettingsManager() {
             <div><Label>{locale === 'ar' ? 'رابط الفيسبوك' : 'Facebook URL'}</Label><Input dir="ltr" value={settings.facebook_url || ''} onChange={e => updateField('facebook_url', e.target.value)} className="mt-1" /></div>
             <div><Label>{locale === 'ar' ? 'رابط الإنستجرام' : 'Instagram URL'}</Label><Input dir="ltr" value={settings.instagram_url || ''} onChange={e => updateField('instagram_url', e.target.value)} className="mt-1" /></div>
             <div><Label>{locale === 'ar' ? 'الموقع' : 'Location'}</Label><Input value={settings.location || ''} onChange={e => updateField('location', e.target.value)} className="mt-1" /></div>
-            <div><Label>{locale === 'ar' ? 'رابط اللوجو' : 'Logo URL'}</Label><Input dir="ltr" value={settings.logo_url || ''} onChange={e => updateField('logo_url', e.target.value)} className="mt-1" /></div>
           </div>
         </CardContent>
       </Card>

@@ -477,8 +477,6 @@ export interface CommunityPost {
 
 export interface SiteSettings {
   id: string
-  hero_type: 'image' | 'video'
-  hero_media_url: string
   whatsapp_number: string
   phone_number: string
   email: string
@@ -507,16 +505,8 @@ export interface SiteSettings {
   primary_cta_label_en?: string
   secondary_cta_label_ar?: string
   secondary_cta_label_en?: string
-  explore_media_url?: string
-  explore_media_alt_ar?: string
-  explore_media_alt_en?: string
-  explore_copy_ar?: string
-  explore_copy_en?: string
   featured_accommodation_ids?: string[]
   featured_trip_ids?: string[]
-  show_community?: boolean
-  show_partners?: boolean
-  show_newsletter?: boolean
   seo_title?: string
   seo_description_ar?: string
   seo_description_en?: string
@@ -524,29 +514,6 @@ export interface SiteSettings {
   organization_name?: string
 }
 
-/** General, structured website/business settings — the "Website" admin section. */
-export interface WeemapSiteSettings {
-  site_title?: string
-  site_description_ar?: string
-  site_description_en?: string
-  social_share_image?: string
-  organization_name?: string
-  hero_heading_ar?: string
-  hero_heading_en?: string
-  hero_subheading_ar?: string
-  hero_subheading_en?: string
-  primary_cta_label_ar?: string
-  primary_cta_label_en?: string
-  secondary_cta_label_ar?: string
-  secondary_cta_label_en?: string
-  featured_accommodation_ids?: string[]
-  featured_trip_ids?: string[]
-  weemap_picks_ids?: string[]
-  show_community_section?: boolean
-  show_partners_section?: boolean
-  show_newsletter_section?: boolean
-  homepage_section_order?: string[]
-}
 
 export interface NavItem {
   href: string

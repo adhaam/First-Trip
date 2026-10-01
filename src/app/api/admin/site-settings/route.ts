@@ -3,21 +3,7 @@ import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
-const homepageMediaUrlSchema = z.string().max(1000).refine(value => {
-  if (!value) return true
-  if (value.startsWith('/') && !value.startsWith('//')) return true
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:'
-      && (url.hostname === 'images.unsplash.com' || url.hostname.endsWith('.supabase.co'))
-  } catch {
-    return false
-  }
-}, 'Use a local path or an image URL from the configured Supabase storage')
-
 const settingsSchema = z.object({
-  hero_type: z.enum(['image', 'video']).optional(),
-  hero_media_url: z.string().optional(),
   whatsapp_number: z.string().optional(),
   phone_number: z.string().optional(),
   email: z.string().optional(),
@@ -44,16 +30,8 @@ const settingsSchema = z.object({
   primary_cta_label_en: z.string().max(80).optional(),
   secondary_cta_label_ar: z.string().max(80).optional(),
   secondary_cta_label_en: z.string().max(80).optional(),
-  explore_media_url: homepageMediaUrlSchema.optional(),
-  explore_media_alt_ar: z.string().max(180).optional(),
-  explore_media_alt_en: z.string().max(180).optional(),
-  explore_copy_ar: z.string().max(220).optional(),
-  explore_copy_en: z.string().max(220).optional(),
   featured_accommodation_ids: z.array(z.string().uuid()).optional(),
   featured_trip_ids: z.array(z.string().uuid()).optional(),
-  show_community: z.boolean().optional(),
-  show_partners: z.boolean().optional(),
-  show_newsletter: z.boolean().optional(),
   seo_title: z.string().max(160).optional(),
   seo_description_ar: z.string().max(400).optional(),
   seo_description_en: z.string().max(400).optional(),

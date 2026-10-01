@@ -18,7 +18,7 @@ import { Accommodation, MealPlan, MealPlanKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { AMENITIES_LIBRARY } from '@/lib/amenities'
 import { SeasonalRatesEditor } from './SeasonalRatesEditor'
-import { RoomVariantsEditor } from './RoomVariantsEditor'
+import { RoomUpgradesEditor } from './RoomUpgradesEditor'
 
 const TYPES = [
   { value: 'hotel', label_ar: '🏨 فندق', label_en: '🏨 Hotel' },
@@ -838,7 +838,7 @@ export function AccommodationManager() {
               {editing?.id ? (
                 <>
                   <SeasonalRatesEditor accommodationId={editing.id} locale={locale} />
-                  <RoomVariantsEditor accommodationId={editing.id} locale={locale} />
+                  <RoomUpgradesEditor accommodationId={editing.id} locale={locale} />
                 </>
               ) : (
                 <p className="rounded-lg border border-dashed p-3 text-xs text-gray-400">
