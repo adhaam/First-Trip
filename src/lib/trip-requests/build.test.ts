@@ -85,7 +85,7 @@ test('quote-normalized selections become the persisted trip-request experiences'
 })
 
 function parseInput(overrides: Record<string, unknown>): TripRequestInput {
-  const result = tripRequestSchema.safeParse({ contact: baseContact, ...overrides })
+  const result = tripRequestSchema.safeParse({ travellers_confirmed: true, contact: baseContact, ...overrides })
   assert.equal(result.success, true, JSON.stringify(!result.success && result.error.flatten()))
   if (!result.success) throw new Error('unreachable')
   return result.data
@@ -101,7 +101,7 @@ function rawCustomHiaceInput(overrides: { arrival_date: string; departure_date: 
   return {
     locale: 'en', source: 'website', transport_mode: 'hiace', origin_governorate_code: 'CAI',
     arrival_date: overrides.arrival_date, departure_date: overrides.departure_date,
-    adults: 2, children: 0, experiences: [], contact: baseContact, builder_stage: 'submitted',
+    adults: 2, children: 0, experiences: [], travellers_confirmed: true, contact: baseContact, builder_stage: 'submitted',
   } as TripRequestInput
 }
 

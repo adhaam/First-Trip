@@ -99,6 +99,7 @@ test("experience package: client-supplied payment_kind 'stay_package' never reac
     arrival_date: '2026-10-10',
     departure_date: '2026-10-13',
     adults: 2,
+    travellers_confirmed: true,
     accommodation_id: ACC_ID,
     experiences: [experienceWithPaymentKind],
     contact: { name: 'Nour Ahmed', phone: '01012345678' },

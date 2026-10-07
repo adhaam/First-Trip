@@ -11,6 +11,7 @@
  * an i18n provider.
  */
 import { formatDate } from '@/lib/format'
+import { HIACE_RECOMMENDED_DEPARTURE_WEEKDAYS } from '@/lib/transport'
 import type { TransportScheduleConfig } from '@/lib/transport'
 import type { TransportMode } from '@/lib/trip-requests/schema'
 import { patternsForMode, returnDateFor, stayNights } from './dates'
@@ -125,6 +126,14 @@ export function experiencesSummary(state: BuilderState): SectionSummary {
  * Returns an empty string when nothing is configured, so the caller can
  * simply skip rendering the hint.
  */
+export function hiaceRecommendedDepartureNames(locale: 'ar' | 'en'): string {
+  const formatter = new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { weekday: 'long' })
+  const names = [...HIACE_RECOMMENDED_DEPARTURE_WEEKDAYS]
+    .sort((a, b) => a - b)
+    .map((day) => formatter.format(new Date(Date.UTC(2026, 8, 20 + day))))
+  return names.join(locale === 'ar' ? '، ' : ' & ')
+}
+
 export function recommendedCheckInWeekdayNames(schedule: TransportScheduleConfig, locale: 'ar' | 'en'): string {
   const formatter = new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { weekday: 'long' })
   // 2026-09-20 is a Sunday (weekday 0); Date.UTC(...,20 + weekday) walks the

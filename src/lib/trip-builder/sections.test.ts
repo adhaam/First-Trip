@@ -30,6 +30,7 @@ test('quote and submit payloads preserve only applicable fields', () => {
   assert.equal(tripRequestQuoteSchema.safeParse(hiace).success, true)
   assert.equal('room_allocations' in hiace, false)
   assert.equal(tripRequestSchema.safeParse(toSubmitPayload(stayOnly, { name: 'Ada Lovelace', phone: '+201000000000' }, 'en')).success, true)
+  assert.equal(toSubmitPayload(stayOnly, { name: 'Ada Lovelace', phone: '+201000000000' }, 'en').travellers_confirmed, true)
 })
 
 test('quote readiness reports each required missing section', () => {

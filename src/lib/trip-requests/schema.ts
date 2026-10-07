@@ -129,6 +129,9 @@ export function refineTripRequestJourney(value: z.infer<typeof tripRequestJourne
 export const tripRequestQuoteSchema = tripRequestJourneyObjectSchema.superRefine(refineTripRequestJourney)
 
 export const tripRequestSchema = tripRequestJourneyObjectSchema.extend({
+  // The customer must explicitly confirm the traveller counts (the default
+  // of one adult is not a choice). The quote preview does not require this.
+  travellers_confirmed: z.literal(true, { errorMap: () => ({ message: 'Please confirm the number of travellers.' }) }),
   contact: contactSchema,
   notes: z.string().max(500).optional(),
   builder_stage: z.enum(BUILDER_STAGES).default('submitted'),

@@ -12,6 +12,7 @@ function stayOnly(overrides: Record<string, unknown> = {}) {
     departure_date: '2026-10-13',
     adults: 2,
     accommodation_id: '11111111-1111-1111-1111-111111111111',
+    travellers_confirmed: true,
     contact: baseContact,
     ...overrides,
   }
@@ -25,6 +26,7 @@ function transport(overrides: Record<string, unknown> = {}) {
     stay_pattern_code: 'bus_4d3n',
     arrival_date: '2026-10-01',
     adults: 2,
+    travellers_confirmed: true,
     contact: baseContact,
     ...overrides,
   }
@@ -165,4 +167,12 @@ test('rejects a package_bus request without a stay_pattern_code even with a depa
   })
   const result = tripRequestSchema.safeParse(input)
   assert.equal(result.success, false)
+})
+
+test('submission rejects travellers that were never explicitly confirmed', () => {
+  const missing = tripRequestSchema.safeParse(stayOnly({ travellers_confirmed: undefined }))
+  assert.equal(missing.success, false)
+  if (!missing.success) assert.ok(missing.error.issues.some((issue) => issue.path[0] === 'travellers_confirmed'))
+  assert.equal(tripRequestSchema.safeParse(stayOnly({ travellers_confirmed: false })).success, false)
+  assert.equal(tripRequestSchema.safeParse(stayOnly()).success, true)
 })

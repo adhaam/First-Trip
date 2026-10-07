@@ -49,6 +49,7 @@
   "datesCustomize": "تخصيص",
   "datesCustomHint": "اختار أي تاريخ وصول، وبعدين اختار تاريخ العودة. أي تاريخ يناسب.",
   "datesRecommendedBadge": "موصى به",
+  "datesRecommendedDeparture": "أيام {days} هي أيام السفر المقترحة. وباقي التواريخ متاحة برضه.",
   "datesCheckIn": "تسجيل الوصول",
   "datesCheckOut": "تسجيل المغادرة",
   "datesRangeHint": "اختار تاريخ الوصول والمغادرة. أي تاريخ يناسب.",

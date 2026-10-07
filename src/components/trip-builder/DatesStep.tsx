@@ -11,12 +11,12 @@ import {
   isoFromLocalDate,
   journeyNights,
   patternsForMode,
-  recommendedCheckIn,
+  recommendedHiaceDeparture,
   returnDateFor,
   stayNights,
 } from '@/lib/trip-builder/dates'
 import type { BuilderAction } from '@/lib/trip-builder/state'
-import { recommendedCheckInWeekdayNames } from '@/lib/trip-builder/summaries'
+import { hiaceRecommendedDepartureNames, recommendedCheckInWeekdayNames } from '@/lib/trip-builder/summaries'
 import type { BuilderCatalog, BuilderState } from '@/lib/trip-builder/types'
 import { cn } from '@/lib/utils'
 import { handleRadioGroupKeyDown } from './controls'
@@ -111,10 +111,15 @@ function TransportDates({
           {state.stay_pattern_code && (
             <div>
               <p className="mb-2 text-sm font-semibold text-sea-900">{t('datesPickArrival')}</p>
+              {mode === 'hiace' && (
+                <p className="mb-2 text-xs font-medium text-sun-700">
+                  {t('datesRecommendedDeparture', { days: hiaceRecommendedDepartureNames(locale) })}
+                </p>
+              )}
               {dates.length ? (
                 <div role="radiogroup" aria-label={t('datesPickArrival')} onKeyDown={handleRadioGroupKeyDown} className="rail-snap -mx-1 gap-2 px-1 pb-1">
                   {dates.map((date) => {
-                    const recommended = mode === 'hiace' && recommendedCheckIn(catalog.schedule, date)
+                    const recommended = mode === 'hiace' && recommendedHiaceDeparture(date)
                     return (
                       <button
                         key={date}

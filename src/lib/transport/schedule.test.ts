@@ -7,6 +7,7 @@ import {
   checkServiceDate,
   findStayPattern,
   isRecommendedCheckIn,
+  isRecommendedHiaceDeparture,
   resolveStayPattern,
   returnOptions,
   weekdayForDate,
@@ -149,6 +150,14 @@ test('recommended check-in weekdays are guidance only', () => {
   assert.equal(isRecommendedCheckIn(schedule, '2026-03-02'), true)
   assert.equal(isRecommendedCheckIn(schedule, '2026-03-06'), true)
   assert.equal(isRecommendedCheckIn(schedule, '2026-03-04'), false)
+})
+
+test('hiace suggests Sunday and Thursday departures without restricting other dates', () => {
+  assert.equal(isRecommendedHiaceDeparture('2026-03-01'), true)
+  assert.equal(isRecommendedHiaceDeparture('2026-03-05'), true)
+  assert.equal(isRecommendedHiaceDeparture('2026-03-02'), false)
+  const result = resolveStayPattern(config(), { patternCode: 'hiace_4d3n', transferType: 'hiace', outboundDate: '2026-03-02' })
+  assert.equal(result.ok, true)
 })
 
 test('bus 8D/7N runs Thursday → following Friday and Sunday → following Monday only', () => {

@@ -1,4 +1,4 @@
-import { addDays, isRecommendedCheckIn, patternsFor, resolveStayPattern } from '@/lib/transport'
+import { addDays, isRecommendedCheckIn, isRecommendedHiaceDeparture, patternsFor, resolveStayPattern } from '@/lib/transport'
 import type { TransportScheduleConfig } from '@/lib/transport'
 import type { TransportMode } from '@/lib/trip-requests/schema'
 
@@ -48,6 +48,11 @@ export function stayNights(arrival?: string, departure?: string): number | null 
 
 export function recommendedCheckIn(schedule: TransportScheduleConfig, date: string) {
   return isRecommendedCheckIn(schedule, date)
+}
+
+/** Private Hiace preset pickers: the picked date is the departure day; Sunday and Thursday are suggested. */
+export function recommendedHiaceDeparture(date: string) {
+  return isRecommendedHiaceDeparture(date)
 }
 
 export function earliestArrival(today: string) {

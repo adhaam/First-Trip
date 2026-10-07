@@ -49,6 +49,7 @@
   "datesCustomize": "Customize",
   "datesCustomHint": "Pick any check-in date, then choose your return date. Any date works.",
   "datesRecommendedBadge": "Recommended",
+  "datesRecommendedDeparture": "{days} are our suggested departure days. Other dates also work.",
   "datesCheckIn": "Check-in",
   "datesCheckOut": "Check-out",
   "datesRangeHint": "Choose your check-in and check-out dates. Any date works.",

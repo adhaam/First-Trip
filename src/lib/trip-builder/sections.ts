@@ -85,6 +85,7 @@ export function toQuotePayload(state: BuilderState, locale: 'ar' | 'en'): TripRe
 export function toSubmitPayload(state: BuilderState, contact: ContactInput, locale: 'ar' | 'en', extras: { notes?: string; website?: string; turnstile_token?: string } = {}): TripRequestInput {
   return {
     ...toQuotePayload(state, locale),
+    travellers_confirmed: true as const,
     contact,
     builder_stage: 'submitted',
     source: 'website',

@@ -208,3 +208,15 @@ export function resolveStayPattern(
 export function isRecommendedCheckIn(config: TransportScheduleConfig, date: string): boolean {
   return config.recommendedCheckInWeekdays.includes(weekdayForDate(date))
 }
+
+/**
+ * Private Hiace presets: the date the customer picks is the DEPARTURE day
+ * (it is the outbound date the pattern resolves from). WEEMAP suggests Sunday
+ * and Thursday, the same days the WEEMAP bus leaves. Guidance only: every
+ * other valid date stays selectable. Code constant, not part of the DB schedule.
+ */
+export const HIACE_RECOMMENDED_DEPARTURE_WEEKDAYS: readonly number[] = [0, 4]
+
+export function isRecommendedHiaceDeparture(date: string): boolean {
+  return HIACE_RECOMMENDED_DEPARTURE_WEEKDAYS.includes(weekdayForDate(date))
+}

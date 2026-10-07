@@ -5,6 +5,7 @@ import type { TransportScheduleConfig } from '@/lib/transport'
 import {
   datesSummary,
   experiencesSummary,
+  hiaceRecommendedDepartureNames,
   recommendedCheckInWeekdayNames,
   roomsSummary,
   staySummary,
@@ -109,6 +110,10 @@ test('experiencesSummary only appears once something has been added', () => {
 test('recommendedCheckInWeekdayNames formats configured weekdays, never hard-coded ones', () => {
   assert.equal(recommendedCheckInWeekdayNames(schedule, 'en'), 'Monday & Friday')
   assert.equal(recommendedCheckInWeekdayNames({ ...schedule, recommendedCheckInWeekdays: [] }, 'en'), '')
+})
+
+test('hiaceRecommendedDepartureNames lists Sunday and Thursday', () => {
+  assert.equal(hiaceRecommendedDepartureNames('en'), 'Sunday & Thursday')
 })
 
 test('transportOutboundWeekdayNames reads the weekly rules for a scheduled mode and is empty for on-demand/stay-only', () => {
