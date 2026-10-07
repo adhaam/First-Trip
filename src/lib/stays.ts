@@ -10,6 +10,31 @@
 import { roomPerPersonPrice, type RoomType } from './pricing'
 import type { Accommodation, AccommodationType, MealPlan } from './types'
 
+// ─── Display labels ───
+
+/**
+ * The type label ("Hotel" / "فندق") shown next to a stay's name — omitted when
+ * the localized name already starts with it, so Arabic never reads
+ * "فندق فندق امون".
+ */
+export function stayTypeLabel(name: string | null | undefined, label: string | undefined): string | undefined {
+  if (!label) return undefined
+  const trimmed = (name ?? '').trim()
+  return trimmed.toLowerCase().startsWith(label.toLowerCase()) ? undefined : label
+}
+
+/**
+ * Amenities for the current locale. On Arabic pages, entries with no Arabic
+ * letters (legacy English imports) are dropped rather than shown untranslated.
+ */
+export function localizedAmenities(
+  acc: { amenities_ar?: string[] | null; amenities_en?: string[] | null },
+  ar: boolean,
+): string[] {
+  if (!ar) return acc.amenities_en ?? []
+  return (acc.amenities_ar ?? []).filter((item) => /[؀-ۿ]/.test(item))
+}
+
 // ─── List filtering & sorting ───
 
 export type StayFilterKey = 'all' | AccommodationType

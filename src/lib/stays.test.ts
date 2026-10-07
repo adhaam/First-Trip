@@ -9,6 +9,8 @@ import {
   roomRateRows,
   sortAccommodations,
   fromPricePerPersonPerNight,
+  localizedAmenities,
+  stayTypeLabel,
 } from './stays'
 import type { Accommodation, MealPlan } from './types'
 
@@ -216,4 +218,21 @@ test('resolveTierKey hides (returns null for) anything not in the known list', (
   assert.equal(resolveTierKey('   '), null)
   assert.equal(resolveTierKey(undefined), null)
   assert.equal(resolveTierKey(null), null)
+})
+
+// ─── stayTypeLabel / localizedAmenities ───
+
+test("stayTypeLabel drops the type label when the name already starts with it", () => {
+  assert.equal(stayTypeLabel("فندق امون دهب", "فندق"), undefined)
+  assert.equal(stayTypeLabel("ريتاك قناي", "فندق"), "فندق")
+  assert.equal(stayTypeLabel("Hotel California", "Hotel"), undefined)
+  assert.equal(stayTypeLabel("Nesima Hotel", "Hotel"), "Hotel")
+  assert.equal(stayTypeLabel("x", undefined), undefined)
+})
+
+test("localizedAmenities never shows untranslated English entries on Arabic pages", () => {
+  const a = { amenities_ar: ["واي فاي", "Free parking", "+ More", "تكييف"], amenities_en: ["WiFi", "AC"] }
+  assert.deepEqual(localizedAmenities(a, true), ["واي فاي", "تكييف"])
+  assert.deepEqual(localizedAmenities({ amenities_ar: [], amenities_en: ["WiFi"] }, true), [])
+  assert.deepEqual(localizedAmenities(a, false), ["WiFi", "AC"])
 })

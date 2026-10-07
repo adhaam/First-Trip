@@ -8,6 +8,7 @@ import { SafeImage } from '@/components/SafeImage'
 import { PriceTag } from '@/components/brand'
 import type { BuilderAction } from '@/lib/trip-builder/state'
 import type { BuilderCatalog, BuilderState, CatalogAccommodation } from '@/lib/trip-builder/types'
+import { ACCOMMODATION_TAGS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { handleRadioGroupKeyDown } from './controls'
 import { StayQuickView } from './StayQuickView'
@@ -124,7 +125,9 @@ function AccommodationCard({
       </div>
       <div className="p-3.5">
         <p className="font-display text-sm font-bold leading-snug text-sea-900">{locale === 'ar' ? stay.name_ar : stay.name_en}</p>
-        <p className="mt-0.5 text-xs capitalize text-ink-subtle">{stay.type}{stay.tier ? ` · ${stay.tier}` : ''}</p>
+        <p className="mt-0.5 text-xs text-ink-subtle">
+          {locale === 'ar' ? ACCOMMODATION_TAGS[stay.type]?.label_ar : ACCOMMODATION_TAGS[stay.type]?.label_en}
+        </p>
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <PriceTag amount={stay.from_price_per_person_per_night} from unit="personNight" size="sm" />
           <StayQuickView stay={stay} locale={locale} active={active} onSelect={onClick} />

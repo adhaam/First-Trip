@@ -1,7 +1,7 @@
 'use client'
 
 import { useLocale, useTranslations } from 'next-intl'
-import { Star, MapPin, MessageCircle } from 'lucide-react'
+import { MapPin, MessageCircle } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { Section, SectionHeading } from '@/components/brand/Section'
 import { Eyebrow } from '@/components/brand/Eyebrow'
@@ -20,18 +20,10 @@ import { StayLocalGuides } from '@/components/stays/StayLocalGuides'
 import { MapPreview } from '@/components/MapPreview'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
-import { formatCount } from '@/lib/format'
-import { resolveTierKey, fromPricePerPersonPerNight } from '@/lib/stays'
+import { fromPricePerPersonPerNight, localizedAmenities, stayTypeLabel } from '@/lib/stays'
 import type { Accommodation, CommunityPost, SinaiTrip } from '@/lib/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 import { NEUTRAL_MEDIA } from '@/lib/media'
-
-const TIER_LABEL_KEY = {
-  budget: 'tierBudget',
-  standard: 'tierStandard',
-  premium: 'tierPremium',
-  lagoon: 'tierLagoon',
-} as const
 
 export function ProductDetailClient({
   accommodation,
@@ -53,10 +45,9 @@ export function ProductDetailClient({
   const ar = locale === 'ar'
 
   const tag = ACCOMMODATION_TAGS[accommodation.type]
-  const tierKey = resolveTierKey(accommodation.tier)
   const images = accommodation.images?.length ? accommodation.images : [accommodation.image_url || NEUTRAL_MEDIA]
   const name = ar ? accommodation.name_ar : accommodation.name_en
-  const amenities = (ar ? accommodation.amenities_ar : accommodation.amenities_en) ?? []
+  const amenities = localizedAmenities(accommodation, ar)
   const location = ar ? accommodation.location_ar || accommodation.location : accommodation.location_en || accommodation.location
   const description = ar ? accommodation.description_ar : accommodation.description_en
 
@@ -95,28 +86,13 @@ export function ProductDetailClient({
         <div className="grid gap-10 lg:grid-cols-[1fr_360px] lg:gap-12">
           <div className="space-y-12">
             <Reveal>
-              {coords && <Eyebrow coords={coords}>{ar ? tag?.label_ar : tag?.label_en}</Eyebrow>}
+              {coords && <Eyebrow coords={coords}>{stayTypeLabel(name, ar ? tag?.label_ar : tag?.label_en)}</Eyebrow>}
               <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-sea-900 sm:text-4xl">{name}</h1>
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-muted">
                 {location && (
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-sun-700" />
                     {location}
-                  </span>
-                )}
-                {accommodation.type === 'hotel' && accommodation.rating > 0 && (
-                  <span
-                    className="inline-flex items-center gap-1"
-                    aria-label={t('detail.ratingLabel', { rating: formatCount(accommodation.rating, locale) })}
-                  >
-                    {Array.from({ length: accommodation.rating }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-sun-500 text-sun-500" aria-hidden />
-                    ))}
-                  </span>
-                )}
-                {tierKey && (
-                  <span className="rounded-full border border-sand-300 bg-sand-100 px-3 py-1 text-xs font-semibold text-ink-muted">
-                    {t(`detail.${TIER_LABEL_KEY[tierKey]}`)}
                   </span>
                 )}
               </div>

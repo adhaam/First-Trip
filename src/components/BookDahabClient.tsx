@@ -18,6 +18,7 @@ import {
   filterAccommodationsByType,
   sortAccommodations,
   fromPricePerPersonPerNight,
+  stayTypeLabel,
   type StayFilterKey,
   type StaySortKey,
 } from '@/lib/stays'
@@ -152,7 +153,10 @@ export function BookDahabClient({
                 href={`/book-dahab/${first.id}`}
                 image={first.image_url || first.images?.[0] || NEUTRAL_MEDIA}
                 title={ar ? first.name_ar : first.name_en}
-                kicker={ar ? ACCOMMODATION_TAGS[first.type]?.label_ar : ACCOMMODATION_TAGS[first.type]?.label_en}
+                kicker={stayTypeLabel(
+                  ar ? first.name_ar : first.name_en,
+                  ar ? ACCOMMODATION_TAGS[first.type]?.label_ar : ACCOMMODATION_TAGS[first.type]?.label_en,
+                )}
                 meta={<PriceTag amount={fromPricePerPersonPerNight(first)} from unit="personNight" size="sm" tone="light" />}
                 size="lg"
                 priority

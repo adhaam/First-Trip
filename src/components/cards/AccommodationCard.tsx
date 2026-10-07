@@ -3,9 +3,9 @@
 import { SafeImage as Image } from '@/components/SafeImage'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Star, MapPin, Hotel, Home, Tent, type LucideIcon } from 'lucide-react'
+import { MapPin, Hotel, Home, Tent, type LucideIcon } from 'lucide-react'
 import { ACCOMMODATION_TAGS } from '@/lib/constants'
-import { fromPricePerPersonPerNight } from '@/lib/stays'
+import { fromPricePerPersonPerNight, stayTypeLabel } from '@/lib/stays'
 import { GlowCard } from '@/components/motion/Reveal'
 import { PriceTag } from '@/components/brand/PriceTag'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
@@ -47,6 +47,7 @@ export function AccommodationCard({
   const fromRate = fromPricePerPersonPerNight(acc)
   const name = ar ? acc.name_ar : acc.name_en
   const location = ar ? acc.location_ar || acc.location : acc.location_en || acc.location
+  const typeLabel = stayTypeLabel(name, ar ? tag?.label_ar : tag?.label_en)
 
   return (
     <GlowCard className={cn('h-full', className)}>
@@ -68,16 +69,8 @@ export function AccommodationCard({
 
           <span className="absolute start-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-sand-50/95 px-3 py-1 text-[0.7rem] font-semibold text-sea-900 backdrop-blur">
             <TypeIcon className="h-3.5 w-3.5" aria-hidden />
-            {ar ? tag?.label_ar : tag?.label_en}
+            {typeLabel ?? <span className="sr-only">{ar ? tag?.label_ar : tag?.label_en}</span>}
           </span>
-
-          {acc.type === 'hotel' && acc.rating > 0 && (
-            <span className="absolute end-3 top-3 flex gap-0.5 rounded-full bg-sea-900/70 px-2 py-1 backdrop-blur">
-              {Array.from({ length: acc.rating }).map((_, i) => (
-                <Star key={i} className="h-3 w-3 fill-sun-300 text-sun-300" />
-              ))}
-            </span>
-          )}
 
           {location && (
             <span className="absolute bottom-3 start-3 inline-flex items-center gap-1 text-xs font-medium text-white/95">

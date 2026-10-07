@@ -4,6 +4,7 @@
  * "which images / amenities show" logic is unit-testable without React.
  * Everything here is real catalog data — no placeholders are invented.
  */
+import { localizedAmenities } from '@/lib/stays'
 import type { CatalogAccommodation } from './types'
 
 export type StayQuickViewData = {
@@ -37,7 +38,7 @@ export function stayQuickViewData(
   { maxImages = DEFAULT_MAX_IMAGES, maxAmenities = DEFAULT_MAX_AMENITIES }: { maxImages?: number; maxAmenities?: number } = {},
 ): StayQuickViewData {
   const imagesSource = stay.images?.length ? stay.images : stay.image ? [stay.image] : []
-  const amenitiesSource = (locale === 'ar' ? stay.amenities_ar : stay.amenities_en) ?? []
+  const amenitiesSource = localizedAmenities(stay, locale === 'ar')
   return {
     name: locale === 'ar' ? stay.name_ar : stay.name_en,
     description: (locale === 'ar' ? stay.description_ar : stay.description_en) ?? '',
