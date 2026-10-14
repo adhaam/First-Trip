@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { addDays, weekdayForDate } from '@/lib/transport'
-import type { BuilderCatalog } from './types'
+import type { BuilderCatalog, BuilderState } from './types'
 import { applyPrefill, builderReducer, initialBuilderState } from './state'
 
 const ids = {
@@ -64,17 +64,64 @@ test('mode, pattern, and origin changes clear dates that the supplied schedule i
   assert.equal(invalidByPattern.arrival_date, undefined)
 })
 
-test('stay and traveler changes only replace automatic room allocations', () => {
-  const withStay = builderReducer({ ...initialBuilderState(), adults: 2, children: 1, meal_plan_key: 'breakfast', upgrade_id: ids.package }, { type: 'setStay', id: ids.otherStay, catalog: fixture })
-  assert.deepEqual(withStay.room_allocations, [{ type: 'double', count: 2 }])
-  assert.equal(withStay.meal_plan_key, undefined)
-  assert.equal(withStay.upgrade_id, undefined)
-  const automatic = builderReducer(withStay, { type: 'setTravelers', adults: 5, children: 0 })
-  assert.deepEqual(automatic.room_allocations, [{ type: 'double', count: 3 }])
-  const custom = builderReducer({ ...withStay, room_allocations: [{ type: 'single', count: 3 }] }, { type: 'setTravelers', adults: 5, children: 0 })
-  assert.deepEqual(custom.room_allocations, [{ type: 'single', count: 3 }])
+test('choosing a stay starts in auto mode with no stored room allocations', () => {
+  const custom = { ...initialBuilderState(), adults: 3, accommodation_id: ids.stay, room_allocations: [{ type: 'single' as const, count: 3 }] }
+  const sameStay = builderReducer(custom, { type: 'setStay', id: ids.stay, catalog: fixture })
+  assert.deepEqual(sameStay.room_allocations, [{ type: 'single', count: 3 }])
+  const switched = builderReducer(custom, { type: 'setStay', id: ids.otherStay, catalog: fixture })
+  assert.equal(switched.room_allocations, undefined)
+  const fresh = builderReducer({ ...initialBuilderState(), adults: 3 }, { type: 'setStay', id: ids.otherStay, catalog: fixture })
+  assert.equal(fresh.room_allocations, undefined)
+  const withMeal = builderReducer({ ...initialBuilderState(), meal_plan_key: 'breakfast', upgrade_id: ids.package }, { type: 'setStay', id: ids.otherStay, catalog: fixture })
+  assert.equal(withMeal.meal_plan_key, undefined)
+  assert.equal(withMeal.upgrade_id, undefined)
+})
+
+test('traveller changes keep a custom allocation that still fits and drop one that does not', () => {
+  const base = { ...initialBuilderState(), accommodation_id: ids.stay, adults: 3 }
+  const auto = builderReducer(base, { type: 'setTravelers', adults: 5, children: 0 })
+  assert.equal(auto.room_allocations, undefined)
+  const doubles = { ...base, room_allocations: [{ type: 'double' as const, count: 2 }] }
+  const stillFits = builderReducer(doubles, { type: 'setTravelers', adults: 4, children: 0 })
+  assert.deepEqual(stillFits.room_allocations, [{ type: 'double', count: 2 }])
+  const tooSmall = builderReducer(doubles, { type: 'setTravelers', adults: 3, children: 2 })
+  assert.equal(tooSmall.room_allocations, undefined)
+  const tooMany = builderReducer({ ...base, room_allocations: [{ type: 'single' as const, count: 3 }] }, { type: 'setTravelers', adults: 2, children: 0 })
+  assert.equal(tooMany.room_allocations, undefined)
   const noStay = builderReducer(initialBuilderState(), { type: 'setTravelers', adults: 4, children: 0 })
   assert.equal(noStay.room_allocations, undefined)
+})
+
+test('setRooms stores a custom allocation, an empty one means auto, and useRecommendedRooms clears it', () => {
+  const state = { ...initialBuilderState(), accommodation_id: ids.stay, adults: 3 }
+  const custom = builderReducer(state, { type: 'setRooms', allocations: [{ type: 'triple', count: 1 }] })
+  assert.deepEqual(custom.room_allocations, [{ type: 'triple', count: 1 }])
+  const emptied = builderReducer(custom, { type: 'setRooms', allocations: [] })
+  assert.equal('room_allocations' in emptied, false)
+  const undefinedRooms = builderReducer(custom, { type: 'setRooms' })
+  assert.equal('room_allocations' in undefinedRooms, false)
+  const recommended = builderReducer(custom, { type: 'useRecommendedRooms' })
+  assert.equal('room_allocations' in recommended, false)
+})
+
+test('a hydrated draft keeps only rooms the customer picked', () => {
+  const hydrate = (draft: Partial<BuilderState>) =>
+    builderReducer(initialBuilderState(), { type: 'hydrate', draft: { ...initialBuilderState(), adults: 3, ...draft } })
+  // Pre-release drafts carry the old ceil(people / 2) doubles guess without the marker.
+  const legacy = hydrate({ room_allocations: [{ type: 'double', count: 2 }] })
+  assert.equal(legacy.room_allocations, undefined)
+  // A deliberate override survives a reload, even when it is 2 doubles for 3.
+  const chosen = hydrate({ room_allocations: [{ type: 'double', count: 2 }], rooms_customized: true })
+  assert.deepEqual(chosen.room_allocations, [{ type: 'double', count: 2 }])
+  assert.equal(chosen.rooms_customized, true)
+})
+
+test('setRooms marks a customer override; recommended clears the marker', () => {
+  const custom = builderReducer(initialBuilderState(), { type: 'setRooms', allocations: [{ type: 'single', count: 1 }] })
+  assert.equal(custom.rooms_customized, true)
+  const auto = builderReducer(custom, { type: 'useRecommendedRooms' })
+  assert.equal(auto.room_allocations, undefined)
+  assert.equal(auto.rooms_customized, undefined)
 })
 
 test('experience selection is capped at ten', () => {

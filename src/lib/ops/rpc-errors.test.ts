@@ -38,3 +38,14 @@ test('journey (migration 049) RPC errors map to client errors', () => {
     { status: 422, code: 'journey_component_price_locked' },
   )
 })
+
+test('journey amendment (migration 051) RPC errors map to client errors', () => {
+  assert.deepEqual(mapRpcError({ message: 'stale_request', code: 'PT409' }), { status: 409, code: 'stale_request' })
+  for (const code of ['amendment_closed', 'amendment_paid_journey', 'journey_children_missing']) {
+    assert.deepEqual(mapRpcError({ message: code }), { status: 409, code })
+  }
+  for (const code of ['invalid_amendment', 'snapshot_mismatch']) {
+    assert.deepEqual(mapRpcError({ message: code }), { status: 422, code })
+  }
+  assert.deepEqual(mapRpcError({ message: 'not_found', code: 'P0002' }), { status: 404, code: 'not_found' })
+})

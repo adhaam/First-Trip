@@ -1,10 +1,29 @@
 import type { PaymentPlan } from '@/lib/payment-rules'
 import type { BuilderCatalog, BuilderState } from './types'
 
+export type RoomPlanAllocation = { type: 'single' | 'double' | 'triple'; count: number }
+
+/** Server-authoritative room plan returned with a room-priced quote. */
+export type RoomPlanView = {
+  mode: 'recommended' | 'custom'
+  people: number
+  allocations: RoomPlanAllocation[]
+  accommodation_total: number
+  recommended: { allocations: RoomPlanAllocation[]; accommodation_total: number } | null
+  difference: number
+  room_types: {
+    type: RoomPlanAllocation['type']
+    capacity: number
+    available: boolean
+    stay_total_per_room: number | null
+  }[]
+}
+
 export type QuoteView = {
   total: number
   lines: { key: string; label_ar: string; label_en: string; detail_ar?: string; detail_en?: string; amount: number }[]
   payment: PaymentPlan
+  rooms?: RoomPlanView
 }
 
 export function weekdayHint(catalog: BuilderCatalog, mode?: string, locale: 'ar' | 'en' = 'en') {
@@ -40,5 +59,21 @@ export function summaryFor(state: BuilderState, catalog: BuilderCatalog, locale:
 export function quoteErrorKey(code?: string) {
   if (code === '429') return 'quoteRateLimited'
   if (code?.startsWith('SCHEDULE_')) return 'quoteScheduleError'
+  if (code === 'ROOMS_MANUAL_CONFIRMATION') return 'quoteRoomsManual'
+  if (code === 'ROOM_TYPE_UNAVAILABLE') return 'quoteRoomTypeUnavailable'
+  if (code === 'ROOM_CAPACITY_EXCEEDED') return 'quoteRoomsCapacity'
+  if (code === 'ROOMS_EXCEED_GUESTS') return 'quoteRoomsTooMany'
   return 'quoteError'
+}
+
+/**
+ * The room allocation the server recommends for the current party — what auto
+ * mode shows in the steppers and recaps. `undefined` until a quote exists, and
+ * ignored when it was priced for a different party size (a stale quote).
+ */
+export function recommendedAllocations(quote: QuoteView | null, people: number): RoomPlanAllocation[] | undefined {
+  const rooms = quote?.rooms
+  if (!rooms || rooms.people !== people) return undefined
+  const recommended = rooms.recommended?.allocations ?? (rooms.mode === 'recommended' ? rooms.allocations : undefined)
+  return recommended?.length ? recommended : undefined
 }

@@ -15,6 +15,10 @@ function useQuoteErrorText(errorKey: string): string {
   switch (errorKey) {
     case 'quoteRateLimited': return t('quoteRateLimited')
     case 'quoteScheduleError': return t('quoteScheduleError')
+    case 'quoteRoomsManual': return t('quoteRoomsManual')
+    case 'quoteRoomTypeUnavailable': return t('quoteRoomTypeUnavailable')
+    case 'quoteRoomsCapacity': return t('quoteRoomsCapacity')
+    case 'quoteRoomsTooMany': return t('quoteRoomsTooMany')
     default: return t('quoteError')
   }
 }
@@ -42,10 +46,11 @@ export function PriceSummary({
   const common = useTranslations('common')
   const rows = paymentRows(quote)
   const quoteErrorText = useQuoteErrorText(errorKey)
+  const manual = errorKey === 'quoteRoomsManual'
 
   return (
     <section aria-live="polite" aria-atomic="false" className={cn('space-y-4', className)}>
-      {!quote && <p className="text-sm text-ink-subtle">{t('addDates')}</p>}
+      {!quote && !manual && <p className="text-sm text-ink-subtle">{t('addDates')}</p>}
 
       {quote && (
         <>
@@ -83,7 +88,12 @@ export function PriceSummary({
       )}
 
       {refreshing && <p className="text-xs text-ink-subtle">{t('updating')}</p>}
-      {errorKey && (
+      {errorKey && manual && (
+        <p role="status" className="rounded-xl bg-sand-100 p-3.5 text-sm font-medium text-sea-900">
+          {quoteErrorText}
+        </p>
+      )}
+      {errorKey && !manual && (
         <p role="alert" className="text-sm font-medium text-red-700">
           {quoteErrorText}
         </p>

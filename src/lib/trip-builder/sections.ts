@@ -1,5 +1,5 @@
 import type { ContactInput, TripRequestInput, TripRequestQuoteInput } from '@/lib/trip-requests/schema'
-import { roomsFit } from './rooms'
+import { roomsExceedPeople, roomsStillValid } from './rooms'
 import type { BuilderCatalog, BuilderState } from './types'
 
 export type SectionId = 'origin' | 'transport' | 'dates' | 'travelers' | 'stay' | 'rooms' | 'experiences' | 'overview' | 'contact'
@@ -11,7 +11,7 @@ export function sectionStatus(state: BuilderState, catalog: BuilderCatalog): Rec
   const stay = catalog.accommodations.find((item) => item.id === state.accommodation_id)
   const hasStay = Boolean(state.accommodation_id)
   const people = (state.adults ?? 1) + (state.children ?? 0)
-  const roomsAreValid = Boolean(state.room_allocations?.length && roomsFit(people, state.room_allocations))
+  const roomsAreValid = roomsStillValid(people, state.room_allocations)
 
   return {
     origin: stayOnly ? { status: 'not_applicable', reason: 'stay_only' } : state.origin_governorate_code ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'origin_required' },
@@ -28,7 +28,11 @@ export function sectionStatus(state: BuilderState, catalog: BuilderCatalog): Rec
       ? stay ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'stay_unavailable' }
       : stayOnly ? { status: 'needs_input', reason: 'stay_required' } : { status: 'optional', reason: 'transfer_only_allowed' },
     rooms: hasStay
-      ? roomsAreValid ? { status: 'complete', reason: 'selected' } : state.room_allocations?.length ? { status: 'needs_input', reason: 'rooms_do_not_fit' } : { status: 'optional', reason: 'suggested_at_quote' }
+      ? roomsAreValid
+        ? { status: 'complete', reason: 'selected' }
+        : state.room_allocations?.length
+          ? { status: 'needs_input', reason: roomsExceedPeople(people, state.room_allocations) ? 'too_many_rooms' : 'rooms_do_not_fit' }
+          : { status: 'optional', reason: 'suggested_at_quote' }
       : { status: 'not_applicable', reason: 'no_stay' },
     experiences: { status: 'optional', reason: 'optional' },
     overview: transport ? { status: 'complete', reason: 'review' } : { status: 'needs_input', reason: 'journey_required' },

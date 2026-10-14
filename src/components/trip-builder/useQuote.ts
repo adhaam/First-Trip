@@ -52,7 +52,11 @@ export function useQuote(state: BuilderState, locale: 'ar' | 'en') {
         if (requestId.current === myId) setQuote(body)
       } catch (error) {
         if ((error as Error).name === 'AbortError') return
-        if (requestId.current === myId) setErrorKey(quoteErrorKey((error as Error).message))
+        if (requestId.current !== myId) return
+        const code = (error as Error).message
+        setErrorKey(quoteErrorKey(code))
+        // A manual-confirmation answer has no trustworthy price: never keep the previous total on screen.
+        if (code === 'ROOMS_MANUAL_CONFIRMATION') setQuote(null)
       } finally {
         if (requestId.current === myId) setRefreshing(false)
       }

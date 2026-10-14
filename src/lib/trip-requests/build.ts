@@ -304,7 +304,8 @@ export function buildTripRequestRow(
     adults: input.adults,
     children: input.children,
     accommodation_id: input.accommodation_id ?? null,
-    room_allocations: input.room_allocations ?? [],
+    // What was actually priced (an auto-recommended quote has none in the input).
+    room_allocations: quote.roomAllocations ?? input.room_allocations ?? [],
     meal_plan_key: input.meal_plan_key ?? null,
     experiences: input.experiences,
     quote_snapshot: quote.snapshot,

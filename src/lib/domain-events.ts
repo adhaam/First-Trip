@@ -31,6 +31,8 @@ export const DOMAIN_EVENT_TYPES = [
   'customer_created',
   'customer_updated',
   'customer_merged',
+  // M6 (migration 051)
+  'trip_request_amended',
 ] as const
 
 export type DomainEventType = (typeof DOMAIN_EVENT_TYPES)[number]

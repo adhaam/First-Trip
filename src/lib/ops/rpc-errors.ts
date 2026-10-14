@@ -1,8 +1,8 @@
 /**
  * Maps errors raised by the Operations Center RPCs (migration 036:
- * weemap_record_payment, weemap_convert_trip_request) and the payment truth
- * guards (migration 040) to HTTP responses. The
- * functions RAISE a bare machine code as the message, so the message IS the code.
+ * weemap_record_payment, weemap_convert_trip_request), the payment truth
+ * guards (migration 040) and journey amendments (migration 051) to HTTP responses.
+ * The functions RAISE a bare machine code as the message, so the message IS the code.
  */
 export type RpcErrorMapping = { status: number; code: string }
 
@@ -31,6 +31,12 @@ const BY_MESSAGE: Record<string, number> = {
   component_of_journey: 409,
   journey_not_commercial: 409,
   journey_component_price_locked: 422,
+  // Migration 051 (journey amendments, weemap_amend_trip_request).
+  stale_request: 409,
+  amendment_closed: 409,
+  amendment_paid_journey: 409,
+  invalid_amendment: 422,
+  journey_children_missing: 409,
 }
 
 // Function or table not there yet: the code is deployed before migration 036.

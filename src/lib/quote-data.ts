@@ -28,7 +28,6 @@ import {
   quoteTransfer,
   upgradeSubtotal,
   nightsForDuration,
-  baseNightlyRoomRate,
   accommodationSubtotal,
   resolveNightlyRates,
   roomsForPeople,
@@ -37,9 +36,14 @@ import {
   effectiveTripPrice,
   validateAndPriceTripPackages,
 } from '@/lib/pricing'
-import type { TripPriceInput } from '@/lib/pricing'
+import type { RoomType, TripPriceInput } from '@/lib/pricing'
+import {
+  baseColumnRate, recommendRooms, roomTypeOptions, validateAllocations,
+} from '@/lib/room-allocation'
+import type { RoomAllocationErrorCode, RoomPlan } from '@/lib/room-allocation'
 import type {
-  Accommodation, BookingType, MealPlan, PriceSnapshot, RoomUpgrade, TransferPricing, TripPackage,
+  Accommodation, BookingType, MealPlan, PriceSnapshot, RoomAllocationSnapshot, RoomUpgrade, TransferPricing,
+  TripPackage,
 } from '@/lib/types'
 
 export interface QuoteDataSource {
@@ -138,6 +142,10 @@ export type QuoteResult =
       /** False when the underlying pricing tables have not been configured yet. */
       isPriced: boolean
       snapshot: PriceSnapshot
+      /** Room plan (recommended vs custom) — only for room-priced accommodations using allocations. */
+      rooms?: RoomPlan
+      /** Exactly the allocations that were priced (incl. the effective upgrade of each). */
+      roomAllocations?: { type: RoomType; count: number; upgrade_id?: string }[]
     }
 
 const TRANSFER_LABELS = {
@@ -303,6 +311,162 @@ function experienceResponse(experiences: PricedExperiences, numPeople: number, n
   }
 }
 
+type AllocationRequest = NonNullable<QuoteInput['room_allocations']>
+type AllocationSnapshot = RoomAllocationSnapshot & {
+  nightly_rates: { date: string; rate: number; source: 'seasonal' | 'base'; seasonal_rate_name?: string }[]
+}
+type AllocationBreakdown = {
+  room_type: RoomType
+  quantity: number
+  base_nightly_rate: number
+  upgrade_name: string | null
+  upgrade_extra_per_night: number
+  final_nightly_rate: number
+  subtotal: number
+}
+type PricedAllocation = { type: RoomType; count: number; upgrade_id?: string }
+type RoomAllocationPricing =
+  | { ok: false; result: Extract<QuoteResult, { ok: false }> }
+  | {
+      ok: true
+      roomTotal: number
+      allocBreakdown: AllocationBreakdown[]
+      allocSnapshots: AllocationSnapshot[]
+      rooms: RoomPlan
+      roomAllocations: PricedAllocation[]
+    }
+
+const ALLOCATION_ERRORS: Record<RoomAllocationErrorCode, string> = {
+  ROOM_TYPE_UNAVAILABLE: 'A selected room type is not available for these dates.',
+  ROOM_CAPACITY_EXCEEDED: 'Room allocations do not accommodate every guest.',
+  ROOMS_EXCEED_GUESTS: 'More rooms were selected than guests; every room needs at least one guest.',
+}
+
+/**
+ * Room-priced accommodations price via allocations unless the caller asked for
+ * the legacy single `room_type`. No allocations and no room_type = "let the
+ * server pick the cheapest valid combination".
+ */
+function usesRoomAllocation(input: QuoteInput): boolean {
+  return Boolean(input.room_allocations?.length) || !input.room_type
+}
+
+function countsByType(list: { type: RoomType; count: number }[]): Record<RoomType, number> {
+  const counts: Record<RoomType, number> = { single: 0, double: 0, triple: 0 }
+  for (const item of list) counts[item.type] += item.count
+  return counts
+}
+
+/**
+ * Prices rooms for a room-priced accommodation, either the customer's
+ * allocations (validated first) or the server's lowest-priced recommendation.
+ * A global `upgrade_id` applies to every allocation without its own.
+ */
+function priceRoomAllocations(args: {
+  acc: Accommodation
+  input: QuoteInput
+  accUpgrades: RoomUpgrade[]
+  numPeople: number
+  nights: number
+}): RoomAllocationPricing {
+  const { acc, input, accUpgrades, numPeople, nights } = args
+  const accommodationId = input.accommodation_id!
+  const globalUpgrade = resolveUpgrade(input.upgrade_id, accommodationId, accUpgrades)
+  const options = roomTypeOptions(acc, input.start_date, nights, globalUpgrade?.extra_price_per_night ?? 0)
+  const recommendation = recommendRooms(numPeople, options)
+
+  const sent = Boolean(input.room_allocations?.length)
+  let requested: AllocationRequest
+  if (sent) {
+    requested = input.room_allocations!
+    const validation = validateAllocations(numPeople, requested, options)
+    if (!validation.ok) {
+      return {
+        ok: false,
+        result: { ok: false, status: 400, error: ALLOCATION_ERRORS[validation.code], code: validation.code },
+      }
+    }
+  } else {
+    if (!recommendation) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          status: 409,
+          code: 'ROOMS_MANUAL_CONFIRMATION',
+          error: 'No reliable room allocation or price is available online for this party; '
+            + 'staff will confirm rooms manually.',
+        },
+      }
+    }
+    requested = recommendation.allocations
+  }
+
+  let roomTotal = 0
+  const allocBreakdown: AllocationBreakdown[] = []
+  const allocSnapshots: AllocationSnapshot[] = []
+  const roomAllocations: PricedAllocation[] = []
+  for (const alloc of requested) {
+    const nightly = resolveNightlyRates(acc, alloc.type, input.start_date, nights)
+    const baseRate = baseColumnRate(acc, alloc.type)
+    const ownUpgradeId = 'upgrade_id' in alloc ? alloc.upgrade_id : undefined
+    const upgrade = ownUpgradeId ? resolveUpgrade(ownUpgradeId, accommodationId, accUpgrades) : globalUpgrade
+    const extra = upgrade ? upgrade.extra_price_per_night : 0
+    const finalRate = baseRate + extra
+    const subtotal = (accommodationSubtotal(nightly) + extra * nights) * alloc.count
+    roomTotal += subtotal
+    allocBreakdown.push({
+      room_type: alloc.type,
+      quantity: alloc.count,
+      base_nightly_rate: baseRate,
+      upgrade_name: upgrade?.name_en ?? null,
+      upgrade_extra_per_night: extra,
+      final_nightly_rate: finalRate,
+      subtotal,
+    })
+    allocSnapshots.push({
+      room_type: alloc.type,
+      quantity: alloc.count,
+      base_nightly_rate: baseRate,
+      ...(upgrade ? { upgrade_id: upgrade.id, upgrade_name: upgrade.name_en } : {}),
+      upgrade_extra_per_night: extra,
+      final_nightly_rate: finalRate,
+      nightly_rates: nightly.map((night) => ({
+        date: night.date, rate: night.rate + extra, source: night.source,
+        ...(night.seasonal_rate_name ? { seasonal_rate_name: night.seasonal_rate_name } : {}),
+      })),
+    })
+    roomAllocations.push({ type: alloc.type, count: alloc.count, ...(upgrade ? { upgrade_id: upgrade.id } : {}) })
+  }
+
+  // A customer who sends back exactly the recommendation is still on it.
+  const priced = countsByType(roomAllocations)
+  const suggested = recommendation ? countsByType(recommendation.allocations) : null
+  const matchesRecommendation = recommendation != null && suggested != null
+    && priced.single === suggested.single && priced.double === suggested.double
+    && priced.triple === suggested.triple
+    && Math.round(roomTotal * 100) === Math.round(recommendation.accommodation_total * 100)
+
+  return {
+    ok: true,
+    roomTotal,
+    allocBreakdown,
+    allocSnapshots,
+    roomAllocations,
+    rooms: {
+      mode: !sent || matchesRecommendation ? 'recommended' : 'custom',
+      people: numPeople,
+      allocations: roomAllocations.map(({ type, count }) => ({ type, count })),
+      accommodation_total: roomTotal,
+      recommended: recommendation
+        ? { allocations: recommendation.allocations, accommodation_total: recommendation.accommodation_total }
+        : null,
+      difference: recommendation ? Math.round((roomTotal - recommendation.accommodation_total) * 100) / 100 : 0,
+      room_types: options,
+    },
+  }
+}
+
 export async function computeQuote(
   input: QuoteInput,
   opts: { source: QuoteDataSource; now?: Date },
@@ -431,40 +595,10 @@ export async function computeQuote(
     const experiences = pricedExperiences.experiences
 
     if (hasRoomPricing) {
-      if (input.room_allocations && input.room_allocations.length > 0) {
-        let roomTotal = 0
-        const allocBreakdown = []
-        const allocSnapshots = []
-        for (const alloc of input.room_allocations) {
-          const nightly = resolveNightlyRates(acc, alloc.type, input.start_date, nights)
-          const baseRate = baseNightlyRoomRate(acc, alloc.type)
-          const upgrade = resolveUpgrade(alloc.upgrade_id, input.accommodation_id, accUpgrades)
-          const extra = upgrade ? upgrade.extra_price_per_night : 0
-          const finalRate = baseRate + extra
-          const subtotal = (accommodationSubtotal(nightly) + extra * nights) * alloc.count
-          roomTotal += subtotal
-          allocBreakdown.push({
-            room_type: alloc.type,
-            quantity: alloc.count,
-            base_nightly_rate: baseRate,
-            upgrade_name: upgrade?.name_en ?? null,
-            upgrade_extra_per_night: extra,
-            final_nightly_rate: finalRate,
-            subtotal,
-          })
-          allocSnapshots.push({
-            room_type: alloc.type,
-            quantity: alloc.count,
-            base_nightly_rate: baseRate,
-            ...(upgrade ? { upgrade_id: upgrade.id, upgrade_name: upgrade.name_en } : {}),
-            upgrade_extra_per_night: extra,
-            final_nightly_rate: finalRate,
-            nightly_rates: nightly.map((night) => ({
-              date: night.date, rate: night.rate + extra, source: night.source,
-              ...(night.seasonal_rate_name ? { seasonal_rate_name: night.seasonal_rate_name } : {}),
-            })),
-          })
-        }
+      if (usesRoomAllocation(input)) {
+        const priced = priceRoomAllocations({ acc, input, accUpgrades, numPeople, nights })
+        if (!priced.ok) return priced.result
+        const { roomTotal, allocBreakdown, allocSnapshots } = priced
         const mealTotal = mealPlanPricePerNight * numPeople * nights
         const total = roomTotal + mealTotal + experiences.extraTripsSubtotal + experiences.packagesSubtotal
         const lines = compact([
@@ -504,7 +638,10 @@ export async function computeQuote(
           perPerson: total / numPeople,
           total,
           isPriced: roomTotal > 0,
+          rooms: priced.rooms,
+          roomAllocations: priced.roomAllocations,
           snapshot: {
+            room_selection: priced.rooms.mode,
             room_allocations: allocSnapshots,
             nights,
             accommodation_subtotal: roomTotal,
@@ -788,40 +925,10 @@ export async function computeQuote(
     }
   }
 
-  if (input.room_allocations && input.room_allocations.length > 0) {
-    let roomTotal = 0
-    const allocBreakdown = []
-    const allocSnapshots = []
-    for (const alloc of input.room_allocations) {
-      const nightly = resolveNightlyRates(acc, alloc.type, input.start_date, nights)
-      const baseRate = baseNightlyRoomRate(acc, alloc.type)
-      const upgrade = resolveUpgrade(alloc.upgrade_id, input.accommodation_id, accUpgrades)
-      const extra = upgrade ? upgrade.extra_price_per_night : 0
-      const finalRate = baseRate + extra
-      const subtotal = (accommodationSubtotal(nightly) + extra * nights) * alloc.count
-      roomTotal += subtotal
-      allocBreakdown.push({
-        room_type: alloc.type,
-        quantity: alloc.count,
-        base_nightly_rate: baseRate,
-        upgrade_name: upgrade?.name_en ?? null,
-        upgrade_extra_per_night: extra,
-        final_nightly_rate: finalRate,
-        subtotal,
-      })
-      allocSnapshots.push({
-        room_type: alloc.type,
-        quantity: alloc.count,
-        base_nightly_rate: baseRate,
-        ...(upgrade ? { upgrade_id: upgrade.id, upgrade_name: upgrade.name_en } : {}),
-        upgrade_extra_per_night: extra,
-        final_nightly_rate: finalRate,
-        nightly_rates: nightly.map((night) => ({
-          date: night.date, rate: night.rate + extra, source: night.source,
-          ...(night.seasonal_rate_name ? { seasonal_rate_name: night.seasonal_rate_name } : {}),
-        })),
-      })
-    }
+  if (usesRoomAllocation(input)) {
+    const priced = priceRoomAllocations({ acc, input, accUpgrades, numPeople, nights })
+    if (!priced.ok) return priced.result
+    const { roomTotal, allocBreakdown, allocSnapshots } = priced
     const mealTotal = mealPlanPricePerNight * numPeople * nights
     const transferQuote = quoteTransfer({ pricing, type: transferType, governorateCode: input.governorate, direction, numPeople })
     let tripsTotal = 0
@@ -872,7 +979,10 @@ export async function computeQuote(
       perPerson: total / numPeople,
       total,
       isPriced: roomTotal > 0,
+      rooms: priced.rooms,
+      roomAllocations: priced.roomAllocations,
       snapshot: {
+        room_selection: priced.rooms.mode,
         room_allocations: allocSnapshots,
         nights,
         accommodation_subtotal: roomTotal,

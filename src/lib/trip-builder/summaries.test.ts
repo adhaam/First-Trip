@@ -122,3 +122,25 @@ test('transportOutboundWeekdayNames reads the weekly rules for a scheduled mode 
   assert.equal(transportOutboundWeekdayNames(schedule, 'stay_only', 'en'), '')
   assert.equal(transportOutboundWeekdayNames(schedule, undefined, 'en'), '')
 })
+
+test('roomsSummary counts rooms, not allocation rows', () => {
+  const allocations = [{ type: 'double' as const, count: 2 }, { type: 'single' as const, count: 1 }]
+  assert.deepEqual(roomsSummary({ ...base, accommodation_id: 'stay-1', room_allocations: allocations }, catalog, 'en'), {
+    key: 'summaryRooms',
+    values: { rooms: 3, capacity: 5 },
+  })
+})
+
+test('roomsSummary falls back to the server recommendation in auto mode, but never over a custom choice', () => {
+  const recommended = [{ type: 'triple' as const, count: 1 }]
+  assert.equal(roomsSummary({ ...base, accommodation_id: 'stay-1' }, catalog, 'en'), null)
+  assert.deepEqual(roomsSummary({ ...base, accommodation_id: 'stay-1' }, catalog, 'en', recommended), {
+    key: 'summaryRooms',
+    values: { rooms: 1, capacity: 3 },
+  })
+  const custom = [{ type: 'single' as const, count: 2 }]
+  assert.deepEqual(roomsSummary({ ...base, accommodation_id: 'stay-1', room_allocations: custom }, catalog, 'en', recommended), {
+    key: 'summaryRooms',
+    values: { rooms: 2, capacity: 2 },
+  })
+})

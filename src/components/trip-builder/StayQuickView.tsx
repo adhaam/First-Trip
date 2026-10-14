@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react'
 import { useTranslations } from 'next-intl'
-import { Eye } from 'lucide-react'
+import { Eye, X } from 'lucide-react'
 import { SafeImage } from '@/components/SafeImage'
 import { PriceTag } from '@/components/brand'
 import { ArrowBack, ChevronForward } from '@/components/brand/DirectionalIcon'
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { stayQuickViewData } from '@/lib/trip-builder/stay-quick-view'
 import type { CatalogAccommodation } from '@/lib/trip-builder/types'
 import { cn } from '@/lib/utils'
@@ -50,12 +50,25 @@ export function StayQuickView({
         <Eye className="h-3.5 w-3.5" aria-hidden />
         {t('stayView')}
       </button>
+      {/*
+        Mobile: the stock bottom sheet. From `sm` up it becomes a dialog centred
+        with `inset-0` + auto margins instead of start/translate offsets, so it
+        is direction-agnostic (the old start-1/2 + translate pair lost to the
+        sheet's higher-specificity data-[side=bottom] insets and pushed the
+        panel past the right edge in RTL). The `!` overrides beat those insets.
+      */}
       <SheetContent
         side="bottom"
-        closeLabel={t('close')}
-        className="flex max-h-[90vh] flex-col overflow-hidden rounded-t-3xl border-sand-300 bg-sand-50 p-0 sm:inset-x-auto sm:bottom-auto sm:start-1/2 sm:top-1/2 sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:border-[1.5px] rtl:sm:translate-x-1/2"
+        showCloseButton={false}
+        className="flex max-h-[90vh] flex-col gap-0 overflow-hidden rounded-t-3xl border-sand-300 bg-sand-50 p-0 sm:inset-0! sm:m-auto sm:h-fit sm:max-h-[min(85vh,48rem)] sm:w-[calc(100vw-2rem)] sm:max-w-lg sm:rounded-3xl sm:border-[1.5px]"
       >
         <SheetTitle className="sr-only">{data.name}</SheetTitle>
+        <SheetClose
+          aria-label={t('close')}
+          className="absolute end-3 top-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-sand-50/95 text-sea-900 shadow-sm backdrop-blur transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-600"
+        >
+          <X className="h-5 w-5" aria-hidden />
+        </SheetClose>
         <div className="flex-1 overflow-y-auto">
           <StayQuickViewGallery images={data.images} name={data.name} />
           <div className="space-y-4 p-5">
@@ -105,8 +118,11 @@ function StayQuickViewGallery({ images, name }: { images: string[]; name: string
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight') go(1)
-      else if (e.key === 'ArrowLeft') go(-1)
+      // "Next" follows the reading direction: ArrowLeft advances in RTL.
+      const forward = document.documentElement.dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight'
+      const back = forward === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft'
+      if (e.key === forward) go(1)
+      else if (e.key === back) go(-1)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)

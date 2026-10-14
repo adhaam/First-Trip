@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
       lines: result.quote.lines.map(({ key, label_ar, label_en, detail_ar, detail_en, amount }) => ({
         key, label_ar, label_en, ...(detail_ar ? { detail_ar } : {}), ...(detail_en ? { detail_en } : {}), amount,
       })),
+      ...(result.quote.rooms ? { rooms: result.quote.rooms } : {}),
       payment: result.paymentPlan,
     })
   } catch (error) {

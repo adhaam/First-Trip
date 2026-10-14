@@ -24,6 +24,7 @@ export function WorkItemTable({
   const titleOf = useItemTitle()
   const t = useTranslations('ops.queue.columns')
   const tCommon = useTranslations('ops.common')
+  const tItem = useTranslations('ops.item')
 
   if (!items.length) {
     return <p className="py-8 text-center text-sm text-muted-foreground">{emptyMessage}</p>
@@ -95,8 +96,13 @@ export function WorkItemTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <PaymentPill paymentStatus={item.payment_status} />
-                    {item.amount_total != null && (
+                    {/* Journey components are fulfilment-only: the journey (WR-…) is the one payment owner. */}
+                    {item.journey_component ? (
+                      <span className="text-xs text-muted-foreground">{tItem('paidViaJourney')}</span>
+                    ) : (
+                      <PaymentPill paymentStatus={item.payment_status} />
+                    )}
+                    {!item.journey_component && item.amount_total != null && (
                       <span className="text-xs text-muted-foreground">
                         {formatAmount(item.amount_paid ?? 0, locale)}/{formatAmount(item.amount_total, locale)}
                       </span>
@@ -144,7 +150,9 @@ export function WorkItemTable({
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span>{item.customer_name}</span>
               {item.start_date && <span>{formatDateShort(item.start_date, locale)}</span>}
-              <PaymentPill paymentStatus={item.payment_status} />
+              {item.journey_component
+                ? <span>{tItem('paidViaJourney')}</span>
+                : <PaymentPill paymentStatus={item.payment_status} />}
               <WaitingLabel hours={item.waiting_hours} stale={item.stale} />
             </div>
             {item.next_action !== 'none' && (

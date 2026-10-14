@@ -26,6 +26,8 @@ const ACC_ID = '11111111-1111-4111-8111-111111111111'
 const OTHER_ACC_ID = '22222222-2222-4222-8222-222222222222'
 const LEGACY_ACC_ID = '33333333-3333-4333-8333-333333333333'
 const MISSING_ACC_ID = '44444444-4444-4444-8444-444444444444'
+const NO_TRIPLE_ACC_ID = '55555555-5555-4555-8555-555555555555'
+const DOUBLE_ONLY_ACC_ID = '66666666-6666-4666-8666-666666666666'
 
 const U_SEA = 'aaaaaaaa-0000-4000-8000-000000000001'
 const U_OLD = 'aaaaaaaa-0000-4000-8000-000000000002' // inactive
@@ -103,6 +105,24 @@ const legacyAcc = {
   room_upgrades: [],
 } as unknown as Accommodation
 
+// Triple never configured (0): must not be offered, never derived from the double rate.
+const noTripleAcc = {
+  ...acc,
+  id: NO_TRIPLE_ACC_ID,
+  price_triple_room: 0,
+  seasonal_rates: [],
+  room_upgrades: [],
+} as unknown as Accommodation
+
+const doubleOnlyAcc = {
+  ...acc,
+  id: DOUBLE_ONLY_ACC_ID,
+  price_single_room: 0,
+  price_triple_room: 0,
+  seasonal_rates: [],
+  room_upgrades: [],
+} as unknown as Accommodation
+
 const trips: (TripPriceInput & { is_active: boolean })[] = [
   { id: T1, name_en: 'Blue Hole', name_ar: 'البلو هول', price: 1000, is_active: true },
   {
@@ -151,6 +171,8 @@ function makeSource(opts: SourceOptions = {}): QuoteDataSource & { calls: string
       calls.push(`acc:${id}`)
       if (id === ACC_ID) return acc
       if (id === LEGACY_ACC_ID) return legacyAcc
+      if (id === NO_TRIPLE_ACC_ID) return noTripleAcc
+      if (id === DOUBLE_ONLY_ACC_ID) return doubleOnlyAcc
       return null
     },
     async getExtraTrips(ids) {
@@ -420,7 +442,7 @@ test('package: uses explicitly resolved 6-day pattern nights', async () => {
 
 test('package: defaults to hiace, round trip, 4-day, double', async () => {
   const r = ok(await quote({
-    booking_type: 'package', accommodation_id: ACC_ID, governorate: 'cairo', num_people: 1,
+    booking_type: 'package', accommodation_id: ACC_ID, governorate: 'cairo', room_type: 'double', num_people: 1,
   }))
   // 2000 × 3 + 700 × 2
   assert.equal(r.total, 7400)
@@ -614,4 +636,192 @@ test('public booking row freezes the quote total and canonical snapshot unchange
   } as never, result)
   assert.equal(row.total_price, result.total)
   assert.deepEqual(row.price_snapshot, result.snapshot)
+})
+
+// ─── Price-aware room recommendation (server is authoritative) ───
+
+test('auto rooms: 3 adults get the cheapest valid combination (one triple), mode recommended', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 2, meal_plan_key: 'breakfast', num_people: 3,
+  }))
+  // 1 triple 2700 x 2 nights = 5400 (2 doubles would be 8000); meals 150 x 3 x 2 = 900
+  assert.equal(r.snapshot.accommodation_subtotal, 5400)
+  assert.equal(r.total, 6300)
+  assert.equal(r.rooms?.mode, 'recommended')
+  assert.deepEqual(r.rooms?.allocations, [{ type: 'triple', count: 1 }])
+  assert.equal(r.rooms?.accommodation_total, 5400)
+  assert.equal(r.rooms?.difference, 0)
+  assert.deepEqual(r.rooms?.recommended?.allocations, [{ type: 'triple', count: 1 }])
+  assert.deepEqual(r.roomAllocations, [{ type: 'triple', count: 1 }])
+  assert.equal(r.snapshot.room_selection, 'recommended')
+  assert.equal(r.snapshot.room_allocations?.length, 1)
+  assert.deepEqual(r.rooms?.room_types.map((o) => [o.type, o.available, o.stay_total_per_room]), [
+    ['single', true, 3000], ['double', true, 4000], ['triple', true, 5400],
+  ])
+  assert.equal(r.lines.reduce((sum, line) => sum + line.amount, 0), r.total)
+  assertSnapshotSumsToTotal(r)
+})
+
+test('auto rooms: quote total equals the sum of its lines (package)', async () => {
+  const r = ok(await quote({
+    booking_type: 'package', accommodation_id: ACC_ID, duration: 4, transfer_type: 'package_bus',
+    governorate: 'cairo', meal_plan_key: 'breakfast', extra_trip_ids: [T1], num_people: 3,
+  }))
+  assert.equal(r.rooms?.mode, 'recommended')
+  assert.equal(r.snapshot.room_selection, 'recommended')
+  assert.equal(r.lines.reduce((sum, line) => sum + line.amount, 0), r.total)
+  // triple 2700 x 3 nights + bus 800 x 3 + meals 150 x 3 x 3 + trip 1000 x 3
+  assert.equal(r.total, 8100 + 2400 + 1350 + 3000)
+  assertSnapshotSumsToTotal(r)
+})
+
+test('auto rooms: a lone traveller gets a single room, not the legacy double', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 1, num_people: 1,
+  }))
+  assert.deepEqual(r.roomAllocations, [{ type: 'single', count: 1 }])
+  assert.equal(r.total, 1500)
+})
+
+test('override: 2 doubles for 3 people is custom and reports the extra cost', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 2, num_people: 3, room_allocations: [{ type: 'double', count: 2 }],
+  }))
+  assert.equal(r.rooms?.mode, 'custom')
+  assert.equal(r.snapshot.room_selection, 'custom')
+  assert.equal(r.rooms?.accommodation_total, 8000)
+  assert.equal(r.rooms?.recommended?.accommodation_total, 5400)
+  assert.equal(r.rooms?.difference, 2600)
+  assert.equal(r.total, 8000)
+  assert.deepEqual(r.roomAllocations, [{ type: 'double', count: 2 }])
+})
+
+test('sending back exactly the recommendation is still the recommended mode', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 2, num_people: 3, room_allocations: [{ type: 'triple', count: 1 }],
+  }))
+  assert.equal(r.rooms?.mode, 'recommended')
+  assert.equal(r.rooms?.difference, 0)
+})
+
+test('an unavailable room type is rejected with ROOM_TYPE_UNAVAILABLE (no 1.5x triple)', async () => {
+  const r = await quote({
+    booking_type: 'accommodation-only', accommodation_id: NO_TRIPLE_ACC_ID, start_date: '2026-10-10',
+    nights: 1, num_people: 3, room_allocations: [{ type: 'triple', count: 1 }],
+  })
+  assert.equal(r.ok, false)
+  assert.equal(!r.ok && r.status, 400)
+  assert.equal(!r.ok && r.code, 'ROOM_TYPE_UNAVAILABLE')
+  const unpricedSingle = await quote({
+    booking_type: 'package', accommodation_id: DOUBLE_ONLY_ACC_ID, start_date: '2026-10-10', duration: 4,
+    governorate: 'cairo', num_people: 2, room_allocations: [{ type: 'single', count: 2 }],
+  })
+  assert.equal(!unpricedSingle.ok && unpricedSingle.code, 'ROOM_TYPE_UNAVAILABLE')
+})
+
+test('auto rooms never recommend an unpriced triple', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: NO_TRIPLE_ACC_ID, start_date: '2026-10-10',
+    nights: 1, num_people: 3,
+  }))
+  assert.deepEqual(r.roomAllocations, [{ type: 'single', count: 1 }, { type: 'double', count: 1 }])
+  assert.equal(r.total, 3500)
+  assert.equal(r.rooms?.room_types.find((o) => o.type === 'triple')?.available, false)
+})
+
+test('capacity short -> ROOM_CAPACITY_EXCEEDED, more rooms than guests -> ROOMS_EXCEED_GUESTS', async () => {
+  const short = await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 1, num_people: 4, room_allocations: [{ type: 'double', count: 1 }],
+  })
+  assert.equal(!short.ok && short.status, 400)
+  assert.equal(!short.ok && short.code, 'ROOM_CAPACITY_EXCEEDED')
+  const many = await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 1, num_people: 3, room_allocations: [{ type: 'single', count: 4 }],
+  })
+  assert.equal(!many.ok && many.status, 400)
+  assert.equal(!many.ok && many.code, 'ROOMS_EXCEED_GUESTS')
+})
+
+test('no reliable allocation -> 409 ROOMS_MANUAL_CONFIRMATION (both booking types)', async () => {
+  // Doubles only, 50 guests: 25 doubles exceeds the 20-per-type cap, nothing valid can be priced online.
+  const stay = await quote({
+    booking_type: 'accommodation-only', accommodation_id: DOUBLE_ONLY_ACC_ID, start_date: '2026-10-10',
+    nights: 1, num_people: 50,
+  })
+  assert.equal(stay.ok, false)
+  assert.equal(!stay.ok && stay.status, 409)
+  assert.equal(!stay.ok && stay.code, 'ROOMS_MANUAL_CONFIRMATION')
+  assert.match(!stay.ok ? stay.error : '', /staff will confirm rooms manually/)
+  const pkg = await quote({
+    booking_type: 'package', accommodation_id: DOUBLE_ONLY_ACC_ID, start_date: '2026-10-10', duration: 4,
+    governorate: 'cairo', num_people: 50,
+  })
+  assert.equal(!pkg.ok && pkg.status, 409)
+  assert.equal(!pkg.ok && pkg.code, 'ROOMS_MANUAL_CONFIRMATION')
+})
+
+test('global upgrade applies to every allocation without its own upgrade', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 2, num_people: 3, upgrade_id: U_SEA,
+    room_allocations: [{ type: 'double', count: 1 }, { type: 'single', count: 1 }],
+  }))
+  // double (2000 + 500) x 2 + single (1500 + 500) x 2
+  assert.equal(r.total, 5000 + 4000)
+  assert.deepEqual(r.roomAllocations, [
+    { type: 'double', count: 1, upgrade_id: U_SEA }, { type: 'single', count: 1, upgrade_id: U_SEA },
+  ])
+  assert.ok(r.snapshot.room_allocations?.every((a) => a.upgrade_id === U_SEA && a.upgrade_extra_per_night === 500))
+  assertSnapshotSumsToTotal(r)
+})
+
+test('an allocation own upgrade wins over the global one; global applies to the rest (package)', async () => {
+  const r = ok(await quote({
+    booking_type: 'package', accommodation_id: ACC_ID, start_date: '2026-10-10', duration: 4,
+    transfer_type: 'package_bus', governorate: 'cairo', num_people: 3, upgrade_id: U_SEA,
+    room_allocations: [{ type: 'double', count: 1, upgrade_id: U_SEA }, { type: 'single', count: 1 }],
+  }))
+  // 3 nights: double (2000 + 500) x 3 + single (1500 + 500) x 3 = 13500; bus 800 x 3
+  assert.equal(r.snapshot.accommodation_subtotal, 13500)
+  assert.equal(r.total, 13500 + 2400)
+  assert.equal(r.rooms?.mode, 'custom')
+})
+
+test('auto rooms honour the global upgrade in the recommendation price', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 2, num_people: 3, upgrade_id: U_SEA,
+  }))
+  // triple (2700 + 500) x 2
+  assert.equal(r.total, 6400)
+  assert.deepEqual(r.roomAllocations, [{ type: 'triple', count: 1, upgrade_id: U_SEA }])
+  assert.equal(r.rooms?.room_types.find((o) => o.type === 'triple')?.stay_total_per_room, 6400)
+})
+
+test('the legacy room_type path is unchanged: no rooms plan, no allocations, no room_selection', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: ACC_ID, start_date: '2026-10-10',
+    nights: 2, room_type: 'double', num_people: 3,
+  }))
+  // 2 doubles for 3 people, exactly as before: 2 x 2000 x 2 nights
+  assert.equal(r.total, 8000)
+  assert.equal(r.snapshot.num_rooms, 2)
+  assert.equal(r.rooms, undefined)
+  assert.equal(r.roomAllocations, undefined)
+  assert.equal(r.snapshot.room_selection, undefined)
+})
+
+test('non-room-priced accommodations are untouched by room recommendation', async () => {
+  const r = ok(await quote({
+    booking_type: 'accommodation-only', accommodation_id: LEGACY_ACC_ID, start_date: '2026-10-10',
+    nights: 2, num_people: 3,
+  }))
+  assert.equal(r.total, 800 * 2 * 3)
+  assert.equal(r.rooms, undefined)
 })

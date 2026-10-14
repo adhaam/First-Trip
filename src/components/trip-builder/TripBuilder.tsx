@@ -20,6 +20,7 @@ import {
 } from '@/lib/trip-builder/summaries'
 import { buildHandoffMessage, whatsappLink } from '@/lib/trip-builder/whatsapp'
 import type { BuilderCatalog } from '@/lib/trip-builder/types'
+import { recommendedAllocations } from '@/lib/trip-builder/view'
 import { ContactStep } from './ContactStep'
 import { DatesStep } from './DatesStep'
 import { ExperiencesStep } from './ExperiencesStep'
@@ -101,10 +102,13 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
   const activeStep = pinnedStep ?? firstIncomplete
 
   // Once the pinned step resolves, hand control back to the automatic flow
-  // so it advances to the next incomplete section on its own.
+  // so it advances to the next incomplete section on its own. Rooms & meal is
+  // excluded: overriding the recommended rooms resolves it on the first
+  // stepper tap, and it also holds the meal/upgrade choices, so it stays open
+  // until the customer moves on.
   const wasPinnedIncomplete = useRef(false)
   useEffect(() => {
-    if (pinnedStep && pinnedStep !== 'contact') {
+    if (pinnedStep && pinnedStep !== 'contact' && pinnedStep !== 'rooms') {
       const complete = stepStatus(pinnedStep) === 'complete'
       if (wasPinnedIncomplete.current && complete) setPinnedStep(null)
       wasPinnedIncomplete.current = !complete
@@ -120,20 +124,24 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
 
   const contactValid = contactSchema.safeParse(state.contact).success
 
+  const people = (state.adults ?? 1) + (state.children ?? 0)
+  const autoRooms = recommendedAllocations(quoteState.quote, people)
+  const roomsManual = quoteState.errorKey === 'quoteRoomsManual'
+
   const summaryFor = (id: StepId) => {
     switch (id) {
       case 'transport': return transportSummary(state, catalog, locale)
       case 'dates': return datesSummary(state, catalog, locale)
       case 'travelers': return travelersSummary(state)
       case 'stay': return staySummary(state, catalog, locale)
-      case 'rooms': return roomsSummary(state, catalog, locale)
+      case 'rooms': return roomsSummary(state, catalog, locale, autoRooms)
       case 'experiences': return experiencesSummary(state)
     }
   }
 
   const prefillStayId = typeof prefill.stay === 'string' ? prefill.stay : undefined
   const whatsappHint = catalog.whatsappNumber
-    ? whatsappLink(catalog.whatsappNumber, buildHandoffMessage({ state, catalog, locale, total: quoteState.quote?.total }))
+    ? whatsappLink(catalog.whatsappNumber, buildHandoffMessage({ state, catalog, locale, total: quoteState.quote?.total, recommendedRooms: autoRooms }))
     : undefined
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -222,7 +230,18 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
                   {id === 'dates' && <DatesStep state={state} catalog={catalog} locale={locale} dispatch={dispatch} />}
                   {id === 'travelers' && <TravellersStep state={state} locale={locale} dispatch={dispatch} />}
                   {id === 'stay' && <StayStep state={state} catalog={catalog} locale={locale} prefillStayId={prefillStayId} dispatch={dispatch} />}
-                  {id === 'rooms' && <RoomsMealStep state={state} catalog={catalog} locale={locale} dispatch={dispatch} />}
+                  {id === 'rooms' && (
+                    <RoomsMealStep
+                      state={state}
+                      catalog={catalog}
+                      locale={locale}
+                      quote={quoteState.quote}
+                      refreshing={quoteState.refreshing}
+                      errorKey={quoteState.errorKey}
+                      whatsappHref={whatsappHint}
+                      dispatch={dispatch}
+                    />
+                  )}
                   {id === 'experiences' && <ExperiencesStep state={state} catalog={catalog} locale={locale} dispatch={dispatch} />}
                 </JourneySection>
               </div>
@@ -277,7 +296,7 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
         summary={
           <button type="button" onClick={() => setSummarySheetOpen(true)} aria-haspopup="dialog" className="min-h-11 text-start">
             <span className="block text-xs font-medium text-ink-subtle">{t('yourTrip')}</span>
-            <span className="block text-sm font-bold text-sea-900">{quoteState.quote ? `${formatAmount(quoteState.quote.total, locale)} ${common('egp')}` : t('addDates')}</span>
+            <span className="block text-sm font-bold text-sea-900">{quoteState.quote ? `${formatAmount(quoteState.quote.total, locale)} ${common('egp')}` : roomsManual ? t('priceConfirmedDirectly') : t('addDates')}</span>
             <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-sun-800">{t('viewBreakdown')}<ChevronUp className="h-3.5 w-3.5" aria-hidden /></span>
           </button>
         }

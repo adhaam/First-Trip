@@ -76,6 +76,7 @@ export function Stepper({
   min,
   max,
   locale,
+  disabled,
   onChange,
 }: {
   label: string
@@ -84,11 +85,18 @@ export function Stepper({
   min: number
   max?: number
   locale: 'ar' | 'en'
+  /** Blocks adding more; removing what is already counted stays possible. */
+  disabled?: boolean
   onChange: (value: number) => void
 }) {
   const labelId = useId()
   return (
-    <div className="flex min-h-14 items-center justify-between gap-3 rounded-xl bg-sand-100 px-3.5 py-2.5">
+    <div
+      className={cn(
+        'flex min-h-14 items-center justify-between gap-3 rounded-xl bg-sand-100 px-3.5 py-2.5',
+        disabled && value <= min && 'opacity-70',
+      )}
+    >
       <div className="min-w-0">
         <span id={labelId} className="block text-sm font-semibold text-sea-900">{label}</span>
         {hint && <span className="block text-xs text-ink-subtle">{hint}</span>}
@@ -118,7 +126,7 @@ export function Stepper({
           type="button"
           aria-label={`${label} +`}
           aria-labelledby={labelId}
-          disabled={max != null && value >= max}
+          disabled={disabled || (max != null && value >= max)}
           onClick={() => onChange(max != null ? Math.min(max, value + 1) : value + 1)}
           className="grid size-10 place-items-center rounded-full bg-sea-900 text-sand-50 transition-opacity disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-600"
         >

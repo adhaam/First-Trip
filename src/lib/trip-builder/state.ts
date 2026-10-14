@@ -1,7 +1,7 @@
 import type { DraftFields } from '@/lib/trip-requests/draft'
 import type { RoomAllocationInput, TransportMode } from '@/lib/trip-requests/schema'
 import { isValidArrival, patternsForMode } from './dates'
-import { suggestRooms } from './rooms'
+import { roomsStillValid } from './rooms'
 import type { BuilderCatalog, BuilderState } from './types'
 
 const TRANSPORT_MODES: readonly TransportMode[] = ['package_bus', 'hiace', 'stay_only']
@@ -73,6 +73,7 @@ export type BuilderAction =
   | { type: 'setTravelers'; adults: number; children: number }
   | { type: 'setStay'; id?: string; catalog?: BuilderCatalog }
   | { type: 'setRooms'; allocations?: RoomAllocationInput[] }
+  | { type: 'useRecommendedRooms' }
   | { type: 'setMeal'; key?: string }
   | { type: 'setUpgrade'; id?: string }
   | { type: 'toggleExperience'; kind: 'trip' | 'trip_package'; id: string }
@@ -95,10 +96,6 @@ function invalidateArrival(next: BuilderState, catalog?: BuilderCatalog) {
   }
 }
 
-function sameAllocations(left: RoomAllocationInput[] | undefined, right: RoomAllocationInput[]) {
-  return JSON.stringify(left) === JSON.stringify(right)
-}
-
 function setStay(next: BuilderState, state: BuilderState, id: string | undefined, catalog?: BuilderCatalog) {
   next.accommodation_id = id
   const stay = catalog?.accommodations.find((item) => item.id === id)
@@ -106,13 +103,13 @@ function setStay(next: BuilderState, state: BuilderState, id: string | undefined
   if (!stay) {
     delete next.meal_plan_key
     delete next.upgrade_id
-    delete next.room_allocations
+    clearRooms(next)
     return
   }
 
-  if (id !== state.accommodation_id) {
-    next.room_allocations = suggestRooms((next.adults ?? 1) + (next.children ?? 0))
-  }
+  // Rooms are server-recommended (auto) until the customer overrides them;
+  // a new stay always starts back in auto mode.
+  if (id !== state.accommodation_id) clearRooms(next)
   if (next.meal_plan_key && !stay.meal_plans.some((meal) => meal.key === next.meal_plan_key)) {
     delete next.meal_plan_key
   }
@@ -121,9 +118,26 @@ function setStay(next: BuilderState, state: BuilderState, id: string | undefined
   }
 }
 
+/** Back to auto mode: the server recommends the lowest-priced valid rooms. */
+function clearRooms(next: BuilderState) {
+  delete next.room_allocations
+  delete next.rooms_customized
+}
+
+/**
+ * Only allocations the customer picked (`rooms_customized`) survive a reload.
+ * Drafts saved before the server picked rooms carry the old client-side guess
+ * (ceil(people / 2) doubles) without the marker, so they return to auto mode.
+ */
+function hydrateDraft(draft: BuilderState): BuilderState {
+  const next: BuilderState = { ...initialBuilderState(), ...draft }
+  if (!next.rooms_customized || !next.room_allocations?.length) clearRooms(next)
+  return next
+}
+
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   if (action.type === 'reset') return initialBuilderState()
-  if (action.type === 'hydrate') return { ...initialBuilderState(), ...action.draft }
+  if (action.type === 'hydrate') return hydrateDraft(action.draft)
 
   const next: BuilderState = {
     ...state,
@@ -165,22 +179,26 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       next.departure_date = action.departure
       break
     case 'setTravelers': {
-      const previousPeople = (state.adults ?? 1) + (state.children ?? 0)
       const people = Math.max(1, Math.floor(action.adults) || 1) + Math.max(0, Math.floor(action.children) || 0)
-      const previousSuggestion = suggestRooms(previousPeople)
       next.adults = Math.max(1, Math.floor(action.adults) || 1)
       next.children = Math.max(0, Math.floor(action.children) || 0)
       next.travellers_confirmed = true
-      if (state.accommodation_id && (!state.room_allocations || sameAllocations(state.room_allocations, previousSuggestion))) {
-        next.room_allocations = suggestRooms(people)
-      }
+      // Keep the customer's own rooms only while they still fit this party;
+      // otherwise fall back to the server's recommendation (auto mode).
+      if (next.room_allocations && !roomsStillValid(people, next.room_allocations)) clearRooms(next)
       break
     }
     case 'setStay':
       setStay(next, state, action.id, action.catalog)
       break
     case 'setRooms':
-      next.room_allocations = action.allocations
+      if (action.allocations?.length) {
+        next.room_allocations = action.allocations
+        next.rooms_customized = true
+      } else clearRooms(next)
+      break
+    case 'useRecommendedRooms':
+      clearRooms(next)
       break
     case 'setMeal':
       next.meal_plan_key = action.key

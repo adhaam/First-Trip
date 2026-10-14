@@ -325,6 +325,42 @@ test('buildTripRequestRow sets exactly the insertable trip_requests columns', ()
   assert.equal(row.customer_name, 'Nour Ahmed')
 })
 
+test('buildTripRequestRow stores the allocations that were priced, not the empty auto-mode input', () => {
+  const input = parseInput({
+    locale: 'en', transport_mode: 'package_bus', origin_governorate_code: 'CAI', stay_pattern_code: 'bus_4d3n',
+    arrival_date: '2026-10-01', adults: 3, accommodation_id: '11111111-1111-1111-1111-111111111111',
+  })
+  assert.equal(input.room_allocations, undefined)
+  const dates = resolveJourneyDates(input, DEFAULT_TRANSPORT_SCHEDULE)
+  assert.equal(dates.ok, true)
+  if (!dates.ok) return
+
+  const snapshot: PriceSnapshot = { total: 8100, num_people: 3, room_selection: 'recommended', computed_at: '2026-09-25T00:00:00.000Z' }
+  const quote = {
+    ok: true as const,
+    response: {},
+    lines: [],
+    numPeople: 3,
+    perPerson: 2700,
+    total: 8100,
+    normalizedSelections: { extraTripIds: [], tripPackageIds: [] },
+    isPriced: true,
+    snapshot,
+    roomAllocations: [{ type: 'triple' as const, count: 1 }],
+  }
+  const plan = paymentPlan('journey', 8100, DEFAULT_PAYMENT_POLICIES)
+
+  const auto = buildTripRequestRow(input, dates.dates, quote, plan, 'cust-1')
+  assert.deepEqual(auto.room_allocations, [{ type: 'triple', count: 1 }])
+
+  // No priced allocations on the quote -> falls back to what the customer sent, then to [].
+  const { roomAllocations: _priced, ...legacyQuote } = quote
+  void _priced
+  assert.deepEqual(buildTripRequestRow(input, dates.dates, legacyQuote, plan, 'cust-1').room_allocations, [])
+  const sent = { ...input, room_allocations: [{ type: 'double' as const, count: 2 }] }
+  assert.deepEqual(buildTripRequestRow(sent, dates.dates, legacyQuote, plan, 'cust-1').room_allocations, [{ type: 'double', count: 2 }])
+})
+
 // ─── tripRequestPaymentParts ───
 
 test('a Dahab stay package + an experience package + a standalone trip: 50/50 stay-package part, 100% upfront for the rest', () => {

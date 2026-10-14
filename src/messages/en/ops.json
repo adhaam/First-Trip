@@ -184,7 +184,7 @@
   },
   "item": {
     "back": "Back to queue",
-    "customerRequestPanel": "Customer request (as submitted — read-only)",
+    "customerRequestPanel": "Customer request (current revision — edit with Edit / Revise booking)",
     "confirmedBookingsPanel": "Confirmed operational bookings",
     "loadError": "Couldn't load this item.",
     "notFound": "This item could not be found.",
@@ -243,6 +243,7 @@
     "noRelatedBookings": "No bookings created from this request yet.",
     "journeyBadge": "Journey",
     "partOfJourney": "Part of journey",
+    "paidViaJourney": "Paid via the journey",
     "componentsPanel": "Components",
     "reconcilePaymentsWarning": "Payments were recorded on components before journey payments existed - manual financial review required.",
     "componentKind": {
@@ -440,7 +441,7 @@
     "hiace": "Private Hiace transfer"
   },
   "journey": {
-    "frozenNote": "Prices and payment split are the quote frozen when the customer submitted. Changes happen on the converted bookings.",
+    "frozenNote": "Prices and payment split are the current quote: the customer's submission, or the latest approved revision. Earlier versions stay in Revisions & quotations below.",
     "noOrigin": "No transport (stay only)",
     "transport": {
       "package_bus": "Shared bus",
@@ -470,6 +471,142 @@
     "payment": {
       "afterConfirmation": "Due after confirmation",
       "onArrival": "Due on arrival"
+    }
+  },
+  "amend": {
+    "editBooking": "Edit / Revise booking",
+    "proposeAlternative": "Propose alternative (revise booking)",
+    "alternativesHint": "This journey needs an alternative. Revise it in place — the customer keeps the same reference and nothing is duplicated.",
+    "retryLoad": "Retry",
+    "loadFailed": "Couldn't load the booking details for editing.",
+    "blocked": {
+      "amendment_paid_journey": "Payments are recorded on this journey. Re-pricing a paid journey needs a staff financial adjustment and can't be done here.",
+      "amendment_closed": "Cancelled or completed journeys can't be amended."
+    },
+    "success": "Booking revised (revision {n}). The same reference now carries the updated quote.",
+    "dialogIntro": "{reference} · {customer}. Changes apply to this journey in place — review the new price before confirming.",
+    "decrease": "Decrease {label}",
+    "increase": "Increase {label}",
+    "previewButton": "Preview revised quote",
+    "previewing": "Calculating…",
+    "confirmButton": "Confirm revision",
+    "confirming": "Saving revision…",
+    "reloadLatest": "Close and reload latest",
+    "sections": {
+      "dates": "Dates & transport",
+      "travellers": "Travellers",
+      "stay": "Stay",
+      "rooms": "Rooms",
+      "mealUpgrade": "Meal plan & room upgrade",
+      "experiences": "Trips & packages",
+      "reason": "Reason for the change"
+    },
+    "fields": {
+      "transportMode": "Transport",
+      "origin": "Travelling from",
+      "notSet": "Not set",
+      "stayPattern": "Stay length",
+      "customDates": "Custom dates",
+      "arrival": "Arrival date",
+      "departure": "Departure date",
+      "currentDates": "Current dates: {arrival} → {departure}",
+      "adults": "Adults",
+      "children": "Children",
+      "accommodation": "Accommodation",
+      "noStay": "No stay (transport only)",
+      "currentStay": "current",
+      "mealPlan": "Meal plan",
+      "defaultMeal": "Default meal plan",
+      "upgrade": "Room upgrade",
+      "noUpgrade": "No upgrade"
+    },
+    "rooms": {
+      "recommendedNote": "Rooms follow the server recommendation (lowest valid price). Use the steppers to set a custom mix.",
+      "customNote": "Custom room mix. The price is calculated by the server when you preview.",
+      "capacity": "Sleeps {n}",
+      "unavailable": "Unavailable",
+      "useRecommended": "Use recommended",
+      "keepCurrent": "Keep current rooms",
+      "current": "Current",
+      "guests": "{n} guests to place"
+    },
+    "experiences": {
+      "max": "Up to {n} trips or packages.",
+      "none": "No trips or packages on this journey.",
+      "preferredDate": "Preferred date",
+      "remove": "Remove {name}",
+      "add": "Add a trip or package",
+      "choose": "Choose…",
+      "limit": "Limit reached"
+    },
+    "compare": {
+      "title": "Original vs revised",
+      "original": "Original",
+      "revised": "Revised",
+      "difference": "Difference",
+      "increase": "Customer pays more",
+      "decrease": "Customer pays less",
+      "noChange": "No change",
+      "availabilityReset": "Availability must be re-confirmed — status returns to Checking availability.",
+      "dates": "Dates",
+      "nights": "Nights: {n}",
+      "rooms": "Rooms",
+      "roomsRecommended": "Recommended",
+      "roomsCustom": "Custom",
+      "roomsVsRecommended": "Compared with the recommended rooms:",
+      "lines": "Quote lines",
+      "total": "Total",
+      "paymentPlan": "Payment plan (revised)",
+      "afterConfirmation": "Due after confirmation",
+      "onArrival": "Due on arrival",
+      "beforeService": "Due before service",
+      "stale": "The form changed after this preview. Preview again before confirming.",
+      "needPreview": "Preview the revised quote to see the new total and the difference."
+    },
+    "reason": {
+      "label": "Why is this booking being revised?",
+      "placeholder": "e.g. The hotel is full on those dates; moved the customer to another stay.",
+      "counter": "{n} / {max}"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "stale_request": "Someone else changed this journey. Close this window and reload the latest version, then try again.",
+      "amendment_paid_journey": "Payments are recorded on this journey. Re-pricing a paid journey needs a staff financial adjustment and can't be done here.",
+      "amendment_closed": "Cancelled or completed journeys can't be amended.",
+      "invalid_amendment": "These changes can't be applied. Check the dates, rooms and selections and preview again.",
+      "ROOM_TYPE_UNAVAILABLE": "One of the selected room types isn't available at this stay.",
+      "ROOM_CAPACITY_EXCEEDED": "The selected rooms can't be booked for these dates — not enough rooms left.",
+      "ROOMS_EXCEED_GUESTS": "There are more rooms than guests. Reduce the rooms or add travellers.",
+      "ROOMS_MANUAL_CONFIRMATION": "These rooms need manual confirmation. Choose a different mix or use the recommended rooms.",
+      "SCHEDULE": "These dates don't match the transport schedule. Choose a valid departure and return.",
+      "EXTRA_TRIP_UNAVAILABLE": "One of the selected trips or packages isn't available.",
+      "VALIDATION_ERROR": "Some fields are missing or invalid. Check the form and preview again."
+    },
+    "revisions": {
+      "title": "Revisions & quotations",
+      "language": "Document language",
+      "arabic": "Arabic",
+      "english": "English",
+      "loadError": "Couldn't load the revisions.",
+      "retry": "Retry",
+      "empty": "No revisions recorded yet.",
+      "revision": "Revision {n}",
+      "original": "Original",
+      "amendment": "Amendment",
+      "current": "Current",
+      "superseded": "Superseded",
+      "provisional": "Provisional",
+      "by": "by {name}",
+      "total": "Total",
+      "difference": "Difference",
+      "reason": "Reason",
+      "view": "View",
+      "print": "Print",
+      "download": "Download",
+      "docError": "Couldn't load the quotation.",
+      "quotationTitle": "Quotation {reference} · revision {n}",
+      "quotationHint": "Versioned quotation for this revision.",
+      "loadingDoc": "Loading quotation…"
     }
   }
 }

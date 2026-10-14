@@ -30,7 +30,7 @@ export function toISODate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function toDate(d: Date | string): Date {
+export function toDate(d: Date | string): Date {
   return d instanceof Date ? d : new Date(`${d}T00:00:00`)
 }
 
@@ -242,7 +242,7 @@ export interface ResolvedNight {
   seasonal_rate_name?: string
 }
 
-function seasonalRateFor(
+export function seasonalRateFor(
   rates: AccommodationSeasonalRate[] | undefined,
   isoDate: string,
 ): AccommodationSeasonalRate | undefined {
@@ -254,7 +254,7 @@ function seasonalRateFor(
   )
 }
 
-function seasonalPriceForRoom(rate: AccommodationSeasonalRate, roomType: RoomType): number {
+export function seasonalPriceForRoom(rate: AccommodationSeasonalRate, roomType: RoomType): number {
   if (roomType === 'single') return Number(rate.single_price) || 0
   if (roomType === 'triple') return Number(rate.triple_price) || 0
   return Number(rate.double_price) || 0

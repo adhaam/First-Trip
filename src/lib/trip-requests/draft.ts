@@ -40,6 +40,8 @@ export const tripRequestDraftSchema = z
 
     accommodation_id: z.string().uuid().optional(),
     room_allocations: z.array(roomAllocationSchema).optional(),
+    /** True when room_allocations is the customer's own override of the server recommendation. */
+    rooms_customized: z.boolean().optional(),
     meal_plan_key: z.string().optional(),
     upgrade_id: z.string().uuid().optional(),
 

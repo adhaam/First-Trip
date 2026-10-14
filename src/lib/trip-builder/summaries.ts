@@ -13,9 +13,9 @@
 import { formatDate } from '@/lib/format'
 import { HIACE_RECOMMENDED_DEPARTURE_WEEKDAYS } from '@/lib/transport'
 import type { TransportScheduleConfig } from '@/lib/transport'
-import type { TransportMode } from '@/lib/trip-requests/schema'
+import type { RoomAllocationInput, TransportMode } from '@/lib/trip-requests/schema'
 import { patternsForMode, returnDateFor, stayNights } from './dates'
-import { roomCapacity } from './rooms'
+import { roomCapacity, roomCount } from './rooms'
 import type { BuilderCatalog, BuilderState } from './types'
 
 export type SectionSummary = { key: string; values?: Record<string, string | number> } | null
@@ -94,10 +94,18 @@ export function staySummary(state: BuilderState, catalog: BuilderCatalog, locale
   return { key: 'summaryStay', values: { stay: localizedName(locale, stay) } }
 }
 
-/** Section 5 — room allocation + meal plan, once rooms have been assigned. */
-export function roomsSummary(state: BuilderState, catalog: BuilderCatalog, locale: 'ar' | 'en'): SectionSummary {
+/**
+ * Section 5 — room allocation + meal plan. In auto mode (no customer choice)
+ * the server's recommended allocation, when a quote has one, stands in.
+ */
+export function roomsSummary(
+  state: BuilderState,
+  catalog: BuilderCatalog,
+  locale: 'ar' | 'en',
+  recommended?: readonly RoomAllocationInput[],
+): SectionSummary {
   if (!state.accommodation_id) return null
-  const allocations = state.room_allocations ?? []
+  const allocations = state.room_allocations?.length ? state.room_allocations : recommended ?? []
   if (!allocations.length) return null
 
   const stay = catalog.accommodations.find((item) => item.id === state.accommodation_id)
@@ -107,10 +115,10 @@ export function roomsSummary(state: BuilderState, catalog: BuilderCatalog, local
   if (meal) {
     return {
       key: 'summaryRoomsMeal',
-      values: { rooms: allocations.length, capacity, meal: localizedName(locale, { name_ar: meal.label_ar, name_en: meal.label_en }) },
+      values: { rooms: roomCount(allocations), capacity, meal: localizedName(locale, { name_ar: meal.label_ar, name_en: meal.label_en }) },
     }
   }
-  return { key: 'summaryRooms', values: { rooms: allocations.length, capacity } }
+  return { key: 'summaryRooms', values: { rooms: roomCount(allocations), capacity } }
 }
 
 /** Section 6 — count of trips/packages added; optional, so `null` just means "nothing added yet". */

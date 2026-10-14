@@ -379,6 +379,8 @@ export interface PriceSnapshot {
    * including any upgrade supplement. Added in migration 011.
    */
   room_allocations?: RoomAllocationSnapshot[]
+  /** Whether the server's lowest-priced room recommendation or the customer's own allocation was priced. */
+  room_selection?: 'recommended' | 'custom'
   nights?: number
   accommodation_subtotal?: number
   transfer_rate_used?: number

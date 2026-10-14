@@ -17,6 +17,8 @@ import { EntityTypeLabel, JourneyBadge, NextActionLabel, PaymentPill, StatusPill
 import { TripRequestPanel } from '@/components/admin/ops/TripRequestPanel'
 import { PaymentsPanel, type PaymentExpectation, type PaymentRecord } from '@/components/admin/ops/PaymentsPanel'
 import { HistoryTimeline } from '@/components/admin/ops/HistoryTimeline'
+import { AmendJourneyAction, type AmendResult } from '@/components/admin/ops/AmendJourneyDialog'
+import { RevisionsPanel } from '@/components/admin/ops/RevisionsPanel'
 import { WorkItemTable } from '@/components/admin/ops/WorkItemTable'
 
 /** Same display reference the work queue shows (ops_work_items, migration 036). */
@@ -76,6 +78,8 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
   const [converting, setConverting] = useState(false)
   const [convertError, setConvertError] = useState('')
   const [convertResult, setConvertResult] = useState<{ booking_id: string | null; trip_booking_ids: string[] } | null>(null)
+  const [revisionsKey, setRevisionsKey] = useState(0)
+  const tAmend = useTranslations('ops.amend')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -124,6 +128,12 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
       setStatusPending(false)
       setConfirmStatus(null)
     }
+  }
+
+  const onAmended = (result: AmendResult) => {
+    setRevisionsKey((key) => key + 1)
+    setNotice(tAmend('success', { n: result.revision_number }))
+    load()
   }
 
   const requestStatusChange = (status: string) => {
@@ -279,6 +289,17 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
       <section className="rounded-lg border bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">{t('statusActions')}</h2>
         {statusError && <p role="alert" className="mb-2 text-sm text-red-700">{statusError}</p>}
+        {type === 'trip_request' && (
+          <div className="mb-3 border-b pb-3">
+            <AmendJourneyAction
+              requestId={id}
+              status={item.status}
+              updatedAt={typeof data.record.updated_at === 'string' ? data.record.updated_at : item.updated_at}
+              onAmended={onAmended}
+              onStale={load}
+            />
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {data.allowed_statuses.map((status) => (
             <Button
@@ -334,6 +355,10 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
           currentStatus={item.status}
           onChanged={load}
         />
+      )}
+
+      {type === 'trip_request' && (
+        <RevisionsPanel requestId={id} reference={item.reference} refreshKey={revisionsKey} />
       )}
 
       <section className="rounded-lg border bg-white p-4">

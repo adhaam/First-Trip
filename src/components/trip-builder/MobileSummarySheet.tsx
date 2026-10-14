@@ -5,7 +5,7 @@ import { MessageCircle } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { buildHandoffMessage, whatsappLink } from '@/lib/trip-builder/whatsapp'
 import type { BuilderCatalog, BuilderState } from '@/lib/trip-builder/types'
-import type { QuoteView } from '@/lib/trip-builder/view'
+import { recommendedAllocations, type QuoteView } from '@/lib/trip-builder/view'
 import { OverviewTimeline } from './OverviewTimeline'
 import { PriceSummary } from './PriceSummary'
 
@@ -31,7 +31,13 @@ export function MobileSummarySheet({
 }) {
   const t = useTranslations('builder')
   const whatsappHref = catalog.whatsappNumber
-    ? whatsappLink(catalog.whatsappNumber, buildHandoffMessage({ state, catalog, locale, total: quote?.total }))
+    ? whatsappLink(catalog.whatsappNumber, buildHandoffMessage({
+        state,
+        catalog,
+        locale,
+        total: quote?.total,
+        recommendedRooms: recommendedAllocations(quote, (state.adults ?? 1) + (state.children ?? 0)),
+      }))
     : undefined
 
   return (

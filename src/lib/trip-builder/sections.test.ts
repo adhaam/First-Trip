@@ -59,3 +59,21 @@ test('travellers section requires an explicit confirmation, not just a default a
   const oldDraft = sectionStatus({ adults: 2, children: 0, experiences: [] }, minimalCatalog)
   assert.equal(oldDraft.travelers.status, 'needs_input')
 })
+
+test('rooms section is optional in auto mode and validates only a customer-chosen allocation', () => {
+  const catalog: BuilderCatalog = {
+    ...minimalCatalog,
+    accommodations: [{
+      id: stay, name_ar: '', name_en: '', type: '', image: '', images: [], rating: 0, location_ar: '', location_en: '',
+      from_price_per_person_per_night: 0, meal_plans: [], room_upgrades: [],
+    }],
+  }
+  const base = { accommodation_id: stay, adults: 3, children: 0, travellers_confirmed: true, experiences: [] }
+  const rooms = (allocations?: { type: 'single' | 'double' | 'triple'; count: number }[]) =>
+    sectionStatus({ ...base, ...(allocations ? { room_allocations: allocations } : {}) }, catalog).rooms
+  assert.deepEqual(rooms(), { status: 'optional', reason: 'suggested_at_quote' })
+  assert.deepEqual(rooms([{ type: 'triple', count: 1 }]), { status: 'complete', reason: 'selected' })
+  assert.deepEqual(rooms([{ type: 'single', count: 1 }]), { status: 'needs_input', reason: 'rooms_do_not_fit' })
+  assert.deepEqual(rooms([{ type: 'single', count: 4 }]), { status: 'needs_input', reason: 'too_many_rooms' })
+  assert.equal(sectionStatus({ ...base, accommodation_id: undefined }, catalog).rooms.status, 'not_applicable')
+})

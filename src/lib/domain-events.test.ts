@@ -42,11 +42,11 @@ function emittedEventTypes() {
 }
 
 // Migration 036 adds events written directly by its RPCs and customer trigger.
+// Migration 051 adds the journey amendment event (same direct-INSERT shape).
 function operationsCenterEventTypes() {
-  const operations = readFileSync(
-    new URL('../../supabase/migrations/036_operations_center.sql', import.meta.url),
-    'utf8',
-  )
+  const operations = ['036_operations_center.sql', '051_journey_amendments.sql']
+    .map((file) => readFileSync(new URL(`../../supabase/migrations/${file}`, import.meta.url), 'utf8'))
+    .join('\n')
   const events = new Set<string>()
   const inserts = /INSERT INTO (?:public\.)?domain_events[\s\S]*?VALUES\s*\(([\s\S]*?),/g
   for (const insert of operations.matchAll(inserts)) {
