@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  cairoDay,
   generateQuotationHTML,
   isQuotationConfirmed,
   quotationLines,
@@ -209,4 +210,9 @@ test('a plan without an upfront split says terms are agreed with the team', () =
   const html = generateQuotationHTML(input({ payment_plan: { rule: 'per_quote', upfrontAmount: null } }))
   assert.match(html, /Payment terms are agreed with the team/)
   assert.equal(generateQuotationHTML(input({ payment_plan: null })).includes('Payment terms'), false)
+})
+
+test('the issue date is the Cairo calendar day, not the UTC one', () => {
+  assert.equal(cairoDay('2026-10-14T22:48:58Z'), '2026-10-15')
+  assert.equal(cairoDay('2026-10-14T09:30:00Z'), '2026-10-14')
 })

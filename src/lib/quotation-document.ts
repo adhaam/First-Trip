@@ -183,6 +183,13 @@ function day(value: string): string {
   return value.slice(0, 10)
 }
 
+/** A timestamp's calendar day in Dahab (Africa/Cairo), not UTC: 01:30 Cairo is still "today" there. */
+export function cairoDay(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return day(value)
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(date)
+}
+
 type Fact = [string, string, string]
 
 function travellersText(j: QuotationJourney, ar: boolean): string {
@@ -320,7 +327,7 @@ export function generateQuotationHTML(input: QuotationInput): string {
     <header>
       <div><h1>${esc(title)}</h1><div>${esc(revisionLabel)}</div></div>
       <div class="meta"><div>${t('Reference', 'المرجع')}: <strong>${esc(input.reference)}</strong></div>
-        <div>${t('Issued', 'تاريخ الإصدار')}: ${esc(day(input.created_at))}</div></div>
+        <div>${t('Issued', 'تاريخ الإصدار')}: ${esc(cairoDay(input.created_at))}</div></div>
     </header>
     ${banners.join('\n    ')}
     <h2>${t('Prepared for', 'أُعد لـ')}</h2>
