@@ -23,6 +23,17 @@ Acceptance ran on the synthetic local stack (`scripts/local-stack`, 127.0.0.1, m
 ## Gates (final run on this branch)
 TypeScript ✔ · ESLint 0 errors ✔ · unit/integration tests ✔ · translation parity ✔ · migration check 001–052 ✔ · DB rebuild + regression SQL ✔ (`m4_hardening.sql`, `operations_center.sql` fail identically on production `96d443a` — pre-existing, stale since 049) · production build ✔.
 
+## Production release (2026-11-02, owner-authorized)
+
+- **Database**: 052 applied as `052_trips_only_journeys_part1` / `_part2` (recorded). Before: definitions identical to the audited preflight. After each part: convert `44a6d6de…`, view `595d95bf…`, amend `f7644c18…`; record_payment unchanged `eba7f698…`; ledger invariants 0; counts unchanged (6 requests / 7 bookings / 14 trip bookings / 8 payment records); 3 converted journeys still `journey`.
+- **Rollback-only acceptance on production**: `RESULT OK: 052 production verification passed — everything rolled back`; zero residue; reference sequence unchanged (latest WR-2611-0011).
+- **App**: `main` fast-forwarded `96d443a → 60f8672`; Vercel production `dpl_DPKimPXzKBbrCRqcMX7as7vwXJu7` READY and serving weemapsinai.com. Rollback target: `dpl_HHzeTJW3ib9BTdSMgdRcvh7PWjux` (`96d443a`).
+- **Public acceptance (no records created)**: EN desktop — travellers 1→4 held open; hotel 23,200 EGP 50/50; "No accommodation" cleared the stale total; trip card 800 = quote 4×800 = 3,200 EGP at 100%; "Recalculating…" during re-price; Package Quick View lists 5 excursions, 2,600×4 = 10,400 at 100%, warns about the covered standalone trip, no savings while a trip is discounted, Esc keeps state. AR mobile 375 — RTL, no overflow, summaries and ٣٬٢٠٠ ج.م carried across language switch + reload; no console errors. 43/43 Arabic hotel pages 200 RTL; real-photo gallery cover/contain working.
+- **Ops acceptance (owner signed in, read-only)**: Today 11 tiles = their lists; WR-2610-0008 one primary action, 10 components, receipts per real payment (AR: 15,000 then 16,000 received, remaining 6,000 / 5,000, partial), Booking Confirmation required now 0 / later 5,000 with logo; component BK-D51A6951 fulfilment-only (no payment/refund, supplier statuses only); new WR-2610-0009: confirmation refused 409 before availability, Arabic Provisional Quotation with logo and "not a tax invoice".
+- **Found in production acceptance, fixed on the branch, NOT deployed** (need a separate go-ahead):
+  - `6d72c62` — 19 hotels store Arabic text in `description_en`; the fallback labelled it `lang=en dir=ltr`. Language now comes from the text's script.
+  - `d581e3d` — Payments panel "Due on arrival" showed the plan's original 50% (10,500) instead of what is still owed later (5,000); now uses the documents' `computePaymentDue`.
+
 ## Release-gate status
 - **Branch pushed** (`origin/fix/experience-ops-stabilization`), not merged, not deployed. Vercel built it as a READY preview (no production target).
 - **Hosting**: production `weemapsinai.com` serves 200 from `96d443a`; last production deploys READY; only pre-existing low-volume home-page runtime errors (since 2026-08) in the last 24 h.
