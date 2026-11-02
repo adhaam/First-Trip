@@ -77,3 +77,32 @@ test('rooms section is optional in auto mode and validates only a customer-chose
   assert.deepEqual(rooms([{ type: 'single', count: 4 }]), { status: 'needs_input', reason: 'too_many_rooms' })
   assert.equal(sectionStatus({ ...base, accommodation_id: undefined }, catalog).rooms.status, 'not_applicable')
 })
+
+test('trips only: self-arrival with "no accommodation" needs a trip, then quotes and submits without any stay fields', () => {
+  const base = { locale: 'en' as const, transport_mode: 'stay_only' as const, arrival_date: '2026-10-10', departure_date: '2026-10-12', adults: 2, children: 0, travellers_confirmed: true, no_accommodation: true, contact: {} }
+  assert.deepEqual(quoteReadiness({ ...base, experiences: [] }).missing, ['experiences'])
+  assert.equal(sectionStatus({ ...base, experiences: [] }, minimalCatalog).stay.status, 'complete')
+  assert.equal(sectionStatus({ ...base, experiences: [] }, minimalCatalog).experiences.status, 'needs_input')
+
+  const withTrip = { ...base, experiences: [{ kind: 'trip' as const, id: trip }] }
+  assert.equal(quoteReadiness(withTrip).ready, true)
+  assert.equal(sectionStatus(withTrip, minimalCatalog).rooms.status, 'not_applicable')
+  const payload = toQuotePayload(withTrip, 'en')
+  assert.equal('accommodation_id' in payload, false)
+  assert.equal('room_allocations' in payload, false)
+  assert.equal('meal_plan_key' in payload, false)
+  assert.equal(tripRequestQuoteSchema.safeParse(payload).success, true)
+  const submit = toSubmitPayload(withTrip, { name: 'Test Guest', phone: '01012345678' }, 'en')
+  assert.equal(tripRequestSchema.safeParse(submit).success, true)
+})
+
+test('self-arrival with neither a stay nor a trip is still refused by the server schema', () => {
+  const payload = { locale: 'en', transport_mode: 'stay_only', arrival_date: '2026-10-10', departure_date: '2026-10-12', adults: 1, children: 0, experiences: [] }
+  assert.equal(tripRequestQuoteSchema.safeParse(payload).success, false)
+})
+
+test('self-arrival without the explicit "no accommodation" choice still asks for a stay', () => {
+  const state = { locale: 'en' as const, transport_mode: 'stay_only' as const, arrival_date: '2026-10-10', departure_date: '2026-10-12', adults: 2, travellers_confirmed: true, experiences: [{ kind: 'trip' as const, id: trip }], contact: {} }
+  assert.deepEqual(quoteReadiness(state).missing, ['stay'])
+  assert.equal(sectionStatus(state, minimalCatalog).stay.status, 'needs_input')
+})

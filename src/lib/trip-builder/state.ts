@@ -38,8 +38,34 @@ function mergeExperiences(existing: NonNullable<BuilderState['experiences']>, ad
   return merged
 }
 
+/**
+ * Drops anything a stored draft carries that the live catalogue no longer
+ * offers (a stay, meal plan, upgrade, trip or package taken offline, an
+ * origin no longer served, an arrival date now in the past) so a reload can
+ * never send — or price — a selection the customer can't actually book.
+ */
+export function sanitizeDraft(state: BuilderState, catalog: BuilderCatalog): BuilderState {
+  const next: BuilderState = { ...state, experiences: [...(state.experiences ?? [])], contact: { ...(state.contact ?? {}) } }
+
+  if (next.origin_governorate_code && !supportsMode(catalog, next.origin_governorate_code, next.transport_mode)) {
+    delete next.origin_governorate_code
+  }
+  if (next.accommodation_id && !catalog.accommodations.some((item) => item.id === next.accommodation_id)) {
+    delete next.accommodation_id
+  }
+  setStay(next, next, next.accommodation_id, catalog)
+  if (next.transport_mode !== 'stay_only' || next.accommodation_id) delete next.no_accommodation
+  if (next.departure_date && next.arrival_date && next.departure_date <= next.arrival_date) delete next.departure_date
+
+  next.experiences = (next.experiences ?? []).filter((experience) => experience.kind === 'trip'
+    ? catalog.trips.some((item) => item.id === experience.id)
+    : catalog.packages.some((item) => item.id === experience.id))
+  invalidateArrival(next, catalog)
+  return next
+}
+
 export function applyPrefill(state: BuilderState, params: Record<string, string | string[] | undefined>, catalog: BuilderCatalog): BuilderState {
-  let result: BuilderState = { ...state, experiences: [...(state.experiences ?? [])] }
+  let result: BuilderState = sanitizeDraft(state, catalog)
   const mode = values(params.mode)[0]
 
   if (isTransportMode(mode)) {
@@ -72,6 +98,10 @@ export type BuilderAction =
   | { type: 'setDeparture'; departure?: string }
   | { type: 'setTravelers'; adults: number; children: number }
   | { type: 'setStay'; id?: string; catalog?: BuilderCatalog }
+  /** Self-arrival only: "I don't need accommodation — trips only". */
+  | { type: 'setNoAccommodation' }
+  /** Explicit "Continue" on the Travellers step: confirms the counts as they are. */
+  | { type: 'confirmTravelers' }
   | { type: 'setRooms'; allocations?: RoomAllocationInput[] }
   | { type: 'useRecommendedRooms' }
   | { type: 'setMeal'; key?: string }
@@ -157,6 +187,7 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
         delete next.stay_pattern_code
       } else {
         delete next.departure_date
+        delete next.no_accommodation
         const patterns = action.catalog && patternsForMode(action.catalog.schedule, action.mode)
         if (next.stay_pattern_code && patterns && !patterns.some((pattern) => pattern.code === next.stay_pattern_code)) {
           delete next.stay_pattern_code
@@ -190,6 +221,18 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
     }
     case 'setStay':
       setStay(next, state, action.id, action.catalog)
+      if (action.id) delete next.no_accommodation
+      break
+    case 'setNoAccommodation':
+      // Same as removing the stay (rooms, meal plan and upgrade go with it),
+      // plus the explicit choice, so the stay step reads as answered.
+      setStay(next, state, undefined, undefined)
+      next.no_accommodation = true
+      break
+    case 'confirmTravelers':
+      next.adults = Math.max(1, Math.floor(next.adults ?? 1) || 1)
+      next.children = Math.max(0, Math.floor(next.children ?? 0) || 0)
+      next.travellers_confirmed = true
       break
     case 'setRooms':
       if (action.allocations?.length) {

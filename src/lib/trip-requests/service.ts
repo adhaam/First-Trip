@@ -1,9 +1,9 @@
 import 'server-only'
 
 import { findOrCreateCustomerByPhone } from '@/lib/customer'
-import { paymentPlan, type PaymentPlan } from '@/lib/payment-rules'
+import { isTripsOnlyJourney, journeyPaymentKind, paymentPlan, type PaymentPlan } from '@/lib/payment-rules'
 import { getPaymentRules } from '@/lib/payment-rules-load'
-import { computeQuote } from '@/lib/quote-service'
+import { computeExperiencesQuote, computeQuote } from '@/lib/quote-service'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { getTransportSchedule } from '@/lib/transport/load'
 import { applyQuotedExperienceSelections, buildTripRequestRow, resolveJourneyDates, toQuoteRequest } from './build'
@@ -22,18 +22,20 @@ export async function priceTripRequest(input: TripRequestQuoteInput): Promise<Pr
   const schedule = await getTransportSchedule()
   const datesResult = resolveJourneyDates(input, schedule)
   if (!datesResult.ok) return { ok: false, status: 400, code: datesResult.code, error: datesResult.error }
-  const quote = await computeQuote(toQuoteRequest(input, datesResult.dates))
+  const quoteRequest = toQuoteRequest(input, datesResult.dates)
+  const quote = isTripsOnlyJourney(input) ? await computeExperiencesQuote(quoteRequest) : await computeQuote(quoteRequest)
   if (!quote.ok) return { ok: false, status: quote.status, code: quote.code ?? 'PRICING_ERROR', error: quote.error }
   const normalizedInput = applyQuotedExperienceSelections(input, quote.normalizedSelections)
   const rules = await getPaymentRules()
-  return { ok: true, input: normalizedInput, dates: datesResult.dates, quote, paymentPlan: paymentPlan('journey', quote.total, rules.policies) }
+  return { ok: true, input: normalizedInput, dates: datesResult.dates, quote, paymentPlan: paymentPlan(journeyPaymentKind(input), quote.total, rules.policies) }
 }
 
 /**
  * Creates a trip_requests row for the M2 Trip Builder: validates the input,
  * resolves the journey dates against the transport schedule, prices it with
- * the server quote engine, derives the payment plan from the 'journey'
- * payment kind (migration 030) on the whole quoted total, resolves the
+ * the server quote engine, derives the payment plan from the journey's
+ * payment kind (journeyPaymentKind: 'journey' 50/50, or 'trip' 100% for a
+ * trips-only journey) on the whole quoted total, resolves the
  * customer, and inserts.
  *
  * Domain events / history are written by the DB trigger on insert — never

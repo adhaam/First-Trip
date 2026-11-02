@@ -4,6 +4,7 @@ import { getAccommodationById, getTransferPricing } from '@/lib/data'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { getTripPackagesForPricing } from '@/lib/trip-packages'
 import {
+  computeExperiencesQuote as computeExperiencesQuoteWithSource,
   computeQuote as computeQuoteWithSource,
   type QuoteDataSource,
   type QuoteInput,
@@ -40,4 +41,9 @@ export const supabaseQuoteDataSource: QuoteDataSource = {
 /** Route-handler convenience entrypoint using the authoritative DB rates. */
 export function computeQuote(input: QuoteInput): Promise<QuoteResult> {
   return computeQuoteWithSource(input, { source: supabaseQuoteDataSource })
+}
+
+/** Trips-only journeys (no stay, no WEEMAP transport), priced from the same DB rates. */
+export function computeExperiencesQuote(input: Parameters<typeof computeExperiencesQuoteWithSource>[0]): Promise<QuoteResult> {
+  return computeExperiencesQuoteWithSource(input, { source: supabaseQuoteDataSource })
 }

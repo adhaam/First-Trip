@@ -4,7 +4,7 @@ import type { Dispatch } from 'react'
 import { useTranslations } from 'next-intl'
 import { Check } from 'lucide-react'
 import { EmptyState } from '@/components/EmptyState'
-import { SafeImage } from '@/components/SafeImage'
+import { HotelCoverImage } from '@/components/stays/HotelMedia'
 import { PriceTag } from '@/components/brand'
 import type { BuilderAction } from '@/lib/trip-builder/state'
 import type { BuilderCatalog, BuilderState, CatalogAccommodation } from '@/lib/trip-builder/types'
@@ -44,6 +44,7 @@ export function StayStep({
       {!isStayOnly && (
         <button
           type="button"
+          aria-pressed={!state.accommodation_id}
           onClick={() => dispatch({ type: 'setStay', id: undefined, catalog })}
           className={cn(
             'min-h-11 rounded-full border-[1.5px] px-4 text-sm font-semibold transition-colors',
@@ -52,6 +53,23 @@ export function StayStep({
         >
           {t('stayTransferOnly')}
         </button>
+      )}
+
+      {isStayOnly && (
+        <div className="space-y-1.5">
+          <button
+            type="button"
+            aria-pressed={Boolean(state.no_accommodation)}
+            onClick={() => dispatch({ type: 'setNoAccommodation' })}
+            className={cn(
+              'min-h-11 rounded-full border-[1.5px] px-4 text-start text-sm font-semibold transition-colors',
+              state.no_accommodation ? 'border-sea-900 bg-sea-900 text-sand-50' : 'border-sand-300 text-sea-900 hover:border-sea-900/40',
+            )}
+          >
+            {t('stayNoAccommodation')}
+          </button>
+          {state.no_accommodation && <p className="text-xs text-ink-subtle">{t('stayNoAccommodationHint')}</p>}
+        </div>
       )}
 
       <div
@@ -107,11 +125,7 @@ function AccommodationCard({
       )}
     >
       <div className="relative aspect-[4/3]">
-        {stay.image ? (
-          <SafeImage src={stay.image} alt="" fill sizes="(max-width: 640px) 60vw, 33vw" className="object-cover" />
-        ) : (
-          <div aria-hidden className="h-full w-full bg-sand-200" />
-        )}
+        <HotelCoverImage src={stay.image} alt="" sizes="(max-width: 640px) 60vw, 33vw" />
         {prefilled && (
           <span className="absolute start-2.5 top-2.5 rounded-full bg-sand-50/95 px-2.5 py-1 text-[0.65rem] font-semibold text-sea-900 backdrop-blur">
             {t('stayPrefilled')}

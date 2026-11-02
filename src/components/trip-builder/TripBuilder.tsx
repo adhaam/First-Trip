@@ -8,8 +8,8 @@ import { Section, StickyActionBar } from '@/components/brand'
 import { formatAmount } from '@/lib/format'
 import { trackConversion, trackRequestFailure } from '@/lib/conversion'
 import { contactSchema } from '@/lib/trip-requests/schema'
-import { builderReducer, initialBuilderState } from '@/lib/trip-builder/state'
-import { sectionStatus, toSubmitPayload, type SectionState } from '@/lib/trip-builder/sections'
+import { builderReducer, initialBuilderState, type BuilderAction } from '@/lib/trip-builder/state'
+import { isTripsOnlyChoice, sectionStatus, toSubmitPayload, type SectionState } from '@/lib/trip-builder/sections'
 import {
   datesSummary,
   experiencesSummary,
@@ -40,6 +40,9 @@ type Props = { catalog: BuilderCatalog; locale: 'ar' | 'en'; prefill: Record<str
 
 const STEP_ORDER = ['transport', 'dates', 'travelers', 'stay', 'rooms', 'experiences'] as const
 type StepId = (typeof STEP_ORDER)[number]
+
+/** Steps edited with steppers: never auto-collapsed while the customer is adjusting them. */
+const HELD_STEPS: ReadonlySet<StepId | 'contact'> = new Set(['travelers', 'rooms'])
 
 const STEP_ICON: Record<StepId, ReactNode> = {
   transport: <Route className="h-5 w-5" aria-hidden />,
@@ -102,16 +105,20 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
   const activeStep = pinnedStep ?? firstIncomplete
 
   // Once the pinned step resolves, hand control back to the automatic flow
-  // so it advances to the next incomplete section on its own. Rooms & meal is
-  // excluded: overriding the recommended rooms resolves it on the first
-  // stepper tap, and it also holds the meal/upgrade choices, so it stays open
-  // until the customer moves on.
-  const wasPinnedIncomplete = useRef(false)
+  // so it advances to the next incomplete section on its own. Stepper steps
+  // are excluded (HELD_STEPS): the first + tap already resolves them, so they
+  // would snap shut mid-adjustment — they stay open until the customer
+  // presses Continue or opens another section.
+  // Remembered per pinned step: carrying it over from the previously opened
+  // section made an already-complete section snap shut the moment the
+  // customer opened it to edit.
+  const wasPinnedIncomplete = useRef<{ step: StepId | 'contact' | null; incomplete: boolean }>({ step: null, incomplete: false })
   useEffect(() => {
-    if (pinnedStep && pinnedStep !== 'contact' && pinnedStep !== 'rooms') {
+    if (pinnedStep && pinnedStep !== 'contact' && !HELD_STEPS.has(pinnedStep)) {
       const complete = stepStatus(pinnedStep) === 'complete'
-      if (wasPinnedIncomplete.current && complete) setPinnedStep(null)
-      wasPinnedIncomplete.current = !complete
+      const previous = wasPinnedIncomplete.current
+      if (previous.step === pinnedStep && previous.incomplete && complete) setPinnedStep(null)
+      wasPinnedIncomplete.current = { step: pinnedStep, incomplete: !complete }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinnedStep, state])
@@ -124,9 +131,18 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
 
   const contactValid = contactSchema.safeParse(state.contact).success
 
+  // Interacting with the travellers steppers holds that section open (the
+  // auto flow would otherwise move on after the first tap, since the counts
+  // count as confirmed from then on). Continue releases it.
+  const travellersDispatch = (action: BuilderAction) => {
+    setPinnedStep((current) => current ?? 'travelers')
+    dispatch(action)
+  }
+
   const people = (state.adults ?? 1) + (state.children ?? 0)
-  const autoRooms = recommendedAllocations(quoteState.quote, people)
+  const autoRooms = recommendedAllocations(quoteState.lastQuote, people)
   const roomsManual = quoteState.errorKey === 'quoteRoomsManual'
+  const tripsOnlyNeedsTrip = isTripsOnlyChoice(state) && !(state.experiences?.length)
 
   const summaryFor = (id: StepId) => {
     switch (id) {
@@ -149,6 +165,13 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
     setContactTouched(true)
     setSubmitError('')
     const parsed = contactSchema.safeParse(state.contact)
+    // Never send while the price on screen is still being recalculated for
+    // the latest change (manual-room requests have no price by design).
+    const priced = Boolean(quoteState.quote) || roomsManual
+    if (quoteState.ready && parsed.success && !priced) {
+      setSubmitError(quoteState.refreshing ? t('recalculating') : t('quoteError'))
+      return
+    }
     if (!quoteState.ready || !parsed.success) {
       setSubmitError(t('completeRequired'))
       activate('contact')
@@ -228,19 +251,22 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
                 >
                   {id === 'transport' && <TransportStep state={state} catalog={catalog} locale={locale} dispatch={dispatch} />}
                   {id === 'dates' && <DatesStep state={state} catalog={catalog} locale={locale} dispatch={dispatch} />}
-                  {id === 'travelers' && <TravellersStep state={state} locale={locale} dispatch={dispatch} />}
+                  {id === 'travelers' && <TravellersStep state={state} locale={locale} dispatch={travellersDispatch} onContinue={() => setPinnedStep(null)} />}
                   {id === 'stay' && <StayStep state={state} catalog={catalog} locale={locale} prefillStayId={prefillStayId} dispatch={dispatch} />}
                   {id === 'rooms' && (
                     <RoomsMealStep
                       state={state}
                       catalog={catalog}
                       locale={locale}
-                      quote={quoteState.quote}
+                      quote={quoteState.lastQuote}
                       refreshing={quoteState.refreshing}
                       errorKey={quoteState.errorKey}
                       whatsappHref={whatsappHint}
                       dispatch={dispatch}
                     />
+                  )}
+                  {id === 'experiences' && tripsOnlyNeedsTrip && (
+                    <p role="status" className="mb-4 rounded-xl bg-sand-100 p-3.5 text-sm font-medium text-sea-900">{t('experiencesTripRequired')}</p>
                   )}
                   {id === 'experiences' && <ExperiencesStep state={state} catalog={catalog} locale={locale} dispatch={dispatch} />}
                 </JourneySection>
@@ -274,7 +300,7 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
             <div className="sticky top-24 space-y-4">
               <div className="rounded-3xl border-[1.5px] border-sand-300 bg-white p-5 shadow-sm">
                 <p className="mb-3.5 font-display text-lg font-bold text-sea-900">{t('yourTrip')}</p>
-                <PriceSummary quote={quoteState.quote} refreshing={quoteState.refreshing} errorKey={quoteState.errorKey} locale={locale} />
+                <PriceSummary quote={quoteState.quote} refreshing={quoteState.refreshing} errorKey={quoteState.errorKey} missing={quoteState.missing} locale={locale} />
               </div>
               {whatsappHint && (
                 <a
@@ -296,7 +322,9 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
         summary={
           <button type="button" onClick={() => setSummarySheetOpen(true)} aria-haspopup="dialog" className="min-h-11 text-start">
             <span className="block text-xs font-medium text-ink-subtle">{t('yourTrip')}</span>
-            <span className="block text-sm font-bold text-sea-900">{quoteState.quote ? `${formatAmount(quoteState.quote.total, locale)} ${common('egp')}` : roomsManual ? t('priceConfirmedDirectly') : t('addDates')}</span>
+            <span className="block text-sm font-bold text-sea-900">{quoteState.quote
+                ? `${formatAmount(quoteState.quote.total, locale)} ${common('egp')}`
+                : quoteState.refreshing ? t('recalculating') : roomsManual ? t('priceConfirmedDirectly') : t('addDates')}</span>
             <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-sun-800">{t('viewBreakdown')}<ChevronUp className="h-3.5 w-3.5" aria-hidden /></span>
           </button>
         }
@@ -316,6 +344,8 @@ export function TripBuilder({ catalog, locale, prefill }: Props) {
         quote={quoteState.quote}
         refreshing={quoteState.refreshing}
         errorKey={quoteState.errorKey}
+        missing={quoteState.missing}
+        roomsQuote={quoteState.lastQuote}
       />
     </main>
   )

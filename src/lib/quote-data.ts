@@ -467,6 +467,55 @@ function priceRoomAllocations(args: {
   }
 }
 
+/**
+ * Trips only: a self-arriving customer who books Sinai trips / trip packages
+ * with no accommodation and no WEEMAP transport. Prices exactly the same
+ * experience lines every other booking type adds — nothing else, so there is
+ * no stay, room, meal or transfer component to hide a charge in.
+ */
+export async function computeExperiencesQuote(
+  input: Pick<QuoteInput, 'start_date' | 'num_people' | 'extra_trip_ids' | 'trip_package_ids'>,
+  opts: { source: QuoteDataSource; now?: Date },
+): Promise<QuoteResult> {
+  const computedAt = (opts.now ?? new Date()).toISOString()
+  const numPeople = Math.max(1, Math.floor(input.num_people) || 1)
+  if (!input.extra_trip_ids?.length && !input.trip_package_ids?.length) {
+    return { ok: false, status: 400, error: 'Choose at least one trip or trip package.', code: 'TRIP_REQUIRED' }
+  }
+  const pricedExperiences = await priceSelectedExperiences(input as QuoteInput, opts.source, numPeople, opts.now)
+  if (!pricedExperiences.ok) {
+    return { ok: false, status: 400, error: pricedExperiences.error, ...(pricedExperiences.code ? { code: pricedExperiences.code } : {}) }
+  }
+  const experiences = pricedExperiences.experiences
+  const total = experiences.extraTripsSubtotal + experiences.packagesSubtotal
+  return {
+    ok: true,
+    response: {
+      booking_type: 'experiences-only',
+      num_people: numPeople,
+      per_person: total / numPeople,
+      total,
+      ...experienceResponse(experiences, numPeople, opts.now),
+      computed_at: computedAt,
+    },
+    lines: compact(experienceLines(experiences, numPeople, opts.now)),
+    normalizedSelections: {
+      extraTripIds: experiences.extraTrips.map((trip) => trip.id),
+      tripPackageIds: experiences.selectedPackages.map((pkg) => pkg.id),
+    },
+    numPeople,
+    perPerson: total / numPeople,
+    total,
+    isPriced: total > 0,
+    snapshot: {
+      ...experienceSnapshot(experiences, numPeople, opts.now),
+      num_people: numPeople,
+      total,
+      computed_at: computedAt,
+    },
+  }
+}
+
 export async function computeQuote(
   input: QuoteInput,
   opts: { source: QuoteDataSource; now?: Date },
@@ -883,7 +932,11 @@ export async function computeQuote(
     // Legacy flat package price
     const accommodationPrice = input.duration === 5 ? Number(acc.price_5day) : Number(acc.price_4day)
     const transferQuote = quoteTransfer({ pricing, type: 'package_bus', governorateCode: input.governorate, direction, numPeople })
-    const total = (accommodationPrice + transferQuote.perPerson) * numPeople
+    // Selected trips / trip packages are priced here too: before, this path
+    // silently dropped them from the total AND from normalizedSelections, so
+    // a customer's chosen trips vanished from the submitted request.
+    const legacyExperiences: PricedExperiences = { extraTrips, selectedPackages, extraTripsSubtotal, packagesSubtotal }
+    const total = (accommodationPrice + transferQuote.perPerson) * numPeople + extraTripsSubtotal + packagesSubtotal
     return {
       ok: true,
       response: {
@@ -894,6 +947,7 @@ export async function computeQuote(
         per_person: total / numPeople,
         num_people: numPeople,
         total,
+        ...experienceResponse(legacyExperiences, numPeople),
         computed_at: computedAt,
       },
       lines: compact([
@@ -906,8 +960,12 @@ export async function computeQuote(
           amount: accommodationPrice * numPeople,
         },
         transferLine(transferQuote),
+        ...tripLines(),
       ]),
-      normalizedSelections: { extraTripIds: [], tripPackageIds: [] },
+      normalizedSelections: {
+        extraTripIds: extraTrips.map((trip) => trip.id),
+        tripPackageIds: selectedPackages.map((pkg) => pkg.id),
+      },
       numPeople,
       perPerson: total / numPeople,
       total,
@@ -918,6 +976,7 @@ export async function computeQuote(
         accommodation_subtotal: accommodationPrice * numPeople,
         transfer_rate_used: transferQuote.perPerson,
         transfer_subtotal: transferQuote.total,
+        ...experienceSnapshot(legacyExperiences, numPeople),
         num_people: numPeople,
         total,
         computed_at: computedAt,

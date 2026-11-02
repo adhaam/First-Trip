@@ -84,8 +84,10 @@ const tripRequestJourneyObjectSchema = z.object({
 /** Shared journey-only validation used by quote previews and submissions. */
 export function refineTripRequestJourney(value: z.infer<typeof tripRequestJourneyObjectSchema>, ctx: z.RefinementCtx) {
     if (value.transport_mode === 'stay_only') {
-      if (!value.accommodation_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['accommodation_id'], message: 'Accommodation is required for a stay.' })
+      // Self-arrival: a stay, trips, or both. Trips only (no accommodation)
+      // needs at least one trip or trip package — never an empty request.
+      if (!value.accommodation_id && value.experiences.length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['accommodation_id'], message: 'Choose accommodation or at least one trip.' })
       }
       if (!value.departure_date) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['departure_date'], message: 'Departure date is required for a stay.' })

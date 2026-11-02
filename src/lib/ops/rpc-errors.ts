@@ -37,6 +37,8 @@ const BY_MESSAGE: Record<string, number> = {
   amendment_paid_journey: 409,
   invalid_amendment: 422,
   journey_children_missing: 409,
+  // Migration 052 (trips-only journeys): a converted journey can't switch between trips-only and stay/transport.
+  amendment_changes_journey_shape: 409,
 }
 
 // Function or table not there yet: the code is deployed before migration 036.

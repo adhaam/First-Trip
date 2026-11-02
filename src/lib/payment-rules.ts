@@ -81,6 +81,21 @@ export function paymentKindFor(row: PaymentKind | PaymentKindRow): PaymentKind {
   }
 }
 
+/**
+ * The payment kind of a Build Your Trip journey (a trip_requests row). A
+ * self-arrival journey with no accommodation is trips only: it follows the
+ * standalone Sinai trips policy (100% after confirmation). Every journey with
+ * a stay or WEEMAP transport keeps the 'journey' policy (migration 049).
+ */
+export function journeyPaymentKind(row: { transport_mode?: string | null; accommodation_id?: string | null }): PaymentKind {
+  return isTripsOnlyJourney(row) ? 'trip' : 'journey'
+}
+
+/** Self-arrival (no WEEMAP transport) and no accommodation: only trips / trip packages. */
+export function isTripsOnlyJourney(row: { transport_mode?: string | null; accommodation_id?: string | null }): boolean {
+  return row.transport_mode === 'stay_only' && !row.accommodation_id
+}
+
 export type PaymentPlan = {
   kind: PaymentKind
   rule: 'policy' | 'per_quote'

@@ -39,6 +39,8 @@ export const tripRequestDraftSchema = z
     travellers_confirmed: z.boolean().optional(),
 
     accommodation_id: z.string().uuid().optional(),
+    /** Self-arrival only: the visitor explicitly chose "no accommodation — trips only". */
+    no_accommodation: z.boolean().optional(),
     room_allocations: z.array(roomAllocationSchema).optional(),
     /** True when room_allocations is the customer's own override of the server recommendation. */
     rooms_customized: z.boolean().optional(),

@@ -45,6 +45,7 @@ function useSectionSummaryText(summary: SectionSummary | undefined, locale: 'ar'
       return t('summaryTravelersWithChildren', { adults: formatCount(values.adults, locale), children: formatCount(values.children, locale) })
     }
     case 'summaryTransferOnly': return t('summaryTransferOnly')
+    case 'summaryNoAccommodation': return t('summaryNoAccommodation')
     case 'summaryStay': return summary.values?.stay as string | undefined
     case 'summaryRooms': {
       const values = summary.values as { rooms: number; capacity: number }

@@ -86,8 +86,9 @@ export function travelersSummary(state: BuilderState): SectionSummary {
 /** Section 4 — chosen stay, or the explicit "transfer only" choice. */
 export function staySummary(state: BuilderState, catalog: BuilderCatalog, locale: 'ar' | 'en'): SectionSummary {
   if (!state.accommodation_id) {
+    if (state.transport_mode === 'stay_only') return state.no_accommodation ? { key: 'summaryNoAccommodation' } : null
     // A transport mode must be chosen before "transfer only" is a meaningful recap.
-    return state.transport_mode && state.transport_mode !== 'stay_only' ? { key: 'summaryTransferOnly' } : null
+    return state.transport_mode ? { key: 'summaryTransferOnly' } : null
   }
   const stay = catalog.accommodations.find((item) => item.id === state.accommodation_id)
   if (!stay) return null

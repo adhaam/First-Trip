@@ -825,3 +825,53 @@ test('non-room-priced accommodations are untouched by room recommendation', asyn
   assert.equal(r.total, 800 * 2 * 3)
   assert.equal(r.rooms, undefined)
 })
+
+// ─── Experience & Operations stabilization: trips only + reconciliation ───
+
+test('trips only: prices only the chosen trips and packages — no stay, room, meal or transfer line', async () => {
+  const { computeExperiencesQuote } = await import('./quote-data')
+  const r = ok(await computeExperiencesQuote(
+    { start_date: '2026-10-10', num_people: 2, extra_trip_ids: [T2], trip_package_ids: [P1] },
+    { source: makeSource(), now: NOW },
+  ))
+  assert.equal(r.total, 3600 + 3000)
+  assert.deepEqual(r.lines.map((line) => line.key), ['extra_trips', 'trip_packages'])
+  assert.equal(r.snapshot.accommodation_subtotal, undefined)
+  assert.equal(r.snapshot.transfer_subtotal, undefined)
+  assertSnapshotSumsToTotal(r)
+})
+
+test('trips only: an empty selection is refused rather than priced at zero', async () => {
+  const { computeExperiencesQuote } = await import('./quote-data')
+  const r = await computeExperiencesQuote({ start_date: '2026-10-10', num_people: 2 }, { source: makeSource(), now: NOW })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.equal(r.code, 'TRIP_REQUIRED')
+})
+
+test('package legacy: selected trips and packages are charged and kept, not silently dropped', async () => {
+  const r = ok(await quote({
+    booking_type: 'package', accommodation_id: LEGACY_ACC_ID, duration: 4, governorate: 'cairo',
+    extra_trip_ids: [T1], trip_package_ids: [P1], num_people: 2,
+  }))
+  // (5000 + 400 × 2) × 2 + trip 1000 × 2 + package 1500 × 2
+  assert.equal(r.total, 11600 + 2000 + 3000)
+  assert.deepEqual(r.normalizedSelections, { extraTripIds: [T1], tripPackageIds: [P1] })
+  assertSnapshotSumsToTotal(r)
+})
+
+test('every priced quote reconciles: its displayed lines add up exactly to its total', async () => {
+  const { quoteReconciles } = await import('./trip-builder/quote-state')
+  const inputs: (Partial<QuoteInput> & Pick<QuoteInput, 'booking_type' | 'num_people'>)[] = [
+    { booking_type: 'transfer-only', transfer_type: 'hiace', governorate: 'alexandria', transfer_direction: 'round_trip', extra_trip_ids: [T2], num_people: 3 },
+    { booking_type: 'accommodation-only', accommodation_id: ACC_ID, nights: 3, meal_plan_key: 'breakfast', num_people: 3 },
+    { booking_type: 'accommodation-only', accommodation_id: ACC_ID, nights: 2, room_type: 'single', upgrade_id: U_SEA, num_people: 2 },
+    { booking_type: 'accommodation-only', accommodation_id: LEGACY_ACC_ID, nights: 2, trip_package_ids: [P1], num_people: 2 },
+    { booking_type: 'package', accommodation_id: ACC_ID, duration: 5, nights: 4, transfer_type: 'hiace', governorate: 'cairo', meal_plan_key: 'breakfast', extra_trip_ids: [T2], trip_package_ids: [P1], num_people: 4 },
+    { booking_type: 'package', accommodation_id: ACC_ID, nights: 3, room_type: 'double', upgrade_id: U_SEA, transfer_type: 'package_bus', governorate: 'cairo', num_people: 2 },
+    { booking_type: 'package', accommodation_id: LEGACY_ACC_ID, duration: 4, governorate: 'cairo', extra_trip_ids: [T1], num_people: 2 },
+  ]
+  for (const input of inputs) {
+    const r = ok(await quote(input))
+    assert.ok(quoteReconciles(r), `${input.booking_type} lines must sum to the total (${r.total})`)
+  }
+})

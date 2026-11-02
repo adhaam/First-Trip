@@ -10,6 +10,8 @@ export function sectionStatus(state: BuilderState, catalog: BuilderCatalog): Rec
   const stayOnly = transport === 'stay_only'
   const stay = catalog.accommodations.find((item) => item.id === state.accommodation_id)
   const hasStay = Boolean(state.accommodation_id)
+  const tripsOnly = isTripsOnlyChoice(state)
+  const hasExperiences = (state.experiences?.length ?? 0) > 0
   const people = (state.adults ?? 1) + (state.children ?? 0)
   const roomsAreValid = roomsStillValid(people, state.room_allocations)
 
@@ -26,7 +28,9 @@ export function sectionStatus(state: BuilderState, catalog: BuilderCatalog): Rec
       : { status: 'needs_input', reason: state.travellers_confirmed ? 'adult_required' : 'travellers_confirmation_required' },
     stay: hasStay
       ? stay ? { status: 'complete', reason: 'selected' } : { status: 'needs_input', reason: 'stay_unavailable' }
-      : stayOnly ? { status: 'needs_input', reason: 'stay_required' } : { status: 'optional', reason: 'transfer_only_allowed' },
+      : tripsOnly
+        ? { status: 'complete', reason: 'no_accommodation' }
+        : stayOnly ? { status: 'needs_input', reason: 'stay_required' } : { status: 'optional', reason: 'transfer_only_allowed' },
     rooms: hasStay
       ? roomsAreValid
         ? { status: 'complete', reason: 'selected' }
@@ -34,7 +38,9 @@ export function sectionStatus(state: BuilderState, catalog: BuilderCatalog): Rec
           ? { status: 'needs_input', reason: roomsExceedPeople(people, state.room_allocations) ? 'too_many_rooms' : 'rooms_do_not_fit' }
           : { status: 'optional', reason: 'suggested_at_quote' }
       : { status: 'not_applicable', reason: 'no_stay' },
-    experiences: { status: 'optional', reason: 'optional' },
+    experiences: tripsOnly && !hasExperiences
+      ? { status: 'needs_input', reason: 'trip_required' }
+      : { status: 'optional', reason: 'optional' },
     overview: transport ? { status: 'complete', reason: 'review' } : { status: 'needs_input', reason: 'journey_required' },
     contact: state.contact?.name && state.contact.phone ? { status: 'complete', reason: 'provided' } : { status: 'needs_input', reason: 'contact_required' },
   }
@@ -45,7 +51,9 @@ export function quoteReadiness(state: BuilderState): { ready: boolean; missing: 
   if (!state.transport_mode) missing.push('transport')
   if (state.transport_mode === 'stay_only') {
     if (!hasValidStayRange(state)) missing.push('dates')
-    if (!state.accommodation_id) missing.push('stay')
+    if (isTripsOnlyChoice(state)) {
+      if (!state.experiences?.length) missing.push('experiences')
+    } else if (!state.accommodation_id) missing.push('stay')
   } else {
     if (!state.origin_governorate_code) missing.push('origin')
     if (!state.stay_pattern_code || !state.arrival_date) missing.push('dates')
@@ -97,6 +105,14 @@ export function toSubmitPayload(state: BuilderState, contact: ContactInput, loca
     ...(extras.website ? { website: extras.website } : {}),
     ...(extras.turnstile_token ? { turnstile_token: extras.turnstile_token } : {}),
   }
+}
+
+/**
+ * Self-arrival with "no accommodation — trips only" chosen: no stay, rooms,
+ * meals or transport are priced, only the selected trips / trip packages.
+ */
+export function isTripsOnlyChoice(state: BuilderState): boolean {
+  return state.transport_mode === 'stay_only' && Boolean(state.no_accommodation) && !state.accommodation_id
 }
 
 /** A stay-only range is usable only once check-out is strictly after check-in. */

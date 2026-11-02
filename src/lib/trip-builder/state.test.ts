@@ -147,3 +147,66 @@ test('automatic experience removal is idempotent and never re-adds a covered tri
   assert.deepEqual(once.experiences, [])
   assert.deepEqual(twice.experiences, [])
 })
+
+test('trips only: "no accommodation" removes the stay with its rooms, meal and upgrade; choosing a stay undoes it', () => {
+  let state = builderReducer(initialBuilderState(), { type: 'setMode', mode: 'stay_only', catalog: fixture })
+  state = builderReducer(state, { type: 'setStay', id: ids.stay, catalog: fixture })
+  state = builderReducer(state, { type: 'setMeal', key: 'breakfast' })
+  state = builderReducer(state, { type: 'setRooms', allocations: [{ type: 'double', count: 1 }] })
+  state = builderReducer(state, { type: 'setNoAccommodation' })
+  assert.equal(state.accommodation_id, undefined)
+  assert.equal(state.meal_plan_key, undefined)
+  assert.equal(state.room_allocations, undefined)
+  assert.equal(state.no_accommodation, true)
+  state = builderReducer(state, { type: 'setStay', id: ids.otherStay, catalog: fixture })
+  assert.equal(state.no_accommodation, undefined)
+})
+
+test('trips only choice is dropped when switching to a WEEMAP transport mode', () => {
+  let state = builderReducer(initialBuilderState(), { type: 'setMode', mode: 'stay_only', catalog: fixture })
+  state = builderReducer(state, { type: 'setNoAccommodation' })
+  state = builderReducer(state, { type: 'setMode', mode: 'hiace', catalog: fixture })
+  assert.equal(state.no_accommodation, undefined)
+})
+
+test('Continue confirms the default party without changing it', () => {
+  const state = builderReducer(initialBuilderState(), { type: 'confirmTravelers' })
+  assert.equal(state.adults, 1)
+  assert.equal(state.children, 0)
+  assert.equal(state.travellers_confirmed, true)
+})
+
+test('a reloaded draft never brings back a stay, meal, trip or package the catalogue no longer offers', () => {
+  const draft: BuilderState = {
+    ...initialBuilderState(),
+    transport_mode: 'stay_only',
+    arrival_date: '2026-10-10',
+    departure_date: '2026-10-12',
+    accommodation_id: '00000000-0000-4000-8000-0000000000ff',
+    meal_plan_key: 'breakfast',
+    room_allocations: [{ type: 'double', count: 1 }],
+    rooms_customized: true,
+    experiences: [{ kind: 'trip', id: ids.trip }, { kind: 'trip', id: '00000000-0000-4000-8000-0000000000fe' }, { kind: 'trip_package', id: '00000000-0000-4000-8000-0000000000fd' }],
+  }
+  const state = applyPrefill(draft, {}, fixture)
+  assert.equal(state.accommodation_id, undefined)
+  assert.equal(state.meal_plan_key, undefined)
+  assert.equal(state.room_allocations, undefined)
+  assert.deepEqual(state.experiences, [{ kind: 'trip', id: ids.trip }])
+  assert.equal(state.arrival_date, '2026-10-10')
+})
+
+test('a reloaded draft keeps a still-offered stay with its meal plan and customer rooms', () => {
+  const draft: BuilderState = {
+    ...initialBuilderState(),
+    transport_mode: 'stay_only',
+    accommodation_id: ids.stay,
+    meal_plan_key: 'breakfast',
+    room_allocations: [{ type: 'double', count: 1 }],
+    rooms_customized: true,
+  }
+  const state = applyPrefill(draft, {}, fixture)
+  assert.equal(state.accommodation_id, ids.stay)
+  assert.equal(state.meal_plan_key, 'breakfast')
+  assert.deepEqual(state.room_allocations, [{ type: 'double', count: 1 }])
+})

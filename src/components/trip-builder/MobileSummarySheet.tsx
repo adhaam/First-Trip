@@ -19,6 +19,8 @@ export function MobileSummarySheet({
   quote,
   refreshing,
   errorKey,
+  missing,
+  roomsQuote,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -28,6 +30,9 @@ export function MobileSummarySheet({
   quote: QuoteView | null
   refreshing: boolean
   errorKey: string
+  missing: readonly string[]
+  /** Latest room recommendation (may predate a pending change; checked against the party size). */
+  roomsQuote: QuoteView | null
 }) {
   const t = useTranslations('builder')
   const whatsappHref = catalog.whatsappNumber
@@ -36,7 +41,7 @@ export function MobileSummarySheet({
         catalog,
         locale,
         total: quote?.total,
-        recommendedRooms: recommendedAllocations(quote, (state.adults ?? 1) + (state.children ?? 0)),
+        recommendedRooms: recommendedAllocations(roomsQuote, (state.adults ?? 1) + (state.children ?? 0)),
       }))
     : undefined
 
@@ -48,7 +53,7 @@ export function MobileSummarySheet({
           <OverviewTimeline state={state} catalog={catalog} locale={locale} />
           <div className="border-t border-sand-200 pt-5">
             <p className="mb-3 font-display text-base font-bold text-sea-900">{t('stepPriceTitle')}</p>
-            <PriceSummary quote={quote} refreshing={refreshing} errorKey={errorKey} locale={locale} />
+            <PriceSummary quote={quote} refreshing={refreshing} errorKey={errorKey} missing={missing} locale={locale} />
           </div>
           {whatsappHref && (
             <a
