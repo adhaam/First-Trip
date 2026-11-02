@@ -8,14 +8,15 @@
  * builder refuses with `availability_not_confirmed`.
  *
  * What is required now / later comes from the journey's payment plan:
- *   paymentPlan(journeyPaymentKind(row), agreedTotal, policies)
- * — a trips-only journey is 100% after confirmation, every other journey 50% after
- * confirmation / 50% on arrival — less the amount the ledger has received.
+ *   paymentPlan(agreedJourneyPaymentKind(row), agreedTotal, policies)
+ * — the kind it was quoted with (a journey with accommodation 50% after
+ * confirmation / 50% on arrival; one without accommodation 100% after
+ * confirmation) — less the amount the ledger has received.
  * The journey is the sole commercial owner: its component bookings never get
  * their own documents.
  */
 import {
-  DEFAULT_PAYMENT_POLICIES, journeyPaymentKind, paymentPlan,
+  agreedJourneyPaymentKind, DEFAULT_PAYMENT_POLICIES, paymentPlan,
   type PaymentMethod, type PaymentPolicy,
 } from '@/lib/payment-rules'
 import {
@@ -38,8 +39,8 @@ export type JourneyConfirmationInput = {
   customer_email?: string | null
   /** The current revision number. */
   revision_number: number
-  /** transport_mode / accommodation_id decide the payment kind via journeyPaymentKind. */
-  journey_row: { transport_mode?: string | null; accommodation_id?: string | null }
+  /** The stored payment_plan (else transport_mode / accommodation_id) decides the kind: agreedJourneyPaymentKind. */
+  journey_row: { transport_mode?: string | null; accommodation_id?: string | null; payment_plan?: unknown }
   journey: QuotationJourney
   /** Reconciled to `total` (quotationLines adds an adjustment line for any gap). */
   lines: QuotationLine[]
@@ -71,7 +72,7 @@ export function buildJourneyConfirmation(input: JourneyConfirmationInput): Journ
   const t = (en: string, ar: string) => (locale === 'ar' ? ar : en)
   const contact = resolveContact(input.settings, locale)
   const plan = paymentPlan(
-    journeyPaymentKind(input.journey_row),
+    agreedJourneyPaymentKind(input.journey_row),
     input.total,
     input.policies ?? DEFAULT_PAYMENT_POLICIES,
   )

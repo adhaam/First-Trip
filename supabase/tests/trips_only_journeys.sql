@@ -180,6 +180,39 @@ BEGIN
     RAISE EXCEPTION 'stay journey lost the journey payment kind';
   END IF;
 
+  -- ── 7. Transport without accommodation (founder decision 2026-11-02) ──
+  -- Quoted under the composition rule: kind 'transfer' (100% after confirmation).
+  INSERT INTO trip_requests (
+    transport_mode, origin_governorate_code, stay_pattern_code, arrival_date, departure_date, adults, children,
+    accommodation_id, room_allocations, experiences, quote_snapshot, quoted_total, payment_plan,
+    customer_name, customer_phone)
+  VALUES (
+    'hiace', 'cairo', NULL, '2026-10-10', '2026-10-12', 2, 0, NULL, '[]'::jsonb,
+    jsonb_build_array(jsonb_build_object('kind', 'trip', 'id', trip1)),
+    jsonb_build_object('total', 3200, 'transfer_subtotal', 1400, 'num_people', 2,
+      'extra_trips', jsonb_build_array(jsonb_build_object('trip_id', trip1, 'name_en', 'x', 'price', 900))),
+    3200, '{"kind": "transfer", "upfrontPercent": 100}'::jsonb, 'Transport Synthetic', '01000000056')
+  RETURNING id INTO bad;
+  UPDATE trip_requests SET status = 'checking_availability' WHERE id = bad;
+  UPDATE trip_requests SET status = 'awaiting_payment' WHERE id = bad;
+  PERFORM weemap_convert_trip_request(bad);
+  IF (SELECT payment_kind FROM ops_work_items WHERE entity_type = 'trip_request' AND entity_id = bad) <> 'transfer' THEN
+    RAISE EXCEPTION 'transport + trips without accommodation is not 100%% (transfer)';
+  END IF;
+  SELECT count(*) INTO n FROM bookings WHERE trip_request_id = bad AND booking_type = 'transfer-only';
+  IF n <> 1 THEN RAISE EXCEPTION 'transport journey: expected 1 transfer-only child, got %', n; END IF;
+
+  -- Quoted before the rule (stored 'journey' plan): its agreed 50/50 terms are preserved.
+  UPDATE trip_requests SET payment_plan = '{"kind": "journey", "upfrontPercent": 50}'::jsonb WHERE id = bad;
+  IF (SELECT payment_kind FROM ops_work_items WHERE entity_type = 'trip_request' AND entity_id = bad) <> 'journey' THEN
+    RAISE EXCEPTION 'previously agreed journey terms were not preserved';
+  END IF;
+  -- No stored plan at all: the composition decides.
+  UPDATE trip_requests SET payment_plan = NULL WHERE id = bad;
+  IF (SELECT payment_kind FROM ops_work_items WHERE entity_type = 'trip_request' AND entity_id = bad) <> 'transfer' THEN
+    RAISE EXCEPTION 'composition fallback did not give transfer';
+  END IF;
+
   RAISE NOTICE 'trips_only_journeys: all checks passed';
 END
 $$;

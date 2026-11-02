@@ -4,7 +4,7 @@ import { requireStaff } from '@/lib/admin-auth'
 import { getSiteSettings } from '@/lib/data'
 import { loadJourneyDocumentFacts } from '@/lib/documents/journey.server'
 import { documentHtmlResponse, documentJson } from '@/lib/documents/response'
-import { journeyPaymentKind, paymentPlan } from '@/lib/payment-rules'
+import { agreedJourneyPaymentKind, paymentPlan } from '@/lib/payment-rules'
 import { getPaymentRules } from '@/lib/payment-rules-load'
 import { generateQuotationHTML } from '@/lib/quotation-document'
 import { getSupabaseAdmin } from '@/lib/supabase'
@@ -65,10 +65,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     getPaymentRules(),
   ])
 
-  // The current revision shows today's payment terms for its journey kind (trips-only journeys
-  // are 100% after confirmation); a superseded revision keeps the terms it was issued with.
+  // The current revision shows the payment terms it was quoted with (its stored plan's kind — a
+  // journey without accommodation is 100% after confirmation) at today's policy percentages; a
+  // superseded revision keeps the terms it was issued with.
   const payment_plan = view.is_current
-    ? paymentPlan(journeyPaymentKind(journeyFields), total, rules.policies)
+    ? paymentPlan(agreedJourneyPaymentKind({ ...journeyFields, payment_plan: view.payment_plan }), total, rules.policies)
     : view.payment_plan
 
   const html = generateQuotationHTML({

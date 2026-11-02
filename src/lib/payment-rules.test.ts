@@ -124,3 +124,37 @@ test('invalid totals are rejected', () => {
   assert.throws(() => paymentPlan('trip', -1))
   assert.throws(() => paymentPlan('trip', Number.NaN))
 })
+
+test('journey payment kind follows the commercial composition (founder decision 2026-11-02)', async () => {
+  const { journeyPaymentKind, paymentPlan } = await import('./payment-rules')
+  const acc = '00000000-0000-4000-8000-000000000001'
+  // Any accommodation: 50% after confirmation, 50% on arrival.
+  assert.equal(journeyPaymentKind({ transport_mode: 'stay_only', accommodation_id: acc }), 'journey')
+  assert.equal(journeyPaymentKind({ transport_mode: 'hiace', accommodation_id: acc }), 'journey')
+  assert.equal(journeyPaymentKind({ transport_mode: 'package_bus', accommodation_id: acc }), 'journey')
+  // No accommodation: 100% after confirmation, whatever else is in it.
+  assert.equal(journeyPaymentKind({ transport_mode: 'stay_only', accommodation_id: null }), 'trip')
+  assert.equal(journeyPaymentKind({ transport_mode: 'hiace', accommodation_id: null }), 'transfer')
+  assert.equal(journeyPaymentKind({ transport_mode: 'package_bus' }), 'transfer')
+  for (const kind of ['trip', 'transfer'] as const) {
+    const plan = paymentPlan(kind, 4800)
+    assert.equal(plan.upfrontAmount, 4800)
+    assert.equal(plan.balanceAmount, 0)
+  }
+  const stay = paymentPlan('journey', 4800)
+  assert.equal(stay.upfrontAmount, 2400)
+  assert.equal(stay.balanceDue, 'on_arrival')
+})
+
+test('a journey keeps the payment kind it was quoted with; legacy per-parts plans keep journey terms', async () => {
+  const { agreedJourneyPaymentKind } = await import('./payment-rules')
+  // Transport-only journey quoted before the rule (stored 'journey' plan): unchanged.
+  assert.equal(agreedJourneyPaymentKind({ transport_mode: 'hiace', accommodation_id: null, payment_plan: { kind: 'journey' } }), 'journey')
+  // Quoted under the rule.
+  assert.equal(agreedJourneyPaymentKind({ transport_mode: 'hiace', accommodation_id: null, payment_plan: { kind: 'transfer' } }), 'transfer')
+  // Pre-049 per-parts plan.
+  assert.equal(agreedJourneyPaymentKind({ transport_mode: 'hiace', accommodation_id: null, payment_plan: { kind: 'combined' } }), 'journey')
+  // No stored plan: composition.
+  assert.equal(agreedJourneyPaymentKind({ transport_mode: 'stay_only', accommodation_id: null, payment_plan: null }), 'trip')
+  assert.equal(agreedJourneyPaymentKind({ transport_mode: 'hiace', accommodation_id: null }), 'transfer')
+})

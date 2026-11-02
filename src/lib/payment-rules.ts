@@ -81,14 +81,40 @@ export function paymentKindFor(row: PaymentKind | PaymentKindRow): PaymentKind {
   }
 }
 
+type JourneyComposition = { transport_mode?: string | null; accommodation_id?: string | null }
+
+/** Payment kinds a journey can be quoted with; anything else stored is a pre-049 per-parts plan. */
+const JOURNEY_PLAN_KINDS: readonly PaymentKind[] = ['journey', 'trip', 'transfer']
+
 /**
- * The payment kind of a Build Your Trip journey (a trip_requests row). A
- * self-arrival journey with no accommodation is trips only: it follows the
- * standalone Sinai trips policy (100% after confirmation). Every journey with
- * a stay or WEEMAP transport keeps the 'journey' policy (migration 049).
+ * The payment kind a Build Your Trip journey (a trip_requests row) is priced
+ * with, from its actual commercial composition (founder decision 2026-11-02):
+ *   - any accommodation           → 'journey'  (50% after confirmation, 50% on arrival)
+ *   - trips / packages only       → 'trip'     (100% after confirmation)
+ *   - transport, with or without
+ *     trips, no accommodation     → 'transfer' (100% after confirmation)
+ * Never from the mere fact that the request came through Build Your Trip.
  */
-export function journeyPaymentKind(row: { transport_mode?: string | null; accommodation_id?: string | null }): PaymentKind {
-  return isTripsOnlyJourney(row) ? 'trip' : 'journey'
+export function journeyPaymentKind(row: JourneyComposition): PaymentKind {
+  if (row.accommodation_id) return 'journey'
+  return row.transport_mode && row.transport_mode !== 'stay_only' ? 'transfer' : 'trip'
+}
+
+/**
+ * The payment kind a journey was actually quoted with at its current revision
+ * (trip_requests.payment_plan.kind), so terms already agreed with a customer
+ * never change under them; a new quote or an amendment writes a fresh plan
+ * from journeyPaymentKind. A stored pre-049 per-parts plan keeps the 'journey'
+ * terms every converted journey has had since 049; no stored plan at all
+ * falls back to the composition. Mirrored by ops_work_items (migration 052).
+ */
+export function agreedJourneyPaymentKind(row: JourneyComposition & { payment_plan?: unknown }): PaymentKind {
+  const plan = row.payment_plan
+  if (plan && typeof plan === 'object') {
+    const kind = (plan as { kind?: unknown }).kind
+    return typeof kind === 'string' && JOURNEY_PLAN_KINDS.includes(kind as PaymentKind) ? kind as PaymentKind : 'journey'
+  }
+  return journeyPaymentKind(row)
 }
 
 /** Self-arrival (no WEEMAP transport) and no accommodation: only trips / trip packages. */

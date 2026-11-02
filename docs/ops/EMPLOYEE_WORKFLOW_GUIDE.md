@@ -36,10 +36,12 @@ A **Build Your Trip** request becomes a **journey** (reference starting **WR-…
 
 | Request type | After confirmation | Later |
 |---|---|---|
-| Trips-only (no hotel, no transport) | **100%** | nothing |
-| Stay-based journey (hotel, with or without transport/trips) | **50%** | **50% on arrival** |
-| Build Your Trip journey with WEEMAP transport but no hotel | **50%** | **50% on arrival** (current journey rule — awaiting the owner's confirmation) |
-| Standalone transfer booking (not a Build Your Trip journey) | **100%** | nothing |
+| Anything that includes accommodation | **50%** | **50% on arrival** |
+| Trips / packages only (no hotel, no transport) | **100%** | nothing |
+| Transport only (no hotel) | **100%** | nothing |
+| Transport + trips / packages (no hotel) | **100%** | nothing |
+
+What decides it is what the customer is actually buying, not which form they used. A journey keeps the terms it was quoted with; if you revise it, the new quote follows these rules.
 
 The item screen shows "Due now" and "Due later" — use those numbers, do not calculate by hand. A trips-only journey shows "Self-arrival (customer arranges own travel)" and "No accommodation — customer has their own stay"; there are no room or meal details, and that is correct.
 
@@ -67,6 +69,6 @@ Pick the right document for the moment. The system only offers what makes sense 
 - Cancelling an item that has money recorded without handling the refund (it shows as "Refund due" — do not ignore it).
 - Creating a second request instead of revising the existing one when the customer changes dates.
 - Using the old Bookings list to change status without reading the confirmation dialog.
-- Quoting the 50/50 split for a trips-only request or a standalone transfer (those are 100%).
+- Quoting the 50/50 split for anything without a hotel (trips only, transport only, or transport + trips are all 100%).
 - Trying to add a hotel to a confirmed trips-only journey by revision — the system refuses; cancel it and create a new request.
 - Leaving "Checking availability" untouched — the customer is waiting.

@@ -27,19 +27,26 @@
 --       - trips-only: NO bookings row is inserted; trip_bookings children
 --         are created exactly as before; converted_at / agreed_total are set.
 --   * ops_work_items (same columns, same order): the trip_request branch
---     treats converted_booking_id OR converted_at as "converted"; a converted
---     trips-only journey has payment_kind 'trip' (the approved standalone
---     Sinai trips policy: 100% after availability confirmation) instead of
---     'journey' (50% after confirmation / 50% on arrival). The parent
---     trip_request stays the only payment owner either way.
+--     treats converted_booking_id OR converted_at as "converted", and a
+--     converted journey's payment_kind is the kind it was QUOTED with at its
+--     current revision (payment_plan->>'kind' when 'journey' / 'trip' /
+--     'transfer'), so terms already agreed with a customer never change under
+--     them. A stored pre-049 per-parts plan keeps 'journey' (unchanged since
+--     049); no stored plan falls back to the composition rule the app now
+--     prices with (founder decision 2026-11-02, journeyPaymentKind):
+--     accommodation → 'journey' (50% after confirmation / 50% on arrival);
+--     no accommodation, no WEEMAP transport → 'trip' (100%); WEEMAP transport
+--     with or without trips, no accommodation → 'transfer' (100%). The
+--     parent trip_request stays the only payment owner either way.
 --   * weemap_amend_trip_request(): "converted" also honours converted_at;
 --     a converted trips-only journey amends in place (no bookings child to
 --     re-sync); an amendment that would turn a converted trips-only journey
 --     into a stay/transport journey or back raises
 --     'amendment_changes_journey_shape' (staff cancel and re-request).
 --   * No table, column, constraint, policy, payment record or data change.
---     Existing journeys (all have accommodation or transport) behave exactly
---     as before.
+--     Existing converted journeys keep the payment kind they were quoted
+--     with (their stored plan is 'journey'), so their due-now figures do not
+--     move; agreed totals and the ledger are untouched.
 --
 -- Safe to re-run (CREATE OR REPLACE only).
 
@@ -261,7 +268,12 @@ UNION ALL
 SELECT
   'trip_request', tr.id, tr.reference, tr.transport_mode,
   CASE WHEN (tr.converted_booking_id IS NOT NULL OR tr.converted_at IS NOT NULL)
-       THEN CASE WHEN tr.transport_mode = 'stay_only' AND tr.accommodation_id IS NULL THEN 'trip' ELSE 'journey' END
+       THEN CASE
+         WHEN tr.payment_plan ->> 'kind' IN ('journey', 'trip', 'transfer') THEN tr.payment_plan ->> 'kind'
+         WHEN tr.payment_plan IS NOT NULL AND jsonb_typeof(tr.payment_plan) = 'object' THEN 'journey'
+         WHEN tr.accommodation_id IS NOT NULL THEN 'journey'
+         WHEN tr.transport_mode = 'stay_only' THEN 'trip'
+         ELSE 'transfer' END
        ELSE NULL END,
   tr.customer_id, tr.customer_name, tr.customer_phone,
   tr.status,

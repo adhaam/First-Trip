@@ -34,8 +34,8 @@ export async function priceTripRequest(input: TripRequestQuoteInput): Promise<Pr
  * Creates a trip_requests row for the M2 Trip Builder: validates the input,
  * resolves the journey dates against the transport schedule, prices it with
  * the server quote engine, derives the payment plan from the journey's
- * payment kind (journeyPaymentKind: 'journey' 50/50, or 'trip' 100% for a
- * trips-only journey) on the whole quoted total, resolves the
+ * payment kind (journeyPaymentKind: 'journey' 50/50 with accommodation,
+ * otherwise 'trip' / 'transfer' 100%) on the whole quoted total, resolves the
  * customer, and inserts.
  *
  * Domain events / history are written by the DB trigger on insert — never
