@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatAmount, formatDate } from '@/lib/format'
 import type { OpsEntityType } from '@/lib/ops/types'
 import { paymentBlockReason } from '@/lib/ops/documents-view'
+import { computePaymentDue } from '@/lib/documents/payment-due'
 import { RecordPaymentDialog } from '@/components/admin/ops/RecordPaymentDialog'
 import { DocumentViewerDialog } from '@/components/admin/ops/DocumentControls'
 import type { DocLocale, DocumentSpec } from '@/components/admin/ops/documentActions'
@@ -64,6 +65,15 @@ export function PaymentsPanel({
   const [receipt, setReceipt] = useState<DocumentSpec | null>(null)
   const [docLocale, setDocLocale] = useState<DocLocale>(locale === 'en' ? 'en' : 'ar')
   const blockReason = paymentAllowed ? null : paymentBlockReason({ entityType, status: currentStatus, converted })
+  // What is still owed later, after what is due now — the same subtraction the customer documents
+  // make (not the plan's original split, which ignored money already received).
+  const dueLater = expectation?.total != null && expectation.upfront_amount != null
+    ? computePaymentDue({
+      total: expectation.total,
+      amountPaid: expectation.amount_paid,
+      plan: { rule: 'policy', upfrontAmount: expectation.upfront_amount, upfrontPercent: expectation.upfront_percent ?? null, balanceDue: null },
+    }).dueLater
+    : null
 
   return (
     <section className="rounded-lg border bg-white p-4">
@@ -79,7 +89,7 @@ export function PaymentsPanel({
           />
           <Field
             label={expectation.balance_due === 'on_arrival' ? t('dueOnArrival') : t('dueBeforeService')}
-            value={expectation.balance_amount != null ? formatAmount(expectation.balance_amount, locale) : '—'}
+            value={dueLater != null ? formatAmount(dueLater, locale) : '—'}
           />
         </dl>
       )}

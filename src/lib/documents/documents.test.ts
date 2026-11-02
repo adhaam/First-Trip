@@ -342,3 +342,14 @@ test('print CSS is present and rows do not split across pages', () => {
   assert.match(journeyConfirmation, /@media print/)
   assert.match(journeyConfirmation, /break-inside: avoid/)
 })
+
+test('payment panel and documents agree: deposit exceeded → nothing due now, only the rest later (WR-2610-0008 shape)', () => {
+  const due = computePaymentDue({
+    total: 21000,
+    amountPaid: 16000,
+    plan: { rule: 'policy', upfrontAmount: 10500, upfrontPercent: 50, balanceDue: null },
+  })
+  assert.equal(due.dueNow, 0)
+  assert.equal(due.dueLater, 5000)
+  assert.equal(due.remaining, 5000)
+})
