@@ -261,3 +261,12 @@ test('localizedDescription is null when neither language has text (nothing is in
   assert.equal(localizedDescription(acc({ description_ar: '', description_en: '  ' }), true), null)
   assert.equal(localizedDescription({ description_ar: null, description_en: undefined }, false), null)
 })
+
+test('localizedDescription labels text by its script, not its column (Arabic saved in description_en)', () => {
+  // Production data: before the admin form had an Arabic field, Arabic text was saved as description_en.
+  const legacy = acc({ description_ar: '', description_en: 'يقع الفندق في منطقة المشربة بمدينة دهب' })
+  assert.deepEqual(localizedDescription(legacy, true), { text: 'يقع الفندق في منطقة المشربة بمدينة دهب', lang: 'ar' })
+  assert.equal(localizedDescription(legacy, false)?.lang, 'ar')
+  // Mixed text follows its dominant script.
+  assert.equal(localizedDescription(acc({ description_en: 'Near the Blue Hole — بالقرب من البلو هول road', description_ar: '' }), false)?.lang, 'en')
+})

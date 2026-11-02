@@ -46,16 +46,25 @@ export interface LocalizedDescription {
  * is empty (staff often fill only one), falls back to the other language's
  * saved text and says which language it is, so the caller can mark it with
  * lang/dir. Never invents or translates anything - null when both are empty.
+ *
+ * The language comes from the text itself, not the column: before the admin
+ * form had an Arabic field, staff saved Arabic text into description_en, and
+ * labelling that "en" rendered Arabic left-to-right.
  */
 export function localizedDescription(
   acc: { description_ar?: string | null; description_en?: string | null },
   ar: boolean,
 ): LocalizedDescription | null {
-  const own = (ar ? acc.description_ar : acc.description_en)?.trim()
-  if (own) return { text: own, lang: ar ? 'ar' : 'en' }
-  const other = (ar ? acc.description_en : acc.description_ar)?.trim()
-  if (other) return { text: other, lang: ar ? 'en' : 'ar' }
-  return null
+  const text = (ar ? acc.description_ar : acc.description_en)?.trim()
+    || (ar ? acc.description_en : acc.description_ar)?.trim()
+  return text ? { text, lang: scriptLanguage(text) } : null
+}
+
+/** 'ar' when the text is mostly Arabic letters, otherwise 'en'. */
+function scriptLanguage(text: string): 'ar' | 'en' {
+  const arabic = (text.match(/[؀-ۿݐ-ݿ]/g) ?? []).length
+  const latin = (text.match(/[A-Za-z]/g) ?? []).length
+  return arabic > latin ? 'ar' : 'en'
 }
 
 // ─── List filtering & sorting ───
