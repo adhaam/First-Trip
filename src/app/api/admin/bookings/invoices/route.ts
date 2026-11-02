@@ -1,33 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
-import { getSupabaseAdmin } from '@/lib/supabase'
 import { getSiteSettings } from '@/lib/data'
+import { documentJson } from '@/lib/documents/response'
 import { generateInvoiceHTML } from '@/lib/invoice-generator'
 import { buildInvoiceData, type InvoiceSource } from '@/lib/invoice-items'
+import { getPaymentRules } from '@/lib/payment-rules-load'
+import { getSupabaseAdmin } from '@/lib/supabase'
+import { isAvailabilityConfirmedStatus } from '@/lib/trip-requests/amend'
 
-// ─── Invoice generation ───
+// ─── Customer documents for single bookings ───
 //
-// Line items are built from the booking's OWN type and columns, not from a
-// generic fallback. The previous version derived everything from
-// price_snapshot and, when that was absent (every manually-entered booking,
-// because the admin route never built one), emitted a single line labelled
-// "Accommodation" with qty = num_people. A 5-person transfer-only booking
-// therefore printed as an accommodation charge for a hotel it had none of.
+// (The path keeps its historical name; nothing here is an invoice.) Two documents:
+//   'provisional_quotation' (alias 'request')       → Provisional Quotation
+//   'booking_confirmation'  (alias 'confirmation')  → Booking Confirmation & Payment Request,
+//       only once availability is confirmed (awaiting_payment / confirmed / completed).
+// A booking that is a component of a journey (trip_request_id set) never gets a document of its
+// own — the journey is the sole commercial owner, so its documents come from the trip-request
+// routes.
 //
-// Two rules hold here:
-//   1. A booking is described by its booking_type. A transfer-only invoice
-//      never names an accommodation; an accommodation-only one never invents
-//      a transfer.
-//   2. The frozen snapshot is the base truth for the lines; the displayed
-//      total is the booking's live agreed total, and any gap between the two
-//      is an explicit adjustment row. A row with no snapshot gets one honest
-//      line for its stored total. See lib/invoice-items for the details.
+// Line items are built from the booking's OWN type and columns, not from a generic fallback, and
+// the frozen snapshot is the base truth for the lines; the displayed total is the booking's live
+// agreed total with any gap shown as an explicit adjustment row. See lib/invoice-items. What is
+// required now / later comes from the booking's stored payment kind (payment_policies) less the
+// amount the ledger has received — lib/documents/payment-due.
 
-const invoiceRequestSchema = z.object({
+const documentTypeSchema = z.enum(['request', 'confirmation', 'provisional_quotation', 'booking_confirmation'])
+
+const documentRequestSchema = z.object({
   bookingId: z.string().uuid(),
   bookingType: z.enum(['accommodation', 'trip']),
-  type: z.enum(['request', 'confirmation']),
+  type: documentTypeSchema,
   locale: z.enum(['ar', 'en']),
 })
 
@@ -36,19 +39,24 @@ export async function POST(req: NextRequest) {
   if (!gate.ok) return gate.response
 
   const body = await req.json().catch(() => null)
-  const validated = invoiceRequestSchema.safeParse(body)
+  const validated = documentRequestSchema.safeParse(body)
   if (!validated.success) {
-    return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
+    return documentJson({ error: 'Invalid data' }, 400)
   }
-  const { bookingId, bookingType, type, locale } = validated.data
+  const { bookingId, bookingType, locale } = validated.data
+  const type = validated.data.type === 'request' || validated.data.type === 'provisional_quotation'
+    ? 'request' as const
+    : 'confirmation' as const
 
   const supabase = getSupabaseAdmin(gate.staff)
 
   // Only names are embedded from accommodations / sinai_trips / trip_packages
   // — never their price columns. Lines come from the booking's own frozen
   // snapshot (see lib/invoice-items), so a catalogue price change cannot
-  // rewrite an invoice for a booking already made.
+  // rewrite a document for a booking already made.
   let source: InvoiceSource
+  let status: string
+  let tripRequestId: string | null
   if (bookingType === 'accommodation') {
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -57,9 +65,11 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (bookingError || !booking) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      return documentJson({ error: 'Booking not found' }, 404)
     }
     source = { kind: 'accommodation', booking }
+    status = String(booking.status)
+    tripRequestId = booking.trip_request_id ?? null
   } else {
     const { data: tripBooking, error: tripBookingError } = await supabase
       .from('trip_bookings')
@@ -68,29 +78,40 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (tripBookingError || !tripBooking) {
-      return NextResponse.json({ error: 'Trip booking not found' }, { status: 404 })
+      return documentJson({ error: 'Trip booking not found' }, 404)
     }
     source = { kind: 'trip', booking: tripBooking }
+    status = String(tripBooking.status)
+    tripRequestId = tripBooking.trip_request_id ?? null
   }
 
-  const settings = await getSiteSettings()
-  // Pure function of the row: stable invoice number, lines that reconcile to
-  // the total, every dynamic value escaped by the generator.
-  const invoice = buildInvoiceData(source, { type, locale, settings })
-  const invoiceNumber = invoice.invoiceNumber
-  const html = generateInvoiceHTML(invoice)
+  if (tripRequestId) {
+    return documentJson({ error: 'component_of_journey', code: 'component_of_journey' }, 409)
+  }
+  if (type === 'confirmation' && !isAvailabilityConfirmedStatus(status)) {
+    return documentJson({ error: 'availability_not_confirmed', code: 'availability_not_confirmed' }, 409)
+  }
 
-  return NextResponse.json(
-    {
-      success: true,
-      html,
-      invoiceNumber,
-      fileName: `WEEMAP-Invoice-${invoiceNumber}.html`,
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    },
-  )
+  const [settings, rules] = await Promise.all([getSiteSettings(), getPaymentRules()])
+  // Pure function of the row: stable document number, lines that reconcile to the total, every
+  // dynamic value escaped by the generator.
+  const document = buildInvoiceData(source, {
+    type,
+    locale,
+    settings,
+    policies: rules.policies,
+    paymentMethods: rules.methods,
+  })
+  const documentNumber = document.invoiceNumber
+  const html = generateInvoiceHTML(document)
+  const label = type === 'request' ? 'Provisional-Quotation' : 'Booking-Confirmation'
+
+  return documentJson({
+    success: true,
+    html,
+    documentNumber,
+    // Same value, kept for callers written against the old response.
+    invoiceNumber: documentNumber,
+    fileName: `WEEMAP-${label}-${documentNumber}.html`,
+  })
 }

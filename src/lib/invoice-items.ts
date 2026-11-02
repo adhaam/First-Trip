@@ -24,7 +24,12 @@
 //   5. The invoice number is derived from immutable booking data, so the
 //      same booking renders the same number every time.
 
+import { cairoDate } from './documents/format'
 import type { InvoiceAdjustment, InvoiceData, InvoiceDetail } from './invoice-generator'
+import {
+  DEFAULT_PAYMENT_POLICIES, paymentKindFor, paymentPlan,
+  type PaymentKind, type PaymentMethod, type PaymentPlan, type PaymentPolicy,
+} from './payment-rules'
 import type { Booking, PriceSnapshot, SiteSettings, TripBookingPriceSnapshot } from './types'
 
 type InvoiceItem = InvoiceData['items'][number]
@@ -105,11 +110,18 @@ function nightsText(n: number) {
   return { ar: `${n} ${n === 1 ? 'ليلة' : 'ليالي'}`, en: `${n} night${n === 1 ? '' : 's'}` }
 }
 
-function formatDate(value: string | null | undefined, locale: 'ar' | 'en'): string | null {
+/**
+ * A date as YYYY-MM-DD in Africa/Cairo. A bare calendar day (trip_date) is
+ * shown as stored; a timestamp (created_at) is converted to its Cairo day.
+ */
+// The locale parameter is kept so call sites stay unchanged; dates are locale-neutral (YYYY-MM-DD).
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function formatDate(value: string | null | undefined, _locale: 'ar' | 'en'): string | null {
   if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US')
+  return cairoDate(d)
 }
 
 export function lineTotal(item: InvoiceItem): number {
@@ -220,6 +232,11 @@ export function buildInvoiceNumber(
     : '00000000'
   const idPart = String(bookingId).replace(/[^0-9a-zA-Z]/g, '').slice(0, 8).toUpperCase()
   return `${prefix}-${date}-${idPart}-${type === 'request' ? 'REQ' : 'CONF'}`
+}
+
+/** The booking reference staff and customers quote — the same one the operations view shows. */
+export function bookingReference(prefix: 'BK' | 'TB', bookingId: string): string {
+  return `${prefix}-${String(bookingId).replace(/[^0-9a-zA-Z]/g, '').slice(0, 8).toUpperCase()}`
 }
 
 // ─── Accommodation / package / transfer bookings (`bookings` table) ───
@@ -503,6 +520,8 @@ export interface TripBookingRow {
   quoted_price: number | null
   final_price: number | null
   trip_package_id: string | null
+  /** Stored payment classification (migration 030); decides the payment plan. */
+  payment_kind?: PaymentKind | null
   price_snapshot: TripBookingPriceSnapshot | null
   package_snapshot: {
     name_ar?: string
@@ -659,15 +678,37 @@ export type InvoiceSource =
  */
 export function buildInvoiceData(
   source: InvoiceSource,
-  opts: { type: 'request' | 'confirmation'; locale: 'ar' | 'en'; settings: SiteSettings | null },
+  opts: {
+    type: 'request' | 'confirmation'
+    locale: 'ar' | 'en'
+    settings: SiteSettings | null
+    /** payment_policies rows (getPaymentRules); defaults to the migration seed. */
+    policies?: readonly PaymentPolicy[]
+    paymentMethods?: readonly PaymentMethod[]
+    /** The issue moment. Injected so the output is a pure function of its inputs; defaults to now. */
+    now?: Date
+  },
 ): InvoiceData {
   const { type, locale, settings } = opts
+  const issueDate = cairoDate(opts.now ?? new Date())
+  const policies = opts.policies ?? DEFAULT_PAYMENT_POLICIES
+  // The plan is the booking's stored payment kind applied to its agreed total;
+  // a row whose kind cannot be determined falls back to "agreed with the team".
+  const planFor = (row: object, total: number): PaymentPlan | null => {
+    try {
+      return paymentPlan(paymentKindFor(row as Parameters<typeof paymentKindFor>[0]), total, policies)
+    } catch {
+      return null
+    }
+  }
   if (source.kind === 'accommodation') {
     const b = source.booking
     const built = buildAccommodationInvoice(b, locale)
     return {
       type,
       invoiceNumber: buildInvoiceNumber('BK', b.id, b.created_at, type),
+      reference: bookingReference('BK', b.id),
+      issueDate,
       customerName: b.customers?.name || b.customer_name || 'Customer',
       customerPhone: b.customers?.phone || b.customer_phone || '',
       customerEmail: b.customer_email || undefined,
@@ -678,6 +719,8 @@ export function buildInvoiceData(
       adjustments: built.adjustments,
       totalAmount: built.totalAmount,
       amountPaid: Number(b.amount_paid) || 0,
+      paymentPlan: planFor(b, built.totalAmount),
+      paymentMethods: opts.paymentMethods,
       notes: b.notes || undefined,
       locale,
       settings,
@@ -688,6 +731,8 @@ export function buildInvoiceData(
   return {
     type,
     invoiceNumber: buildInvoiceNumber('TB', b.id, b.created_at, type),
+    reference: bookingReference('TB', b.id),
+    issueDate,
     customerName: b.customers?.name || b.customer_name || 'Customer',
     customerPhone: b.customers?.phone || b.customer_phone || '',
     customerEmail: b.customers?.email || undefined,
@@ -700,6 +745,8 @@ export function buildInvoiceData(
     // trip_bookings tracks payments too, so a trip invoice gets the same
     // paid / balance-due rows as an accommodation one.
     amountPaid: Number(b.amount_paid) || 0,
+    paymentPlan: planFor(b, built.totalAmount),
+    paymentMethods: opts.paymentMethods,
     notes: b.notes || undefined,
     locale,
     settings,

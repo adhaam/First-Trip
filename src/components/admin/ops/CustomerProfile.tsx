@@ -11,6 +11,7 @@ import type { Activity, WorkItem } from '@/lib/ops/types'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
 import { WorkItemTable } from '@/components/admin/ops/WorkItemTable'
 import type { PaymentRecord } from '@/components/admin/ops/PaymentsPanel'
+import { ActivityDetail } from '@/components/admin/ops/TodayView'
 
 type CustomerProfileResponse = {
   customer: { id: string; name: string; phone: string; email: string | null; merged_into: string | null }
@@ -70,7 +71,16 @@ export function CustomerProfile({ id }: { id: string }) {
   }
 
   if (!data) return <p className="text-sm text-muted-foreground">{t('notFound')}</p>
-  const { customer, totals } = data
+  const { customer } = data
+  // A journey's components (its stay/trip bookings) are fulfilment, not separate bills: count and
+  // total only the commercial rows so a journey is one item and is never billed twice.
+  const commercial = data.items.filter((item) => !item.journey_component)
+  const totals = {
+    items: commercial.length,
+    open_items: commercial.filter((item) => !['completed', 'cancelled'].includes(item.status)).length,
+    lifetime_paid: data.totals.lifetime_paid,
+    outstanding_now: commercial.reduce((sum, item) => sum + (item.outstanding_now ?? 0), 0),
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -97,7 +107,7 @@ export function CustomerProfile({ id }: { id: string }) {
 
       <section className="rounded-lg border bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">{t('items')}</h2>
-        <WorkItemTable items={data.items} emptyMessage={t('itemsEmpty')} />
+        <WorkItemTable items={data.items} emptyMessage={t('itemsEmpty')} groupComponents />
       </section>
 
       <section className="rounded-lg border bg-white p-4">
@@ -125,7 +135,7 @@ export function CustomerProfile({ id }: { id: string }) {
           <ul className="flex flex-col divide-y">
             {data.activity.map((activity, i) => (
               <li key={i} className="flex items-center justify-between py-2 text-sm">
-                <span className="text-muted-foreground">{activity.reference} · {activity.from_value} → {activity.to_value}</span>
+                <span className="text-muted-foreground">{activity.reference} · <ActivityDetail activity={activity} /></span>
                 <span className="text-xs text-muted-foreground">{formatDate(activity.at, locale)}</span>
               </li>
             ))}

@@ -5,6 +5,7 @@ import { useLocale } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -59,7 +60,7 @@ const STATUS_STYLES: Record<TripBookingStatus, string> = {
 }
 
 const STATUS_LABELS_AR: Record<TripBookingStatus, string> = {
-  new: 'جديد', contacted: 'تم التواصل', checking_availability: 'جار التحقق من التوفر', alternatives_required: 'بدائل مطلوبة', awaiting_payment: 'في انتظار الدفع', confirmed: 'مؤكد', completed: 'مكتمل', cancelled: 'ملغي',
+  new: 'جديد', contacted: 'تم التواصل', checking_availability: 'جارٍ التحقق من التوفر', alternatives_required: 'بدائل مطلوبة', awaiting_payment: 'بانتظار الدفع', confirmed: 'مؤكد', completed: 'مكتمل', cancelled: 'ملغي',
 }
 const STATUS_LABELS_EN: Record<TripBookingStatus, string> = {
   new: 'New', contacted: 'Contacted', checking_availability: 'Checking availability', alternatives_required: 'Alternatives required', awaiting_payment: 'Awaiting payment', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
@@ -85,6 +86,10 @@ export function TripBookingsManager() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  // Cancelled / completed are not undoable from here: ask first. Errors show inline, never alert().
+  const [confirmStatus, setConfirmStatus] = useState<{ id: string; status: TripBookingStatus } | null>(null)
+  const [statusPending, setStatusPending] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   // ─── invoice viewer ───
   const [invoiceOpen, setInvoiceOpen] = useState(false)
@@ -120,7 +125,14 @@ export function TripBookingsManager() {
     load()
   }, [load])
 
+  const requestStatus = (id: string, status: TripBookingStatus) => {
+    if (status === 'cancelled' || status === 'completed') setConfirmStatus({ id, status })
+    else void updateStatus(id, status)
+  }
+
   const updateStatus = async (id: string, status: TripBookingStatus) => {
+    setActionError('')
+    setStatusPending(true)
     try {
       const res = await fetch(`/api/admin/trip-bookings/${id}`, {
         method: 'PATCH',
@@ -129,10 +141,12 @@ export function TripBookingsManager() {
       })
       if (res.status === 401) { window.location.assign(ar ? '/admin' : '/en/admin'); return }
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { window.alert(data.error || (ar ? 'فشل تحديث الحالة' : 'Failed to update status')); return }
+      if (!res.ok) { setActionError(data.error || (ar ? 'فشل تحديث الحالة' : 'Failed to update status')); return }
       setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)))
     } catch {
-      window.alert(ar ? 'فشل تحديث الحالة' : 'Failed to update status')
+      setActionError(ar ? 'فشل تحديث الحالة' : 'Failed to update status')
+    } finally {
+      setStatusPending(false)
     }
   }
 
@@ -379,6 +393,10 @@ export function TripBookingsManager() {
         </Card>
       )}
 
+      {actionError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</p>
+      )}
+
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
@@ -392,7 +410,7 @@ export function TripBookingsManager() {
                 <TableHead>{ar ? 'السعر' : 'Price'}</TableHead>
                 <TableHead>{ar ? 'الحالة' : 'Status'}</TableHead>
                 <TableHead>{ar ? 'الدفع' : 'Payment'}</TableHead>
-                <TableHead>{ar ? 'فاتورة' : 'Invoice'}</TableHead>
+                <TableHead>{ar ? 'المستندات' : 'Documents'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -426,7 +444,7 @@ export function TripBookingsManager() {
                   <TableCell>{b.num_people}</TableCell>
                   <TableCell>{b.final_price ?? b.quoted_price ?? '—'} {ar ? 'ج.م' : 'EGP'}</TableCell>
                   <TableCell>
-                    <Select value={b.status} onValueChange={(v) => v && updateStatus(b.id, v as TripBookingStatus)}>
+                    <Select value={b.status} onValueChange={(v) => v && requestStatus(b.id, v as TripBookingStatus)}>
                       <SelectTrigger className={cn('w-[120px] h-8 text-xs border-0', STATUS_STYLES[b.status])}>
                         <SelectValue />
                       </SelectTrigger>
@@ -459,7 +477,7 @@ export function TripBookingsManager() {
                       className="gap-1.5"
                     >
                       <FileText className="h-4 w-4" />
-                      {ar ? 'فاتورة' : 'Invoice'}
+                      {ar ? 'المستندات' : 'Documents'}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -472,12 +490,45 @@ export function TripBookingsManager() {
         </CardContent>
       </Card>
 
+      <Dialog open={confirmStatus !== null} onOpenChange={(open) => { if (!open) setConfirmStatus(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmStatus?.status === 'cancelled'
+                ? (ar ? 'إلغاء هذا الحجز؟' : 'Cancel this booking?')
+                : (ar ? 'تحديد هذا الحجز كمكتمل؟' : 'Mark this booking complete?')}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmStatus?.status === 'cancelled'
+                ? (ar ? 'لا يمكن التراجع عن هذا من هنا. سيتم تحديد الحجز كملغي.' : 'This cannot be undone from here. The booking will be marked cancelled.')
+                : (ar ? 'سيتم تسجيل أن الخدمة تم تقديمها.' : 'This marks the service as delivered.')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmStatus(null)}>{ar ? 'تراجع' : 'Back'}</Button>
+            <Button
+              variant={confirmStatus?.status === 'cancelled' ? 'destructive' : 'default'}
+              disabled={statusPending}
+              onClick={async () => {
+                if (!confirmStatus) return
+                await updateStatus(confirmStatus.id, confirmStatus.status)
+                setConfirmStatus(null)
+              }}
+            >
+              {statusPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              {ar ? 'تأكيد' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Invoice Viewer */}
       {invoiceBookingId && (
         <InvoiceViewer
           bookingId={invoiceBookingId}
           bookingNumber={invoiceBookingNumber}
           bookingType="trip"
+          status={bookings.find((x) => x.id === invoiceBookingId)?.status}
           locale={locale as 'ar' | 'en'}
           open={invoiceOpen}
           onOpenChange={setInvoiceOpen}

@@ -897,10 +897,12 @@ export function AmendJourneyDialog({ open, onOpenChange, data, updatedAt, onAmen
  * The staff-facing entry point for ItemDetail: loads the amend context (journey + catalog + blocker),
  * renders the button with a visible reason when amending is blocked, and owns the dialog.
  */
-export function AmendJourneyAction({ requestId, status, updatedAt, onAmended, onStale }: {
+export function AmendJourneyAction({ requestId, status, updatedAt, onAmended, onStale, prominent }: {
   requestId: string
   status: string
   updatedAt: string
+  /** Render as the screen's primary action (large, filled) rather than a secondary outline button. */
+  prominent?: boolean
   onAmended: (result: AmendResult) => void
   onStale?: () => void
 }) {
@@ -936,8 +938,8 @@ export function AmendJourneyAction({ requestId, status, updatedAt, onAmended, on
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          size="sm"
-          variant={alternative ? 'default' : 'outline'}
+          size={prominent ? 'touch' : 'sm'}
+          variant={alternative || prominent ? 'default' : 'outline'}
           disabled={loading || error || !data || blocker !== null}
           onClick={() => setOpen(true)}
         >

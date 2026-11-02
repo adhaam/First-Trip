@@ -7,10 +7,9 @@ import {
   quotationLines,
   QUOTATION_DISCLAIMER_AR,
   QUOTATION_DISCLAIMER_EN,
-  QUOTATION_FOOTER_DISCLAIMER_AR,
-  QUOTATION_FOOTER_DISCLAIMER_EN,
   type QuotationInput,
 } from './quotation-document'
+import { NOT_TAX_INVOICE_AR, NOT_TAX_INVOICE_EN } from './documents/format'
 import type { PriceSnapshot } from './types'
 
 const snapshot: PriceSnapshot = {
@@ -101,33 +100,33 @@ function input(overrides: Partial<QuotationInput> = {}): QuotationInput {
 /** Removes the sentences that are allowed to contain the word "invoice". */
 function withoutDisclaimers(html: string): string {
   return [
-    QUOTATION_DISCLAIMER_EN, QUOTATION_DISCLAIMER_AR, QUOTATION_FOOTER_DISCLAIMER_EN, QUOTATION_FOOTER_DISCLAIMER_AR,
+    QUOTATION_DISCLAIMER_EN, QUOTATION_DISCLAIMER_AR, NOT_TAX_INVOICE_EN, NOT_TAX_INVOICE_AR,
   ].reduce((text, sentence) => text.split(sentence).join(''), html)
 }
 
-test('a confirmed, current English quotation has no banners and shows the revision', () => {
+test('a confirmed, current English quotation has no status banners and shows the revision', () => {
   const html = generateQuotationHTML(input())
   assert.match(html, /<html lang="en" dir="ltr">/)
-  assert.match(html, /<h1>Quotation<\/h1>/)
-  assert.match(html, /Revision 2/)
+  assert.match(html, /<div class="doctitle">Quotation<\/div>/)
+  assert.match(html, /Revision: <strong>2<\/strong>/)
   assert.match(html, /WR-2610-0001/)
   assert.equal(html.includes('PROVISIONAL'), false)
   assert.equal(html.includes('SUPERSEDED'), false)
-  assert.ok(html.includes(QUOTATION_FOOTER_DISCLAIMER_EN))
+  assert.ok(html.includes(NOT_TAX_INVOICE_EN))
   assert.equal(isQuotationConfirmed('awaiting_payment', true), true)
 })
 
-test('payment terms, previous total and difference are shown with en-US grouping', () => {
+test('payment terms, previous total and difference are shown with en-US grouping and 2 decimals', () => {
   const html = generateQuotationHTML(input())
   assert.match(html, /50% after confirmation/)
   assert.match(html, /50% on arrival/)
-  assert.match(html, /6,200 EGP/)
-  assert.match(html, /12,400 EGP/)
+  assert.match(html, /6,200\.00 EGP/)
+  assert.match(html, /12,400\.00 EGP/)
   assert.match(html, /Previous total/)
-  assert.match(html, /10,000 EGP/)
-  assert.match(html, /\+2,400 EGP/)
+  assert.match(html, /10,000\.00 EGP/)
+  assert.match(html, /\+2,400\.00 EGP/)
   const lower = generateQuotationHTML(input({ difference: -300, previous_total: 12700 }))
-  assert.match(lower, /-300 EGP/)
+  assert.match(lower, /-300\.00 EGP/)
   const first = generateQuotationHTML(input({ previous_total: null, difference: null, revision_number: 1 }))
   assert.equal(first.includes('Previous total'), false)
 })
@@ -137,7 +136,8 @@ test('a request whose availability is not confirmed is PROVISIONAL', () => {
   for (const status of ['new', 'checking_availability', 'alternatives_required', 'cancelled']) {
     const html = generateQuotationHTML(input({ status, availability_confirmed: false }))
     assert.ok(html.includes(banner), status)
-    assert.equal(html.includes(QUOTATION_FOOTER_DISCLAIMER_EN), false)
+    assert.ok(html.includes('<div class="doctitle">Provisional Quotation</div>'), status)
+    assert.ok(html.includes(NOT_TAX_INVOICE_EN), status)
   }
   // Either signal alone is enough.
   assert.ok(generateQuotationHTML(input({ status: 'checking_availability' })).includes('PROVISIONAL'))
@@ -150,7 +150,7 @@ test('a request whose availability is not confirmed is PROVISIONAL', () => {
 test('a superseded revision says which revision replaced it', () => {
   const html = generateQuotationHTML(input({ revision_number: 1, is_current: false, superseded_by: 2 }))
   assert.ok(html.includes('SUPERSEDED by revision 2'))
-  assert.ok(html.includes('Revision 1'))
+  assert.ok(html.includes('Revision: <strong>1</strong>'))
   const generic = generateQuotationHTML(input({ is_current: false, superseded_by: null }))
   assert.ok(generic.includes('SUPERSEDED by a later revision'))
   const ar = generateQuotationHTML(input({ revision_number: 1, is_current: false, superseded_by: 3, locale: 'ar' }))
@@ -162,18 +162,18 @@ test('the Arabic quotation is right-to-left and uses Arabic copy', () => {
     input({ locale: 'ar', status: 'checking_availability', availability_confirmed: false }),
   )
   assert.match(html, /<html lang="ar" dir="rtl">/)
-  assert.match(html, /<h1>عرض سعر<\/h1>/)
-  assert.ok(html.includes('المراجعة رقم 2'))
+  assert.match(html, /<div class="doctitle">عرض سعر مبدئي<\/div>/)
+  assert.ok(html.includes('المراجعة: <strong>2</strong>'))
   assert.ok(html.includes(
     'مبدئي — رهن تأكيد التوفر من المورد. ليس تأكيدًا للحجز ولا فاتورة ضريبية.',
   ))
   assert.ok(html.includes('مخيم بلو لاجون'))
   assert.ok(html.includes('البلو هول'))
-  assert.ok(html.includes('12,400 ج.م'))
+  assert.ok(html.includes('12,400.00 ج.م'))
   assert.equal(generateQuotationHTML(input()).includes('dir="rtl"'), false)
 })
 
-test('the word invoice appears only inside the not-a-tax-invoice disclaimer', () => {
+test('the word invoice appears only inside the not-a-tax-invoice disclaimers, never in a title', () => {
   const variants = [
     input(),
     input({ locale: 'ar' }),
@@ -185,6 +185,9 @@ test('the word invoice appears only inside the not-a-tax-invoice disclaimer', ()
   for (const variant of variants) {
     const html = generateQuotationHTML(variant)
     assert.ok(/invoice/i.test(html) || /فاتورة/.test(html), 'the disclaimer is always present')
+    const title = (html.match(/<title>([^<]*)<\/title>/) ?? [])[1] ?? ''
+    assert.equal(/invoice|فاتورة/i.test(title), false, 'no title says invoice')
+    assert.ok(html.includes(NOT_TAX_INVOICE_EN) || html.includes(NOT_TAX_INVOICE_AR), 'footer present')
     const rest = withoutDisclaimers(html)
     assert.equal(/invoice/i.test(rest), false, 'English: invoice outside the disclaimer')
     assert.equal(/فاتورة/.test(rest), false, 'Arabic: invoice outside the disclaimer')

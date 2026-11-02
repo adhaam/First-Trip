@@ -52,6 +52,12 @@ export function QueueView() {
   const payment = searchParams.get('payment') || ''
   const from = searchParams.get('from') || ''
   const to = searchParams.get('to') || ''
+  // Set by the Today tiles so the list matches the tile's count: which date column from/to filter,
+  // transfers only, a count scope (journey / trips / transfer_attention) and the Today date picker's day.
+  const dateField = searchParams.get('date_field') === 'end' ? 'end' : ''
+  const transfer = searchParams.get('transfer') === '1' ? '1' : ''
+  const scope = searchParams.get('scope') || ''
+  const asOf = searchParams.get('today') || ''
   const page = Number(searchParams.get('page') || '1')
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
   const debouncedSearch = useDebouncedValue(searchInput, 400)
@@ -86,6 +92,10 @@ export function QueueView() {
       if (payment) params.set('payment', payment)
       if (from) params.set('from', from)
       if (to) params.set('to', to)
+      if (dateField) params.set('date_field', dateField)
+      if (transfer) params.set('transfer', transfer)
+      if (scope) params.set('scope', scope)
+      if (asOf) params.set('today', asOf)
       const q = searchParams.get('q') || ''
       if (q) params.set('q', q)
       const res = await fetchJson(`/api/admin/ops/queue?${params.toString()}`)
@@ -96,14 +106,14 @@ export function QueueView() {
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, type, status, payment, from, to, page, fetchJson, t])
+  }, [view, type, status, payment, from, to, dateField, transfer, scope, asOf, page, fetchJson, t])
 
   useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch
     load()
   }, [load])
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1
-  const hasFilters = !!(type || status || payment || from || to || searchInput)
+  const hasFilters = !!(type || status || payment || from || to || transfer || scope || searchInput)
 
   const clearFilters = () => {
     setSearchInput('')
@@ -124,7 +134,7 @@ export function QueueView() {
             type="button"
             role="tab"
             aria-selected={view === v}
-            onClick={() => setParam({ view: v })}
+            onClick={() => setParam({ view: v, date_field: undefined, transfer: undefined, scope: undefined, today: undefined })}
             className={cn(
               'rounded-full px-3 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange',
               view === v ? 'bg-weemap-orange text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
@@ -157,6 +167,9 @@ export function QueueView() {
               <SelectTrigger id="queue-status" className="mt-1 w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{tFilters('anyStatus')}</SelectItem>
+                {status.includes(',') && (
+                  <SelectItem value={status}>{status.split(',').map((s) => (tStatus.has(s) ? tStatus(s) : s)).join(' / ')}</SelectItem>
+                )}
                 {ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{tStatus(s)}</SelectItem>)}
               </SelectContent>
             </Select>

@@ -27,6 +27,11 @@ export type JourneyQuoteLine = {
 }
 
 export type RequestJourney = {
+  /**
+   * Trips-only journey: no stay and no transport package (transport_mode 'stay_only' with no
+   * accommodation). The customer arranges their own travel and stay; only the trips are ours.
+   */
+  trips_only: boolean
   origin: (Named & { code: string }) | null
   meal_plan: (Named & { key: string }) | null
   experiences: JourneyExperience[]
@@ -95,7 +100,13 @@ export function requestJourney(record: Record<string, unknown>, lookups: Journey
 
   const plan = record.payment_plan ? obj(record.payment_plan) : null
 
+  const accommodationId = typeof record.accommodation_id === 'string' && record.accommodation_id
+  // Only what the request itself says: converted_at / converted_booking_id are never consulted here,
+  // so a converted trips-only journey (converted_at set, no bookings child) reads exactly like before.
+  const trips_only = record.transport_mode === 'stay_only' && !accommodationId
+
   return {
+    trips_only,
     origin: originCode ? { code: originCode, ...(lookups.origins[originCode] ?? fallbackName(originCode)) } : null,
     meal_plan: mealKey
       ? { key: mealKey, name_ar: meal?.label_ar || mealKey, name_en: meal?.label_en || mealKey }

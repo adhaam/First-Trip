@@ -29,3 +29,11 @@ test('a trip_request only takes payment once converted and priced', () => {
   assert.equal(paymentAllowedFor({ ...journey, converted: false }, { agreed_total: 5000 }), false, 'not converted')
   assert.equal(paymentAllowedFor({ ...journey, status: 'new' }, { agreed_total: 5000 }), false, 'wrong status')
 })
+
+test('refunds follow the ledger: money held, any status (a cancelled booking is exactly when one is due)', async () => {
+  const { refundAllowedFor } = await import('./payment-allowed')
+  assert.equal(refundAllowedFor({ journey_component: false, amount_paid: 500 }), true)
+  assert.equal(refundAllowedFor({ journey_component: false, amount_paid: 0 }), false)
+  assert.equal(refundAllowedFor({ journey_component: false, amount_paid: null }), false)
+  assert.equal(refundAllowedFor({ journey_component: true, amount_paid: 500 }), false)
+})

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader2 } from 'lucide-react'
 import type { OpsEntityType } from '@/lib/ops/types'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
+import { localInputToIso, toLocalInputValue } from '@/lib/ops/documents-view'
 
 const METHODS = ['vodafonecash', 'instapay', 'cash', 'card_link', 'bank_transfer', 'other'] as const
 
@@ -30,16 +31,22 @@ export function RecordPaymentDialog({
   const t = useTranslations('ops.payment.dialog')
   const tErr = useTranslations('ops.payment.errors')
   const tCommon = useTranslations('ops.common')
+  const tDoc = useTranslations('documents.payments')
   const fetchJson = useOpsFetch()
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<(typeof METHODS)[number]>('cash')
   const [reference, setReference] = useState('')
   const [note, setNote] = useState('')
-  const [receivedAt, setReceivedAt] = useState(() => new Date().toISOString().slice(0, 16))
+  const [receivedAt, setReceivedAt] = useState(() => toLocalInputValue(new Date()))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [recorded, setRecorded] = useState(false)
+  const closeTimer = useRef<number | null>(null)
 
-  const reset = () => { setAmount(''); setReference(''); setNote(''); setError('') }
+  useEffect(() => () => { if (closeTimer.current !== null) window.clearTimeout(closeTimer.current) }, [])
+
+  // datetime-local holds the browser's local wall time, so the default must be local too (not UTC).
+  const reset = () => { setAmount(''); setReference(''); setNote(''); setError(''); setReceivedAt(toLocalInputValue(new Date())) }
 
   const submit = async () => {
     const numeric = Number(amount)
@@ -58,12 +65,14 @@ export function RecordPaymentDialog({
           expected_amount_paid: currentAmountPaid,
           reference: reference || undefined,
           note: note || undefined,
-          received_at: receivedAt ? new Date(receivedAt).toISOString() : undefined,
+          received_at: localInputToIso(receivedAt),
         }),
       })
       onRecorded(result)
       reset()
-      onOpenChange(false)
+      // Brief confirmation before closing, so the employee sees the payment went through.
+      setRecorded(true)
+      closeTimer.current = window.setTimeout(() => { setRecorded(false); onOpenChange(false) }, 1200)
     } catch (err) {
       const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined
       setError(code && tErr.has(code) ? tErr(code) : tErr('generic'))
@@ -73,13 +82,19 @@ export function RecordPaymentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (!next) reset() }}>
+    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (!next) { reset(); setRecorded(false) } }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{direction === 'received' ? t('titlePayment') : t('titleRefund')}</DialogTitle>
         </DialogHeader>
 
         {error && <p role="alert" className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {recorded && (
+          <p role="status" className="flex items-center gap-2 rounded-md bg-green-50 p-2 text-sm text-green-800">
+            <CheckCircle2 className="h-4 w-4" />
+            {direction === 'received' ? t('success') : tDoc('refundRecorded')}
+          </p>
+        )}
 
         <div className="flex flex-col gap-3">
           <div>
@@ -110,8 +125,8 @@ export function RecordPaymentDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{tCommon('cancel')}</Button>
-          <Button onClick={submit} disabled={submitting}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{recorded ? tCommon('close') : tCommon('cancel')}</Button>
+          <Button onClick={submit} disabled={submitting || recorded}>
             {submitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             {submitting ? t('submitting') : t('submit')}
           </Button>

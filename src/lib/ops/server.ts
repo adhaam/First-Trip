@@ -66,7 +66,9 @@ export async function loadWorkItems(supabase: SupabaseClient, filters: Filters =
   const view = filters.view ?? 'all'
   const derived = view !== 'all'
   let query = baseQuery(supabase, filters)
-  if (filters.status) query = query.eq('status', filters.status)
+  // status may be a comma list (e.g. the "New requests" tile: new,pending,contacted).
+  if (filters.status?.includes(',')) query = query.in('status', filters.status.split(',').map((s) => s.trim()).filter(Boolean))
+  else if (filters.status) query = query.eq('status', filters.status)
   else if (derived) query = query.not('status', 'in', '(completed,cancelled)')
   if (filters.payment) query = query.eq('payment_status', filters.payment)
   if (derived) query = query.limit(1000)

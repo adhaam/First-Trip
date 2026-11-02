@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RotateCcw } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
-import { formatDate } from '@/lib/format'
+import { formatAmount, formatDate } from '@/lib/format'
 import type { Activity, WorkItem } from '@/lib/ops/types'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
 import { WorkItemTable } from '@/components/admin/ops/WorkItemTable'
@@ -73,18 +73,22 @@ export function TodayView() {
   const tiles = useMemo(() => {
     if (!data) return []
     const c = data.counts
+    // Every href carries the picker's day as `today` so date-relative flags (stale, unpaid-close-to-service,
+    // transfer unconfirmed) are evaluated for the same day as the tile count. Arrivals/departures/trips/
+    // transfers use a `scope` so the list applies the same predicate as the count (see todayCounts).
+    const asOf = { today: date }
     return [
-      { key: 'needsAction', value: c.needs_action, href: queueHref('needs_action') },
-      { key: 'newRequests', value: c.new_requests, href: queueHref('needs_action', { status: 'new' }) },
-      { key: 'awaitingAvailability', value: c.awaiting_availability, href: queueHref('needs_action', { status: 'checking_availability' }) },
-      { key: 'alternativesRequired', value: c.alternatives_required, href: queueHref('needs_action', { status: 'alternatives_required' }) },
-      { key: 'awaitingPayment', value: c.awaiting_payment, href: queueHref('awaiting_payment') },
-      { key: 'arrivalsToday', value: c.arrivals_today, href: queueHref('all', { from: date, to: date }) },
-      { key: 'departuresToday', value: c.departures_today, href: queueHref('all', { from: date, to: date }) },
-      { key: 'tripsToday', value: c.trips_today, href: queueHref('all', { type: 'trip_booking', from: date, to: date }) },
-      { key: 'transfersAttention', value: c.transfers_attention, href: queueHref('exceptions', { from: date, to: date }) },
-      { key: 'stale', value: c.stale, href: queueHref('stale') },
-      { key: 'exceptions', value: c.exceptions, href: queueHref('exceptions') },
+      { key: 'needsAction', value: c.needs_action, href: queueHref('needs_action', asOf) },
+      { key: 'newRequests', value: c.new_requests, href: queueHref('needs_action', { ...asOf, status: 'new,pending,contacted' }) },
+      { key: 'awaitingAvailability', value: c.awaiting_availability, href: queueHref('needs_action', { ...asOf, status: 'checking_availability' }) },
+      { key: 'alternativesRequired', value: c.alternatives_required, href: queueHref('needs_action', { ...asOf, status: 'alternatives_required' }) },
+      { key: 'awaitingPayment', value: c.awaiting_payment, href: queueHref('awaiting_payment', asOf) },
+      { key: 'arrivalsToday', value: c.arrivals_today, href: queueHref('all', { ...asOf, scope: 'journey', from: date, to: date, date_field: 'start' }) },
+      { key: 'departuresToday', value: c.departures_today, href: queueHref('all', { ...asOf, scope: 'journey', from: date, to: date, date_field: 'end' }) },
+      { key: 'tripsToday', value: c.trips_today, href: queueHref('all', { ...asOf, scope: 'trips', from: date, to: date, date_field: 'start' }) },
+      { key: 'transfersAttention', value: c.transfers_attention, href: queueHref('exceptions', { ...asOf, scope: 'transfer_attention', transfer: '1' }) },
+      { key: 'stale', value: c.stale, href: queueHref('stale', asOf) },
+      { key: 'exceptions', value: c.exceptions, href: queueHref('exceptions', asOf) },
     ] as const
   }, [data, date])
 
@@ -192,6 +196,28 @@ function Section({ title, children }: { title: string; empty: boolean; emptyLabe
   )
 }
 
+/**
+ * What happened, in words: payment/refund rows carry amount + method (no from/to values); status rows
+ * carry from → to. Shared with the customer profile's activity list.
+ */
+export function ActivityDetail({ activity }: { activity: Activity }) {
+  const locale = useLocale()
+  const t = useTranslations('ops.today')
+  const tMethod = useTranslations('ops.method')
+  const tStatus = useTranslations('ops.status')
+  const tPay = useTranslations('ops.paymentStatus')
+  if (activity.kind === 'payment' || activity.kind === 'refund') {
+    if (activity.amount === undefined) return null
+    const method = activity.method ? (tMethod.has(activity.method) ? tMethod(activity.method) : activity.method) : '—'
+    const values = { amount: formatAmount(activity.amount, locale), method }
+    return <>{activity.kind === 'refund' ? t('refundRecorded', values) : t('paymentRecorded', values)}</>
+  }
+  if (!activity.from_value && !activity.to_value) return null
+  const dict = activity.kind === 'payment_status' ? tPay : tStatus
+  const label = (value: string | null) => (value ? (dict.has(value) ? dict(value) : value) : '—')
+  return <>{label(activity.from_value)} → {label(activity.to_value)}</>
+}
+
 function RecentActivity({ items, locale }: { items: Activity[]; locale: string }) {
   const t = useTranslations('ops.item')
   if (!items.length) return null
@@ -203,7 +229,7 @@ function RecentActivity({ items, locale }: { items: Activity[]; locale: string }
             <span className="font-medium">{activity.actor_name || t('websiteCustomer')}</span>{' '}
             <span className="text-muted-foreground">
               {activity.reference} · {activity.customer_name}
-              {activity.from_value && activity.to_value ? ` · ${activity.from_value} → ${activity.to_value}` : ''}
+              {' · '}<ActivityDetail activity={activity} />
             </span>
           </div>
           <span className="shrink-0 text-xs text-muted-foreground">{formatDate(activity.at, locale)}</span>

@@ -1,30 +1,61 @@
 'use client'
 
 import { useLocale, useTranslations } from 'next-intl'
+import { ArrowRight } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatAmount, formatCount, formatDateShort, formatReference } from '@/lib/format'
 import type { WorkItem } from '@/lib/ops/types'
+import { cn } from '@/lib/utils'
 import { customerHref, workItemHref } from '@/components/admin/ops/nav'
 import {
   AttentionChips, EntityTypeLabel, JourneyBadge, NextActionLabel, PaymentPill, StatusPill, WaitingLabel, useItemTitle,
 } from '@/components/admin/ops/pills'
 
+/**
+ * Parent journeys first, each followed directly by its components (bookings/trip bookings converted
+ * off it), so a customer's list never reads as separate bills. Rows keep their incoming order otherwise.
+ */
+function withComponentsUnderParents(items: WorkItem[]): WorkItem[] {
+  const parents = new Set(items.filter((i) => i.entity_type === 'trip_request').map((i) => i.entity_id))
+  const byParent = new Map<string, WorkItem[]>()
+  for (const item of items) {
+    if (item.journey_component && item.trip_request_id && parents.has(item.trip_request_id)) {
+      byParent.set(item.trip_request_id, [...(byParent.get(item.trip_request_id) ?? []), item])
+    }
+  }
+  const nested = new Set([...byParent.values()].flat())
+  return items.filter((i) => !nested.has(i)).flatMap((i) => [i, ...(byParent.get(i.entity_id) ?? [])])
+}
+
 /** Shared row list for the work queue, today view sections and a customer profile. */
 export function WorkItemTable({
-  items,
+  items: rawItems,
   emptyMessage,
   showType = true,
+  groupComponents = false,
 }: {
   items: WorkItem[]
   emptyMessage: string
   showType?: boolean
+  /** Place journey components directly under their parent journey (customer profile). */
+  groupComponents?: boolean
 }) {
+  const items = groupComponents ? withComponentsUnderParents(rawItems) : rawItems
+  // WR-… reference of each journey on screen, so a component can say which journey manages it.
+  const journeyRef = new Map(rawItems.filter((i) => i.entity_type === 'trip_request').map((i) => [i.entity_id, i.reference]))
+  const parentRefOf = (item: WorkItem) => (item.trip_request_id ? journeyRef.get(item.trip_request_id) : undefined)
   const locale = useLocale()
   const titleOf = useItemTitle()
   const t = useTranslations('ops.queue.columns')
+  const tQueue = useTranslations('ops.queue')
   const tCommon = useTranslations('ops.common')
   const tItem = useTranslations('ops.item')
+
+  const managedOn = (item: WorkItem) => {
+    const ref = parentRefOf(item)
+    return ref ? tQueue('managedOnJourney', { reference: formatReference(ref) }) : tQueue('managedOnJourneyGeneric')
+  }
 
   if (!items.length) {
     return <p className="py-8 text-center text-sm text-muted-foreground">{emptyMessage}</p>
@@ -49,7 +80,7 @@ export function WorkItemTable({
           </TableHeader>
           <TableBody>
             {items.map((item) => (
-              <TableRow key={`${item.entity_type}:${item.entity_id}`} className="relative">
+              <TableRow key={`${item.entity_type}:${item.entity_id}`} className={cn('relative', item.journey_component && 'bg-muted/30')}>
                 <TableCell className="font-medium">
                   <Link
                     href={workItemHref(item.entity_type, item.entity_id)}
@@ -57,6 +88,13 @@ export function WorkItemTable({
                   >
                     {formatReference(item.reference)}
                   </Link>
+                  {item.journey_component && (
+                    <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                      {parentRefOf(item)
+                        ? tQueue('partOfJourneyRef', { reference: formatReference(parentRefOf(item) as string) })
+                        : tItem('partOfJourney')}
+                    </span>
+                  )}
                 </TableCell>
                 {showType && (
                   <TableCell className="text-sm text-muted-foreground">
@@ -110,12 +148,18 @@ export function WorkItemTable({
                   </div>
                 </TableCell>
                 <TableCell className="relative z-10 min-w-[130px] whitespace-normal text-sm">
-                  {item.next_action !== 'none' ? (
+                  {item.journey_component ? (
+                    <span className="text-xs text-muted-foreground">{managedOn(item)}</span>
+                  ) : item.next_action !== 'none' ? (
                     <Link
                       href={workItemHref(item.entity_type, item.entity_id)}
-                      className="font-medium text-sea-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
+                      className="group flex flex-col font-medium text-sea-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
                     >
-                      <NextActionLabel action={item.next_action} />
+                      <span className="text-xs font-normal text-muted-foreground">{tQueue('goToItem')}</span>
+                      <span className="inline-flex items-center gap-1 group-hover:underline">
+                        <NextActionLabel action={item.next_action} />
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0 rtl:rotate-180" aria-hidden />
+                      </span>
                     </Link>
                   ) : (
                     <span className="text-muted-foreground"><NextActionLabel action={item.next_action} /></span>
@@ -133,7 +177,7 @@ export function WorkItemTable({
       {/* Mobile: stacked cards */}
       <ul className="flex flex-col gap-3 md:hidden">
         {items.map((item) => (
-          <li key={`${item.entity_type}:${item.entity_id}`} className="relative rounded-lg border p-3">
+          <li key={`${item.entity_type}:${item.entity_id}`} className={cn('relative rounded-lg border p-3', item.journey_component && 'bg-muted/30')}>
             <Link
               href={workItemHref(item.entity_type, item.entity_id)}
               className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
@@ -155,9 +199,15 @@ export function WorkItemTable({
                 : <PaymentPill paymentStatus={item.payment_status} />}
               <WaitingLabel hours={item.waiting_hours} stale={item.stale} />
             </div>
-            {item.next_action !== 'none' && (
+            {item.journey_component ? (
+              <p className="relative z-10 mt-2 text-xs text-muted-foreground">{managedOn(item)}</p>
+            ) : item.next_action !== 'none' && (
               <p className="relative z-10 mt-2 text-sm font-medium text-sea-900">
-                <NextActionLabel action={item.next_action} />
+                <span className="me-1 text-xs font-normal text-muted-foreground">{tQueue('goToItem')}</span>
+                <span className="inline-flex items-center gap-1">
+                  <NextActionLabel action={item.next_action} />
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 rtl:rotate-180" aria-hidden />
+                </span>
               </p>
             )}
             <div className="relative z-10 mt-1"><AttentionChips codes={item.attention} /></div>

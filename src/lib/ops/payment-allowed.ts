@@ -23,4 +23,13 @@ export function paymentAllowedFor(
   return ['awaiting_payment', 'confirmed', 'completed'].includes(item.status)
 }
 
+/**
+ * Mirrors the refund branch of weemap_record_payment(): a refund needs money held (amount_paid > 0)
+ * and is allowed in ANY status — including cancelled, which is exactly when a refund is due. Journey
+ * components never refund directly (the money is on the parent journey).
+ */
+export function refundAllowedFor(item: Pick<WorkItem, 'journey_component' | 'amount_paid'>): boolean {
+  return !item.journey_component && (item.amount_paid ?? 0) > 0
+}
+
 export type { OpsEntityType }

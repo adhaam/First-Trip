@@ -133,7 +133,9 @@
       "recentActivity": "No recent activity."
     },
     "loadError": "Couldn't load today's overview.",
-    "waitingSince": "Waiting {duration}"
+    "waitingSince": "Waiting {duration}",
+    "paymentRecorded": "Payment recorded — {amount} EGP · {method}",
+    "refundRecorded": "Refund recorded — {amount} EGP · {method}"
   },
   "queue": {
     "title": "Work queue",
@@ -172,6 +174,10 @@
       "source": "Source"
     },
     "empty": "No items match these filters.",
+    "goToItem": "Go to item to:",
+    "managedOnJourney": "Managed on journey {reference}",
+    "managedOnJourneyGeneric": "Managed on its journey",
+    "partOfJourneyRef": "Part of {reference}",
     "loadError": "Couldn't load the work queue.",
     "waiting": {
       "hours": "{count}h",
@@ -184,8 +190,15 @@
   },
   "item": {
     "back": "Back to queue",
-    "customerRequestPanel": "Customer request (current revision — edit with Edit / Revise booking)",
+    "customerRequestPanel": "Customer request (current revision — change it with Revise request)",
     "confirmedBookingsPanel": "Confirmed operational bookings",
+    "relatedFromRequest": "Bookings created from this request",
+    "relatedInJourney": "Other bookings in this journey",
+    "kind": {
+      "tripRequest": "Trip request",
+      "journey": "Journey",
+      "booking": "Booking"
+    },
     "loadError": "Couldn't load this item.",
     "notFound": "This item could not be found.",
     "reference": "Reference",
@@ -218,11 +231,71 @@
     "statusStale": "This item changed while you were looking — reloaded.",
     "statusInvalid": "That change isn't allowed from the current status. Allowed: {allowed}",
     "statusChanged": "Status updated.",
-    "convert": "Convert to bookings",
-    "convertTitle": "Convert this request to operational bookings?",
-    "convertBody": "This creates the stay or transport booking and one trip booking per experience, at the frozen quoted prices. This cannot be undone.",
-    "convertConfirm": "Convert",
-    "converting": "Converting…",
+    "statusComponent": "This booking's status is managed on its journey.",
+    "nextStep": "Next step",
+    "otherActions": "Other actions",
+    "nothingToDo": "Nothing to do right now",
+    "noneReason": {
+      "component": "Payments, documents and revisions are handled on the journey. Use the buttons below only to track this booking with the supplier.",
+      "completed": "This item is completed.",
+      "cancelled": "This item is cancelled.",
+      "reconcile": "Manual financial review is needed — see the warning below.",
+      "waiting": "Waiting on the customer or the service date."
+    },
+    "nextHint": {
+      "start_availability_check": "Check availability with the supplier, then confirm it or ask for alternatives.",
+      "confirm_availability": "Once availability is confirmed, request payment from the customer.",
+      "plan_signature": "Plan the experience with the customer, then move it forward.",
+      "agree_alternative": "Revise the request with an alternative the customer accepts, then request payment.",
+      "convert_to_booking": "Confirm this request as a journey to create its bookings.",
+      "collect_payment": "Record the customer's payment when it arrives.",
+      "mark_completed": "The service date has passed — mark it completed.",
+      "refund_due": "Money is held on a cancelled item — record the refund.",
+      "contact_customer": "Contact the customer to move this forward.",
+      "confirm_order": "Confirm the order with the customer.",
+      "prepare_order": "Prepare the order.",
+      "mark_ready": "Mark the order ready.",
+      "hand_over": "Hand the order over.",
+      "complete_delivery": "Complete the delivery.",
+      "confirm_or_close": "Confirm or close this request.",
+      "reconcile_payments": "Review the payments recorded before journey payments existed.",
+      "none": "No action needed right now."
+    },
+    "primaryAction": {
+      "collect_payment": "Record payment",
+      "refund_due": "Record refund"
+    },
+    "statusAction": {
+      "new": "Mark as new",
+      "pending": "Mark pending",
+      "contacted": "Mark contacted",
+      "checking_availability": "Start availability check",
+      "planning": "Start planning",
+      "alternatives_required": "Ask for alternatives",
+      "awaiting_payment": "Availability confirmed — request payment",
+      "confirmed": "Mark confirmed",
+      "preparing": "Start preparing",
+      "ready": "Mark ready",
+      "out_for_delivery": "Out for delivery",
+      "completed": "Mark completed",
+      "cancelled": "Cancel booking",
+      "reopen": "Reopen",
+      "agreeAlternative": "Alternative agreed — request payment"
+    },
+    "confirmReopen": "Reopen this item?",
+    "confirmReopenBody": "It will move back to “{status}” and become active again.",
+    "confirmAlternative": "Alternative agreed with the customer?",
+    "confirmAlternativeBody": "This confirms availability for the agreed alternative and asks the customer for payment.",
+    "componentBanner": "This booking is part of journey <reference></reference>. Record payments and issue documents on the journey; here you only track this booking with the supplier.",
+    "componentBannerNoLink": "This booking is part of a journey. Record payments and issue documents on the journey; here you only track this booking with the supplier.",
+    "openJourney": "Open the journey",
+    "paymentsOnJourney": "Payments are recorded on the journey after you convert this request.",
+    "convertedTripsOnly": "Journey confirmed — no separate stay booking was needed.",
+    "convert": "Confirm as journey (create bookings)",
+    "convertTitle": "Confirm this request as a journey?",
+    "convertBody": "This turns the request into a journey and creates its bookings — the stay/transport booking (if the request has a stay or WEEMAP transport) and one trip booking per experience — at the frozen quoted prices. Payments are then recorded on the journey. This cannot be undone.",
+    "convertConfirm": "Confirm as journey",
+    "converting": "Creating bookings…",
     "convertedLinks": "Created bookings",
     "alreadyConverted": "This request was already converted.",
     "convertError": "Couldn't convert this request.",
@@ -394,7 +467,7 @@
     "confirm_availability": "Confirm availability",
     "plan_signature": "Plan experience",
     "agree_alternative": "Agree alternative",
-    "convert_to_booking": "Convert to booking",
+    "convert_to_booking": "Confirm as journey (create bookings)",
     "collect_payment": "Collect payment",
     "mark_completed": "Mark completed",
     "refund_due": "Refund due",
@@ -419,7 +492,7 @@
     "accommodation_booking": "Dahab booking",
     "trip_booking": "Sinai trip booking",
     "signature_request": "Earlier experience request",
-    "trip_request": "Trip Builder request",
+    "trip_request": "Trip request",
     "commerce_order": "Commerce order",
     "edition_request": "Experience request"
   },
@@ -443,10 +516,12 @@
   "journey": {
     "frozenNote": "Prices and payment split are the current quote: the customer's submission, or the latest approved revision. Earlier versions stay in Revisions & quotations below.",
     "noOrigin": "No transport (stay only)",
+    "selfArrival": "Self-arrival (customer arranges own travel)",
+    "noStayOwn": "No accommodation — customer has their own stay",
     "transport": {
       "package_bus": "Shared bus",
       "hiace": "Private Hiace",
-      "stay_only": "Stay only"
+      "stay_only": "Self-arrival"
     },
     "stayPattern": "Stay length",
     "travellers": "{adults} adults · {children} children",
@@ -474,16 +549,16 @@
     }
   },
   "amend": {
-    "editBooking": "Edit / Revise booking",
-    "proposeAlternative": "Propose alternative (revise booking)",
+    "editBooking": "Revise request",
+    "proposeAlternative": "Propose alternative (revise request)",
     "alternativesHint": "This journey needs an alternative. Revise it in place — the customer keeps the same reference and nothing is duplicated.",
     "retryLoad": "Retry",
-    "loadFailed": "Couldn't load the booking details for editing.",
+    "loadFailed": "Couldn't load the request details for revising.",
     "blocked": {
       "amendment_paid_journey": "Payments are recorded on this journey. Re-pricing a paid journey needs a staff financial adjustment and can't be done here.",
       "amendment_closed": "Cancelled or completed journeys can't be amended."
     },
-    "success": "Booking revised (revision {n}). The same reference now carries the updated quote.",
+    "success": "Request revised (revision {n}). The same reference now carries the updated quote.",
     "dialogIntro": "{reference} · {customer}. Changes apply to this journey in place — review the new price before confirming.",
     "decrease": "Decrease {label}",
     "increase": "Increase {label}",
@@ -564,13 +639,14 @@
       "needPreview": "Preview the revised quote to see the new total and the difference."
     },
     "reason": {
-      "label": "Why is this booking being revised?",
+      "label": "Why is this request being revised?",
       "placeholder": "e.g. The hotel is full on those dates; moved the customer to another stay.",
       "counter": "{n} / {max}"
     },
     "errors": {
       "generic": "Something went wrong. Please try again.",
       "stale_request": "Someone else changed this journey. Close this window and reload the latest version, then try again.",
+      "amendment_changes_journey_shape": "A confirmed trips-only journey can't gain a stay or transport (or lose them) by revision. Cancel it and create a new request instead.",
       "amendment_paid_journey": "Payments are recorded on this journey. Re-pricing a paid journey needs a staff financial adjustment and can't be done here.",
       "amendment_closed": "Cancelled or completed journeys can't be amended.",
       "invalid_amendment": "These changes can't be applied. Check the dates, rooms and selections and preview again.",

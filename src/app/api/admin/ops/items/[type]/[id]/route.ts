@@ -7,7 +7,7 @@ import { getPaymentRules } from '@/lib/payment-rules-load'
 import { resolveActorNames } from '@/lib/staff'
 import { allowedNextStatuses, type RequestStatus } from '@/lib/request-workflow'
 import { isMissingOpsRelation, loadWorkItemByEntity, loadWorkItemsByTripRequest, loadRequestJourney } from '@/lib/ops/server'
-import { paymentAllowedFor } from '@/lib/ops/payment-allowed'
+import { paymentAllowedFor, refundAllowedFor } from '@/lib/ops/payment-allowed'
 import { OPS_ENTITY_TABLES, type OpsEntityType, type WorkItem } from '@/lib/ops/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 
@@ -170,13 +170,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
     const components = entityType === 'trip_request' ? related.items : []
     const journeyParent = journeyParentResult.data as { id: string, reference: string } | null
 
+    const domain = OPS_ENTITY_TABLES[entityType]!.domain
+    const record = recordResult.data as unknown as Record<string, unknown>
+    // ops_work_items.converted keys off converted_booking_id alone, but a trips-only journey converts
+    // without a bookings row and only carries converted_at. Treat either as converted here.
+    if (entityType === 'trip_request' && !item.converted && record.converted_at) item.converted = true
+
     const payment_expectation = !item.payment_kind || item.amount_total === null
       || (entityType === 'trip_request' && !item.converted)
       ? null
       : buildPaymentExpectation(item, rules.policies)
 
-    const domain = OPS_ENTITY_TABLES[entityType]!.domain
-    const record = recordResult.data as unknown as Record<string, unknown>
+    // A journey component takes no payment here (its money belongs to the parent journey), but it keeps
+    // its own fulfilment status transitions: nothing propagates the journey's status to its bookings.
     const allowed_statuses = allowedNextStatuses(domain, item.status as RequestStatus<typeof domain>, {
       fulfillmentMethod: entityType === 'commerce_order' ? (record.fulfillment_method as string) : null,
     }).filter((status) => status !== item.status)
@@ -193,9 +199,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       customer: customerResult.data ?? null,
       payment_expectation,
       allowed_statuses,
-      payment_allowed: paymentAllowedFor(item, record),
+      payment_allowed: !item.journey_component && paymentAllowedFor(item, record),
+      refund_allowed: refundAllowedFor(item),
+      // A trips-only journey converts without a bookings row (converted_booking_id stays NULL), so
+      // converted_at is the other half of "already converted".
       can_convert: entityType === 'trip_request'
         && !record.converted_booking_id
+        && !record.converted_at
         && ['awaiting_payment', 'confirmed'].includes(item.status),
       ...(entityType === 'trip_request' ? { components } : {}),
       ...(item.journey_component && journeyParent ? { journey: journeyParent } : {}),

@@ -1,64 +1,59 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Download, X, FileText } from 'lucide-react'
+import { isAvailabilityConfirmed } from '@/lib/ops/documents-view'
+import { DocumentError, downloadHtml, loadDocument, type DocumentSpec } from '@/components/admin/ops/documentActions'
+
+type BookingDocumentType = 'provisional_quotation' | 'booking_confirmation'
 
 interface InvoiceViewerProps {
   bookingId: string
   bookingNumber: string
   bookingType: 'accommodation' | 'trip'
   locale: 'ar' | 'en'
+  /**
+   * The booking's current status. When given, Booking Confirmation is disabled (with the reason shown)
+   * until availability is confirmed; when omitted the server's 409 is shown inline instead.
+   */
+  status?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, open, onOpenChange }: InvoiceViewerProps) {
-  const [loading, setLoading] = useState(false)
-  const [invoiceHtml, setInvoiceHtml] = useState<string | null>(null)
-  const [invoiceType, setInvoiceType] = useState<'request' | 'confirmation'>('request')
+/** Customer documents for a single booking (the component keeps its legacy file name). */
+export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, status, open, onOpenChange }: InvoiceViewerProps) {
+  const t = useTranslations('documents')
+  const tErr = useTranslations('documents.errors')
+  const tCommon = useTranslations('ops.common')
+  const [loading, setLoading] = useState<BookingDocumentType | null>(null)
+  const [documentHtml, setDocumentHtml] = useState<string | null>(null)
+  const [filename, setFilename] = useState('')
+  const [error, setError] = useState('')
   const previewFrameRef = useRef<HTMLIFrameElement>(null)
-  const ar = locale === 'ar'
 
-  const generateInvoice = async (type: 'request' | 'confirmation') => {
-    setLoading(true)
+  const confirmationLocked = status !== undefined && !isAvailabilityConfirmed(status)
+
+  const generate = async (type: BookingDocumentType) => {
+    setLoading(type)
+    setError('')
+    const spec: DocumentSpec = { kind: 'booking', bookingId, bookingType, type, reference: bookingNumber }
     try {
-      const res = await fetch('/api/admin/bookings/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId,
-          bookingType,
-          type,
-          locale,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to generate invoice')
-      setInvoiceHtml(data.html)
-      setInvoiceType(type)
-    } catch (e) {
-      alert((e as Error).message)
+      const doc = await loadDocument(spec, locale)
+      setDocumentHtml(doc.html)
+      setFilename(doc.filename)
+    } catch (err) {
+      const code = err instanceof DocumentError ? err.code : null
+      setError(code && tErr.has(code) ? tErr(code) : tErr('generic'))
     } finally {
-      setLoading(false)
+      setLoading(null)
     }
   }
 
-  const downloadInvoice = () => {
-    if (!invoiceHtml) return
-    const blob = new Blob([invoiceHtml], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `WEEMAP-Invoice-${bookingNumber}-${invoiceType}.html`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  const printInvoice = () => {
+  const printDocument = () => {
     previewFrameRef.current?.contentWindow?.print()
   }
 
@@ -67,80 +62,69 @@ export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, o
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          {ar ? 'مولد الفواتير' : 'Invoice Generator'}
+          {t('title')}
         </DialogTitle>
 
-        {!invoiceHtml ? (
+        {!documentHtml ? (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              {ar
-                ? 'اختر نوع الفاتورة التي تريد إنشاءها:'
-                : 'Choose the type of invoice you want to generate:'}
-            </p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="text-sm text-gray-600">{t('chooseDocument')}</p>
+            {error && <p role="alert" className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Button
-                onClick={() => generateInvoice('request')}
-                disabled={loading}
-                className="h-24 flex-col items-center justify-center gap-2"
+                onClick={() => generate('provisional_quotation')}
+                disabled={loading !== null}
+                className="h-auto min-h-24 flex-col items-center justify-center gap-2 whitespace-normal py-3 text-center"
               >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span className="text-xs font-semibold">
-                  {ar ? 'فاتورة الطلب' : 'Request Invoice'}
-                </span>
-                <span className="text-xs text-white/75">
-                  {ar ? 'للطلب الأولي' : 'Initial request'}
-                </span>
+                {loading === 'provisional_quotation' && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span className="text-xs font-semibold">{t('names.provisionalQuotation')}</span>
+                <span className="text-xs font-normal text-white/75">{t('when.provisionalQuotation')}</span>
               </Button>
-              <Button
-                onClick={() => generateInvoice('confirmation')}
-                disabled={loading}
-                className="h-24 flex-col items-center justify-center gap-2 bg-green-600 hover:bg-green-700"
-              >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span className="text-xs font-semibold">
-                  {ar ? 'فاتورة التأكيد' : 'Confirmation Invoice'}
-                </span>
-                <span className="text-xs text-white/75">
-                  {ar ? 'للحجز المؤكد' : 'Confirmed booking'}
-                </span>
-              </Button>
+              <div className="flex flex-col gap-1">
+                <Button
+                  onClick={() => generate('booking_confirmation')}
+                  disabled={loading !== null || confirmationLocked}
+                  className="h-auto min-h-24 flex-col items-center justify-center gap-2 whitespace-normal bg-green-600 py-3 text-center hover:bg-green-700"
+                >
+                  {loading === 'booking_confirmation' && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <span className="text-xs font-semibold">{t('names.bookingConfirmation')}</span>
+                  <span className="text-xs font-normal text-white/75">{t('when.bookingConfirmation')}</span>
+                </Button>
+                {confirmationLocked && <p className="text-xs text-amber-800">{t('confirmationLocked')}</p>}
+              </div>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex gap-2 flex-wrap">
               <Button
-                onClick={downloadInvoice}
+                onClick={() => downloadHtml(documentHtml, filename)}
                 variant="outline"
                 size="sm"
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                {ar ? 'تحميل' : 'Download'}
+                {t('download')}
               </Button>
-              <Button
-                onClick={printInvoice}
-                variant="outline"
-                size="sm"
-              >
-                {ar ? 'طباعة' : 'Print'}
+              <Button onClick={printDocument} variant="outline" size="sm">
+                {t('print')}
               </Button>
               <Button
                 onClick={() => {
-                  setInvoiceHtml(null)
-                  setInvoiceType('request')
+                  setDocumentHtml(null)
+                  setFilename('')
+                  setError('')
                 }}
                 variant="outline"
                 size="sm"
               >
-                {ar ? 'فاتورة أخرى' : 'Another invoice'}
+                {t('another')}
               </Button>
             </div>
 
             <iframe
               ref={previewFrameRef}
-              title={ar ? 'معاينة الفاتورة' : 'Invoice preview'}
-              srcDoc={invoiceHtml}
+              title={t('previewTitle')}
+              srcDoc={documentHtml}
               sandbox="allow-same-origin allow-modals"
               className="h-[500px] w-full rounded-lg border border-gray-200 bg-white"
             />
@@ -150,7 +134,7 @@ export function InvoiceViewer({ bookingId, bookingNumber, bookingType, locale, o
         <button
           onClick={() => onOpenChange(false)}
           className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-          aria-label={ar ? 'إغلاق' : 'Close'}
+          aria-label={tCommon('close')}
         >
           <X className="h-4 w-4" />
         </button>

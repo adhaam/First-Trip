@@ -1,25 +1,30 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Loader2, RotateCcw } from 'lucide-react'
+import { ArrowRight, Info, Loader2, RotateCcw } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { formatAmount, formatDate } from '@/lib/format'
 import type { OpsEntityType, WorkItem } from '@/lib/ops/types'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
 import { customerHref, opsItemHref } from '@/components/admin/ops/nav'
-import { EntityTypeLabel, JourneyBadge, NextActionLabel, PaymentPill, StatusPill, useItemTitle } from '@/components/admin/ops/pills'
+import { EntityTypeLabel, JourneyBadge, PaymentPill, StatusPill, useItemTitle } from '@/components/admin/ops/pills'
 import { TripRequestPanel } from '@/components/admin/ops/TripRequestPanel'
 import { PaymentsPanel, type PaymentExpectation, type PaymentRecord } from '@/components/admin/ops/PaymentsPanel'
 import { HistoryTimeline } from '@/components/admin/ops/HistoryTimeline'
 import { AmendJourneyAction, type AmendResult } from '@/components/admin/ops/AmendJourneyDialog'
 import { RevisionsPanel } from '@/components/admin/ops/RevisionsPanel'
+import { DocumentsPanel } from '@/components/admin/ops/DocumentsPanel'
 import { WorkItemTable } from '@/components/admin/ops/WorkItemTable'
+import { resolveItemActions, type StatusAction, type StatusConfirmKind } from '@/lib/ops/primary-action'
+
+/** DOM id the payments panel wrapper carries, so the primary action can scroll to and focus it. */
+const PAYMENTS_PANEL_ID = 'ops-payments-panel'
 
 /** Same display reference the work queue shows (ops_work_items, migration 036). */
 function displayReference(prefix: 'BK' | 'TB', id: string): string {
@@ -37,6 +42,7 @@ type ItemResponse = {
   payment_expectation: PaymentExpectation
   allowed_statuses: string[]
   payment_allowed: boolean
+  refund_allowed?: boolean
   can_convert: boolean
   /** trip_request only: children created by conversion (payment_allowed is always false on these). */
   components?: WorkItem[]
@@ -69,7 +75,7 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [confirmStatus, setConfirmStatus] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<{ status: string; kind: StatusConfirmKind } | null>(null)
   const [statusPending, setStatusPending] = useState(false)
   const [statusError, setStatusError] = useState('')
   const [notes, setNotes] = useState('')
@@ -80,6 +86,8 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
   const [convertResult, setConvertResult] = useState<{ booking_id: string | null; trip_booking_ids: string[] } | null>(null)
   const [revisionsKey, setRevisionsKey] = useState(0)
   const tAmend = useTranslations('ops.amend')
+  const tPayment = useTranslations('ops.payment')
+  const tStatus = useTranslations('ops.status')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -119,6 +127,9 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
       if (code === 'stale_status') {
         setStatusError(t('statusStale'))
         load()
+      } else if (code === 'component_of_journey') {
+        setStatusError(t('statusComponent'))
+        load()
       } else if (code === 'invalid_transition') {
         setStatusError(t('statusInvalid', { allowed: (payload?.allowed || []).join(', ') }))
       } else {
@@ -126,7 +137,7 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
       }
     } finally {
       setStatusPending(false)
-      setConfirmStatus(null)
+      setConfirm(null)
     }
   }
 
@@ -136,9 +147,22 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
     load()
   }
 
-  const requestStatusChange = (status: string) => {
-    if (status === 'cancelled' || status === 'completed') setConfirmStatus(status)
-    else changeStatus(status)
+  const requestStatusChange = (action: StatusAction) => {
+    if (action.confirm) setConfirm({ status: action.status, kind: action.confirm })
+    else changeStatus(action.status)
+  }
+
+  const onPaymentChanged = () => {
+    load()
+    setNotice(tPayment('dialog.success'))
+  }
+
+  const paymentsPanelRef = useRef<HTMLDivElement>(null)
+  const focusPayments = () => {
+    const panel = paymentsPanelRef.current
+    if (!panel) return
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    panel.focus({ preventScroll: true })
   }
 
   const saveNotes = async () => {
@@ -209,20 +233,57 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
   if (!data) return <p className="text-sm text-muted-foreground">{t('notFound')}</p>
 
   const { item } = data
+  // A trips-only journey converts without a bookings row, so converted_booking_id stays NULL.
+  const isConverted = item.converted || Boolean(data.record.converted_at) || Boolean(data.record.converted_booking_id)
+  const isComponent = item.journey_component
+  const paymentsShown = !isComponent && item.next_action !== 'reconcile_payments' && (type !== 'trip_request' || isConverted)
+  const actions = resolveItemActions({
+    entityType: type,
+    status: item.status,
+    nextAction: item.next_action,
+    allowedStatuses: data.allowed_statuses,
+    journeyComponent: isComponent,
+    canConvert: data.can_convert,
+    paymentsVisible: paymentsShown,
+  })
+  const { primary } = actions
+  const updatedAt = typeof data.record.updated_at === 'string' ? data.record.updated_at : item.updated_at
+  const amendControl = (prominent: boolean) => (
+    <AmendJourneyAction
+      requestId={id}
+      status={item.status}
+      updatedAt={updatedAt}
+      onAmended={onAmended}
+      onStale={load}
+      prominent={prominent}
+    />
+  )
+  const hasOtherActions = actions.secondary.length > 0 || actions.amend === 'secondary' || actions.convert === 'secondary'
+  const relatedHeading = isComponent ? t('relatedInJourney') : t('relatedFromRequest')
 
   return (
     <div className="flex flex-col gap-5">
       <div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground"><EntityTypeLabel type={item.entity_type} /></p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {type === 'trip_request'
+                ? t(isConverted ? 'kind.journey' : 'kind.tripRequest')
+                : isComponent ? t('kind.booking') : <EntityTypeLabel type={item.entity_type} />}
+            </p>
             <h1 className="text-xl font-semibold text-gray-900" dir="ltr">{item.reference}</h1>
             <p className="text-sm text-muted-foreground">{titleOf(item)}</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex gap-2"><StatusPill status={item.status} /><PaymentPill paymentStatus={item.payment_status} /></div>
-            {item.next_action !== 'none' && (
-              <p className="text-sm font-medium text-sea-900"><NextActionLabel action={item.next_action} /></p>
+          <div className="flex max-w-sm flex-col items-end gap-1 text-end">
+            <div className="flex items-center gap-2">
+              <StatusPill status={item.status} />
+              {/* A journey booking's own payment columns are frozen; its money is on the journey. */}
+              {isComponent
+                ? <span className="text-xs text-muted-foreground">{t('paidViaJourney')}</span>
+                : <PaymentPill paymentStatus={item.payment_status} />}
+            </div>
+            {!isComponent && (
+              <p className="text-sm text-muted-foreground">{t(`nextHint.${item.next_action}`)}</p>
             )}
           </div>
         </div>
@@ -238,25 +299,41 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
 
       {notice && <p role="status" className="rounded-md bg-green-50 p-2 text-sm text-green-700">{notice}</p>}
 
-      {type === 'trip_request' && <TripRequestPanel record={data.record} />}
-
-      {item.journey_component && data.journey && (
-        <p className="text-sm text-muted-foreground">
-          {t('partOfJourney')}{' '}
-          <Link href={opsItemHref('trip_request', data.journey.id)} className="font-medium text-sea-900 hover:underline" dir="ltr">
-            {data.journey.reference}
-          </Link>
-        </p>
+      {isComponent && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-sea-900/30 bg-sea-50 p-4">
+          <p className="flex min-w-0 flex-1 items-start gap-2 text-sm font-medium text-sea-900">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              {data.journey
+                ? t.rich('componentBanner', {
+                  reference: () => <span dir="ltr" className="font-semibold">{data.journey!.reference}</span>,
+                })
+                : t('componentBannerNoLink')}
+            </span>
+          </p>
+          {data.journey && (
+            <Link
+              href={opsItemHref('trip_request', data.journey.id)}
+              className={buttonVariants({ size: 'touch' })}
+            >
+              {t('openJourney')}
+              <ArrowRight className="ms-1 h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+            </Link>
+          )}
+        </section>
       )}
 
-      {data.related.items.length > 0 && (
+      {type === 'trip_request' && <TripRequestPanel record={data.record} />}
+
+      {/* A converted journey lists its bookings once, in the components panel below — not twice. */}
+      {data.related.items.length > 0 && !(type === 'trip_request' && isConverted && (data.components?.length ?? 0) > 0) && (
         <section className="rounded-lg border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-gray-900">{t('confirmedBookingsPanel')}</h2>
+          <h2 className="mb-3 text-sm font-semibold text-gray-900">{relatedHeading}</h2>
           <WorkItemTable items={data.related.items} emptyMessage={t('noRelatedBookings')} />
         </section>
       )}
 
-      {type === 'trip_request' && item.converted && (data.components?.length ?? 0) > 0 && (
+      {type === 'trip_request' && isConverted && (data.components?.length ?? 0) > 0 && (
         <section className="rounded-lg border bg-white p-4">
           <div className="mb-3 flex items-center gap-2">
             <h2 className="text-sm font-semibold text-gray-900">{t('componentsPanel')}</h2>
@@ -286,58 +363,64 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
         </section>
       )}
 
-      <section className="rounded-lg border bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">{t('statusActions')}</h2>
-        {statusError && <p role="alert" className="mb-2 text-sm text-red-700">{statusError}</p>}
-        {type === 'trip_request' && (
-          <div className="mb-3 border-b pb-3">
-            <AmendJourneyAction
-              requestId={id}
-              status={item.status}
-              updatedAt={typeof data.record.updated_at === 'string' ? data.record.updated_at : item.updated_at}
-              onAmended={onAmended}
-              onStale={load}
-            />
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {data.allowed_statuses.map((status) => (
-            <Button
-              key={status}
-              size="sm"
-              variant={status === 'cancelled' ? 'destructive' : 'outline'}
-              // Darker red keeps the destructive label at WCAG AA contrast on its tinted background.
-              className={status === 'cancelled' ? 'text-red-800' : undefined}
-              disabled={statusPending}
-              onClick={() => requestStatusChange(status)}
-            >
-              <StatusLabel status={status} />
-            </Button>
-          ))}
-          {data.allowed_statuses.length === 0 && <p className="text-sm text-muted-foreground">{tCommon('none')}</p>}
-        </div>
+      {(!isComponent || hasOtherActions) && (
+        <section className="rounded-lg border bg-white p-4" aria-labelledby="ops-item-next-step">
+          <h2 id="ops-item-next-step" className="mb-3 text-sm font-semibold text-gray-900">{t('nextStep')}</h2>
+          {statusError && <p role="alert" className="mb-2 text-sm text-red-700">{statusError}</p>}
 
-        {data.can_convert && (
-          <div className="mt-4 border-t pt-4">
-            {convertError && <p role="alert" className="mb-2 text-sm text-red-700">{convertError}</p>}
-            {convertResult ? (
-              <div className="text-sm">
-                <p className="mb-1 font-medium text-green-700">{t('convertedLinks')}</p>
-                <ul className="flex flex-col gap-1">
-                  {convertResult.booking_id && (
-                    <li><Link href={opsItemHref('accommodation_booking', convertResult.booking_id)} className="text-sea-900 hover:underline" dir="ltr">{displayReference('BK', convertResult.booking_id)}</Link></li>
-                  )}
-                  {convertResult.trip_booking_ids.map((tbId) => (
-                    <li key={tbId}><Link href={opsItemHref('trip_booking', tbId)} className="text-sea-900 hover:underline" dir="ltr">{displayReference('TB', tbId)}</Link></li>
-                  ))}
-                </ul>
+          <div className="flex flex-col gap-2">
+            {primary.kind === 'status' && (
+              <div>
+                <Button size="touch" disabled={statusPending} onClick={() => requestStatusChange(primary.action)}>
+                  {statusPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                  {t(`statusAction.${primary.labelKey}`)}
+                </Button>
               </div>
-            ) : (
-              <ConvertButton converting={converting} onConvert={convert} />
             )}
+            {primary.kind === 'amend' && amendControl(true)}
+            {primary.kind === 'payments' && (
+              <div>
+                <Button size="touch" onClick={focusPayments}>{t(`primaryAction.${primary.labelKey}`)}</Button>
+              </div>
+            )}
+            {primary.kind === 'convert' && (
+              <ConvertControl converting={converting} convertError={convertError} onConvert={convert} prominent />
+            )}
+            {primary.kind === 'none' && (
+              <div>
+                <p className="text-sm font-medium text-gray-900">{t('nothingToDo')}</p>
+                <p className="text-sm text-muted-foreground">{t(`noneReason.${primary.reason}`)}</p>
+              </div>
+            )}
+            {convertResult && <ConvertedLinks result={convertResult} />}
           </div>
-        )}
-      </section>
+
+          {hasOtherActions && (
+            <div className="mt-4 border-t pt-4">
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('otherActions')}</h3>
+              <div className="flex flex-wrap items-start gap-2">
+                {actions.amend === 'secondary' && amendControl(false)}
+                {actions.convert === 'secondary' && (
+                  <ConvertControl converting={converting} convertError={convertError} onConvert={convert} />
+                )}
+                {actions.secondary.map((action) => (
+                  <Button
+                    key={action.status}
+                    size="sm"
+                    variant={action.destructive ? 'destructive' : 'outline'}
+                    // Darker red keeps the destructive label at WCAG AA contrast on its tinted background.
+                    className={action.destructive ? 'text-red-800' : undefined}
+                    disabled={statusPending}
+                    onClick={() => requestStatusChange(action)}
+                  >
+                    {t(`statusAction.${action.labelKey}`)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {item.next_action === 'reconcile_payments' && (
         <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
@@ -345,17 +428,31 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
         </section>
       )}
 
-      {!item.journey_component && item.next_action !== 'reconcile_payments' && (type !== 'trip_request' || item.converted) && (
-        <PaymentsPanel
-          entityType={type}
-          entityId={id}
-          expectation={data.payment_expectation}
-          payments={data.payments}
-          paymentAllowed={data.payment_allowed}
-          currentStatus={item.status}
-          onChanged={load}
-        />
+      {paymentsShown && (
+        <div
+          id={PAYMENTS_PANEL_ID}
+          ref={paymentsPanelRef}
+          tabIndex={-1}
+          className="scroll-mt-4 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sea-900/40"
+        >
+          <PaymentsPanel
+            entityType={type}
+            entityId={id}
+            expectation={data.payment_expectation}
+            payments={data.payments}
+            paymentAllowed={data.payment_allowed}
+            refundAllowed={data.refund_allowed}
+            currentStatus={item.status}
+            converted={item.converted}
+            reference={item.reference}
+            onChanged={onPaymentChanged}
+          />
+        </div>
       )}
+      {type === 'trip_request' && !isConverted && (
+        <p className="rounded-lg border border-dashed bg-white p-4 text-sm text-muted-foreground">{t('paymentsOnJourney')}</p>
+      )}
+      <DocumentsPanel item={item} payments={data.payments} locale={locale} journey={data.journey} />
 
       {type === 'trip_request' && (
         <RevisionsPanel requestId={id} reference={item.reference} refreshKey={revisionsKey} />
@@ -384,18 +481,20 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
         <HistoryTimeline history={data.history} payments={data.payments} audit={data.audit} />
       </section>
 
-      <Dialog open={confirmStatus !== null} onOpenChange={(open) => { if (!open) setConfirmStatus(null) }}>
+      <Dialog open={confirm !== null} onOpenChange={(open) => { if (!open) setConfirm(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{confirmStatus === 'cancelled' ? t('confirmCancel') : t('confirmComplete')}</DialogTitle>
-            <DialogDescription>{confirmStatus === 'cancelled' ? t('confirmCancelBody') : t('confirmCompleteBody')}</DialogDescription>
+            <DialogTitle>{confirm ? t(CONFIRM_COPY[confirm.kind].title) : ''}</DialogTitle>
+            <DialogDescription>
+              {confirm ? t(CONFIRM_COPY[confirm.kind].body, { status: tStatus.has(confirm.status) ? tStatus(confirm.status) : confirm.status }) : ''}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmStatus(null)}>{tCommon('cancel')}</Button>
+            <Button variant="outline" onClick={() => setConfirm(null)}>{tCommon('cancel')}</Button>
             <Button
-              variant={confirmStatus === 'cancelled' ? 'destructive' : 'default'}
+              variant={confirm?.kind === 'cancel' ? 'destructive' : 'default'}
               disabled={statusPending}
-              onClick={() => confirmStatus && changeStatus(confirmStatus)}
+              onClick={() => confirm && changeStatus(confirm.status)}
             >
               {statusPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {tCommon('confirm')}
@@ -407,22 +506,62 @@ export function ItemDetail({ type, id }: { type: OpsEntityType; id: string }) {
   )
 }
 
+/** Dialog wording per confirmation kind (keys under ops.item). */
+const CONFIRM_COPY: Record<StatusConfirmKind, { title: string; body: string }> = {
+  cancel: { title: 'confirmCancel', body: 'confirmCancelBody' },
+  complete: { title: 'confirmComplete', body: 'confirmCompleteBody' },
+  reopen: { title: 'confirmReopen', body: 'confirmReopenBody' },
+  alternative: { title: 'confirmAlternative', body: 'confirmAlternativeBody' },
+}
+
 function ComponentKindLabel({ item }: { item: Pick<WorkItem, 'entity_type' | 'subtype'> }) {
   const t = useTranslations('ops.item.componentKind')
   return <>{t(componentKindKey(item))}</>
 }
 
-function StatusLabel({ status }: { status: string }) {
-  const t = useTranslations('ops.status')
-  return <>{t.has(status) ? t(status) : status}</>
+function ConvertedLinks({ result }: { result: { booking_id: string | null; trip_booking_ids: string[] } }) {
+  const t = useTranslations('ops.item')
+  const hasLinks = Boolean(result.booking_id) || result.trip_booking_ids.length > 0
+  return (
+    <div className="text-sm">
+      <p className="mb-1 font-medium text-green-700">{hasLinks ? t('convertedLinks') : t('convertedTripsOnly')}</p>
+      <ul className="flex flex-col gap-1">
+        {result.booking_id && (
+          <li><Link href={opsItemHref('accommodation_booking', result.booking_id)} className="text-sea-900 hover:underline" dir="ltr">{displayReference('BK', result.booking_id)}</Link></li>
+        )}
+        {result.trip_booking_ids.map((tbId) => (
+          <li key={tbId}><Link href={opsItemHref('trip_booking', tbId)} className="text-sea-900 hover:underline" dir="ltr">{displayReference('TB', tbId)}</Link></li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
-function ConvertButton({ converting, onConvert }: { converting: boolean; onConvert: () => void }) {
+function ConvertControl({ converting, convertError, onConvert, prominent }: {
+  converting: boolean
+  convertError: string
+  onConvert: () => void
+  prominent?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      {convertError && <p role="alert" className="text-sm text-red-700">{convertError}</p>}
+      <ConvertButton converting={converting} onConvert={onConvert} prominent={prominent} />
+    </div>
+  )
+}
+
+function ConvertButton({ converting, onConvert, prominent }: { converting: boolean; onConvert: () => void; prominent?: boolean }) {
   const t = useTranslations('ops.item')
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button onClick={() => setOpen(true)} disabled={converting}>
+      <Button
+        size={prominent ? 'touch' : 'sm'}
+        variant={prominent ? 'default' : 'outline'}
+        onClick={() => setOpen(true)}
+        disabled={converting}
+      >
         {converting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
         {converting ? t('converting') : t('convert')}
       </Button>

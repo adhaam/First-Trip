@@ -1,0 +1,57 @@
+{
+  "title": "Customer documents",
+  "intro": "The documents you can give the customer for this request, in the order you will normally need them.",
+  "language": "Document language",
+  "arabic": "Arabic",
+  "english": "English",
+  "view": "View",
+  "print": "Print",
+  "download": "Download",
+  "receipt": "Receipt",
+  "loading": "Loading document…",
+  "chooseDocument": "Choose the document you want to issue:",
+  "another": "Another document",
+  "previewTitle": "Document preview",
+  "viewerHint": "This is exactly what the customer will receive.",
+  "names": {
+    "provisionalQuotation": "Provisional Quotation",
+    "supersededQuotation": "Superseded quotation",
+    "bookingConfirmation": "Booking Confirmation & Payment Request",
+    "paymentReceipt": "Payment Receipt"
+  },
+  "when": {
+    "provisionalQuotation": "Send this first, before availability is checked. It is only an estimate: it does not reserve anything or guarantee the price.",
+    "bookingConfirmation": "Send this once the supplier has confirmed availability. It confirms the booking and tells the customer how much to pay and when.",
+    "paymentReceipt": "Give the customer one of these each time you record a payment they have made."
+  },
+  "confirmationLocked": "Available once supplier availability is confirmed — move the request to Awaiting payment.",
+  "receipts": {
+    "title": "Payment receipts",
+    "empty": "A receipt becomes available after a payment is recorded."
+  },
+  "componentNote": "Documents for this booking are issued from its journey {reference}.",
+  "componentNoteNoRef": "Documents for this booking are issued from its journey.",
+  "errors": {
+    "availability_not_confirmed": "Availability isn't confirmed yet. Move the request to Awaiting payment first.",
+    "component_of_journey": "This booking is part of a journey — issue its documents from the journey.",
+    "receipt_not_for_refund": "A refund has no receipt.",
+    "not_found": "Document not found.",
+    "generic": "Couldn't load the document. Please try again."
+  },
+  "revisions": {
+    "viewerTitle": "{name} · {reference} · revision {n}"
+  },
+  "payments": {
+    "typeReceived": "Payment received",
+    "typeRefund": "Refund",
+    "receipt": "Receipt",
+    "receiptAria": "Open the receipt for the payment of {amount}",
+    "refundRecorded": "Refund recorded.",
+    "currentStatus": "Current status: {status}.",
+    "blocked": {
+      "convert_first": "Convert this request first — payments can only be recorded once the journey has been converted.",
+      "awaiting_payment_first": "Payments can be recorded once the request is Awaiting payment or Confirmed.",
+      "order_not_confirmed": "Payments can be recorded once the order is confirmed."
+    }
+  }
+}

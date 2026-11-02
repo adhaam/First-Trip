@@ -27,6 +27,9 @@ export function TripRequestPanel({ record }: { record: Record<string, unknown> }
   const pattern = record.stay_patterns as { name_ar?: string; name_en?: string } | null
   const allocations = records(record.room_allocations)
   const transportMode = typeof record.transport_mode === 'string' ? record.transport_mode : null
+  // Trips-only: no stay, no transport package. Never render room/meal rows or a phantom stay for it.
+  const tripsOnly = journey?.trips_only ?? (transportMode === 'stay_only' && !record.accommodation_id)
+  const dateOrDash = (value: unknown) => (typeof value === 'string' && value ? formatDateShort(value, locale) : '—')
   const name = (value: { name_ar?: string; name_en?: string } | null | undefined) =>
     value ? (ar ? value.name_ar || value.name_en : value.name_en || value.name_ar) || '—' : '—'
 
@@ -36,19 +39,20 @@ export function TripRequestPanel({ record }: { record: Record<string, unknown> }
       <p className="mb-3 text-xs text-gray-600">{tj('frozenNote')}</p>
       <div className="grid gap-5 text-sm md:grid-cols-2">
         <div>
-          <Row
-            label={t('origin')}
-            value={journey?.origin ? name(journey.origin) : tj('noOrigin')}
-          />
+          {!tripsOnly && (
+            <Row
+              label={t('origin')}
+              value={journey?.origin ? name(journey.origin) : tj('noOrigin')}
+            />
+          )}
           <Row
             label={t('transportMode')}
-            value={transportMode ? tj(`transport.${transportMode}`) : '—'}
+            value={tripsOnly ? tj('selfArrival') : transportMode ? tj(`transport.${transportMode}`) : '—'}
           />
-          {pattern && <Row label={tj('stayPattern')} value={name(pattern)} />}
+          {pattern && !tripsOnly && <Row label={tj('stayPattern')} value={name(pattern)} />}
           <Row
             label={t('dates')}
-            value={`${formatDateShort(record.arrival_date as string, locale)} → ${
-              formatDateShort(record.departure_date as string, locale)}`}
+            value={`${dateOrDash(record.arrival_date)} → ${dateOrDash(record.departure_date)}`}
           />
           <Row
             label={t('travellers')}
@@ -59,14 +63,14 @@ export function TripRequestPanel({ record }: { record: Record<string, unknown> }
           />
           <Row
             label={t('accommodation')}
-            value={accommodation ? name(accommodation) : t('noAccommodation')}
+            value={accommodation ? name(accommodation) : tripsOnly ? tj('noStayOwn') : t('noAccommodation')}
           />
-          <Row label={t('mealPlan')} value={journey?.meal_plan ? name(journey.meal_plan) : '—'} />
+          {!tripsOnly && <Row label={t('mealPlan')} value={journey?.meal_plan ? name(journey.meal_plan) : '—'} />}
         </div>
 
         <div>
-          <h3 className="mb-1 font-medium text-gray-900">{t('roomAllocations')}</h3>
-          {allocations.length ? (
+          {!tripsOnly && <h3 className="mb-1 font-medium text-gray-900">{t('roomAllocations')}</h3>}
+          {tripsOnly ? null : allocations.length ? (
             <ul className="mb-3 space-y-1 text-gray-600">
               {allocations.map((allocation, i) => (
                 <li key={i}>

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -40,10 +41,10 @@ const STATUS_STYLES: Record<BookingWorkflowStatus, string> = {
 
 const STATUS_LABELS: Record<BookingWorkflowStatus, { ar: string; en: string }> = {
   new: { ar: 'جديد', en: 'New' },
-  pending: { ar: 'معلق', en: 'Pending' },
-  checking_availability: { ar: 'جار التحقق من التوفر', en: 'Checking availability' },
+  pending: { ar: 'معلّق', en: 'Pending' },
+  checking_availability: { ar: 'جارٍ التحقق من التوفر', en: 'Checking availability' },
   alternatives_required: { ar: 'بدائل مطلوبة', en: 'Alternatives required' },
-  awaiting_payment: { ar: 'في انتظار الدفع', en: 'Awaiting payment' },
+  awaiting_payment: { ar: 'بانتظار الدفع', en: 'Awaiting payment' },
   confirmed: { ar: 'مؤكد', en: 'Confirmed' },
   cancelled: { ar: 'ملغي', en: 'Cancelled' },
   completed: { ar: 'مكتمل', en: 'Completed' },
@@ -146,6 +147,9 @@ export function BookingsManager() {
   const [loadError, setLoadError] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  // Cancelled / completed are not undoable from here: ask first. Errors show inline, never alert().
+  const [confirmStatus, setConfirmStatus] = useState<{ id: string; status: BookingWorkflowStatus } | null>(null)
+  const [actionError, setActionError] = useState('')
 
   // ─── filters ───
   const [search, setSearch] = useState('')
@@ -310,12 +314,13 @@ export function BookingsManager() {
 
   const patchBooking = async (id: string, patch: Record<string, unknown>) => {
     setUpdatingId(id)
+    setActionError('')
     try {
       const res = await fetch(`/api/admin/bookings/${id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
       })
       if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return false }
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || (ar ? 'فشل التحديث' : 'Update failed')); return false }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setActionError(d.error || (ar ? 'فشل التحديث' : 'Update failed')); return false }
       setBookings(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b))
       return true
     } finally {
@@ -323,13 +328,19 @@ export function BookingsManager() {
     }
   }
 
-  const updateStatus = (id: string, status: BookingWorkflowStatus) => patchBooking(id, { status })
+  const updateStatus = (id: string, status: BookingWorkflowStatus) => {
+    if (status === 'cancelled' || status === 'completed') {
+      setConfirmStatus({ id, status })
+      return
+    }
+    return patchBooking(id, { status })
+  }
 
   const deleteBooking = async (id: string) => {
     if (!confirm(ar ? 'متأكد من حذف الحجز؟' : 'Delete this booking?')) return
     const res = await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE' })
     if (res.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
-    if (!res.ok) { alert(ar ? 'فشل الحذف' : 'Delete failed'); return }
+    if (!res.ok) { setActionError(ar ? 'فشل الحذف' : 'Delete failed'); return }
     setBookings(prev => prev.filter(b => b.id !== id))
   }
 
@@ -472,7 +483,7 @@ export function BookingsManager() {
       if (data.pricing_warning) {
         // Saved, but the price could not be derived — say so rather than
         // letting the employee assume the total was calculated.
-        alert(ar
+        setActionError(ar
           ? `الحجز اتحفظ، بس تعذر حساب السعر تلقائياً: ${data.pricing_warning}`
           : `Booking saved, but the price could not be calculated: ${data.pricing_warning}`)
       }
@@ -613,6 +624,15 @@ export function BookingsManager() {
           {ar ? 'حجز يدوي' : 'Manual booking'}
         </Button>
       </div>
+
+      {actionError && (
+        <div role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError('')} aria-label={ar ? 'إغلاق' : 'Dismiss'} className="shrink-0 text-red-500 hover:text-red-700">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* ─── Table ─── */}
       <Card>
@@ -803,7 +823,7 @@ export function BookingsManager() {
                                 className="gap-1.5"
                               >
                                 <FileText className="h-4 w-4" />
-                                {ar ? 'فاتورة' : 'Invoice'}
+                                {ar ? 'المستندات' : 'Documents'}
                               </Button>
                               {canDelete && (
                                 <Button
@@ -1067,12 +1087,45 @@ export function BookingsManager() {
         </div>
       )}
 
+      <Dialog open={confirmStatus !== null} onOpenChange={(open) => { if (!open) setConfirmStatus(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmStatus?.status === 'cancelled'
+                ? (ar ? 'إلغاء هذا الحجز؟' : 'Cancel this booking?')
+                : (ar ? 'تحديد هذا الحجز كمكتمل؟' : 'Mark this booking complete?')}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmStatus?.status === 'cancelled'
+                ? (ar ? 'لا يمكن التراجع عن هذا من هنا. سيتم تحديد الحجز كملغي.' : 'This cannot be undone from here. The booking will be marked cancelled.')
+                : (ar ? 'سيتم تسجيل أن الخدمة تم تقديمها.' : 'This marks the service as delivered.')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmStatus(null)}>{ar ? 'تراجع' : 'Back'}</Button>
+            <Button
+              variant={confirmStatus?.status === 'cancelled' ? 'destructive' : 'default'}
+              disabled={!!confirmStatus && updatingId === confirmStatus.id}
+              onClick={async () => {
+                if (!confirmStatus) return
+                await patchBooking(confirmStatus.id, { status: confirmStatus.status })
+                setConfirmStatus(null)
+              }}
+            >
+              {confirmStatus && updatingId === confirmStatus.id && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              {ar ? 'تأكيد' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Invoice Viewer */}
       {invoiceBookingId && (
         <InvoiceViewer
           bookingId={invoiceBookingId}
           bookingNumber={invoiceBookingNumber}
           bookingType="accommodation"
+          status={bookings.find(x => x.id === invoiceBookingId)?.status}
           locale={locale as 'ar' | 'en'}
           open={invoiceOpen}
           onOpenChange={setInvoiceOpen}

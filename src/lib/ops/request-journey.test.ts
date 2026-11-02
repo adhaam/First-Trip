@@ -58,6 +58,26 @@ test('a stay-only request without snapshot money renders empty, not zero lines',
   assert.equal(journey.payment, null)
 })
 
+test('a converted trips-only journey (converted_at set, no bookings child) is tolerated', () => {
+  const journey = requestJourney({
+    transport_mode: 'stay_only', accommodation_id: null, adults: 2, children: 0,
+    converted_at: '2026-10-01T10:00:00Z', converted_booking_id: null,
+    experiences: [{ kind: 'trip', id: TRIP }],
+    quote_snapshot: { total: 1800, extra_trips_subtotal: 1800, extra_trips: [{ trip_id: TRIP, price: 900 }] },
+    payment_plan: { upfrontAmount: 1800, balanceAmount: 0 },
+  }, lookups)
+  assert.equal(journey.trips_only, true)
+  assert.equal(journey.origin, null)
+  assert.equal(journey.meal_plan, null)
+  assert.equal(journey.experiences[0].total, 1800)
+  assert.deepEqual(journey.payment, { after_confirmation: 1800, on_arrival: 0 })
+})
+
+test('a stay-only transport mode with an accommodation is not trips-only', () => {
+  assert.equal(requestJourney({ transport_mode: 'stay_only', accommodation_id: 'acc-1' }, lookups).trips_only, false)
+  assert.equal(requestJourney({ transport_mode: 'hiace' }, lookups).trips_only, false)
+})
+
 test('malformed experiences are skipped', () => {
   const journey = requestJourney({ experiences: [{ kind: 'hotel', id: 'x' }, null, { kind: 'trip' }] }, lookups)
   assert.deepEqual(journey.experiences, [])

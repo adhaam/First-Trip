@@ -1,6 +1,11 @@
-// ─── WEEMAP invoice generator tests ───
+// ─── WEEMAP single-booking document tests ───
 // Run with:  npx tsx --test src/lib/invoice.test.ts
 // (no test framework dependency — uses node:test built into Node 20+)
+//
+// The generator renders the Provisional Quotation ('request') and the Booking
+// Confirmation & Payment Request ('confirmation') for a single booking; the
+// cross-document guarantees (footer, logo, titles, due-now maths) live in
+// src/lib/documents/documents.test.ts.
 //
 // Covers src/lib/invoice-generator.ts (pure HTML renderer) fed with data
 // shapes matching the two real booking sources the invoice route branches
@@ -13,6 +18,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { generateInvoiceHTML, type InvoiceData } from './invoice-generator'
+import { paymentPlan } from './payment-rules'
 
 const baseData: Omit<InvoiceData, 'items' | 'subtotal' | 'totalAmount' | 'type' | 'depositAmount'> = {
   invoiceNumber: 'BK-ABCD1234-REQ-000001',
@@ -50,14 +56,14 @@ test('accommodation booking: price_snapshot-derived line items sum to a non-zero
     items,
     subtotal,
     totalAmount,
-    depositAmount: totalAmount * 0.5,
+    paymentPlan: paymentPlan('stay_package', totalAmount),
   })
 
   assert.match(html, /Accommodation \(2 nights\)/)
   assert.match(html, /Transfer/)
   assert.match(html, /Meal Plan/)
-  assert.match(html, /4800\.00 EGP/) // total amount due
-  assert.match(html, /2400\.00 EGP/) // deposit (50%)
+  assert.match(html, /4,800\.00 EGP/) // agreed total
+  assert.match(html, /Amount currently required[\s\S]*2,400\.00 EGP/) // 50% upfront, nothing received yet
   assert.doesNotMatch(html, /NaN/)
 })
 
@@ -96,7 +102,7 @@ test('trip booking: quoted_price/num_people produce a non-zero total with the re
   })
 
   assert.match(html, /Colored Canyon Trip/)
-  assert.match(html, /1200\.00 EGP/)
+  assert.match(html, /1,200\.00 EGP/)
   assert.doesNotMatch(html, /NaN/)
 })
 
@@ -150,14 +156,14 @@ test('booking details block renders the facts a customer needs to recognise thei
     totalAmount: 4750,
   })
 
-  assert.match(html, /Booking Details/)
+  assert.match(html, /Booking details/)
   assert.match(html, /Transfer only/)
   assert.match(html, /5 people/)
   assert.match(html, /Private Hiace/)
   assert.match(html, /Round trip/)
   // The charge is per person, so the quantity column carries the party size.
   assert.match(html, /5 people × 950 EGP/)
-  assert.match(html, /4750\.00 EGP/)
+  assert.match(html, /4,750\.00 EGP/)
   // A transfer-only invoice must never CHARGE for an accommodation. Scoped to
   // the charges table — the page header brand line legitimately reads
   // "Trip & Accommodation Bookings".
@@ -174,8 +180,8 @@ test('an invoice with no details block still renders (old bookings keep working)
     subtotal: 1000,
     totalAmount: 1000,
   })
-  assert.doesNotMatch(html, /Booking Details/)
-  assert.match(html, /1000\.00 EGP/)
+  assert.doesNotMatch(html, /Booking details/)
+  assert.match(html, /1,000\.00 EGP/)
 })
 
 test('a line without meta renders no empty meta element', () => {
@@ -186,9 +192,9 @@ test('a line without meta renders no empty meta element', () => {
     subtotal: 1000,
     totalAmount: 1000,
   })
-  // The .item-meta CSS rule is always present; what must not appear is the
+  // The .meta CSS rule is always present; what must not appear is the
   // element itself, emitted empty for a line that has no meta.
-  assert.doesNotMatch(html, /<span class="item-meta">/)
+  assert.doesNotMatch(html, /<span class="meta">/)
   assert.doesNotMatch(html, /undefined/)
 })
 
@@ -204,7 +210,7 @@ test('a discount renders as its own deducted row', () => {
 
   assert.match(html, /Discount 10%/)
   assert.match(html, /− 500\.00 EGP/)
-  assert.match(html, /4500\.00 EGP/)
+  assert.match(html, /4,500\.00 EGP/)
 })
 
 test('a zero discount is not rendered — no "− 0.00" row', () => {
@@ -229,13 +235,15 @@ test('paid and balance-due rows come from money actually received', () => {
     amountPaid: 1500,
   })
 
-  assert.match(html, /Paid/)
-  assert.match(html, /1500\.00 EGP/)
-  assert.match(html, /Balance Due/)
-  assert.match(html, /2500\.00 EGP/)
+  assert.match(html, /Received to date \(per our records\)/)
+  assert.match(html, /1,500\.00 EGP/)
+  // No plan supplied: the remainder is shown, with its schedule left to the team.
+  assert.match(html, /Remaining balance/)
+  assert.match(html, /2,500\.00 EGP/)
+  assert.doesNotMatch(html, /\bPaid\b/i)
 })
 
-test('an unpaid booking shows no paid/balance rows rather than a phantom 50% deposit', () => {
+test('an unpaid booking shows no "received" row and no phantom deposit', () => {
   const html = generateInvoiceHTML({
     ...baseData,
     type: 'confirmation',
@@ -245,7 +253,7 @@ test('an unpaid booking shows no paid/balance rows rather than a phantom 50% dep
     amountPaid: 0,
   })
 
-  assert.doesNotMatch(html, /Balance Due/)
+  assert.doesNotMatch(html, /Received to date/)
   assert.doesNotMatch(html, /Agreed Amount \(Deposit\)/)
 })
 
@@ -259,9 +267,8 @@ test('overpayment never renders a negative balance', () => {
     amountPaid: 1200,
   })
 
-  assert.match(html, /Balance Due/)
-  assert.match(html, /<span>0\.00 EGP<\/span>/)
-  // A negative money amount, specifically — not the hyphens in the invoice number.
+  assert.match(html, /Remaining balance[\s\S]*?<td class="num">0\.00 EGP<\/td>/)
+  // A negative money amount, specifically — not the hyphens in the document number.
   assert.doesNotMatch(html, /-\d+\.\d\d EGP/)
 })
 
