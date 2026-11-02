@@ -1,11 +1,11 @@
 'use client'
 
-import { SafeImage as Image } from '@/components/SafeImage'
+import { HotelCoverImage } from '@/components/stays/HotelMedia'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { MapPin, Hotel, Home, Tent, type LucideIcon } from 'lucide-react'
 import { ACCOMMODATION_TAGS } from '@/lib/constants'
-import { fromPricePerPersonPerNight, stayTypeLabel } from '@/lib/stays'
+import { fromPricePerPersonPerNight, localizedDescription, stayTypeLabel } from '@/lib/stays'
 import { GlowCard } from '@/components/motion/Reveal'
 import { PriceTag } from '@/components/brand/PriceTag'
 import { ArrowForward } from '@/components/brand/DirectionalIcon'
@@ -46,6 +46,7 @@ export function AccommodationCard({
   const cover = acc.image_url || acc.images?.[0] || NEUTRAL_MEDIA
   const fromRate = fromPricePerPersonPerNight(acc)
   const name = ar ? acc.name_ar : acc.name_en
+  const description = localizedDescription(acc, ar)
   const location = ar ? acc.location_ar || acc.location : acc.location_en || acc.location
   const typeLabel = stayTypeLabel(name, ar ? tag?.label_ar : tag?.label_en)
 
@@ -57,13 +58,11 @@ export function AccommodationCard({
         className="hover-lift group flex h-full flex-col overflow-hidden border-[1.5px] border-sand-300 bg-card pin-card transition-colors hover:border-sea-900/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea-500"
       >
         <div className="slow-zoom relative aspect-[4/3] overflow-hidden">
-          <Image
+          <HotelCoverImage
             src={cover}
             alt={name}
-            fill
             sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 25vw"
             priority={priority}
-            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-sea-900/60 via-transparent to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-95" />
 
@@ -83,9 +82,16 @@ export function AccommodationCard({
         <div className="flex flex-1 flex-col p-5">
           <h3 className="font-display text-lg font-bold leading-snug text-sea-900">{name}</h3>
 
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">
-            {ar ? acc.description_ar : acc.description_en}
-          </p>
+          {description && (
+            <p
+              className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted"
+              {...(description.lang !== (ar ? 'ar' : 'en')
+                ? { lang: description.lang, dir: description.lang === 'ar' ? 'rtl' : 'ltr' }
+                : {})}
+            >
+              {description.text}
+            </p>
+          )}
 
           <div className="mt-auto flex items-end justify-between gap-3 pt-5">
             <PriceTag amount={fromRate} from unit="personNight" size="md" />

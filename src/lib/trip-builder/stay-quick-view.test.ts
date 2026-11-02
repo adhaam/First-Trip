@@ -59,3 +59,20 @@ test('stayQuickViewData caps amenities at maxAmenities and handles missing field
   assert.equal(mapped.description, '')
   assert.deepEqual(mapped.amenities, [])
 })
+
+test('stayQuickViewData falls back to the other language only when the locale text is empty', () => {
+  const onlyEn: CatalogAccommodation = { ...base, description_ar: '   ', description_en: 'A quiet stay right on the sea.' }
+  const ar = stayQuickViewData(onlyEn, 'ar')
+  assert.equal(ar.description, 'A quiet stay right on the sea.')
+  assert.equal(ar.descriptionLang, 'en')
+  assert.equal(stayQuickViewData(onlyEn, 'en').descriptionLang, 'en')
+
+  const onlyAr: CatalogAccommodation = { ...base, description_ar: 'إقامة هادئة.', description_en: '' }
+  const en = stayQuickViewData(onlyAr, 'en')
+  assert.equal(en.description, 'إقامة هادئة.')
+  assert.equal(en.descriptionLang, 'ar')
+
+  const none: CatalogAccommodation = { ...base, description_ar: '', description_en: undefined }
+  assert.equal(stayQuickViewData(none, 'ar').description, '')
+  assert.equal(stayQuickViewData(none, 'ar').descriptionLang, null)
+})

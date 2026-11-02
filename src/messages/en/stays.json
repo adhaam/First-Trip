@@ -42,7 +42,10 @@
     "next": "Next photo",
     "expand": "View full screen",
     "close": "Close gallery",
-    "counter": "{current} of {total}"
+    "counter": "{current} of {total}",
+    "showPhoto": "Show photo {number}",
+    "photoAlt": "{name} — photo {current} of {total}",
+    "unavailable": "Photo unavailable"
   },
   "detail": {
     "back": "Back to stays",

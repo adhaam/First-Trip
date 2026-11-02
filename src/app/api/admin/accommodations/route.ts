@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { revalidateAccommodationSurfaces } from './revalidate-public'
 
 const mealPlanSchema = z.object({
   key: z.enum(['room_only', 'breakfast', 'half_board', 'all_inclusive']),
@@ -16,8 +17,8 @@ const accommodationSchema = z.object({
   name_en: z.string().min(1),
   type: z.enum(['hotel', 'chalet', 'camp']),
   tier: z.string().optional(),
-  description_ar: z.string().optional().default(''),
-  description_en: z.string().optional().default(''),
+  description_ar: z.string().trim().optional().default(''),
+  description_en: z.string().trim().optional().default(''),
   images: z.array(z.string()).optional().default([]),
   image_url: z.string().optional(),
   rating: z.number().min(1).max(5).optional().default(4),
@@ -65,6 +66,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid data', details: validated.error.flatten() }, { status: 400 })
   }
 
+  // The public site shows the description in the visitor's language and falls
+  // back to the other one, so a new stay needs at least one of the two.
+  if (!validated.data.description_ar && !validated.data.description_en) {
+    return NextResponse.json(
+      {
+        error: 'Add a description in at least one language (Arabic or English).',
+        code: 'DESCRIPTION_REQUIRED',
+      },
+      { status: 400 },
+    )
+  }
+
   const supabase = getSupabaseAdmin(gate.staff)
   const { data, error } = await supabase
     .from('accommodations')
@@ -76,5 +89,6 @@ export async function POST(req: NextRequest) {
     console.error('POST accommodation error:', error)
     return NextResponse.json({ error: 'Failed to create accommodation' }, { status: 500 })
   }
+  revalidateAccommodationSurfaces(data?.id)
   return NextResponse.json({ accommodation: data }, { status: 201 })
 }

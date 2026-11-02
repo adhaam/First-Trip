@@ -35,6 +35,29 @@ export function localizedAmenities(
   return (acc.amenities_ar ?? []).filter((item) => /[؀-ۿ]/.test(item))
 }
 
+export interface LocalizedDescription {
+  text: string
+  /** Language the text is actually written in (not the page locale). */
+  lang: 'ar' | 'en'
+}
+
+/**
+ * The stay's own saved description for the current locale. When that language
+ * is empty (staff often fill only one), falls back to the other language's
+ * saved text and says which language it is, so the caller can mark it with
+ * lang/dir. Never invents or translates anything - null when both are empty.
+ */
+export function localizedDescription(
+  acc: { description_ar?: string | null; description_en?: string | null },
+  ar: boolean,
+): LocalizedDescription | null {
+  const own = (ar ? acc.description_ar : acc.description_en)?.trim()
+  if (own) return { text: own, lang: ar ? 'ar' : 'en' }
+  const other = (ar ? acc.description_en : acc.description_ar)?.trim()
+  if (other) return { text: other, lang: ar ? 'en' : 'ar' }
+  return null
+}
+
 // ─── List filtering & sorting ───
 
 export type StayFilterKey = 'all' | AccommodationType

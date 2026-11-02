@@ -10,6 +10,7 @@ import {
   sortAccommodations,
   fromPricePerPersonPerNight,
   localizedAmenities,
+  localizedDescription,
   stayTypeLabel,
 } from './stays'
 import type { Accommodation, MealPlan } from './types'
@@ -235,4 +236,28 @@ test("localizedAmenities never shows untranslated English entries on Arabic page
   assert.deepEqual(localizedAmenities(a, true), ["واي فاي", "تكييف"])
   assert.deepEqual(localizedAmenities({ amenities_ar: [], amenities_en: ["WiFi"] }, true), [])
   assert.deepEqual(localizedAmenities(a, false), ["WiFi", "AC"])
+})
+
+// ─── localizedDescription ───
+
+test('localizedDescription returns the current locale text when present (trimmed)', () => {
+  const a = acc({ description_ar: '  وصف عربي ', description_en: 'English text' })
+  assert.deepEqual(localizedDescription(a, true), { text: 'وصف عربي', lang: 'ar' })
+  assert.deepEqual(localizedDescription(a, false), { text: 'English text', lang: 'en' })
+})
+
+test('localizedDescription falls back to the other language and reports its lang', () => {
+  assert.deepEqual(localizedDescription(acc({ description_ar: '', description_en: 'English only' }), true), {
+    text: 'English only',
+    lang: 'en',
+  })
+  assert.deepEqual(localizedDescription(acc({ description_ar: 'عربي فقط', description_en: '   ' }), false), {
+    text: 'عربي فقط',
+    lang: 'ar',
+  })
+})
+
+test('localizedDescription is null when neither language has text (nothing is invented)', () => {
+  assert.equal(localizedDescription(acc({ description_ar: '', description_en: '  ' }), true), null)
+  assert.equal(localizedDescription({ description_ar: null, description_en: undefined }, false), null)
 })

@@ -9,6 +9,7 @@ import {
   getSiteSettings,
 } from '@/lib/data'
 import { getPaymentRules } from '@/lib/payment-rules-load'
+import { localizedDescription } from '@/lib/stays'
 import { NEUTRAL_MEDIA } from '@/lib/media'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { buildAlternates, SITE_URL } from '@/lib/seo'
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: {
   if (!acc) return { alternates, robots: { index: false, follow: true } }
   const ar = locale === 'ar'
   const name = ar ? acc.name_ar || acc.name_en : acc.name_en || acc.name_ar
-  const description = ar ? acc.description_ar : acc.description_en
+  const description = localizedDescription(acc, ar)?.text
   // Only the accommodation's own real photo — never stock/other-place
   // imagery. NEUTRAL_MEDIA when it has none of its own.
   const image = acc.image_url || acc.images?.[0] || `${SITE_URL}${NEUTRAL_MEDIA}`
@@ -78,7 +79,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const t = await getTranslations({ locale, namespace: 'discovery' })
 
   const name = locale === 'ar' ? accommodation.name_ar || accommodation.name_en : accommodation.name_en || accommodation.name_ar
-  const description = locale === 'ar' ? accommodation.description_ar : accommodation.description_en
+  const description = localizedDescription(accommodation, locale === 'ar')?.text ?? ''
   const pageUrl = `${SITE_URL}${getPathname({ href: `/book-dahab/${id}`, locale })}`
 
   const lodgingSchema = getLodgingBusinessSchema({

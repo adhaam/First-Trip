@@ -20,7 +20,7 @@ import { StayLocalGuides } from '@/components/stays/StayLocalGuides'
 import { MapPreview } from '@/components/MapPreview'
 import { RelatedPlaces } from '@/components/RelatedPlaces'
 import { ACCOMMODATION_TAGS, WHATSAPP_NUMBER } from '@/lib/constants'
-import { fromPricePerPersonPerNight, localizedAmenities, stayTypeLabel } from '@/lib/stays'
+import { fromPricePerPersonPerNight, localizedAmenities, localizedDescription, stayTypeLabel } from '@/lib/stays'
 import type { Accommodation, CommunityPost, SinaiTrip } from '@/lib/types'
 import type { PaymentPolicy } from '@/lib/payment-rules'
 import { NEUTRAL_MEDIA } from '@/lib/media'
@@ -49,7 +49,7 @@ export function ProductDetailClient({
   const name = ar ? accommodation.name_ar : accommodation.name_en
   const amenities = localizedAmenities(accommodation, ar)
   const location = ar ? accommodation.location_ar || accommodation.location : accommodation.location_en || accommodation.location
-  const description = ar ? accommodation.description_ar : accommodation.description_en
+  const description = localizedDescription(accommodation, ar)
 
   const digits = (whatsapp || WHATSAPP_NUMBER).replace(/[^0-9]/g, '')
   const waLink = `https://wa.me/${digits}?text=${encodeURIComponent(
@@ -101,7 +101,14 @@ export function ProductDetailClient({
             {description && (
               <Reveal>
                 <h2 className="font-display text-xl font-bold text-sea-900">{t('detail.aboutTitle')}</h2>
-                <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-loose text-ink-muted">{description}</p>
+                <p
+                  className="mt-4 whitespace-pre-line text-[0.95rem] leading-loose text-ink-muted"
+                  {...(description.lang !== (ar ? 'ar' : 'en')
+                    ? { lang: description.lang, dir: description.lang === 'ar' ? 'rtl' : 'ltr' }
+                    : {})}
+                >
+                  {description.text}
+                </p>
               </Reveal>
             )}
           </div>

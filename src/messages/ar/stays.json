@@ -42,7 +42,10 @@
     "next": "الصورة التالية",
     "expand": "اعرض بملء الشاشة",
     "close": "إغلاق المعرض",
-    "counter": "{current} من {total}"
+    "counter": "{current} من {total}",
+    "showPhoto": "اعرض الصورة {number}",
+    "photoAlt": "{name} — صورة {current} من {total}",
+    "unavailable": "الصورة غير متاحة"
   },
   "detail": {
     "back": "رجوع لكل الإقامات",

@@ -4,12 +4,15 @@
  * "which images / amenities show" logic is unit-testable without React.
  * Everything here is real catalog data — no placeholders are invented.
  */
-import { localizedAmenities } from '@/lib/stays'
+import { localizedAmenities, localizedDescription } from '@/lib/stays'
 import type { CatalogAccommodation } from './types'
 
 export type StayQuickViewData = {
   name: string
+  /** The stay's own saved text for this locale, else its other-language text; '' when it has none. */
   description: string
+  /** Language `description` is written in (differs from the locale on fallback); null when empty. */
+  descriptionLang: 'ar' | 'en' | null
   /** Real images only, de-duplicated, capped at `maxImages`. */
   images: string[]
   /** Localized amenity labels, capped at `maxAmenities`. */
@@ -39,9 +42,11 @@ export function stayQuickViewData(
 ): StayQuickViewData {
   const imagesSource = stay.images?.length ? stay.images : stay.image ? [stay.image] : []
   const amenitiesSource = localizedAmenities(stay, locale === 'ar')
+  const description = localizedDescription(stay, locale === 'ar')
   return {
     name: locale === 'ar' ? stay.name_ar : stay.name_en,
-    description: (locale === 'ar' ? stay.description_ar : stay.description_en) ?? '',
+    description: description?.text ?? '',
+    descriptionLang: description?.lang ?? null,
     images: dedupe(imagesSource).slice(0, maxImages),
     amenities: dedupe(amenitiesSource).slice(0, maxAmenities),
     fromPricePerPersonPerNight: stay.from_price_per_person_per_night,

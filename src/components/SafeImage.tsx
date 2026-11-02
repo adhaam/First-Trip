@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import Image, { type ImageProps } from 'next/image'
 
 /**
@@ -44,10 +47,33 @@ export function canOptimize(src: ImageProps['src']): boolean {
   }
 }
 
-export function SafeImage({ unoptimized, ...props }: ImageProps) {
+export type SafeImageProps = ImageProps & {
+  /**
+   * Opt-in broken-image fallback. When the image fails to load, it is swapped
+   * for this source (typically `NEUTRAL_MEDIA`) instead of leaving a broken
+   * box. Callers that do not pass it behave exactly as before.
+   */
+  fallbackSrc?: string
+}
+
+export function SafeImage({ unoptimized, fallbackSrc, onError, ...props }: SafeImageProps) {
+  // Remembers which `src` failed, so a new `src` gets a fresh attempt without
+  // needing an effect to reset state.
+  const [failedSrc, setFailedSrc] = useState<ImageProps['src'] | null>(null)
+  const failed = fallbackSrc !== undefined && failedSrc === props.src
+  const src = failed && fallbackSrc !== undefined ? fallbackSrc : props.src
+
+  const handleError: ImageProps['onError'] =
+    fallbackSrc === undefined
+      ? onError
+      : (event) => {
+          onError?.(event)
+          if (props.src !== fallbackSrc) setFailedSrc(props.src)
+        }
+
   // `alt` is required by ImageProps and arrives through the spread — the
   // jsx-a11y rule cannot see through a wrapper component, so it is silenced
   // here rather than weakened globally.
   // eslint-disable-next-line jsx-a11y/alt-text
-  return <Image {...props} unoptimized={unoptimized ?? !canOptimize(props.src)} />
+  return <Image {...props} src={src} onError={handleError} unoptimized={unoptimized ?? !canOptimize(src)} />
 }

@@ -1,17 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Eye, X } from 'lucide-react'
-import { SafeImage } from '@/components/SafeImage'
 import { PriceTag } from '@/components/brand'
-import { ArrowBack, ChevronForward } from '@/components/brand/DirectionalIcon'
+import { HotelGallery } from '@/components/stays/HotelMedia'
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { stayQuickViewData } from '@/lib/trip-builder/stay-quick-view'
 import type { CatalogAccommodation } from '@/lib/trip-builder/types'
 import { cn } from '@/lib/utils'
-
-const SWIPE_THRESHOLD = 40
 
 /**
  * The "View" action on a stay card: opens a lightweight, read-only panel
@@ -108,74 +105,14 @@ export function StayQuickView({
 }
 
 function StayQuickViewGallery({ images, name }: { images: string[]; name: string }) {
-  const t = useTranslations('builder')
-  const [index, setIndex] = useState(0)
-  const touchStartX = useRef<number | null>(null)
-
-  const go = useCallback((direction: 1 | -1) => {
-    setIndex((i) => (i + direction + images.length) % images.length)
-  }, [images.length])
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      // "Next" follows the reading direction: ArrowLeft advances in RTL.
-      const forward = document.documentElement.dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight'
-      const back = forward === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft'
-      if (e.key === forward) go(1)
-      else if (e.key === back) go(-1)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [go])
-
-  function onTouchStart(e: TouchEvent) {
-    touchStartX.current = e.touches[0]?.clientX ?? null
-  }
-
-  function onTouchEnd(e: TouchEvent) {
-    if (touchStartX.current == null) return
-    const dx = e.changedTouches[0].clientX - touchStartX.current
-    if (Math.abs(dx) > SWIPE_THRESHOLD) go(dx > 0 ? -1 : 1)
-    touchStartX.current = null
-  }
-
-  if (images.length === 0) {
-    return <div aria-hidden className="aspect-[4/3] w-full bg-sand-200" />
-  }
-
   return (
-    <div
-      className="relative aspect-[4/3] w-full bg-sea-900"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
-      <SafeImage key={images[index]} src={images[index]} alt={name} fill sizes="(max-width: 640px) 100vw, 28rem" className="object-cover" />
-      {images.length > 1 && (
-        <>
-          <button
-            type="button"
-            onClick={() => go(-1)}
-            aria-label={t('stayQuickViewGalleryPrevious')}
-            className="absolute start-3 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-400"
-          >
-            <ArrowBack className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => go(1)}
-            aria-label={t('stayQuickViewGalleryNext')}
-            className="absolute end-3 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun-400"
-          >
-            <ChevronForward className="h-5 w-5" />
-          </button>
-          <span
-            aria-live="polite"
-            className="absolute bottom-3 end-3 z-10 rounded-full bg-sea-900/60 px-2.5 py-1 text-[0.65rem] font-semibold tabular-nums text-white backdrop-blur"
-          >
-            {t('stayQuickViewGalleryCounter', { current: index + 1, total: images.length })}
-          </span>
-        </>
-      )}
-    </div>
+    <HotelGallery
+      images={images}
+      alt={name}
+      aspect={4 / 3}
+      tone="dark"
+      compact
+      sizes="(max-width: 640px) 100vw, 28rem"
+    />
   )
 }

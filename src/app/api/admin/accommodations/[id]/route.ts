@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { revalidateAccommodationSurfaces } from '../revalidate-public'
 
 const mealPlanSchema = z.object({
   key: z.enum(['room_only', 'breakfast', 'half_board', 'all_inclusive']),
@@ -16,8 +17,8 @@ const accommodationUpdateSchema = z.object({
   name_en: z.string().min(1).optional(),
   type: z.enum(['hotel', 'chalet', 'camp']).optional(),
   tier: z.string().optional(),
-  description_ar: z.string().optional(),
-  description_en: z.string().optional(),
+  description_ar: z.string().trim().optional(),
+  description_en: z.string().trim().optional(),
   images: z.array(z.string()).optional(),
   image_url: z.string().optional(),
   rating: z.number().min(1).max(5).optional(),
@@ -61,6 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     console.error('PATCH accommodation error:', error)
     return NextResponse.json({ error: 'Failed to update accommodation' }, { status: 500 })
   }
+  revalidateAccommodationSurfaces(id)
   return NextResponse.json({ accommodation: data })
 }
 
@@ -75,5 +77,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     console.error('DELETE accommodation error:', error)
     return NextResponse.json({ error: 'Failed to delete accommodation' }, { status: 500 })
   }
+  revalidateAccommodationSurfaces(id)
   return NextResponse.json({ success: true })
 }

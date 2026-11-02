@@ -93,6 +93,23 @@ export function AccommodationManager() {
   const [importError, setImportError] = useState('')
   const [importedFrom, setImportedFrom] = useState<string | null>(null)
 
+  // Descriptions: the public site shows the description in the visitor's
+  // language, so each language is its own field. `descriptionsTouched` flips
+  // on the first save attempt so the "both empty" error doesn't greet an
+  // admin who just opened a blank form.
+  const [descriptionsTouched, setDescriptionsTouched] = useState(false)
+  const descriptionEnEmpty = !(form.description_en ?? '').trim()
+  const descriptionArEmpty = !(form.description_ar ?? '').trim()
+  const descriptionsBothEmpty = descriptionEnEmpty && descriptionArEmpty
+  const descriptionsOneMissing = descriptionEnEmpty !== descriptionArEmpty
+  const descriptionEnRef = useRef<HTMLTextAreaElement>(null)
+  const descriptionArRef = useRef<HTMLTextAreaElement>(null)
+
+  // Custom amenities are entered per language — the English text is never
+  // copied into amenities_ar (the Arabic site would show it untranslated).
+  const [customAmenityEn, setCustomAmenityEn] = useState('')
+  const [customAmenityAr, setCustomAmenityAr] = useState('')
+
   const mealPlanFor = (key: MealPlanKey): MealPlan | undefined =>
     ((form.meal_plans as MealPlan[]) || []).find(m => m.key === key)
 
@@ -200,6 +217,7 @@ export function AccommodationManager() {
       ? acc.images
       : acc.image_url ? [acc.image_url] : []
     setForm({ ...acc, images })
+    setDescriptionsTouched(false)
     setShowForm(true)
   }
 
@@ -207,6 +225,7 @@ export function AccommodationManager() {
     setEditing(null)
     setImportedFrom(null)
     setForm({ ...emptyAccommodation })
+    setDescriptionsTouched(false)
     setShowForm(true)
   }
 
@@ -233,6 +252,7 @@ export function AccommodationManager() {
       setEditing(null)
       setForm({ ...emptyAccommodation, ...data.extracted })
       setImportedFrom(data.source_url || url)
+      setDescriptionsTouched(false)
       setShowImportDialog(false)
       setImportUrl('')
       setShowForm(true)
@@ -245,6 +265,13 @@ export function AccommodationManager() {
 
   const handleSave = async () => {
     if (!form.name_ar || !form.name_en) return
+    // At least one description is required; a single missing language is
+    // only a warning (the public site falls back to the other one).
+    if (descriptionsBothEmpty) {
+      setDescriptionsTouched(true)
+      ;(descriptionEnRef.current ?? descriptionArRef.current)?.focus()
+      return
+    }
     setSaving(true)
     try {
       const payload = {
@@ -252,8 +279,8 @@ export function AccommodationManager() {
         name_en: form.name_en || '',
         type: form.type || 'hotel',
         tier: form.tier || 'standard',
-        description_ar: form.description_ar || '',
-        description_en: form.description_en || '',
+        description_ar: (form.description_ar || '').trim(),
+        description_en: (form.description_en || '').trim(),
         image_url: (form.images as string[])?.[0] || form.image_url || '',
         images: (form.images as string[]) || [],
         rating: form.rating || 4,
@@ -291,6 +318,10 @@ export function AccommodationManager() {
       }
       const data = await res.json()
       if (!res.ok) {
+        if (data.code === 'DESCRIPTION_REQUIRED') {
+          setDescriptionsTouched(true)
+          return
+        }
         alert(data.error || (locale === 'ar' ? 'فشل الحفظ' : 'Save failed'))
         return
       }
@@ -378,9 +409,9 @@ export function AccommodationManager() {
     setMapUrlInput('')
   }
 
-  // Removes a custom (non-library) amenity by value from both arrays — custom
-  // entries are added identically to amenities_ar/amenities_en, so they stay
-  // in sync without needing a translation.
+  // Removes a custom (non-library) amenity by value from both arrays. Custom
+  // entries are language-specific (English in amenities_en, Arabic in
+  // amenities_ar), so removal is by value in whichever list holds it.
   const removeCustomAmenity = (value: string) => {
     updateField('amenities_ar', ((form.amenities_ar as string[]) || []).filter(x => x !== value))
     updateField('amenities_en', ((form.amenities_en as string[]) || []).filter(x => x !== value))
@@ -641,7 +672,7 @@ export function AccommodationManager() {
                                 {locale === 'ar' ? 'صورة رئيسية' : 'Main photo'}
                               </Badge>
                             )}
-                            <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                               <button
                                 type="button"
                                 onClick={() => removeImage(index)}
@@ -948,45 +979,108 @@ export function AccommodationManager() {
                   })}
                 </div>
 
-                {/* Custom amenities not in the library above */}
+                {/* Custom amenities not in the library above - one box per language */}
                 <div className="mt-3">
-                  <div className="flex gap-2 mb-2">
-                    <Input id="amenity-en-input" placeholder={locale === 'ar' ? 'خدمة تانية مش في القايمة فوق...' : 'Another amenity not listed above...'} className="flex-1" />
+                  <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                    <Input
+                      dir="ltr"
+                      value={customAmenityEn}
+                      onChange={e => setCustomAmenityEn(e.target.value)}
+                      placeholder={locale === 'ar' ? 'خدمة أخرى (إنجليزي)...' : 'Another amenity (English)...'}
+                    />
+                    <Input
+                      dir="rtl"
+                      value={customAmenityAr}
+                      onChange={e => setCustomAmenityAr(e.target.value)}
+                      placeholder={locale === 'ar' ? 'خدمة أخرى (عربي)...' : 'Another amenity (Arabic)...'}
+                    />
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
+                      disabled={!customAmenityEn.trim() && !customAmenityAr.trim()}
                       onClick={() => {
-                        const input = document.getElementById('amenity-en-input') as HTMLInputElement
-                        const value = input?.value?.trim()
-                        if (!value) return
-                        updateField('amenities_en', [...((form.amenities_en as string[]) || []), value])
-                        updateField('amenities_ar', [...((form.amenities_ar as string[]) || []), value])
-                        input.value = ''
+                        const en = customAmenityEn.trim()
+                        const ar = customAmenityAr.trim()
+                        if (en) updateField('amenities_en', [...((form.amenities_en as string[]) || []), en])
+                        if (ar) updateField('amenities_ar', [...((form.amenities_ar as string[]) || []), ar])
+                        setCustomAmenityEn('')
+                        setCustomAmenityAr('')
                       }}
                     >
                       +
                     </Button>
                   </div>
+                  <p className="mb-2 text-[11px] text-gray-500">
+                    {locale === 'ar'
+                      ? 'اكتب الخدمة بكل لغة على حدة — اللي مش مكتوبة بلغة معينة مش هتظهر في موقع اللغة دي.'
+                      : 'Enter each language separately — an amenity left blank in one language will not show on that language of the site.'}
+                  </p>
                   <div className="flex flex-wrap gap-1">
-                    {((form.amenities_en as string[]) || [])
-                      .filter(a => !AMENITIES_LIBRARY.some(def => def.en === a))
-                      .map(a => (
-                        <Badge key={a} variant="secondary" className="gap-1">
-                          {a}
-                          <button type="button" onClick={() => removeCustomAmenity(a)} className="ml-1 hover:text-red-600">
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
+                    {[
+                      ...((form.amenities_en as string[]) || []).filter(a => !AMENITIES_LIBRARY.some(def => def.en === a)),
+                      ...((form.amenities_ar as string[]) || []).filter(
+                        a => !AMENITIES_LIBRARY.some(def => def.ar === a) && !((form.amenities_en as string[]) || []).includes(a),
+                      ),
+                    ].map(a => (
+                      <Badge key={a} variant="secondary" className="gap-1">
+                        {a}
+                        <button type="button" onClick={() => removeCustomAmenity(a)} className="ml-1 hover:text-red-600">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <Label className="mb-2 block">{locale === 'ar' ? 'الوصف' : 'Description'}</Label>
-                <Textarea rows={3} value={form.description_en || ''} onChange={e => updateField('description_en', e.target.value)} />
+              {/* Descriptions - one per language; the site shows the visitor's language */}
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="acc-description-en" className="mb-2 block">Description (English)</Label>
+                  <Textarea
+                    id="acc-description-en"
+                    ref={descriptionEnRef}
+                    dir="ltr"
+                    rows={3}
+                    value={form.description_en || ''}
+                    onChange={e => updateField('description_en', e.target.value)}
+                    aria-invalid={descriptionsTouched && descriptionsBothEmpty}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="acc-description-ar" className="mb-2 block">الوصف (عربي)</Label>
+                  <Textarea
+                    id="acc-description-ar"
+                    ref={descriptionArRef}
+                    dir="rtl"
+                    rows={3}
+                    value={form.description_ar || ''}
+                    onChange={e => updateField('description_ar', e.target.value)}
+                    aria-invalid={descriptionsTouched && descriptionsBothEmpty}
+                  />
+                </div>
+                {descriptionsTouched && descriptionsBothEmpty && (
+                  <p role="alert" className="text-sm font-medium text-red-600">
+                    {locale === 'ar'
+                      ? 'لازم تكتب وصف واحد على الأقل (عربي أو إنجليزي) قبل الحفظ.'
+                      : 'Add at least one description (English or Arabic) before saving.'}
+                  </p>
+                )}
+                {descriptionsOneMissing && (
+                  <p className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      {descriptionArEmpty
+                        ? (locale === 'ar'
+                            ? 'الوصف العربي ناقص — الموقع العربي هيعرض النص الإنجليزي.'
+                            : 'Arabic description missing — the Arabic site will show the English text.')
+                        : (locale === 'ar'
+                            ? 'الوصف الإنجليزي ناقص — الموقع الإنجليزي هيعرض النص العربي.'
+                            : 'English description missing — the English site will show the Arabic text.')}
+                    </span>
+                  </p>
+                )}
               </div>
 
               {/* Display Order */}
