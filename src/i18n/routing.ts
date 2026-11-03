@@ -9,3 +9,10 @@ export const routing = defineRouting({
   // NEXT_LOCALE cookie, so users can override the detection at any time.
   localeDetection: true,
 })
+
+export type AppLocale = (typeof routing.locales)[number]
+
+/** True only for a locale the site actually serves (the [locale] segment can be any string). */
+export function isAppLocale(value: string): value is AppLocale {
+  return (routing.locales as readonly string[]).includes(value)
+}

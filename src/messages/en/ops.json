@@ -158,6 +158,13 @@
       "anyType": "Any type",
       "anyStatus": "Any status",
       "anyPayment": "Any payment status",
+      "sort": "Sort",
+      "sortOption": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "upcoming": "Upcoming arrival",
+        "waiting": "Longest waiting"
+      },
       "clear": "Clear filters"
     },
     "columns": {

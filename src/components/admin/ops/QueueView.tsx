@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { OpsEntityType, WorkItem } from '@/lib/ops/types'
+import { defaultSortForView, QUEUE_SORTS, type OpsView, type QueueSort } from '@/lib/ops/work-items'
 import { STATUSES } from '@/lib/request-workflow'
 import { useOpsFetch } from '@/components/admin/ops/useOpsFetch'
 import { WorkItemTable } from '@/components/admin/ops/WorkItemTable'
@@ -59,6 +60,10 @@ export function QueueView() {
   const scope = searchParams.get('scope') || ''
   const asOf = searchParams.get('today') || ''
   const page = Number(searchParams.get('page') || '1')
+  const sortParam = searchParams.get('sort') || ''
+  const sort: QueueSort = (QUEUE_SORTS as readonly string[]).includes(sortParam)
+    ? (sortParam as QueueSort)
+    : defaultSortForView(view as OpsView)
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
   const debouncedSearch = useDebouncedValue(searchInput, 400)
 
@@ -96,6 +101,7 @@ export function QueueView() {
       if (transfer) params.set('transfer', transfer)
       if (scope) params.set('scope', scope)
       if (asOf) params.set('today', asOf)
+      params.set('sort', sort)
       const q = searchParams.get('q') || ''
       if (q) params.set('q', q)
       const res = await fetchJson(`/api/admin/ops/queue?${params.toString()}`)
@@ -106,7 +112,7 @@ export function QueueView() {
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, type, status, payment, from, to, dateField, transfer, scope, asOf, page, fetchJson, t])
+  }, [view, type, status, payment, from, to, dateField, transfer, scope, asOf, sort, page, fetchJson, t])
 
   useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch
     load()
@@ -134,7 +140,7 @@ export function QueueView() {
             type="button"
             role="tab"
             aria-selected={view === v}
-            onClick={() => setParam({ view: v, date_field: undefined, transfer: undefined, scope: undefined, today: undefined })}
+            onClick={() => setParam({ view: v, date_field: undefined, transfer: undefined, scope: undefined, today: undefined, sort: undefined })}
             className={cn(
               'rounded-full px-3 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange',
               view === v ? 'bg-weemap-orange text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
@@ -154,7 +160,7 @@ export function QueueView() {
           <div>
             <Label htmlFor="queue-type">{tFilters('type')}</Label>
             <Select value={type || 'all'} onValueChange={(v) => setParam({ type: v === 'all' ? undefined : String(v) })}>
-              <SelectTrigger id="queue-type" className="mt-1 w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="queue-type" className="mt-1 w-44"><SelectValue>{type ? tEntity(type as OpsEntityType) : tFilters('anyType')}</SelectValue></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{tFilters('anyType')}</SelectItem>
                 {ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{tEntity(et)}</SelectItem>)}
@@ -164,7 +170,7 @@ export function QueueView() {
           <div>
             <Label htmlFor="queue-status">{tFilters('status')}</Label>
             <Select value={status || 'all'} onValueChange={(v) => setParam({ status: v === 'all' ? undefined : String(v) })}>
-              <SelectTrigger id="queue-status" className="mt-1 w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="queue-status" className="mt-1 w-44"><SelectValue>{status ? status.split(',').map((s) => (tStatus.has(s) ? tStatus(s) : s)).join(' / ') : tFilters('anyStatus')}</SelectValue></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{tFilters('anyStatus')}</SelectItem>
                 {status.includes(',') && (
@@ -177,7 +183,7 @@ export function QueueView() {
           <div>
             <Label htmlFor="queue-payment">{tFilters('payment')}</Label>
             <Select value={payment || 'all'} onValueChange={(v) => setParam({ payment: v === 'all' ? undefined : String(v) })}>
-              <SelectTrigger id="queue-payment" className="mt-1 w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="queue-payment" className="mt-1 w-44"><SelectValue>{payment ? (tPayment.has(payment) ? tPayment(payment) : payment) : tFilters('anyPayment')}</SelectValue></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{tFilters('anyPayment')}</SelectItem>
                 {PAYMENT_STATUSES.map((p) => <SelectItem key={p} value={p}>{tPayment(p)}</SelectItem>)}
@@ -191,6 +197,15 @@ export function QueueView() {
           <div>
             <Label htmlFor="queue-to">{tFilters('to')}</Label>
             <Input id="queue-to" type="date" dir="ltr" value={to} onChange={(e) => setParam({ to: e.target.value || undefined })} className="mt-1 w-40" />
+          </div>
+          <div>
+            <Label htmlFor="queue-sort">{tFilters('sort')}</Label>
+            <Select value={sort} onValueChange={(v) => setParam({ sort: v === defaultSortForView(view as OpsView) ? undefined : String(v) })}>
+              <SelectTrigger id="queue-sort" className="mt-1 w-48"><SelectValue>{tFilters(`sortOption.${sort}`)}</SelectValue></SelectTrigger>
+              <SelectContent>
+                {QUEUE_SORTS.map((s) => <SelectItem key={s} value={s}>{tFilters(`sortOption.${s}`)}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>{tFilters('clear')}</Button>

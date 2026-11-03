@@ -7,6 +7,8 @@ import {
 } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { notFound } from 'next/navigation'
+import { isAppLocale } from '@/i18n/routing'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
@@ -71,6 +73,7 @@ export async function generateMetadata({ params }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
+  if (!isAppLocale(locale)) notFound()
   const settings = await getSiteSettings().catch(() => null)
   const { title, description } = siteSeo(settings, locale)
   const socialImage = settings?.social_share_image || '/media/og-cover.jpg'
@@ -116,6 +119,10 @@ export default async function RootLayout({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
+  // The middleware skips any path with a dot, so scanner requests such as /.env or /wp-login.php
+  // reach this segment with locale ".env": rendering them threw INVALID_MESSAGE and
+  // "Incorrect locale information" (toLocaleString) in production. They are simply not pages.
+  if (!isAppLocale(locale)) notFound()
   const messages = await getMessages()
   const settings = await getSiteSettings()
   const dir = locale === 'ar' ? 'rtl' : 'ltr'

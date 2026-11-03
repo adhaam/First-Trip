@@ -301,3 +301,27 @@ test('journey: arrivals are not double-counted (component stay counts, converted
   const counts = todayCounts(items, '2026-10-05') // both share this start_date
   assert.equal(counts.arrivals_today, 1)
 })
+
+// ─── Ordering (operations cleanup 2026-11) ───
+
+test('lists default to newest first by creation time, with a stable tiebreak, never by travel date', async () => {
+  const { sortForView, defaultSortForView } = await import('./work-items')
+  const mk = (id: string, created_at: string, start_date: string | null, last_change_at = created_at) =>
+    ({ entity_type: 'trip_request', entity_id: id, created_at, start_date, last_change_at }) as unknown as import('./types').WorkItem
+  const items = [
+    mk('a', '2026-10-01T10:00:00Z', '2026-12-01'),
+    mk('c', '2026-11-03T09:00:00Z', '2026-11-20'),
+    mk('b', '2026-11-03T09:00:00Z', null),
+    mk('d', '2026-10-15T10:00:00Z', '2026-11-05', '2026-11-04T00:00:00Z'),
+  ]
+  assert.equal(defaultSortForView('needs_action'), 'newest')
+  assert.equal(defaultSortForView('all'), 'newest')
+  assert.equal(defaultSortForView('upcoming'), 'upcoming')
+  assert.equal(defaultSortForView('stale'), 'waiting')
+  assert.deepEqual(sortForView(items, 'needs_action').map((i) => i.entity_id), ['c', 'b', 'd', 'a'])
+  assert.deepEqual(sortForView(items, 'needs_action', 'oldest').map((i) => i.entity_id), ['a', 'd', 'b', 'c'])
+  assert.deepEqual(sortForView(items, 'upcoming').map((i) => i.entity_id), ['d', 'c', 'a', 'b'])
+  assert.deepEqual(sortForView(items, 'stale').map((i) => i.entity_id), ['a', 'b', 'c', 'd'])
+  // Stable: sorting a shuffled copy gives the identical order (pagination never reshuffles).
+  assert.deepEqual(sortForView([...items].reverse(), 'all').map((i) => i.entity_id), ['c', 'b', 'd', 'a'])
+})

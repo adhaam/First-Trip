@@ -4,7 +4,7 @@ import { requireStaff } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { todayInCairo } from '@/lib/transport/today'
 import { isMissingOpsRelation, loadWorkItems } from '@/lib/ops/server'
-import { filterByView, isCommercialItem, isJourneyItem, isTripItem, sortForView } from '@/lib/ops/work-items'
+import { filterByView, isCommercialItem, isJourneyItem, isTripItem, QUEUE_SORTS, sortForView } from '@/lib/ops/work-items'
 
 const VIEWS = ['needs_action', 'awaiting_payment', 'upcoming', 'stale', 'exceptions', 'all'] as const
 const ENTITY_TYPES = [
@@ -26,6 +26,8 @@ const querySchema = z.object({
   // Reference day for date-relative flags (the Today date picker); defaults to today in Cairo.
   today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   q: z.string().max(200).optional(),
+  // Omitted = the view's own default (newest first; upcoming by date; stale longest-waiting).
+  sort: z.enum(QUEUE_SORTS).optional(),
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(1).max(100).default(25),
 })
@@ -53,13 +55,13 @@ export async function GET(req: NextRequest) {
       today, dateField: filter.date_field, transferOnly: filter.transfer === '1',
     })
     let displayed
-    if (filter.scope === 'journey') displayed = sortForView(items.filter(isJourneyItem), 'all')
-    else if (filter.scope === 'trips') displayed = sortForView(items.filter(isTripItem), 'all')
+    if (filter.scope === 'journey') displayed = sortForView(items.filter(isJourneyItem), 'all', filter.sort)
+    else if (filter.scope === 'trips') displayed = sortForView(items.filter(isTripItem), 'all', filter.sort)
     else if (filter.scope === 'transfer_attention') {
       displayed = sortForView(
-        items.filter((item) => isCommercialItem(item) && item.attention.includes('transfer_unconfirmed')), 'all',
+        items.filter((item) => isCommercialItem(item) && item.attention.includes('transfer_unconfirmed')), 'all', filter.sort,
       )
-    } else displayed = sortForView(filterByView(items, filter.view, today), filter.view)
+    } else displayed = sortForView(filterByView(items, filter.view, today), filter.view, filter.sort)
     const start = (filter.page - 1) * filter.page_size
     return NextResponse.json({
       items: displayed.slice(start, start + filter.page_size),

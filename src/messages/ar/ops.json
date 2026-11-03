@@ -158,6 +158,13 @@
       "anyType": "أي نوع",
       "anyStatus": "أي حالة",
       "anyPayment": "أي حالة دفع",
+      "sort": "الترتيب",
+      "sortOption": {
+        "newest": "الأحدث أولاً",
+        "oldest": "الأقدم أولاً",
+        "upcoming": "الوصول الأقرب",
+        "waiting": "الأطول انتظاراً"
+      },
       "clear": "مسح الفلاتر"
     },
     "columns": {

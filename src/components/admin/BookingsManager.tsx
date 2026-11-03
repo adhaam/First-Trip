@@ -24,6 +24,8 @@ import { allowedNextStatuses, STATUSES } from '@/lib/request-workflow'
 import { useStaff } from '@/components/admin/ops/StaffContext'
 import { PaymentSummary } from '@/components/admin/config/PaymentSummary'
 import { InvoiceViewer } from './InvoiceViewer'
+import { JourneyStaysPanel } from './JourneyStaysPanel'
+import { matchesJourneyStaySearch, type JourneyStayRow } from '@/lib/ops/journey-stays'
 
 type BookingWorkflowStatus = (typeof STATUSES.accommodation_booking)[number]
 type ManagedBooking = Omit<Booking, 'status'> & { status: BookingWorkflowStatus }
@@ -142,6 +144,7 @@ export function BookingsManager() {
   const canDelete = staff?.role !== 'operations'
 
   const [bookings, setBookings] = useState<ManagedBooking[]>([])
+  const [journeys, setJourneys] = useState<JourneyStayRow[]>([])
   const [accommodations, setAccommodations] = useState<Accommodation[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -190,14 +193,20 @@ export function BookingsManager() {
     setLoading(true)
     setLoadError('')
     try {
-      const [bRes, aRes] = await Promise.all([
+      const [bRes, aRes, jRes] = await Promise.all([
         fetch('/api/admin/bookings'),
         fetch('/api/admin/accommodations'),
+        fetch('/api/admin/bookings/journey-stays'),
       ])
       if (bRes.status === 401) { window.location.href = locale === 'en' ? '/en/admin' : '/admin'; return }
       const bData = await bRes.json()
       if (!bRes.ok) throw new Error(bData.error)
       setBookings(bData.bookings || [])
+      // Non-fatal: the direct bookings list still works if journeys fail to load.
+      if (jRes.ok) {
+        const jData = await jRes.json()
+        setJourneys(jData.journeys || [])
+      }
       if (aRes.ok) {
         const aData = await aRes.json()
         setAccommodations(aData.accommodations || [])
@@ -348,7 +357,8 @@ export function BookingsManager() {
     const q = search.trim().toLowerCase()
     return bookings.filter(b => {
       if (q) {
-        const hay = `${b.customer_name} ${b.customer_phone} ${b.customer_email || ''}`.toLowerCase()
+        // Reference (BK-…) and hotel name too, not just the customer's contact details.
+        const hay = `BK-${b.id.slice(0, 8)} ${b.customer_name} ${b.customer_phone} ${b.customer_email || ''} ${accName(b.accommodation_id, b.accommodations)}`.toLowerCase()
         if (!hay.includes(q)) return false
       }
       if (filterType !== 'all' && b.booking_type !== filterType) return false
@@ -360,7 +370,23 @@ export function BookingsManager() {
       if (dateTo && (!b.trip_date || b.trip_date > dateTo)) return false
       return true
     })
-  }, [bookings, search, filterType, filterStatus, filterSource, filterAccommodation, filterGovernorate, dateFrom, dateTo])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- accName reads accommodations
+  }, [bookings, accommodations, search, filterType, filterStatus, filterSource, filterAccommodation, filterGovernorate, dateFrom, dateTo])
+
+  // Build Your Trip hotel requests follow the same search / status / hotel / date filters. Type, source
+  // and governorate describe direct bookings only, so a list narrowed by them hides these rows.
+  const filteredJourneys = useMemo(() => {
+    if (filterType !== 'all' || filterSource !== 'all' || filterGovernorate !== 'all') return []
+    return journeys.filter(j => {
+      if (!matchesJourneyStaySearch(j, search, accName(j.accommodation_id))) return false
+      if (filterStatus !== 'all' && j.status !== filterStatus) return false
+      if (filterAccommodation !== 'all' && j.accommodation_id !== filterAccommodation) return false
+      if (dateFrom && (!j.arrival_date || j.arrival_date < dateFrom)) return false
+      if (dateTo && (!j.arrival_date || j.arrival_date > dateTo)) return false
+      return true
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- accName reads accommodations
+  }, [journeys, accommodations, search, filterType, filterStatus, filterSource, filterAccommodation, filterGovernorate, dateFrom, dateTo])
 
   const stats = useMemo(() => {
     // "Booked value" is NOT revenue — it's the total of non-cancelled booking
@@ -516,7 +542,7 @@ export function BookingsManager() {
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder={ar ? 'اسم، موبايل، إيميل...' : 'Name, phone, email...'}
+            placeholder={ar ? 'رقم الحجز، اسم، موبايل، فندق...' : 'Reference, name, phone, hotel...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -632,6 +658,11 @@ export function BookingsManager() {
             <X className="h-4 w-4" />
           </button>
         </div>
+      )}
+
+      {/* ─── Build Your Trip hotel requests (journeys; read-only links) ─── */}
+      {!loading && !loadError && (
+        <JourneyStaysPanel rows={filteredJourneys} ar={ar} hotelName={(id) => accName(id)} fmtDate={fmtDate} />
       )}
 
       {/* ─── Table ─── */}

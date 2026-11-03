@@ -168,11 +168,45 @@ export function filterByView(items: WorkItem[], view: OpsView, today: string): W
   ))
 }
 
-export function sortForView(items: WorkItem[], view: OpsView): WorkItem[] {
+/**
+ * How a list is ordered. 'newest' / 'oldest' use the record's creation time (trip_requests:
+ * submitted_at) — never the travel date or the latest status change; 'upcoming' is by start date
+ * (travel / check-in); 'waiting' is longest-waiting first (oldest last change).
+ */
+export const QUEUE_SORTS = ['newest', 'oldest', 'upcoming', 'waiting'] as const
+export type QueueSort = (typeof QUEUE_SORTS)[number]
+
+/** Each view's own default: arrivals by date, stale by longest wait, everything else newest first. */
+export function defaultSortForView(view: OpsView): QueueSort {
+  if (view === 'upcoming') return 'upcoming'
+  if (view === 'stale') return 'waiting'
+  return 'newest'
+}
+
+// Stable tiebreak so equal timestamps never reshuffle between pages, filters or reloads.
+const byKey = (a: WorkItem, b: WorkItem) => `${a.entity_type}:${a.entity_id}`.localeCompare(`${b.entity_type}:${b.entity_id}`)
+
+export function sortItems(items: WorkItem[], sort: QueueSort): WorkItem[] {
   return [...items].sort((a, b) => {
-    if (view === 'upcoming') return (a.start_date ?? '').localeCompare(b.start_date ?? '')
-    return a.last_change_at.localeCompare(b.last_change_at)
+    switch (sort) {
+      case 'newest': return b.created_at.localeCompare(a.created_at) || byKey(b, a)
+      case 'oldest': return a.created_at.localeCompare(b.created_at) || byKey(a, b)
+      case 'waiting': return a.last_change_at.localeCompare(b.last_change_at) || byKey(a, b)
+      case 'upcoming': {
+        // Undated items sink to the bottom instead of jumping to the top.
+        if (a.start_date !== b.start_date) {
+          if (!a.start_date) return 1
+          if (!b.start_date) return -1
+          return a.start_date.localeCompare(b.start_date)
+        }
+        return b.created_at.localeCompare(a.created_at) || byKey(b, a)
+      }
+    }
   })
+}
+
+export function sortForView(items: WorkItem[], view: OpsView, sort?: QueueSort): WorkItem[] {
+  return sortItems(items, sort ?? defaultSortForView(view))
 }
 
 /**

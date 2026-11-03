@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
     .from('trip_bookings')
     .select('*, sinai_trips(name_ar, name_en), trip_packages(name_ar, name_en)')
     .order('created_at', { ascending: false })
+    // Stable tiebreak: equal timestamps never reshuffle between loads.
+    .order('id', { ascending: false })
     .limit(300)
   // Journey components (converted off a trip_request, migration 049) are worked from the journey's
   // own detail screen, not this list — they'd otherwise show up twice with no separate action.
