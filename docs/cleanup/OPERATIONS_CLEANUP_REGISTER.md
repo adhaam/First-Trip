@@ -159,3 +159,29 @@ All of them come from scanner paths such as `/.env`, `/wp-login.php`, `/security
 - Torino Camp needs its own description.
 - Migration registry rows for 044–046 and 049–051 (optional, see §4).
 - Global Codex repair (see §6).
+
+## 8. Production release and acceptance — 2026-11-04 (owner-authorized)
+
+**Description correction.** It was applied once via Codex `supabase_rw` after the project URL check.
+
+| Measure | Before | After |
+|---|---|---|
+| Backup / split rows | — | 18 / 18 |
+| Active hotels with empty `description_ar` | 19 | 1 (Torino, unchanged) |
+| Non-description fingerprint | `8fca05937ec1` | `8fca05937ec1` |
+| trip_requests / bookings / trip_bookings / payment_records | 7 / 7 / 14 / 8 | 7 / 7 / 14 / 8 |
+| Payments total | 38,950 | 38,950 |
+
+**Deploy.** `main` was fast-forwarded `30f0364 → d41a2a9`. Vercel production `dpl_AesygPZXQgFeKZWrUL5buEdG8B7U` is READY; rollback candidate `dpl_JCATTMWersyUKZ2aXUQFq6g3yYho`.
+
+**Acceptance (all pass):**
+1. Description apply result as above.
+2. Public detail pages: Havana House and 4S Hotel are Arabic-only on `/` and English-only on `/en`. Torino is unchanged. Admin API: only Torino lacks Arabic.
+3. Stays → "Build Your Trip hotel requests (5)", newest first: WR-2611-0012, -0011 (→ BK-5534FCF8), -0010, -0009, -0008.
+4. Stays search: `BK-5534` → WR-2611-0011, `havana` → WR-2611-0011, `WR-2610-0010` → WR-2610-0010.
+5. The queue (15 items) is newest first by default and `sort=oldest` reverses it. Labels are translated in EN and AR (RTL). At 375 px there is no horizontal overflow.
+6. `/.env`, `/wp-login.php`, `/security.txt` and `/meta.json` return 404; `/`, `/en`, `/plan`, `/en/plan` and `/book-dahab` return 200.
+7. Vercel runtime errors: none on the new deployment. The last `INVALID_MESSAGE`/`RangeError` was at 02:06 UTC on the previous deployment.
+8. Ledger and record counts are unchanged; only the 18 description fields changed.
+
+**WEEMAP OPERATIONS CLEANUP — PRODUCTION VERIFIED.**
